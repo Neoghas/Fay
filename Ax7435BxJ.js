@@ -578,7 +578,6 @@ async function renderBets(betsToRender) {
 
              <span id="likeCount-${bet.betId}" 
              style="margin-left: 10px; color: #00cc51; font-size: 15px; font-weight: bold;">
-             0
              </span> Likes 
 
              <p id="likeStatus-${bet.betId}" style="font-size: 12px; color: gray; margin-top: 3px;"></p> 
