@@ -1,15 +1,16 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Faylotto Claim ETH DApp</title><script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script><link href="https://raw.githubusercontent.com/Neoghas/Fay/refs/heads/main/logo.png" rel="icon"><link href="https://raw.githubusercontent.com/Neoghas/Fay/refs/heads/main/logo.png" rel="apple-touch-icon"><link href="https://fonts.googleapis.com/css2?family=Anonymous+Pro:wght@700&display=swap" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@700&display=swap" rel="stylesheet"><script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/js/all.min.js" crossorigin="anonymous"></script><link rel="stylesheet" href="styles.css"><style> #preloader { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: #000000; z-index: 9999; display: flex; align-items: center; justify-content: center;}.loader { border: 4px solid #f0f0f0; border-top: 4px solid #00b7ff; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite;}@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }} </style>
 
 <style>
-  body {
+  /* Reset default margins and ensure full viewport coverage */
+body {
     font-family: 'Ubuntu', sans-serif;
     font-weight: bold;
     text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
     text-align: center;
     margin: 0;
     padding: 0;
-    width: 100%;
-    max-width: 1300px;
+    width: 100vw; /* Use viewport width for full coverage */
+    min-height: 100vh; /* Ensure body takes full height */
     background-color: #000;
     color: #ccc;
     display: flex;
@@ -18,22 +19,58 @@
     overflow-x: hidden;
     font-size: 16px;
     padding-top: 70px;
+    box-sizing: border-box;
 }
-        
+
+/* Container should stretch to fit body, with max-width for larger screens */
 .container {
     width: 100%;
-    max-width: 1300px;
-    margin: auto;
+    max-width: 1300px; /* Keep max-width for large screens */
+    margin: 0 auto; /* Center horizontally */
     padding: 20px;
     background: #000000;
     box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     backdrop-filter: blur(10px);
     box-sizing: border-box;
-    align-items: center;
     margin-top: 20px;
 }
 
+/* Ensure navbar stretches to full viewport width on PC */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 10px 20px;
+    color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw; /* Full viewport width */
+    max-width: none; /* Remove max-width to prevent constraining */
+    z-index: 1000;
+    height: 60px;
+    box-sizing: border-box;
+}
+
+/* Ensure footer also stretches to full viewport width */
+footer {
+    text-align: center;
+    margin-top: 20px;
+    padding: 10px;
+    background: #111;
+    color: #ddd;
+    font-size: 12px;
+    width: 100vw; /* Full viewport width */
+    max-width: none; /* Remove max-width */
+    box-sizing: border-box;
+}
+
+/* Rest of your styles remain unchanged */
 h1, h2 {
     background: linear-gradient(90deg, #03a9f4, #f441a5);
     -webkit-background-clip: text;
@@ -141,25 +178,6 @@ img {
     margin-right: 5px;
 }
 
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 0 5px 15px rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px); 
-    -webkit-backdrop-filter: blur(10px);
-    padding: 10px 20px;
-    color: white;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    max-width: 1250px;
-    z-index: 1000;
-    height: 60px;
-}
-
 .logo {
     display: flex;
     align-items: center;
@@ -234,22 +252,11 @@ img {
     }
 }
 
-footer {
-        text-align: center;
-        margin-top: 20px;
-        padding: 10px;
-        background: #111;
-        color: #ddd;
-        font-size: 12px;
-        width: 100%;
-        max-width: 1250px;
-    }
+.social-icons {
+    margin-bottom: 10px;
+}
 
-    .social-icons {
-        margin-bottom: 10px;
-    }
-
-    .social-icons a {
+.social-icons a {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     padding: 10px;
@@ -269,7 +276,7 @@ footer {
     color: #1a88ff;
     text-shadow: 0 0 10px #1a88ff, 0 0 20px #1a88ff, 0 0 30px #1a88ff;
     box-shadow: 0 0 20px rgba(0, 0, 255, 1), 0 0 30px rgba(0, 0, 255, 0.8);
-    transform: rotate(360deg); /* Efek berputar */
+    transform: rotate(360deg);
 }
 
 #walletAddress {
@@ -279,10 +286,13 @@ footer {
 
 #signatureInfo {
     font-size: 12px;
+}
 
 #walletBalance {
     color: #1a88ff;
 }
+
+/* Add viewport meta tag in HTML head for proper scaling */
 </style>
   
 </head><body><nav class="navbar"><div class="logo"><img src="https://raw.githubusercontent.com/Neoghas/Fay/refs/heads/main/logo.png" class="logo-img"><span style=" font-size: 22px; font-weight: bold; background: linear-gradient(90deg, #03a9f4, #f441a5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block;"> Faylotto </span></div><div class="hamburger" onclick="toggleMenu()">&#9776;</div><ul class="nav-links" id="navMenu"><a href="https://analitycs.faylotto.xyz">Statistics</a><a href="https://analitycs.faylotto.xyz/tools">Tools</a><a href="https://analitycs.faylotto.xyz/search">Search</a><a href="https://app.faylotto.xyz">Play</a></ul></nav><div id="AXHgf753hfdxzsH"></div><div id="preloader"><div class="loader"></div></div><script> window.addEventListener("load", function () { const preloader = document.getElementById("preloader"); preloader.style.display = "none"; }); </script><script src="statis/ACx6934KgfxzRswCss.js"></script><script src="AXHgf753hfdxzsH.js"></script><script src="Ax7435BxJ.js"></script></body></html>
