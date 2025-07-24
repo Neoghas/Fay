@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QR Code Generator with Logo</title>
+  <script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
+    #qr-container {
+      margin-top: 20px;
+    }
+    input {
+      width: 80%;
+      padding: 10px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>QR Code Generator with Logo</h1>
+  <input type="text" id="qr-input" placeholder="Enter your text or URL here" />
+  <br />
+  <button onclick="generateQRCode()">Generate QR</button>
+  <button onclick="downloadQR()">Download Full HD</button>
+
+  <div id="qr-container"></div>
+
+  <script>
+    let qrCode = null;
+
+    function generateQRCode() {
+      const qrData = document.getElementById("qr-input").value;
+      if (!qrData) return alert("Please enter a value!");
+
+      // Hapus QR lama
+      document.getElementById("qr-container").innerHTML = "";
+
+      qrCode = new QRCodeStyling({
+        width: 1920,
+        height: 1920,
+        data: qrData,
+        image: "logo.png", // ganti logo sesuai kebutuhan
+        dotsOptions: {
+          color: "#000",
+          type: "rounded"
+        },
+        backgroundOptions: {
+          color: "#ffffff"
+        },
+        imageOptions: {
+          crossOrigin: "anonymous",
+          margin: 20,
+          imageSize: 0.3
+        }
+      });
+
+      qrCode.append(document.getElementById("qr-container"));
+    }
+
+    function downloadQR() {
+      if (!qrCode) return alert("Generate QR Code first!");
+      qrCode.download({ name: "qr-code-fullhd", extension: "png" });
+    }
+  </script>
+</body>
+</html>
