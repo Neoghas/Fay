@@ -3,25 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QR Code Generator with Custom Logo</title>
+  <title>QR Generator HD + Logo</title>
   <script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
       text-align: center;
       padding: 1.5rem;
-      background: #f9f9f9;
-    }
-    #qr-wrapper {
-      display: flex;
-      justify-content: center;
-      margin-top: 1rem;
-    }
-    #qr-container canvas,
-    #qr-container img {
-      width: 100%;
-      max-width: 300px;
-      height: auto;
     }
     input, button {
       padding: 10px;
@@ -30,26 +18,29 @@
       width: 90%;
       max-width: 400px;
     }
-    button {
-      cursor: pointer;
+    #qr-preview {
+      max-width: 300px;
+      margin: auto;
+    }
+    #qr-preview canvas, #qr-preview img {
+      width: 100%;
+      height: auto;
     }
   </style>
 </head>
 <body>
-  <h2>QR Code Generator + Custom Logo</h2>
+  <h2>QR Code Generator + Logo Upload (Full HD Download)</h2>
 
-  <input type="text" id="qr-input" placeholder="Enter text or URL" /><br>
-  <input type="file" id="logo-upload" accept="image/*" /><br>
+  <input type="text" id="qr-input" placeholder="Enter text or URL"><br>
+  <input type="file" id="logo-upload" accept="image/*"><br>
   <button onclick="generateQRCode()">Generate QR</button>
   <button onclick="downloadQR()">Download Full HD</button>
 
-  <div id="qr-wrapper">
-    <div id="qr-container"></div>
-  </div>
+  <div id="qr-preview"></div>
 
   <script>
-    let qrCode = null;
     let uploadedLogoURL = "";
+    let previewQR = null;
 
     document.getElementById("logo-upload").addEventListener("change", function (e) {
       const file = e.target.files[0];
@@ -63,18 +54,45 @@
     });
 
     function generateQRCode() {
-      const qrData = document.getElementById("qr-input").value;
-      if (!qrData) return alert("Please enter some text or a URL!");
+      const data = document.getElementById("qr-input").value;
+      if (!data) return alert("Please enter some text or URL!");
 
-      document.getElementById("qr-container").innerHTML = "";
+      // Generate low-res preview (for UI)
+      previewQR = new QRCodeStyling({
+        width: 300,
+        height: 300,
+        data,
+        image: uploadedLogoURL,
+        dotsOptions: {
+          color: "#000",
+          type: "rounded"
+        },
+        backgroundOptions: {
+          color: "#ffffff"
+        },
+        imageOptions: {
+          crossOrigin: "anonymous",
+          margin: 10,
+          imageSize: 0.3
+        }
+      });
 
-      qrCode = new QRCodeStyling({
+      document.getElementById("qr-preview").innerHTML = "";
+      previewQR.append(document.getElementById("qr-preview"));
+    }
+
+    function downloadQR() {
+      const data = document.getElementById("qr-input").value;
+      if (!data) return alert("Please generate the QR first!");
+
+      // Generate new QR in memory with full HD size
+      const downloadQR = new QRCodeStyling({
         width: 1920,
         height: 1920,
-        data: qrData,
-        image: uploadedLogoURL || "",
+        data,
+        image: uploadedLogoURL,
         dotsOptions: {
-          color: "#000000",
+          color: "#000",
           type: "rounded"
         },
         backgroundOptions: {
@@ -87,12 +105,7 @@
         }
       });
 
-      qrCode.append(document.getElementById("qr-container"));
-    }
-
-    function downloadQR() {
-      if (!qrCode) return alert("Generate QR Code first!");
-      qrCode.download({ name: "qr-code-fullhd", extension: "png" });
+      downloadQR.download({ name: "qr-code-fullhd", extension: "png" });
     }
   </script>
 </body>
