@@ -3,37 +3,95 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QR Generator HD + Logo</title>
+  <title>QR Code Generator</title>
   <script src="https://cdn.jsdelivr.net/npm/qr-code-styling/lib/qr-code-styling.js"></script>
   <style>
     body {
-      font-family: sans-serif;
+      margin: 0;
+      padding: 2rem 1rem;
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #ffffff;
       text-align: center;
-      padding: 1.5rem;
     }
-    input, button {
-      padding: 10px;
-      margin: 10px;
-      font-size: 1rem;
+
+    h2 {
+      font-weight: 500;
+      font-size: 1.8rem;
+      color: #00ffff;
+      text-shadow: 0 0 10px #00ffff;
+    }
+
+    input[type="text"], input[type="file"] {
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      margin: 10px 0;
       width: 90%;
       max-width: 400px;
+      background: #1e1e2e;
+      color: #ffffff;
+      box-shadow: 0 0 10px #00ffff33;
+      outline: none;
     }
+
+    input[type="file"] {
+      background: transparent;
+      box-shadow: none;
+    }
+
+    button {
+      margin: 12px 6px;
+      padding: 12px 20px;
+      background: #00ffff22;
+      color: #00ffff;
+      border: 1px solid #00ffff44;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 12px #00ffff55;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: #00ffff55;
+      color: #0f0f1a;
+      box-shadow: 0 0 20px #00ffffaa;
+    }
+
     #qr-preview {
-      max-width: 300px;
-      margin: auto;
+      margin-top: 1.5rem;
+      display: flex;
+      justify-content: center;
     }
-    #qr-preview canvas, #qr-preview img {
+
+    #qr-preview canvas,
+    #qr-preview img {
       width: 100%;
+      max-width: 300px;
       height: auto;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #00ffff44;
+    }
+
+    ::file-selector-button {
+      background: #00ffff33;
+      color: #00ffff;
+      border: none;
+      padding: 6px 12px;
+      margin-right: 10px;
+      border-radius: 6px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h2>QR Code Generator + Logo Upload (Full HD Download)</h2>
+  <h2>⚡ QR Code Generator with Logo</h2>
 
   <input type="text" id="qr-input" placeholder="Enter text or URL"><br>
   <input type="file" id="logo-upload" accept="image/*"><br>
-  <button onclick="generateQRCode()">Generate QR</button>
+
+  <button onclick="generateQRCode()">Generate</button>
   <button onclick="downloadQR()">Download Full HD</button>
 
   <div id="qr-preview"></div>
@@ -55,20 +113,19 @@
 
     function generateQRCode() {
       const data = document.getElementById("qr-input").value;
-      if (!data) return alert("Please enter some text or URL!");
+      if (!data) return alert("Please enter a text or URL!");
 
-      // Generate low-res preview (for UI)
       previewQR = new QRCodeStyling({
         width: 300,
         height: 300,
         data,
         image: uploadedLogoURL,
         dotsOptions: {
-          color: "#000",
+          color: "#00ffff",
           type: "rounded"
         },
         backgroundOptions: {
-          color: "#ffffff"
+          color: "#0f0f1a"
         },
         imageOptions: {
           crossOrigin: "anonymous",
@@ -83,16 +140,15 @@
 
     function downloadQR() {
       const data = document.getElementById("qr-input").value;
-      if (!data) return alert("Please generate the QR first!");
+      if (!data) return alert("Please generate the QR code first!");
 
-      // Generate new QR in memory with full HD size
       const downloadQR = new QRCodeStyling({
         width: 1920,
         height: 1920,
         data,
         image: uploadedLogoURL,
         dotsOptions: {
-          color: "#000",
+          color: "#00ffff",
           type: "rounded"
         },
         backgroundOptions: {
