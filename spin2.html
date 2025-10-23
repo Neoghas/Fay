@@ -153,12 +153,11 @@ for (let i = 0; i < total; i++) {
   path.setAttribute("stroke-linejoin", "round");
   svg.appendChild(path);
 
-  // Label
   const angle = (i + 0.5) * slice - 90;
   const textRadius = radius * 0.65;
   const textX = cx + textRadius * Math.cos((angle * Math.PI) / 180);
   const textY = cy + textRadius * Math.sin((angle * Math.PI) / 180);
-  
+
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
   text.setAttribute("x", textX);
   text.setAttribute("y", textY);
@@ -172,95 +171,67 @@ for (let i = 0; i < total; i++) {
   svg.appendChild(text);
 }
 
-// ✅ FIX DEFINITIF: Proper cleanup dan state management
+// State management
 let spinning = false;
 let currentRotation = 0;
+let animation = null;
 
-// Reset wheel to 0 rotation (CRITICAL untuk fix lag)
-function resetWheel() {
-  gsap.killTweensOf(svg);
-  gsap.set(svg, { 
-    rotation: 0,
-    transformOrigin: "center center"
-  });
-  currentRotation = 0;
-}
-
-// Reset button state
 function resetButton() {
   btn.disabled = false;
   btn.textContent = "SPIN";
-  spinning = false;
 }
 
-// Calculate winning index from final rotation (FIXED logic)
 function getWinningIndex(rotation) {
   const normalized = (360 - (rotation % 360) + 360) % 360;
-  let index = Math.floor(normalized / slice) % total;
-  return (total - index - 1 + total) % total; // Adjust untuk pointer di jam 12
+  return Math.floor(normalized / slice) % total;
 }
 
-// Spin animation - 30 DETIK FIXED
 function spinWheel() {
   if (spinning) return;
-  
-  // ✅ CRITICAL: Reset wheel SEBELUM spin baru
-  resetWheel();
-  
   spinning = true;
   btn.disabled = true;
-  btn.textContent = "SPINNING...";
   resultText.textContent = "🎡 Spinning...";
   resultText.style.color = "#00FFFF";
 
-  // Generate random target
+  if (animation) {
+    gsap.killTweensOf(svg);
+  }
+
+  // Target acak
   const randomIndex = Math.floor(Math.random() * total);
   const targetSlice = slice * randomIndex + slice / 2;
-  const fullRotations = 30; // FIXED 30 full rotations
-  const totalRotation = fullRotations * 360 + targetSlice;
+  const fullRotations = 12; // lebih banyak rotasi supaya smooth 30 detik
+  const totalRotation = currentRotation + fullRotations * 360 + targetSlice;
 
-  // ✅ GSAP timeline untuk perfect control
-  const tl = gsap.timeline({
-    onUpdate: () => {
-      currentRotation = gsap.getProperty(svg, "rotation");
-    },
-    onComplete: () => {
-      const winnerIndex = getWinningIndex(currentRotation);
-      const prize = prizes[winnerIndex];
-      
-      resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize}</span>`;
-      resultText.style.color = "#FFD700";
-      
-      // Reset setelah 3 detik
-      setTimeout(() => {
-        resetWheel();
-        resetButton();
-      }, 3000);
+  // Gunakan gsap.fromTo untuk menghindari lag rotasi kedua
+  animation = gsap.fromTo(svg,
+    { rotation: currentRotation },
+    {
+      rotation: totalRotation,
+      duration: 30, // durasi spin 30 detik
+      ease: "power3.inOut",
+      transformOrigin: "center center",
+      onUpdate: () => { currentRotation = gsap.getProperty(svg, "rotation"); },
+      onComplete: () => {
+        spinning = false;
+        animation = null;
+        const winnerIndex = getWinningIndex(currentRotation);
+        const prize = prizes[winnerIndex];
+        resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize}</span>`;
+        resultText.style.color = "#FFD700";
+        setTimeout(resetButton, 2000);
+      }
     }
-  });
-
-  // ✅ Custom easing untuk 30 detik smooth spin
-  tl.to(svg, {
-    rotation: totalRotation,
-    duration: 30, // ✅ 30 DETIK FIXED
-    ease: "power2.inOut",
-    transformOrigin: "center center"
-  });
+  );
 }
 
-// Event listeners
 btn.addEventListener("click", spinWheel);
-
-// Keyboard support
-document.addEventListener('keydown', function(e) {
-  if (e.code === 'Space' && !spinning) {
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space" && !spinning) {
     e.preventDefault();
     spinWheel();
   }
 });
-
-// Initial reset
-resetWheel();
-</script>
+    </script>
 </body>
 </html>
