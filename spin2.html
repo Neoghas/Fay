@@ -26,20 +26,20 @@
 
   .pointer {
     position: absolute;
-    top: 15%;
+    top: calc(50% - 210px);
     width: 0;
     height: 0;
     border-left: 15px solid transparent;
     border-right: 15px solid transparent;
     border-bottom: 25px solid red;
-    z-index: 5;
+    z-index: 10;
   }
 
   #centerBtn {
     position: absolute;
-    top: 70%;
-    width: 80px;
-    height: 80px;
+    top: 72%;
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
     background: gold;
     color: black;
@@ -49,20 +49,24 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 0 20px gold;
+    box-shadow: 0 0 25px gold;
+    transition: transform 0.2s ease;
+  }
+  #centerBtn:active {
+    transform: scale(0.95);
   }
 
   .result {
-    margin-top: 460px;
+    margin-top: 470px;
     font-size: 20px;
     text-align: center;
+    transition: color 0.5s;
   }
 </style>
 </head>
 <body>
 
 <div class="pointer"></div>
-
 <svg id="wheel" viewBox="0 0 500 500"></svg>
 <div id="centerBtn">SPIN</div>
 <div class="result" id="resultText">Press SPIN to play</div>
@@ -98,7 +102,6 @@ const cy = 250;
 const total = prizes.length;
 const slice = 360 / total;
 
-// Buat sektor pizza
 for (let i = 0; i < total; i++) {
   const start = (Math.PI / 180) * (i * slice);
   const end = (Math.PI / 180) * ((i + 1) * slice);
@@ -106,13 +109,7 @@ for (let i = 0; i < total; i++) {
   const y1 = cy + radius * Math.sin(start);
   const x2 = cx + radius * Math.cos(end);
   const y2 = cy + radius * Math.sin(end);
-  const largeArc = slice > 180 ? 1 : 0;
-  const pathData = `
-    M ${cx} ${cy}
-    L ${x1} ${y1}
-    A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2}
-    Z
-  `;
+  const pathData = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`;
 
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", pathData);
@@ -121,7 +118,6 @@ for (let i = 0; i < total; i++) {
   path.setAttribute("stroke-width", "2");
   svg.appendChild(path);
 
-  // Tambahkan label hadiah
   const angle = (i + 0.5) * slice;
   const textX = cx + (radius - 60) * Math.cos((Math.PI / 180) * angle);
   const textY = cy + (radius - 60) * Math.sin((Math.PI / 180) * angle);
@@ -139,6 +135,7 @@ for (let i = 0; i < total; i++) {
 }
 
 let spinning = false;
+let currentRotation = 0;
 
 btn.addEventListener("click", () => {
   if (spinning) return;
@@ -148,17 +145,24 @@ btn.addEventListener("click", () => {
   resultText.style.color = "#00FFFF";
 
   const randomIndex = Math.floor(Math.random() * prizes.length);
-  const rotations = 25 + Math.random() * 10; // banyak putaran biar lama
-  const stopAngle = 360 * rotations - (randomIndex * slice + slice / 2);
+  const fullRotations = 30; // banyak putaran supaya lama tapi smooth
+  const stopAngle = 360 * fullRotations - (randomIndex * slice + slice / 2);
 
   gsap.to(svg, {
     rotation: stopAngle,
-    duration: 30, // 30 detik
-    ease: "power4.out",
+    duration: 30,
+    ease: "power2.out",
     transformOrigin: "50% 50%",
+    onUpdate: () => {
+      // update rotation value biar real-time pointer sinkron
+      currentRotation = gsap.getProperty(svg, "rotation") % 360;
+    },
     onComplete: () => {
       spinning = false;
-      resultText.innerHTML = `🎉 You won: <span style="color:gold">${prizes[randomIndex]}</span>`;
+      const normalized = (360 - (currentRotation % 360)) % 360;
+      const resultIndex = Math.floor(normalized / slice) % total;
+      resultText.innerHTML = `🎉 You won: <span style="color:gold">${prizes[resultIndex]}</span>`;
+      resultText.style.color = "#FFD700";
     }
   });
 });
