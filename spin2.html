@@ -1,153 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Spin Wheel DApp</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <style>
-    body {
-      background: radial-gradient(circle at center, #111, #000);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      color: #fff;
-      font-family: sans-serif;
-      overflow: hidden;
-    }
-    .wheel-container {
-      position: relative;
-      width: 320px;
-      height: 320px;
-    }
-    canvas {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-    }
-    /* Pointer arah ke tengah bundaran */
-    .pointer {
-      position: absolute;
-      top: 50%;
-      left: calc(100% - 5px);
-      transform: translateY(-50%) rotate(90deg);
-      width: 0;
-      height: 0;
-      border-top: 12px solid transparent;
-      border-bottom: 12px solid transparent;
-      border-left: 25px solid red;
-      z-index: 10;
-      filter: drop-shadow(0 0 4px #f00);
-    }
-    button {
-      margin-top: 40px;
-      padding: 14px 32px;
-      border: none;
-      border-radius: 50%;
-      background: yellow;
-      color: #000;
-      font-weight: bold;
-      font-size: 16px;
-      cursor: pointer;
-      box-shadow: 0 0 25px yellow;
-    }
-    #result {
-      margin-top: 20px;
-      font-size: 18px;
-      color: gold;
-      text-align: center;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>Faylotto Spin Wheel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+  body {
+    background: radial-gradient(circle at center, #111, #000);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: "Poppins", sans-serif;
+  }
+
+  .wheel-container {
+    position: relative;
+    width: 350px;
+    height: 350px;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    transform-origin: center;
+  }
+
+  /* Pointer di posisi jam 12 */
+  .pointer {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 30px solid red;
+    z-index: 10;
+    filter: drop-shadow(0 0 6px #f00);
+  }
+
+  #spinBtn {
+    margin-top: 50px;
+    background: gold;
+    border: none;
+    padding: 18px 45px;
+    border-radius: 50px;
+    color: black;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 20px gold;
+    transition: transform 0.1s ease;
+  }
+  #spinBtn:active {
+    transform: scale(0.95);
+  }
+
+  #result {
+    margin-top: 25px;
+    font-size: 18px;
+    color: gold;
+    text-align: center;
+  }
+</style>
 </head>
 <body>
   <div class="wheel-container">
-    <canvas id="wheel" width="320" height="320"></canvas>
+    <canvas id="wheel" width="350" height="350"></canvas>
     <div class="pointer"></div>
   </div>
-  <button id="spin">SPIN</button>
-  <div id="result"></div>
+  <button id="spinBtn">SPIN</button>
+  <div id="result">🎯 Ready to spin!</div>
 
-  <script>
-    const canvas = document.getElementById('wheel');
-    const ctx = canvas.getContext('2d');
-    const btn = document.getElementById('spin');
-    const result = document.getElementById('result');
+<script>
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+const btn = document.getElementById("spinBtn");
+const resultText = document.getElementById("result");
 
-    const prizes = [
-      { text: 'MacBook', color: '#ff6f61', img: '💻' },
-      { text: 'iPhone', color: '#00bcd4', img: '📱' },
-      { text: '0.1 ETH', color: '#ffcc00', img: '🪙' },
-      { text: '0.05 ETH', color: '#66cc66', img: '💰' },
-      { text: '0.005 ETH', color: '#ff9933', img: '🤑' },
-      { text: '1 LPoint', color: '#9966ff', img: '⭐' },
-      { text: '2 LPoint', color: '#ff6699', img: '🎯' },
-      { text: 'Big Win', color: '#3399ff', img: '🏆' },
-    ];
+const prizes = [
+  { text: "MacBook", color: "#FFB703", emoji: "💻" },
+  { text: "iPhone", color: "#8ECAE6", emoji: "📱" },
+  { text: "0.1 ETH", color: "#FB8500", emoji: "🪙" },
+  { text: "0.05 ETH", color: "#90EE90", emoji: "💰" },
+  { text: "0.005 ETH", color: "#FFD700", emoji: "🤑" },
+  { text: "1 LPoint", color: "#9370DB", emoji: "⭐" },
+  { text: "2 LPoint", color: "#FF69B4", emoji: "🎯" },
+  { text: "Big Win", color: "#20B2AA", emoji: "🏆" }
+];
 
-    const sliceAngle = 2 * Math.PI / prizes.length;
-    let currentRotation = 0;
-    let spinning = false;
+const slices = prizes.length;
+const sliceAngle = 360 / slices;
+let rotation = 0;
+let spinning = false;
 
-    // 🎨 Gambar roda
-    function drawWheel(rotation = 0) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const radius = canvas.width / 2;
+// 🎨 Gambar roda
+function drawWheel() {
+  const radius = canvas.width / 2;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < slices; i++) {
+    const start = (sliceAngle * i) * Math.PI / 180;
+    const end = (sliceAngle * (i + 1)) * Math.PI / 180;
 
-      prizes.forEach((prize, i) => {
-        const startAngle = i * sliceAngle + rotation;
-        const endAngle = startAngle + sliceAngle;
+    // sektor warna
+    ctx.beginPath();
+    ctx.moveTo(radius, radius);
+    ctx.arc(radius, radius, radius, start, end);
+    ctx.fillStyle = prizes[i].color;
+    ctx.fill();
+    ctx.strokeStyle = "#111";
+    ctx.stroke();
 
-        // Slice
-        ctx.beginPath();
-        ctx.moveTo(radius, radius);
-        ctx.arc(radius, radius, radius, startAngle, endAngle);
-        ctx.fillStyle = prize.color;
-        ctx.fill();
-        ctx.strokeStyle = '#111';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+    // teks & emoji
+    ctx.save();
+    ctx.translate(radius, radius);
+    ctx.rotate((start + end) / 2);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#000";
+    ctx.font = "bold 14px Poppins";
+    ctx.fillText(prizes[i].emoji + " " + prizes[i].text, radius - 10, 5);
+    ctx.restore();
+  }
+}
+drawWheel();
 
-        // Text dan gambar
-        ctx.save();
-        ctx.translate(radius, radius);
-        ctx.rotate(startAngle + sliceAngle / 2);
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 14px sans-serif';
-        ctx.fillText(prize.text, radius - 15, 5);
-        ctx.font = '20px sans-serif';
-        ctx.fillText(prize.img, radius - 40, 30);
-        ctx.restore();
-      });
+btn.addEventListener("click", () => {
+  if (spinning) return;
+  spinning = true;
+
+  const randomIndex = Math.floor(Math.random() * prizes.length);
+  const stopAngle = 360 * 8 + (360 - (randomIndex * sliceAngle + sliceAngle / 2));
+
+  gsap.to(".wheel-container canvas", {
+    rotation: stopAngle,
+    duration: 8,
+    ease: "power4.out",
+    transformOrigin: "50% 50%",
+    onComplete: () => {
+      spinning = false;
+      const prize = prizes[randomIndex];
+      resultText.innerHTML = `🎉 You won: <b>${prize.text}</b> ${prize.emoji}`;
+      // simpan rotasi akhir supaya spin berikutnya tetap sinkron
+      rotation = stopAngle % 360;
+      gsap.set(".wheel-container canvas", { rotation });
     }
-
-    drawWheel();
-
-    // 🌀 Spin
-    btn.addEventListener('click', () => {
-      if (spinning) return;
-      spinning = true;
-
-      const randomIndex = Math.floor(Math.random() * prizes.length);
-      const targetRotation =
-        360 * 6 + (360 - (randomIndex * (360 / prizes.length) + (180 / prizes.length)));
-
-      gsap.to(canvas, {
-        rotation: targetRotation,
-        duration: 5,
-        ease: 'power4.out',
-        onUpdate: () => {
-          drawWheel((canvas._gsap.rotation * Math.PI) / 180);
-        },
-        onComplete: () => {
-          result.textContent = `🎉 You won: ${prizes[randomIndex].text} ${prizes[randomIndex].img}`;
-          spinning = false;
-          currentRotation = targetRotation % 360;
-          gsap.set(canvas, { rotation: currentRotation });
-        },
-      });
-    });
-  </script>
+  });
+});
+</script>
 </body>
 </html>
