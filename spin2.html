@@ -4,335 +4,124 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🎰 FAYLOTTO Spin Bet Battle</title>
-    <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
+    <script src="https://unpkg.com/ethers@6/dist/ethers.umd.min.js"></script>
+    <script src="https://unpkg.com/@metamask/detect-provider"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Poppins', sans-serif; 
             background: linear-gradient(135deg, #0f0f23 0%, #1a0033 50%, #2d1b69 100%);
-            color: white;
-            min-height: 100vh;
-            overflow-x: hidden;
+            color: white; min-height: 100vh; overflow-x: hidden;
         }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .header h1 {
-            font-family: 'Orbitron', monospace;
-            font-size: 3.5rem;
-            font-weight: 900;
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header h1 { 
+            font-family: 'Orbitron', monospace; font-size: 3.5rem; font-weight: 900;
             background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #feca57);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 10px;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            text-align: center; margin-bottom: 10px;
         }
-
-        .network-info {
-            background: rgba(255,255,255,0.1);
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 14px;
-            margin-bottom: 20px;
+        .network-info { 
+            background: rgba(255,255,255,0.1); padding: 15px; border-radius: 15px; 
+            text-align: center; margin-bottom: 20px; font-weight: 600;
         }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+        .wheel-wrapper { 
+            position: relative; width: 450px; height: 450px; margin: 40px auto; 
         }
-
-        .stat-card {
-            background: rgba(255,255,255,0.1);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .stat-value {
-            font-family: 'Orbitron', monospace;
-            font-size: 2rem;
-            font-weight: 700;
-            color: #4ecdc4;
-        }
-
-        .wheel-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 40px 0;
-        }
-
-        .wheel-wrapper {
-            position: relative;
-            width: 450px;
-            height: 450px;
-            margin-bottom: 30px;
-        }
-
-        .wheel {
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            position: relative;
+        .wheel { 
+            width: 100%; height: 100%; border-radius: 50%; position: relative;
             transition: transform 4.5s cubic-bezier(0.23, 1, 0.32, 1);
-            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
-            border: 10px solid #fff;
-            border-top: 10px solid #ff6b6b;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.5); border: 10px solid #fff;
             overflow: hidden;
         }
-
         .wheel-segment {
-            position: absolute;
-            width: 50%;
-            height: 50%;
-            left: 50%;
-            top: 50%;
-            transform-origin: 0% 100%;
-            clip-path: polygon(0% 0%, 100% 0%, 100% 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            color: white;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            font-size: 13px;
-            border: 1px solid rgba(255,255,255,0.2);
+            position: absolute; width: 50%; height: 50%; left: 50%; top: 50%;
+            transform-origin: 0% 100%; clip-path: polygon(0% 0%, 100% 0%, 100% 100%);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 600; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            font-size: 12px; border: 1px solid rgba(255,255,255,0.2);
         }
-
         .wheel-pointer {
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 25px solid transparent;
-            border-right: 25px solid transparent;
-            border-top: 50px solid #ff4757;
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; border-left: 25px solid transparent;
+            border-right: 25px solid transparent; border-top: 50px solid #ff4757;
             z-index: 20;
-            filter: drop-shadow(0 5px 10px rgba(255,71,87,0.6));
         }
-
         .center-circle {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 100px;
-            height: 100px;
-            background: conic-gradient(#ff6b6b, #4ecdc4, #45b7d1, #feca57);
-            border-radius: 50%;
-            border: 8px solid #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            font-family: 'Orbitron', monospace;
-            font-weight: 900;
-            font-size: 14px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            z-index: 10;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 100px; height: 100px; background: conic-gradient(#ff6b6b, #4ecdc4);
+            border-radius: 50%; border: 8px solid #fff; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; font-family: 'Orbitron', monospace;
+            font-weight: 900; font-size: 14px; z-index: 10; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-
         .controls {
-            background: rgba(255,255,255,0.08);
-            backdrop-filter: blur(30px);
-            border-radius: 25px;
-            padding: 30px;
-            text-align: center;
-            border: 1px solid rgba(255,255,255,0.15);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-            margin-bottom: 30px;
-            max-width: 500px;
-            width: 100%;
+            background: rgba(255,255,255,0.08); backdrop-filter: blur(30px);
+            border-radius: 25px; padding: 30px; text-align: center; max-width: 500px;
+            margin: 0 auto 30px; border: 1px solid rgba(255,255,255,0.15);
         }
-
         .btn {
-            background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 50px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 10px 30px rgba(255,107,107,0.4);
-            margin: 8px;
-            font-family: 'Orbitron', monospace;
-            min-width: 140px;
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e); color: white; border: none;
+            padding: 15px 30px; border-radius: 50px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: all 0.3s ease; box-shadow: 0 10px 30px rgba(255,107,107,0.4);
+            margin: 8px; font-family: 'Orbitron', monospace; min-width: 140px;
         }
-
-        .btn:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(255,107,107,0.6);
-        }
-
-        .btn:disabled {
-            background: #555;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .btn-success {
-            background: linear-gradient(45deg, #4ecdc4, #44bdad);
-            box-shadow: 0 10px 30px rgba(78,205,196,0.4);
-        }
-
-        .btn-success:hover:not(:disabled) {
-            box-shadow: 0 15px 40px rgba(78,205,196,0.6);
-        }
-
+        .btn:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(255,107,107,0.6); }
+        .btn:disabled { background: #555; cursor: not-allowed; transform: none; }
+        .btn-success { background: linear-gradient(45deg, #4ecdc4, #44bdad); }
         .status {
-            margin: 20px 0;
-            padding: 15px 25px;
-            border-radius: 15px;
-            font-weight: 600;
-            font-size: 16px;
-            min-height: 20px;
+            margin: 20px 0; padding: 15px 25px; border-radius: 15px; font-weight: 600;
+            font-size: 16px; min-height: 20px;
         }
-
-        .status.success { 
-            background: rgba(78,205,196,0.2); 
-            color: #4ecdc4; 
-            border: 2px solid #4ecdc4; 
-        }
-
-        .status.error { 
-            background: rgba(231,76,60,0.2); 
-            color: #e74c3c; 
-            border: 2px solid #e74c3c; 
-        }
-
-        .status.info { 
-            background: rgba(52,152,219,0.2); 
-            color: #3498db; 
-            border: 2px solid #3498db; 
-        }
-
-        .history-section {
-            background: rgba(255,255,255,0.05);
-            backdrop-filter: blur(20px);
-            border-radius: 20px;
-            padding: 25px;
-            margin: 20px 0;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
+        .status.success { background: rgba(78,205,196,0.2); color: #4ecdc4; border: 2px solid #4ecdc4; }
+        .status.error { background: rgba(231,76,60,0.2); color: #e74c3c; border: 2px solid #e74c3c; }
+        .status.info { background: rgba(52,152,219,0.2); color: #3498db; border: 2px solid #3498db; }
         .history-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 15px;
-            max-height: 400px;
-            overflow-y: auto;
-            padding: 10px 0;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px; max-height: 400px; overflow-y: auto; padding: 10px 0;
         }
-
         .bet-item {
-            background: rgba(255,255,255,0.08);
-            border-radius: 15px;
-            padding: 15px;
-            border-left: 4px solid #4ecdc4;
-            transition: all 0.3s ease;
-            cursor: pointer;
+            background: rgba(255,255,255,0.08); border-radius: 15px; padding: 15px;
+            border-left: 4px solid #4ecdc4; transition: all 0.3s ease; cursor: pointer;
         }
-
-        .bet-item:hover {
-            transform: translateX(5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-
-        .bet-result {
-            font-weight: 700;
-            font-size: 16px;
-            margin-bottom: 8px;
-        }
-
-        .prize-jackpot { border-left-color: #feca57; }
-        .prize-bigwin { border-left-color: #ff6b6b; }
-        .prize-lpoint { border-left-color: #4ecdc4; }
-        .prize-lose { border-left-color: #666; }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: #4ecdc4;
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 10px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 768px) {
-            .wheel-wrapper { width: 350px; height: 350px; }
-            .header h1 { font-size: 2.5rem; }
-        }
+        .bet-item:hover { transform: translateX(5px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #4ecdc4; animation: spin 1s ease-in-out infinite; margin-right: 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) { .wheel-wrapper { width: 350px; height: 350px; } .header h1 { font-size: 2.5rem; } }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🎰 FAYLOTTO</h1>
-            <h2 style="font-size: 1.2rem; opacity: 0.8;">Spin Bet Battle</h2>
+            <h2 style="font-size: 1.2rem; opacity: 0.8; text-align: center;">Spin Bet Battle</h2>
         </div>
 
         <div class="network-info" id="networkInfo">
-            <span class="loading"></span>Checking network...
+            <span class="loading"></span>Memuat...
         </div>
 
-        <div class="stats-grid" id="statsGrid">
-            <!-- Stats loaded by JS -->
+        <div class="wheel-wrapper">
+            <div class="wheel-pointer"></div>
+            <div class="wheel" id="wheel"></div>
+            <div class="center-circle">
+                <div>SPIN</div>
+                <div style="font-size: 12px;">0.000256 ETH</div>
+            </div>
         </div>
-
-        <div class="wheel-container">
-            <div class="wheel-wrapper">
-                <div class="wheel-pointer"></div>
-                <div class="wheel" id="wheel"></div>
-                <div class="center-circle">
-                    <div>SPIN</div>
-                    <div style="font-size: 12px;">0.000256 ETH</div>
-                </div>
+        
+        <div class="controls">
+            <div style="font-size: 28px; font-weight: 700; margin-bottom: 20px; color: #4ecdc4;" id="balance">
+                Connect Wallet
             </div>
             
-            <div class="controls">
-                <div style="font-size: 28px; font-weight: 700; margin-bottom: 20px; color: #4ecdc4;" id="balance">
-                    Connect Wallet
-                </div>
-                
-                <button class="btn" id="connectBtn">🔗 Connect Wallet</button>
-                <button class="btn" id="spinBtn" disabled>🎰 SPIN</button>
-                <button class="btn btn-success" id="freeSpinBtn" disabled>🎁 Free Spin</button>
-                
-                <div class="status" id="status"></div>
-            </div>
+            <button class="btn" id="connectBtn">🔗 Connect MetaMask</button>
+            <button class="btn" id="spinBtn" disabled>🎰 SPIN</button>
+            <button class="btn btn-success" id="freeSpinBtn" disabled>🎁 Free Spin</button>
+            
+            <div class="status" id="status"></div>
         </div>
 
-        <div class="history-section">
+        <div style="background: rgba(255,255,255,0.05); backdrop-filter: blur(20px); border-radius: 20px; padding: 25px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.1);">
             <h3 style="margin-bottom: 20px; font-family: 'Orbitron', monospace;">📊 Live Bets</h3>
             <div class="history-grid" id="publicBets">
                 <div style="grid-column: 1/-1; text-align: center; opacity: 0.5; padding: 40px;">Loading...</div>
@@ -341,7 +130,7 @@
     </div>
 
     <script>
-        // ✅ GANTI INI DENGAN ALAMAT KONTRAKMU!
+        // ✅ GANTI INI DENGAN ALAMAT KONTRAKMU DI BASE SEPOLIA!
         const CONTRACT_ADDRESS = "0x179c8F2fef1b02A3E1C8Be8C4723De65Cf7e4183"; // ← PASTIKAN BENAR!
         
         const ABI = [{"inputs":[{"internalType":"address","name":"_lpointAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"result","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"randomNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"contractBalance","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"totalBets","type":"uint256"},{"indexed":false,"internalType":"string","name":"highestAvailablePrize","type":"string"},{"indexed":false,"internalType":"bool","name":"prizeAvailable","type":"bool"},{"indexed":false,"internalType":"uint256","name":"winChance","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetUnliked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentIndex","type":"uint256"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"prizeName","type":"string"}],"name":"ETHAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"freeSpinNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"random","type":"uint256"}],"name":"FreeSpinPlayed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"LPointAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"rating","type":"uint8"}],"name":"RatingAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"oldRating","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"newRating","type":"uint8"}],"name":"RatingEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"}],"name":"ReferralAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"ReferralRewardEarned","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"uid","type":"string"}],"name":"UIDGenerated","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[{"internalType":"string","name":"refereeUID","type":"string"}],"name":"addReferralByUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"claimedReferralRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyUsedQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"depositLPoint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"freeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeSpinData","outputs":[{"internalType":"uint256","name":"freeSpinsUsed","type":"uint256"},{"internalType":"uint256","name":"lastActive","type":"uint256"},{"internalType":"uint256","name":"walletCreated","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"freeSpinQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"generateUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"getPublicBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBetBattle.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getUserBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBetBattle.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"lastPrizeTimestamps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastResetTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lpointToken","outputs":[{"internalType":"contract LPointToken","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minInactiveTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minWalletAge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"publicHistoryLimit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrals","outputs":[{"internalType":"address","name":"inviter","type":"address"},{"internalType":"uint256","name":"rewardEarned","type":"uint256"},{"internalType":"string","name":"uid","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinBetPaid","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"spinPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalBetsEver","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"uidToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawLPoint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
@@ -349,98 +138,56 @@
         let provider, signer, contract, account;
         let isSpinning = false;
 
-        const elements = {
-            connectBtn: document.getElementById('connectBtn'),
-            spinBtn: document.getElementById('spinBtn'),
-            freeSpinBtn: document.getElementById('freeSpinBtn'),
-            balance: document.getElementById('balance'),
-            status: document.getElementById('status'),
-            wheel: document.getElementById('wheel'),
-            networkInfo: document.getElementById('networkInfo'),
-            publicBets: document.getElementById('publicBets'),
-            statsGrid: document.getElementById('statsGrid')
-        };
-
-        // Wheel segments EXACT sesuai kontrak determinePrize()
-        const prizeSegments = [
-            "1 ETH Jackpot", "0.7 ETH Big Win", "Won MacBook!", "iPhone/Worth ETH",
-            "0.1 ETH Monthly", "0.05 ETH Monthly", "0.01 ETH Bi-weekly", "0.005 ETH Weekly",
-            "0.001 ETH 5-day", "0.0005 ETH 4-day", "0.000256 ETH 2-day", "0.0001 ETH Daily",
-            "0.00008 ETH Daily", "0.00005 ETH Daily", "Won 2 LPoint", "Won 5 LPoint",
-            "Won 7 LPoint", "Try Again", "No Prize", "No Prize"
-        ];
-
-        async function init() {
-            if (typeof window.ethereum !== 'undefined') {
-                provider = new ethers.providers.Web3Provider(window.ethereum, "any");
-                await checkNetwork();
-                await loadContract();
-                setupEventListeners();
-            } else {
-                showStatus('❌ Install MetaMask terlebih dahulu!', 'error');
-                elements.networkInfo.innerHTML = '❌ MetaMask tidak terdeteksi';
+        async function initMetaMask() {
+            const { ethereum } = window;
+            if (!ethereum) {
+                showStatus('❌ Install MetaMask!', 'error');
+                document.getElementById('networkInfo').innerHTML = '❌ MetaMask tidak terdeteksi';
+                return false;
             }
-        }
 
-        async function checkNetwork() {
+            provider = new ethers.BrowserProvider(ethereum);
+            
+            // ✅ BASE SEPOLIA = 84532
             try {
                 const network = await provider.getNetwork();
-                if (network.chainId !== 11155111n) { // Sepolia = 11155111
-                    elements.networkInfo.innerHTML = `
-                        ⚠️ Switch to <strong>Sepolia Testnet</strong><br>
-                        <small>Get test ETH: <a href="https://sepoliafaucet.com" target="_blank" style="color: #4ecdc4;">sepoliafaucet.com</a></small>
+                if (network.chainId !== 84532n) {
+                    document.getElementById('networkInfo').innerHTML = `
+                        ⚠️ Switch to <strong>Base Sepolia Testnet (84532)</strong><br>
+                        <small>Add network: <a href="https://chainlist.org/chain/84532" target="_blank" style="color: #4ecdc4;">chainlist.org</a></small>
                     `;
                     return false;
                 } else {
-                    elements.networkInfo.innerHTML = '✅ Sepolia Testnet Ready';
-                    return true;
+                    document.getElementById('networkInfo').innerHTML = '✅ Base Sepolia Testnet (84532) Ready';
                 }
             } catch (error) {
-                elements.networkInfo.innerHTML = '❌ Network error';
+                console.error('Network error:', error);
                 return false;
             }
-        }
 
-        async function loadContract() {
-            try {
-                if (!CONTRACT_ADDRESS || CONTRACT_ADDRESS === "0x...") {
-                    throw new Error("Contract address belum diset!");
-                }
-                
-                contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-                // Test call
-                await contract.spinPrice();
-                renderWheel();
-                updatePublicBets();
-                return true;
-            } catch (error) {
-                console.error('Contract error:', error);
-                showStatus(`❌ Contract error: ${error.message}`, 'error');
-                elements.networkInfo.innerHTML = `❌ Contract ${CONTRACT_ADDRESS.slice(0,10)}... not found`;
-                return false;
-            }
+            return true;
         }
 
         async function connectWallet() {
             try {
-                showStatus('🔗 Connecting...', 'info');
+                showStatus('🔗 Connecting MetaMask...', 'info');
                 
-                // Request accounts
                 const accounts = await provider.send("eth_requestAccounts", []);
                 account = accounts[0];
                 
-                signer = provider.getSigner();
+                signer = await provider.getSigner();
                 contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
                 
-                elements.connectBtn.innerHTML = `✅ ${account.slice(0,6)}...${account.slice(-4)}`;
-                elements.connectBtn.disabled = true;
+                document.getElementById('connectBtn').innerHTML = `✅ ${account.slice(0,6)}...${account.slice(-4)}`;
+                document.getElementById('connectBtn').disabled = true;
                 
                 await updateUI();
-                showStatus('✅ Wallet terhubung!', 'success');
+                showStatus('✅ Connected to Base Sepolia!', 'success');
+                renderWheel();
                 
             } catch (error) {
                 console.error('Connect error:', error);
-                showStatus('❌ Gagal connect: ' + error.message, 'error');
+                showStatus('❌ Connect failed: ' + error.message, 'error');
             }
         }
 
@@ -448,31 +195,18 @@
             if (!account) return;
             
             try {
-                // Wallet balance
                 const balance = await provider.getBalance(account);
-                const ethBalance = parseFloat(ethers.utils.formatEther(balance)).toFixed(4);
-                elements.balance.innerHTML = `💰 ${ethBalance} ETH`;
+                const ethBalance = parseFloat(ethers.formatEther(balance)).toFixed(4);
+                document.getElementById('balance').innerHTML = `💰 ${ethBalance} ETH`;
 
-                // Spin price
                 const spinPrice = await contract.spinPrice();
-                const priceEth = parseFloat(ethers.utils.formatEther(spinPrice)).toFixed(6);
-                elements.spinBtn.innerHTML = `🎰 SPIN (${priceEth} ETH)`;
+                const priceEth = parseFloat(ethers.formatEther(spinPrice)).toFixed(6);
+                document.getElementById('spinBtn').innerHTML = `🎰 SPIN (${priceEth} ETH)`;
                 
-                // Enable/disable buttons
-                const canSpin = parseFloat(ethBalance) >= parseFloat(priceEth);
-                elements.spinBtn.disabled = isSpinning || !canSpin;
+                document.getElementById('spinBtn').disabled = isSpinning || parseFloat(ethBalance) < parseFloat(priceEth);
                 
-                if (!canSpin) {
-                    showStatus('💸 ETH tidak cukup!', 'error');
-                }
-
-                // Contract balance
-                const contractBal = await provider.getBalance(CONTRACT_ADDRESS);
-                const contractEth = parseFloat(ethers.utils.formatEther(contractBal)).toFixed(2);
-                updateStats(contractEth, priceEth);
-
             } catch (error) {
-                console.error('UI update error:', error);
+                console.error('UI error:', error);
             }
         }
 
@@ -481,139 +215,119 @@
             
             try {
                 isSpinning = true;
-                elements.spinBtn.disabled = true;
-                elements.freeSpinBtn.disabled = true;
-                showStatus('🎰 Memproses bet...', 'info');
+                document.getElementById('spinBtn').disabled = true;
+                showStatus('🎰 Placing bet...', 'info');
                 
                 const spinPrice = await contract.spinPrice();
-                const tx = await contract.placeBet({ 
-                    value: spinPrice,
-                    gasLimit: 300000 
-                });
+                const tx = await contract.placeBet({ value: spinPrice });
                 
-                showStatus(`⏳ ${tx.hash.slice(0,20)}...`, 'info');
+                showStatus('⏳ Confirming...', 'info');
                 await tx.wait();
                 
-                // Animate wheel
                 const randomRotation = (Math.floor(Math.random() * 5) + 8) * 360;
-                elements.wheel.style.transform = `rotate(${randomRotation}deg)`;
+                document.getElementById('wheel').style.transform = `rotate(${randomRotation}deg)`;
                 
-                showStatus('🎉 Spin selesai! Cek history', 'success');
+                showStatus('🎉 Spin completed!', 'success');
                 
                 setTimeout(() => {
                     isSpinning = false;
-                    elements.spinBtn.disabled = false;
                     updateUI();
+                    updatePublicBets();
                 }, 4500);
                 
             } catch (error) {
                 console.error('Spin error:', error);
-                showStatus('❌ ' + (error.data?.message || error.message || 'Spin gagal'), 'error');
+                showStatus('❌ ' + (error.reason || error.message || 'Spin failed'), 'error');
                 isSpinning = false;
-                elements.spinBtn.disabled = false;
-                elements.freeSpinBtn.disabled = false;
+                document.getElementById('spinBtn').disabled = false;
             }
         }
 
         async function updatePublicBets() {
             try {
                 const bets = await contract.getPublicBets();
-                const betsHtml = bets.slice(0, 12).map((bet, i) => {
+                const betsHtml = bets.slice(0, 12).map(bet => {
                     const addr = bet.player.slice(0,6) + '...' + bet.player.slice(-4);
                     const timeAgo = Math.floor((Date.now() / 1000 - Number(bet.timestamp)) / 60);
-                    const prizeClass = getPrizeClass(bet.result);
-                    
                     return `
-                        <div class="bet-item ${prizeClass}">
-                            <div class="bet-result">${bet.result}</div>
-                            <div style="font-size: 14px; opacity: 0.8;">
-                                ${addr} • ${timeAgo}' ago
-                            </div>
+                        <div class="bet-item" style="border-left-color: ${getPrizeColor(bet.result)}">
+                            <div style="font-weight: 700; font-size: 16px;">${bet.result}</div>
+                            <div style="font-size: 14px; opacity: 0.8;">${addr} • ${timeAgo}' ago</div>
                         </div>
                     `;
-                }).join('') || '<div style="grid-column: 1/-1; text-align: center; opacity: 0.5;">Belum ada bet</div>';
+                }).join('') || '<div style="grid-column: 1/-1; text-align: center; opacity: 0.5;">No bets yet</div>';
                 
-                elements.publicBets.innerHTML = betsHtml;
+                document.getElementById('publicBets').innerHTML = betsHtml;
             } catch (error) {
-                elements.publicBets.innerHTML = '<div style="grid-column: 1/-1; text-align: center; opacity: 0.5;">Loading...</div>';
+                console.error('Bets error:', error);
             }
         }
 
         function renderWheel() {
-            const wheel = elements.wheel;
+            const wheel = document.getElementById('wheel');
             wheel.innerHTML = '';
             
-            const totalSegments = prizeSegments.length;
-            const anglePerSegment = 360 / totalSegments;
+            const segments = [
+                "1 ETH Jackpot", "0.7 ETH Big Win", "Won MacBook!", "iPhone/Worth ETH",
+                "0.1 ETH Monthly", "0.05 ETH Monthly", "0.01 ETH Bi-weekly", "0.005 ETH Weekly",
+                "0.001 ETH 5-day", "0.0005 ETH 4-day", "0.000256 ETH 2-day", "0.0001 ETH Daily",
+                "0.00008 ETH Daily", "0.00005 ETH Daily", "Won 2 LPoint", "Won 5 LPoint",
+                "Won 7 LPoint", "Try Again", "No Prize", "No Prize"
+            ];
+            
+            const total = segments.length;
+            const angle = 360 / total;
 
-            for (let i = 0; i < totalSegments; i++) {
+            for (let i = 0; i < total; i++) {
                 const segment = document.createElement('div');
                 segment.className = 'wheel-segment';
                 segment.style.background = getSegmentColor(i);
-                segment.style.transform = `rotate(${i * anglePerSegment}deg)`;
-                
-                const text = prizeSegments[i].length > 15 ? 
-                    prizeSegments[i].slice(0,12) + '...' : prizeSegments[i];
-                
-                segment.innerHTML = `<div style="transform: skewY(${anglePerSegment}deg) rotate(${anglePerSegment/2}deg); width: 90%;">${text}</div>`;
+                segment.style.transform = `rotate(${i * angle}deg)`;
+                segment.innerHTML = `<div style="transform: skewY(${angle}deg) rotate(${angle/2}deg); width: 90%;">${segments[i]}</div>`;
                 wheel.appendChild(segment);
             }
         }
 
-        function getSegmentColor(index) {
-            const colors = [
-                '#feca57', '#ff6b6b', '#ff9ff3', '#54a0ff', '#00d2d3',
-                '#ff9f43', '#f7931e', '#a55eea', '#4ecdc4', '#45b7d1',
-                '#96ceb4', '#ff4757', '#ffa502', '#2ed573', '#1e90ff',
-                '#ff6348', '#9b59b6', '#3498db', '#e74c3c', '#f39c12'
-            ];
-            const color = colors[index % colors.length];
-            return `linear-gradient(135deg, ${color}CC, ${color}88)`;
+        function getSegmentColor(i) {
+            const colors = ['#feca57', '#ff6b6b', '#ff9ff3', '#54a0ff', '#00d2d3', '#ff9f43', '#a55eea', '#4ecdc4'];
+            return `linear-gradient(135deg, ${colors[i % colors.length]}CC, ${colors[i % colors.length]}77)`;
         }
 
-        function getPrizeClass(result) {
-            if (result.includes('Jackpot') || result.includes('Big Win')) return 'prize-jackpot';
-            if (result.includes('ETH') || result.includes('MacBook') || result.includes('iPhone')) return 'prize-bigwin';
-            if (result.includes('LPoint')) return 'prize-lpoint';
-            return 'prize-lose';
+        function getPrizeColor(result) {
+            if (result.includes('Jackpot') || result.includes('Big Win')) return '#feca57';
+            if (result.includes('ETH') || result.includes('MacBook') || result.includes('iPhone')) return '#ff6b6b';
+            if (result.includes('LPoint')) return '#4ecdc4';
+            return '#666';
         }
 
-        function updateStats(contractEth, spinPrice) {
-            elements.statsGrid.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-value">${contractEth} ETH</div>
-                    <div>Contract Balance</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value">${spinPrice} ETH</div>
-                    <div>Ticket Price</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" style="color: #feca57;">Sepolia</div>
-                    <div>Network</div>
-                </div>
-            `;
+        function showStatus(msg, type = 'info') {
+            const status = document.getElementById('status');
+            status.textContent = msg;
+            status.className = `status ${type}`;
         }
 
-        function showStatus(message, type = 'info') {
-            elements.status.textContent = message;
-            elements.status.className = `status ${type}`;
+        document.getElementById('connectBtn').onclick = connectWallet;
+        document.getElementById('spinBtn').onclick = spinWheel;
+
+        async function init() {
+            const isReady = await initMetaMask();
+            if (isReady) {
+                try {
+                    const accounts = await provider.listAccounts();
+                    if (accounts.length > 0) {
+                        account = accounts[0];
+                        await connectWallet();
+                    }
+                } catch (e) {}
+                setInterval(updatePublicBets, 3000);
+            }
         }
 
-        function setupEventListeners() {
-            elements.connectBtn.onclick = connectWallet;
-            elements.spinBtn.onclick = spinWheel;
-        }
-
-        // Event listeners
-        if (window.ethereum) {
-            window.ethereum.on('accountsChanged', () => window.location.reload());
-            window.ethereum.on('chainChanged', () => window.location.reload());
-        }
-
-        // Auto connect & init
         window.addEventListener('load', init);
-        setInterval(updatePublicBets, 3000); // Update bets every 3s
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', () => location.reload());
+            window.ethereum.on('chainChanged', () => location.reload());
+        }
     </script>
 </body>
 </html>
