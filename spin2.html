@@ -172,77 +172,84 @@ for (let i = 0; i < total; i++) {
   svg.appendChild(text);
 }
 
-// State management
+// ✅ FIX DEFINITIF: Proper cleanup dan state management
 let spinning = false;
-let animation = null;
 let currentRotation = 0;
+
+// Reset wheel to 0 rotation (CRITICAL untuk fix lag)
+function resetWheel() {
+  gsap.killTweensOf(svg);
+  gsap.set(svg, { 
+    rotation: 0,
+    transformOrigin: "center center"
+  });
+  currentRotation = 0;
+}
 
 // Reset button state
 function resetButton() {
   btn.disabled = false;
   btn.textContent = "SPIN";
+  spinning = false;
 }
 
-// Calculate winning index from final rotation
+// Calculate winning index from final rotation (FIXED logic)
 function getWinningIndex(rotation) {
   const normalized = (360 - (rotation % 360) + 360) % 360;
-  return Math.floor(normalized / slice) % total;
+  let index = Math.floor(normalized / slice) % total;
+  return (total - index - 1 + total) % total; // Adjust untuk pointer di jam 12
 }
 
-// Spin animation
+// Spin animation - 30 DETIK FIXED
 function spinWheel() {
   if (spinning) return;
   
+  // ✅ CRITICAL: Reset wheel SEBELUM spin baru
+  resetWheel();
+  
   spinning = true;
   btn.disabled = true;
+  btn.textContent = "SPINNING...";
   resultText.textContent = "🎡 Spinning...";
   resultText.style.color = "#00FFFF";
-
-  // Cancel any existing animation
-  if (animation) {
-    gsap.killTweensOf(svg);
-  }
 
   // Generate random target
   const randomIndex = Math.floor(Math.random() * total);
   const targetSlice = slice * randomIndex + slice / 2;
-  const fullRotations = 5 + Math.random() * 3; // 5-8 rotations
+  const fullRotations = 30; // FIXED 30 full rotations
   const totalRotation = fullRotations * 360 + targetSlice;
 
-  animation = gsap.to(svg, {
-    rotation: totalRotation,
-    duration: 4 + Math.random() * 2, // 4-6 seconds
-    ease: "power3.inOut",
-    transformOrigin: "center center",
-    onUpdate: function() {
+  // ✅ GSAP timeline untuk perfect control
+  const tl = gsap.timeline({
+    onUpdate: () => {
       currentRotation = gsap.getProperty(svg, "rotation");
     },
-    onComplete: function() {
-      spinning = false;
-      animation = null;
-      
+    onComplete: () => {
       const winnerIndex = getWinningIndex(currentRotation);
       const prize = prizes[winnerIndex];
       
       resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize}</span>`;
       resultText.style.color = "#FFD700";
       
-      // Reset button after delay
-      setTimeout(resetButton, 2000);
+      // Reset setelah 3 detik
+      setTimeout(() => {
+        resetWheel();
+        resetButton();
+      }, 3000);
     }
+  });
+
+  // ✅ Custom easing untuk 30 detik smooth spin
+  tl.to(svg, {
+    rotation: totalRotation,
+    duration: 30, // ✅ 30 DETIK FIXED
+    ease: "power2.inOut",
+    transformOrigin: "center center"
   });
 }
 
 // Event listeners
 btn.addEventListener("click", spinWheel);
-
-// Reset on page visibility change (for mobile)
-document.addEventListener('visibilitychange', function() {
-  if (!document.hidden && !spinning) {
-    gsap.set(svg, { rotation: 0 });
-    currentRotation = 0;
-  }
-});
 
 // Keyboard support
 document.addEventListener('keydown', function(e) {
@@ -251,6 +258,9 @@ document.addEventListener('keydown', function(e) {
     spinWheel();
   }
 });
+
+// Initial reset
+resetWheel();
 </script>
 </body>
 </html>
