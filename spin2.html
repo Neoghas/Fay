@@ -14,45 +14,35 @@
       height: 100vh;
       color: #fff;
       font-family: sans-serif;
+      overflow: hidden;
     }
     .wheel-container {
       position: relative;
-      width: 300px;
-      height: 300px;
+      width: 320px;
+      height: 320px;
     }
-    .wheel {
+    canvas {
       width: 100%;
       height: 100%;
       border-radius: 50%;
-      border: 4px solid #333;
-      background: conic-gradient(
-        #ff6f61 0deg 36deg,
-        #ffcc00 36deg 72deg,
-        #66cc66 72deg 108deg,
-        #3399ff 108deg 144deg,
-        #9966cc 144deg 180deg,
-        #ff6666 180deg 216deg,
-        #ff9933 216deg 252deg,
-        #66cccc 252deg 288deg,
-        #cc66ff 288deg 324deg,
-        #ffcc33 324deg 360deg
-      );
-      transform-origin: center;
     }
+    /* Pointer arah ke tengah bundaran */
     .pointer {
       position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
+      top: 50%;
+      left: calc(100% - 5px);
+      transform: translateY(-50%) rotate(90deg);
       width: 0;
       height: 0;
-      border-left: 12px solid transparent;
-      border-right: 12px solid transparent;
-      border-bottom: 20px solid red;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-left: 25px solid red;
+      z-index: 10;
+      filter: drop-shadow(0 0 4px #f00);
     }
     button {
-      margin-top: 50px;
-      padding: 14px 28px;
+      margin-top: 40px;
+      padding: 14px 32px;
       border: none;
       border-radius: 50%;
       background: yellow;
@@ -60,59 +50,102 @@
       font-weight: bold;
       font-size: 16px;
       cursor: pointer;
-      box-shadow: 0 0 20px yellow;
+      box-shadow: 0 0 25px yellow;
     }
     #result {
       margin-top: 20px;
       font-size: 18px;
       color: gold;
+      text-align: center;
     }
   </style>
 </head>
 <body>
   <div class="wheel-container">
-    <div class="wheel" id="wheel"></div>
+    <canvas id="wheel" width="320" height="320"></canvas>
     <div class="pointer"></div>
   </div>
-
   <button id="spin">SPIN</button>
   <div id="result"></div>
 
   <script>
-    const wheel = document.getElementById('wheel');
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
     const btn = document.getElementById('spin');
     const result = document.getElementById('result');
 
     const prizes = [
-      'MacBook', 'iPhone or Worth ETH', '0.1 ETH Monthly Prize',
-      '0.05 ETH Monthly Prize', '0.005 ETH Weekly',
-      '0.0005 ETH 4-Day', '0.0001 ETH Daily', '2 LPoint', '5 LPoint', 'Big Win'
+      { text: 'MacBook', color: '#ff6f61', img: '💻' },
+      { text: 'iPhone', color: '#00bcd4', img: '📱' },
+      { text: '0.1 ETH', color: '#ffcc00', img: '🪙' },
+      { text: '0.05 ETH', color: '#66cc66', img: '💰' },
+      { text: '0.005 ETH', color: '#ff9933', img: '🤑' },
+      { text: '1 LPoint', color: '#9966ff', img: '⭐' },
+      { text: '2 LPoint', color: '#ff6699', img: '🎯' },
+      { text: 'Big Win', color: '#3399ff', img: '🏆' },
     ];
 
-    let spinning = false;
+    const sliceAngle = 2 * Math.PI / prizes.length;
     let currentRotation = 0;
+    let spinning = false;
 
+    // 🎨 Gambar roda
+    function drawWheel(rotation = 0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const radius = canvas.width / 2;
+
+      prizes.forEach((prize, i) => {
+        const startAngle = i * sliceAngle + rotation;
+        const endAngle = startAngle + sliceAngle;
+
+        // Slice
+        ctx.beginPath();
+        ctx.moveTo(radius, radius);
+        ctx.arc(radius, radius, radius, startAngle, endAngle);
+        ctx.fillStyle = prize.color;
+        ctx.fill();
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Text dan gambar
+        ctx.save();
+        ctx.translate(radius, radius);
+        ctx.rotate(startAngle + sliceAngle / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillText(prize.text, radius - 15, 5);
+        ctx.font = '20px sans-serif';
+        ctx.fillText(prize.img, radius - 40, 30);
+        ctx.restore();
+      });
+    }
+
+    drawWheel();
+
+    // 🌀 Spin
     btn.addEventListener('click', () => {
-      if (spinning) return; // cegah klik ganda
+      if (spinning) return;
       spinning = true;
 
       const randomIndex = Math.floor(Math.random() * prizes.length);
-      const sliceAngle = 360 / prizes.length;
-      const targetAngle = 360 * 5 + (360 - randomIndex * sliceAngle - sliceAngle / 2); // berputar 5x
+      const targetRotation =
+        360 * 6 + (360 - (randomIndex * (360 / prizes.length) + (180 / prizes.length)));
 
-      gsap.to(wheel, {
-        rotation: targetAngle,
+      gsap.to(canvas, {
+        rotation: targetRotation,
         duration: 5,
         ease: 'power4.out',
+        onUpdate: () => {
+          drawWheel((canvas._gsap.rotation * Math.PI) / 180);
+        },
         onComplete: () => {
-          const finalIndex = randomIndex;
-          result.textContent = `🎉 You won: ${prizes[finalIndex]}`;
+          result.textContent = `🎉 You won: ${prizes[randomIndex].text} ${prizes[randomIndex].img}`;
           spinning = false;
-
-          // Reset rotasi agar spin berikutnya tidak lag
-          currentRotation = targetAngle % 360;
-          gsap.set(wheel, { rotation: currentRotation });
-        }
+          currentRotation = targetRotation % 360;
+          gsap.set(canvas, { rotation: currentRotation });
+        },
       });
     });
   </script>
