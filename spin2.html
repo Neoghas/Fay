@@ -1,488 +1,139 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Faylotto Spin Battle — UI</title>
-
-  <!-- ethers v6 (cdnjs) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.11.0/ethers.umd.min.js"></script>
-
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    :root{
-      --bg:#0f1115;
-      --card:#16181c;
-      --accent:#00d084;
-      --muted:#9aa3b2;
-      --danger:#ff6b6b;
-      --glass: rgba(255,255,255,0.03);
-    }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,#071018 0%, #09121a 100%);font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
-    .app {
-      max-width:980px;margin:28px auto;padding:20px;
-      color:#e6eef6;
-    }
-    header{
-      display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;
-    }
-    .brand {display:flex;align-items:center;gap:12px}
-    .logo {
-      width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#0fffb3,#00a86b);display:flex;align-items:center;justify-content:center;font-weight:700;color:#022;}
-    .title {font-size:20px;font-weight:600}
-    .wallet {
-      display:flex;gap:8px;align-items:center;
-    }
-    .btn {
-      background:var(--accent);color:#022;border:0;padding:8px 12px;border-radius:8px;font-weight:600;cursor:pointer;
-    }
-    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(255,255,255,0.04);}
-    .btn.danger{background:var(--danger);color:#fff;}
-    .card {
-      background:var(--card);border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 6px 22px rgba(0,0,0,0.5);
-    }
-    .row{display:flex;gap:12px;align-items:center;}
-    .col{flex:1;}
-    .small{font-size:12px;color:var(--muted);}
-    #controls{display:flex;gap:10px;flex-wrap:wrap;}
-    #publicBets, #myBets{max-height:260px;overflow:auto;padding:8px;border-radius:8px;background:var(--glass);margin-top:8px;}
-    .bet-item{padding:8px;border-radius:8px;margin-bottom:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);display:flex;justify-content:space-between;align-items:center;}
-    .bet-left{max-width:70%;}
-    input[type="text"]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;}
-    .footer {text-align:center;color:var(--muted);font-size:12px;margin-top:16px;}
-    .status {margin-top:8px;color:var(--muted);font-size:13px;}
-    .big {font-size:18px;font-weight:700;}
-    .muted-pill {padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);font-size:13px;color:var(--muted)}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Faylotto Spin Battle</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: radial-gradient(circle at top, #121212, #000);
+    color: white;
+    text-align: center;
+    padding: 20px;
+  }
+  h1 { color: #00ffff; }
+  button {
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background-color: #00ffff;
+    color: black;
+    font-weight: bold;
+  }
+  button:hover { background-color: #00b3b3; }
+  #resultBox {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+  }
+  #status {
+    margin-top: 10px;
+    color: #ffcc00;
+  }
+</style>
 </head>
 <body>
-  <div class="app">
-    <header>
-      <div class="brand">
-        <div class="logo">F</div>
-        <div>
-          <div class="title">Faylotto Spin Battle</div>
-          <div class="small">Spin — win LPoint or ETH prizes (contract decides prize)</div>
-        </div>
-      </div>
 
-      <div class="wallet">
-        <div id="chainInfo" class="muted-pill">Chain: -</div>
-        <div id="addrShort" class="muted-pill">Not connected</div>
-        <button id="btnConnect" class="btn">Connect Wallet</button>
-        <button id="btnDisconnect" class="btn ghost" style="display:none">Disconnect</button>
-      </div>
-    </header>
+<h1>🎰 Faylotto Spin Battle 🎰</h1>
+<button id="connectButton">Connect Wallet</button>
+<button id="disconnectButton" style="display:none;">Disconnect</button>
+<br>
+<button id="spinButton" disabled>🎡 Place Bet (0.000256 ETH)</button>
 
-    <!-- INFO -->
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div>
-          <div class="small">Spin price</div>
-          <div id="spinPrice" class="big">-</div>
-        </div>
-        <div style="text-align:right">
-          <div class="small">Referral reward</div>
-          <div id="refReward" class="big">-</div>
-        </div>
-      </div>
+<div id="status"></div>
 
-      <div id="controls" style="margin-top:12px;">
-        <button id="btnSpin" class="btn" disabled>🎰 Place Spin Bet</button>
-        <button id="btnFreeSpin" class="btn ghost" disabled>🎁 Free Spin</button>
-        <button id="btnGenerateUID" class="btn ghost" disabled>🔖 Generate UID</button>
-        <input id="inputUID" placeholder="Invite UID (e.g. 0xFAY...)" />
-        <button id="btnAddRef" class="btn ghost" disabled>➕ Use Invite UID</button>
-        <button id="btnClaimRef" class="btn ghost" disabled>💸 Claim Referral Reward</button>
-      </div>
+<div id="resultBox">
+  <h3>Spin Result</h3>
+  <p id="spinResult">No spin yet...</p>
+</div>
 
-      <div class="status" id="status">Status: Idle</div>
-    </div>
-
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div><strong>Public Bets</strong> <span class="small"> (most recent)</span></div>
-        <div>
-          <button id="btnRefreshBets" class="btn ghost">Refresh</button>
-        </div>
-      </div>
-      <div id="publicBets"></div>
-    </div>
-
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <div><strong>My Bets</strong></div>
-        <div><button id="btnRefreshMyBets" class="btn ghost">Refresh</button></div>
-      </div>
-      <div id="myBets"></div>
-    </div>
-
-    <div class="footer">This UI uses the contract's prize logic — the smart contract decides prize outcomes and distributions.</div>
-  </div>
-
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <script>
-/*
-  Frontend for FaylottoSpinBetBattle (ethers v6)
-  - Update CONTRACT_ADDRESS if needed
-  - The ABI below contains the public functions/events used by the UI.
-*/
+(async () => {
+  const connectButton = document.getElementById("connectButton");
+  const disconnectButton = document.getElementById("disconnectButton");
+  const spinButton = document.getElementById("spinButton");
+  const status = document.getElementById("status");
+  const spinResult = document.getElementById("spinResult");
 
-const CONTRACT_ADDRESS = "0x179c8F2fef1b02A3E1C8Be8C4723De65Cf7e4183";
-const CONTRACT_LPOINTADDRESS ="0x723cC3795317C22c0F346D101e7A0c8a0e2BD0aA";
+  let provider, signer, contract;
 
-// Minimal ABI matching contract functions and event used by UI.
-// If your contract ABI differs, replace this ABI with the exact ABI
-// (or JSON fragment) produced by compilation.
-const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_lpointAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"result","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"randomNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"contractBalance","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"totalBets","type":"uint256"},{"indexed":false,"internalType":"string","name":"highestAvailablePrize","type":"string"},{"indexed":false,"internalType":"bool","name":"prizeAvailable","type":"bool"},{"indexed":false,"internalType":"uint256","name":"winChance","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetUnliked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentIndex","type":"uint256"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"prizeName","type":"string"}],"name":"ETHAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"freeSpinNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"random","type":"uint256"}],"name":"FreeSpinPlayed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"LPointAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"rating","type":"uint8"}],"name":"RatingAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"oldRating","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"newRating","type":"uint8"}],"name":"RatingEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"}],"name":"ReferralAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"ReferralRewardEarned","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"uid","type":"string"}],"name":"UIDGenerated","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[{"internalType":"string","name":"refereeUID","type":"string"}],"name":"addReferralByUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"claimedReferralRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyUsedQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"depositLPoint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"freeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeSpinData","outputs":[{"internalType":"uint256","name":"freeSpinsUsed","type":"uint256"},{"internalType":"uint256","name":"lastActive","type":"uint256"},{"internalType":"uint256","name":"walletCreated","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"freeSpinQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"generateUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"getPublicBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBetBattle.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getUserBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBetBattle.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"lastPrizeTimestamps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastResetTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lpointToken","outputs":[{"internalType":"contract LPointToken","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minInactiveTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minWalletAge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"publicHistoryLimit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrals","outputs":[{"internalType":"address","name":"inviter","type":"address"},{"internalType":"uint256","name":"rewardEarned","type":"uint256"},{"internalType":"string","name":"uid","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinBetPaid","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"spinPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalBetsEver","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"uidToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawLPoint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
+  // ✅ Ganti alamat kontrak di sini
+  const CONTRACT_ADDRESS = "0x179c8F2fef1b02A3E1C8Be8C4723De65Cf7e4183";
+  const CONTRACT_LPOINTADDRESS = "0x723cC3795317C22c0F346D101e7A0c8a0e2BD0aA";
 
-let provider = null;
-let signer = null;
-let contract = null;
-let userAddress = null;
+  // ✅ ABI minimal hanya untuk fungsi dan event utama
+  const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_lpointAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"result","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"randomNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"contractBalance","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"totalBets","type":"uint256"},{"indexed":false,"internalType":"string","name":"highestAvailablePrize","type":"string"},{"indexed":false,"internalType":"bool","name":"prizeAvailable","type":"bool"},{"indexed":false,"internalType":"uint256","name":"winChance","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetUnliked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentIndex","type":"uint256"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"prizeName","type":"string"}],"name":"ETHAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"freeSpinNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"random","type":"uint256"}],"name":"FreeSpinPlayed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"LPointAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"rating","type":"uint8"}],"name":"RatingAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"oldRating","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"newRating","type":"uint8"}],"name":"RatingEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"}],"name":"ReferralAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"ReferralRewardEarned","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"uid","type":"string"}],"name":"UIDGenerated","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[{"internalType":"string","name":"refereeUID","type":"string"}],"name":"addReferralByUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"claimedReferralRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyUsedQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"depositLPoint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"freeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeSpinData","outputs":[{"internalType":"uint256","name":"freeSpinsUsed","type":"uint256"},{"internalType":"uint256","name":"lastActive","type":"uint256"},{"internalType":"uint256","name":"walletCreated","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"freeSpinQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"generateUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"getPublicBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBetBattle.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getUserBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBetBattle.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"lastPrizeTimestamps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastResetTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lpointToken","outputs":[{"internalType":"contract LPointToken","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minInactiveTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minWalletAge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"publicHistoryLimit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrals","outputs":[{"internalType":"address","name":"inviter","type":"address"},{"internalType":"uint256","name":"rewardEarned","type":"uint256"},{"internalType":"string","name":"uid","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinBetPaid","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"spinPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalBetsEver","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"uidToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawLPoint","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
 
-// Elements
-const btnConnect = document.getElementById("btnConnect");
-const btnDisconnect = document.getElementById("btnDisconnect");
-const addrShort = document.getElementById("addrShort");
-const chainInfo = document.getElementById("chainInfo");
-const spinPriceEl = document.getElementById("spinPrice");
-const refRewardEl = document.getElementById("refReward");
-const statusEl = document.getElementById("status");
-const btnSpin = document.getElementById("btnSpin");
-const btnFreeSpin = document.getElementById("btnFreeSpin");
-const btnGenerateUID = document.getElementById("btnGenerateUID");
-const btnAddRef = document.getElementById("btnAddRef");
-const btnClaimRef = document.getElementById("btnClaimRef");
-const inputUID = document.getElementById("inputUID");
-const publicBetsDiv = document.getElementById("publicBets");
-const myBetsDiv = document.getElementById("myBets");
-const btnRefreshBets = document.getElementById("btnRefreshBets");
-const btnRefreshMyBets = document.getElementById("btnRefreshMyBets");
-
-// small helpers
-function shortAddr(a){
-  if(!a) return "—";
-  return a.substr(0,6)+"..."+a.substr(a.length-4);
-}
-function setStatus(txt, isError=false){
-  statusEl.innerText = "Status: "+txt;
-  statusEl.style.color = isError ? "var(--danger)" : "";
-}
-function showAlert(txt){ alert(txt); }
-
-// Connect wallet (ethers v6 BrowserProvider)
-async function connectWallet(){
-  try{
-    if(!window.ethereum) { showAlert("MetaMask / injected wallet not found."); return; }
-    provider = new ethers.BrowserProvider(window.ethereum, "any");
-    // request accounts
-    await provider.send("eth_requestAccounts", []);
-    signer = await provider.getSigner();
-    userAddress = await signer.getAddress();
-    // instantiate contract with signer
-    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-
-    addrShort.innerText = shortAddr(userAddress);
-    btnConnect.style.display = "none";
-    btnDisconnect.style.display = "inline-block";
-
-    // enable buttons
-    btnSpin.disabled = false;
-    btnFreeSpin.disabled = false;
-    btnGenerateUID.disabled = false;
-    btnAddRef.disabled = false;
-    btnClaimRef.disabled = false;
-
-    // chain info
-    const network = await provider.getNetwork();
-    chainInfo.innerText = `Chain: ${network.name || network.chainId} (${network.chainId})`;
-
-    setStatus("Wallet connected: " + shortAddr(userAddress));
-    await postConnectInit();
-
-    // listen account / network changes
-    if(window.ethereum && window.ethereum.on){
-      window.ethereum.on("accountsChanged", async (accounts) => {
-        if(!accounts || accounts.length === 0) { disconnectWallet(); return; }
-        // reconnect to new account
-        try{
-          await connectWallet();
-        }catch(e){ console.error(e); }
-      });
-      window.ethereum.on("chainChanged", (_chainId) => {
-        // reload to re-init provider
-        console.log("chain changed", _chainId);
-        setTimeout(()=>location.reload(), 300);
-      });
+  // 🔹 Connect wallet
+  connectButton.onclick = async () => {
+    if (!window.ethereum) {
+      alert("Please install MetaMask!");
+      return;
     }
-  }catch(err){
-    console.error("connect error", err);
-    setStatus("Failed to connect: " + (err?.message || err), true);
-  }
-}
+    try {
+      await ethereum.request({ method: "eth_requestAccounts" });
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      signer = provider.getSigner();
+      const addr = await signer.getAddress();
+      const network = await provider.getNetwork();
 
-// Disconnect
-function disconnectWallet(){
-  provider = null;
-  signer = null;
-  contract = null;
-  userAddress = null;
-  addrShort.innerText = "Not connected";
-  chainInfo.innerText = "Chain: -";
-  btnConnect.style.display = "inline-block";
-  btnDisconnect.style.display = "none";
-
-  btnSpin.disabled = true;
-  btnFreeSpin.disabled = true;
-  btnGenerateUID.disabled = true;
-  btnAddRef.disabled = true;
-  btnClaimRef.disabled = true;
-
-  spinPriceEl.innerText = "-";
-  refRewardEl.innerText = "-";
-  publicBetsDiv.innerHTML = "";
-  myBetsDiv.innerHTML = "";
-  setStatus("Disconnected");
-}
-
-// After connect: fetch spin price, referral reward and bets
-async function postConnectInit(){
-  try{
-    await refreshSpinPrice();
-    await refreshReferralInfo();
-    await refreshPublicBets();
-    await refreshMyBets();
-    listenToEvents();
-  }catch(e){
-    console.error(e);
-  }
-}
-
-// read spin price
-async function refreshSpinPrice(){
-  try{
-    if(!contract) return;
-    const price = await contract.spinPrice();
-    spinPriceEl.innerText = ethers.formatEther(price) + " ETH";
-  }catch(e){
-    console.error("spinPrice", e);
-    spinPriceEl.innerText = "-";
-  }
-}
-
-// referral reward
-async function refreshReferralInfo(){
-  try{
-    if(!contract || !userAddress) return;
-    const rr = await contract.getReferralReward(userAddress);
-    refRewardEl.innerText = ethers.formatEther(rr) + " ETH";
-  }catch(e){
-    console.error("ref info", e);
-    refRewardEl.innerText = "-";
-  }
-}
-
-// Place spin (payable)
-async function doPlaceSpin(){
-  if(!contract) return showAlert("Connect wallet first");
-  setStatus("Sending spin transaction...");
-  try{
-    const price = await contract.spinPrice();
-    // send tx with exact price
-    const tx = await contract.placeBet({ value: price });
-    setStatus("Transaction sent — waiting confirmations...");
-    await tx.wait();
-    setStatus("Spin tx confirmed.");
-    await refreshPublicBets();
-    await refreshMyBets();
-    await refreshReferralInfo();
-  }catch(err){
-    console.error("placeSpin failed", err);
-    // Detect revert reason
-    let msg = err?.reason || err?.message || String(err);
-    setStatus("Spin failed: " + msg, true);
-    // If error contains "Not allowed to transfer" or LPoint transfer revert, surface a helpful note:
-    if(String(msg).includes("Not allowed to transfer") || String(msg).includes("transfer failed")){
-      showAlert("Spin reverted because token transfer (LPoint) failed on-chain. Ensure the LPoint token contract allows transfers by this contract or owner funded.");
-    }
-  }
-}
-
-// Free spin
-async function doFreeSpin(){
-  if(!contract) return showAlert("Connect wallet first");
-  setStatus("Sending freeSpin transaction...");
-  try{
-    const tx = await contract.freeSpin();
-    await tx.wait();
-    setStatus("Free spin executed.");
-    await refreshPublicBets();
-    await refreshMyBets();
-  }catch(err){
-    console.error("freeSpin err", err);
-    setStatus("FreeSpin failed: " + (err?.reason || err?.message || err), true);
-    if(String(err).includes("LPoint transfer failed") || String(err).includes("Not allowed to transfer")){
-      showAlert("FreeSpin failed because contract couldn't transfer LPoint. Check token allowances / token restrictions.");
-    }
-  }
-}
-
-// Generate UID
-async function doGenerateUID(){
-  if(!contract) return showAlert("Connect wallet first");
-  setStatus("Generating UID (confirm in wallet)...");
-  try{
-    const tx = await contract.generateUID();
-    await tx.wait();
-    setStatus("UID generated (check contract event).");
-  }catch(err){
-    console.error("gen uid", err);
-    setStatus("generateUID failed: " + (err?.reason || err?.message || err), true);
-  }
-}
-
-// Add referral by UID
-async function doAddReferralByUID(){
-  const uid = inputUID.value.trim();
-  if(!uid) return showAlert("Enter UID to use");
-  if(!contract) return showAlert("Connect wallet first");
-  setStatus("Adding referral (confirm in wallet)...");
-  try{
-    const tx = await contract.addReferralByUID(uid);
-    await tx.wait();
-    setStatus("Referral saved on-chain.");
-    await refreshReferralInfo();
-  }catch(err){
-    console.error("add ref", err);
-    setStatus("addReferralByUID failed: " + (err?.reason || err?.message || err), true);
-  }
-}
-
-// Claim referral reward
-async function doClaimReferralReward(){
-  if(!contract) return showAlert("Connect wallet first");
-  setStatus("Claiming referral reward...");
-  try{
-    const tx = await contract.claimReferralReward();
-    await tx.wait();
-    setStatus("Referral reward claimed.");
-    await refreshReferralInfo();
-  }catch(err){
-    console.error("claim ref", err);
-    setStatus("claimReferralReward failed: " + (err?.reason || err?.message || err), true);
-  }
-}
-
-// Public Bets refresh
-async function refreshPublicBets(){
-  publicBetsDiv.innerHTML = "<div class='small'>Loading...</div>";
-  if(!contract) { publicBetsDiv.innerHTML = "<div class='small'>Connect wallet to view</div>"; return; }
-  try{
-    const bets = await contract.getPublicBets();
-    if(!bets || bets.length === 0) { publicBetsDiv.innerHTML = "<div class='small'>No public bets yet</div>"; return; }
-    publicBetsDiv.innerHTML = "";
-    for(let i=0;i<bets.length;i++){
-      const b = bets[i];
-      const el = document.createElement("div");
-      el.className = "bet-item";
-      el.innerHTML = `<div class="bet-left">
-          <div><strong>${escapeHtml(b.result)}</strong></div>
-          <div class="small">Player: ${shortAddr(b.player)} — Amt: ${formatEth(b.amount)} ETH</div>
-        </div>
-        <div class="bet-right small">${new Date(Number(b.timestamp)*1000).toLocaleString()}</div>`;
-      publicBetsDiv.appendChild(el);
-    }
-  }catch(err){
-    console.error("refreshPublicBets", err);
-    publicBetsDiv.innerHTML = "<div class='small'>Failed to load public bets</div>";
-  }
-}
-
-// My Bets
-async function refreshMyBets(){
-  myBetsDiv.innerHTML = "<div class='small'>Loading...</div>";
-  if(!contract || !userAddress) { myBetsDiv.innerHTML = "<div class='small'>Connect wallet to view</div>"; return; }
-  try{
-    const bets = await contract.getUserBets();
-    if(!bets || bets.length === 0) { myBetsDiv.innerHTML = "<div class='small'>No bets yet</div>"; return; }
-    myBetsDiv.innerHTML = "";
-    for(let i=0;i<bets.length;i++){
-      const b = bets[i];
-      const el = document.createElement("div");
-      el.className = "bet-item";
-      el.innerHTML = `<div class="bet-left"><strong>${escapeHtml(b.result)}</strong>
-          <div class="small">Time: ${new Date(Number(b.timestamp)*1000).toLocaleString()}</div></div>
-          <div class="bet-right small">Amt: ${formatEth(b.amount)} ETH</div>`;
-      myBetsDiv.appendChild(el);
-    }
-  }catch(err){
-    console.error("refreshMyBets", err);
-    myBetsDiv.innerHTML = "<div class='small'>Failed to load my bets</div>";
-  }
-}
-
-// listen to BetPlaced & award events
-function listenToEvents(){
-  if(!contract) return;
-  // remove existing listeners (defensive)
-  try{ contract.off("BetPlaced"); }catch(e){}
-
-  contract.on("BetPlaced", (player, amount, result, timestamp, randomNumber, contractBalance, playerBetCount, totalBets, highestAvailablePrize, prizeAvailable, winChance) => {
-    try{
-      // event signature in contract: (address,uint256,string,uint256,uint256,uint256,uint256,uint256,string,bool,uint256)
-      // ethers may pass BigInt-like values — convert or format as needed
-      console.log("BetPlaced event:", player, amount, result);
-      // update lists if relevant
-      refreshPublicBets().catch(()=>{});
-      // if this event is for the connected user, show result
-      if(userAddress && player && player.toLowerCase() === userAddress.toLowerCase()){
-        setStatus("🎉 You spun: " + result);
-        refreshMyBets();
+      if (network.chainId !== 84532) {
+        alert("Please switch to Base Sepolia Testnet!");
+        return;
       }
-    }catch(e){
-      console.error("event handler error", e);
+
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      connectButton.style.display = "none";
+      disconnectButton.style.display = "inline-block";
+      spinButton.disabled = false;
+      status.innerText = `Connected: ${addr}`;
+      listenToEvents();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to connect wallet.");
     }
-  });
+  };
 
-  contract.on("LPointAwarded", (player, amt) => {
-    console.log("LPointAwarded", player, amt);
-    if(userAddress && player && player.toLowerCase() === userAddress.toLowerCase()){
-      setStatus("You received LPoint: " + formatEth(amt) + " (raw unit)");
+  // 🔹 Disconnect wallet
+  disconnectButton.onclick = () => {
+    provider = null;
+    signer = null;
+    contract = null;
+    connectButton.style.display = "inline-block";
+    disconnectButton.style.display = "none";
+    spinButton.disabled = true;
+    status.innerText = "Disconnected.";
+  };
+
+  // 🔹 Place Bet
+  spinButton.onclick = async () => {
+    if (!contract) return alert("Wallet not connected.");
+    try {
+      status.innerText = "Spinning... please wait for confirmation...";
+      const tx = await contract.placeBet({ value: ethers.utils.parseEther("0.000256") });
+      await tx.wait();
+      status.innerText = "Transaction confirmed! Waiting for result...";
+    } catch (err) {
+      console.error(err);
+      status.innerText = "Spin failed or rejected.";
     }
-  });
+  };
 
-  contract.on("ETHAwarded", (player, amt, prizeName) => {
-    console.log("ETHAwarded", player, amt, prizeName);
-    if(userAddress && player && player.toLowerCase() === userAddress.toLowerCase()){
-      setStatus("You received ETH prize: " + prizeName + " ("+formatEth(amt)+" ETH)");
-    }
-  });
-}
-
-// small util safe format
-function formatEth(x){
-  try{ return ethers.formatEther(x); }catch(e){ return String(x); }
-}
-function escapeHtml(s){
-  if(!s) return "";
-  return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-}
-
-// event bindings
-btnConnect.addEventListener("click", connectWallet);
-btnDisconnect.addEventListener("click", disconnectWallet);
-btnSpin.addEventListener("click", doPlaceSpin);
-btnFreeSpin.addEventListener("click", doFreeSpin);
-btnGenerateUID.addEventListener("click", doGenerateUID);
-btnAddRef.addEventListener("click", doAddReferralByUID);
-btnClaimRef.addEventListener("click", doClaimReferralReward);
-btnRefreshBets.addEventListener("click", refreshPublicBets);
-btnRefreshMyBets.addEventListener("click", refreshMyBets);
-
-// initial
-spinPriceEl.innerText = "-";
-refRewardEl.innerText = "-";
-setStatus("Idle");
-
+  // 🔹 Listen to BetPlaced event
+  function listenToEvents() {
+    if (!contract) return;
+    contract.on("BetPlaced", (player, amount, result) => {
+      spinResult.innerText = result;
+      status.innerText = "Spin complete!";
+    });
+  }
+})();
 </script>
+
 </body>
 </html>
