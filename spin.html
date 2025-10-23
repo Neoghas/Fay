@@ -188,21 +188,36 @@ function showToast(msg){
   alert(msg);
 }
 
-// Connect wallet
+// =============== WALLET CONNECT =================
 async function connectWallet(){
-  if(window.ethereum == null){
-    showToast("No wallet detected (MetaMask). Please install.");
-    return;
-  }
+  if(!window.ethereum) return showToast("Install MetaMask dulu.");
   provider = new ethers.providers.Web3Provider(window.ethereum);
   await provider.send("eth_requestAccounts", []);
   signer = provider.getSigner();
+  const network = await provider.getNetwork();
+  if(network.chainId !== 84532){ // 84532 = Base Sepolia Testnet
+    showToast("Please switch to Base Sepolia Testnet.");
+    return;
+  }
   userAddress = await signer.getAddress();
+  contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
   addrShort.textContent = shortAddr(userAddress);
   btnConnect.textContent = "Disconnect";
-  contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
   await postConnectInit();
 }
+
+// After connect
+async function postConnectInit(){
+  try {
+    const price = await contract.spinPrice();
+    spinPriceEl.textContent = ethers.utils.formatEther(price);
+  } catch {
+    spinPriceEl.textContent = "-";
+  }
+  await refreshRefInfo();
+  await refreshPublicBets();
+  await refreshMyBets();
+    }
 
 // Disconnect (simple UI reset)
 function disconnectWallet(){
