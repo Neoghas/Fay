@@ -104,20 +104,24 @@
 </div>
 <div class="result" id="resultText">Press SPIN to play</div>
 
+<audio id="clickSound" src="click.mp3" preload="auto"></audio>
+<audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
+<audio id="winSound" src="win.mp3" preload="auto"></audio>
+
 <script>
 const prizes = [
-  "1 ETH Jackpot",
-  "0.7 ETH Big Win",
-  "MacBook",
-  "iPhone or Worth ETH",
-  "0.1 ETH Monthly Prize",
-  "0.05 ETH Monthly Prize",
-  "0.005 ETH Weekly",
-  "0.0005 ETH 4-Day Prize",
-  "0.0001 ETH Daily Prize",
-  "Won 2 LPoint",
-  "Won 5 LPoint",
-  "Won 7 LPoint"
+  { name: "1 ETH Jackpot", icon: "icons/eth.png" },
+  { name: "0.7 ETH Big Win", icon: "icons/eth.png" },
+  { name: "MacBook", icon: "icons/macbook.png" },
+  { name: "iPhone or Worth ETH", icon: "icons/iphone.png" },
+  { name: "0.1 ETH Monthly Prize", icon: "icons/eth.png" },
+  { name: "0.05 ETH Monthly Prize", icon: "icons/eth.png" },
+  { name: "0.005 ETH Weekly", icon: "icons/eth.png" },
+  { name: "0.0005 ETH 4-Day Prize", icon: "icons/eth.png" },
+  { name: "0.0001 ETH Daily Prize", icon: "icons/eth.png" },
+  { name: "Won 2 LPoint", icon: "icons/lpoint.png" },
+  { name: "Won 5 LPoint", icon: "icons/lpoint.png" },
+  { name: "Won 7 LPoint", icon: "icons/lpoint.png" }
 ];
 
 const colors = [
@@ -128,37 +132,44 @@ const colors = [
 const svg = document.getElementById("wheel");
 const resultText = document.getElementById("resultText");
 const btn = document.getElementById("centerBtn");
+const clickSound = document.getElementById("clickSound");
+const spinSound = document.getElementById("spinSound");
+const winSound = document.getElementById("winSound");
 
 const radius = 240;
-const cx = 250;
-const cy = 250;
+const cx = 250, cy = 250;
 const total = prizes.length;
 const slice = 360 / total;
 
-// Buat wheel segments
 for (let i = 0; i < total; i++) {
-  const startAngle = (i * slice - 90) * (Math.PI / 180);
-  const endAngle = ((i + 1) * slice - 90) * (Math.PI / 180);
+  const startAngle = (i * slice - 90) * Math.PI / 180;
+  const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;
   const x1 = cx + radius * Math.cos(startAngle);
   const y1 = cy + radius * Math.sin(startAngle);
   const x2 = cx + radius * Math.cos(endAngle);
   const y2 = cy + radius * Math.sin(endAngle);
-  const pathData = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`;
-
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", pathData);
-  path.setAttribute("fill", colors[i % colors.length]);
-  path.setAttribute("stroke", "rgba(255,255,255,0.8)");
+  path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);
+  path.setAttribute("fill", colors[i]);
+  path.setAttribute("stroke", "#fff");
   path.setAttribute("stroke-width", "2");
-  path.setAttribute("stroke-linejoin", "round");
   svg.appendChild(path);
+  prizes[i].path = path;
 
   const angle = (i + 0.5) * slice - 90;
-  const textRadius = radius * 0.65;
-  const textX = cx + textRadius * Math.cos((angle * Math.PI) / 180);
-  const textY = cy + textRadius * Math.sin((angle * Math.PI) / 180);
+  const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+  const imgX = cx + radius * 0.55 * Math.cos(angle * Math.PI / 180) - 20;
+  const imgY = cy + radius * 0.55 * Math.sin(angle * Math.PI / 180) - 20;
+  img.setAttributeNS("http://www.w3.org/1999/xlink", "href", prizes[i].icon);
+  img.setAttribute("x", imgX);
+  img.setAttribute("y", imgY);
+  img.setAttribute("width", "40");
+  img.setAttribute("height", "40");
+  svg.appendChild(img);
 
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  const textX = cx + radius * 0.8 * Math.cos(angle * Math.PI / 180);
+  const textY = cy + radius * 0.8 * Math.sin(angle * Math.PI / 180);
   text.setAttribute("x", textX);
   text.setAttribute("y", textY);
   text.setAttribute("fill", "#000");
@@ -167,71 +178,65 @@ for (let i = 0; i < total; i++) {
   text.setAttribute("text-anchor", "middle");
   text.setAttribute("alignment-baseline", "middle");
   text.setAttribute("transform", `rotate(${angle}, ${textX}, ${textY})`);
-  text.textContent = prizes[i];
+  text.textContent = prizes[i].name;
   svg.appendChild(text);
 }
 
-// State management
 let spinning = false;
 let currentRotation = 0;
 let animation = null;
-
-function resetButton() {
-  btn.disabled = false;
-  btn.textContent = "SPIN";
-}
 
 function getWinningIndex(rotation) {
   const normalized = (360 - (rotation % 360) + 360) % 360;
   return Math.floor(normalized / slice) % total;
 }
 
+function resetButton() {
+  btn.disabled = false;
+  btn.textContent = "SPIN";
+}
+
 function spinWheel() {
   if (spinning) return;
   spinning = true;
+  clickSound.play();
   btn.disabled = true;
   resultText.textContent = "🎡 Spinning...";
   resultText.style.color = "#00FFFF";
+  spinSound.currentTime = 0;
+  spinSound.play();
 
-  if (animation) {
-    gsap.killTweensOf(svg);
-  }
+  if (animation) gsap.killTweensOf(svg);
+  prizes.forEach(p => p.path.classList.remove("glow"));
 
-  // Target acak
   const randomIndex = Math.floor(Math.random() * total);
   const targetSlice = slice * randomIndex + slice / 2;
-  const fullRotations = 12; // lebih banyak rotasi supaya smooth 30 detik
+  const fullRotations = 12;
   const totalRotation = currentRotation + fullRotations * 360 + targetSlice;
 
-  // Gunakan gsap.fromTo untuk menghindari lag rotasi kedua
-  animation = gsap.fromTo(svg,
-    { rotation: currentRotation },
+  animation = gsap.fromTo(svg, 
+    { rotation: currentRotation }, 
     {
       rotation: totalRotation,
-      duration: 30, // durasi spin 30 detik
+      duration: 30,
       ease: "power3.inOut",
       transformOrigin: "center center",
-      onUpdate: () => { currentRotation = gsap.getProperty(svg, "rotation"); },
+      onUpdate: () => currentRotation = gsap.getProperty(svg, "rotation"),
       onComplete: () => {
+        spinSound.pause();
         spinning = false;
         animation = null;
         const winnerIndex = getWinningIndex(currentRotation);
         const prize = prizes[winnerIndex];
-        resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize}</span>`;
-        resultText.style.color = "#FFD700";
+        winSound.play();
+        prize.path.classList.add("glow");
+        resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize.name}</span>`;
         setTimeout(resetButton, 2000);
       }
-    }
-  );
+    });
 }
 
 btn.addEventListener("click", spinWheel);
-document.addEventListener("keydown", (e) => {
-  if (e.code === "Space" && !spinning) {
-    e.preventDefault();
-    spinWheel();
-  }
-});
-    </script>
+  </script>
 </body>
 </html>
