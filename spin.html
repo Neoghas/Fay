@@ -172,7 +172,7 @@ const prizes = [
   { name: "0.0001 ETH", icon: "eth.png"},
   { name: "2 FPoint", icon: "fpoint.svg"},
   { name: "5 FPoint", icon: "fpoint.svg"},
-  { name: "7 FPoint", icon: "fpoint.svg"}
+  { name: "7 FPoint", icon: "fpoint.sv"}
 ];
 
 const colors = [
@@ -191,7 +191,6 @@ for (let i = 0; i < total; i++) {
   const x2 = cx + radius * Math.cos(endAngle);
   const y2 = cy + radius * Math.sin(endAngle);
 
-  // slice color
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);
   path.setAttribute("fill", colors[i]);
@@ -200,8 +199,9 @@ for (let i = 0; i < total; i++) {
   svg.appendChild(path);
   prizes[i].path = path;
 
-  // icon
   const angle = (i + 0.5) * slice - 90;
+
+  // icon
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
   const imgX = cx + radius * 0.55 * Math.cos(angle * Math.PI / 180) - 20;
   const imgY = cy + radius * 0.55 * Math.sin(angle * Math.PI / 180) - 20;
@@ -269,6 +269,7 @@ async function spinFromBlockchain() {
     spinSound.currentTime = 0;
     spinSound.play();
 
+    // ✅ Biaya transaksi fix
     const tx = await contract.placeBet({ value: ethers.utils.parseEther("0.000256") });
     const receipt = await tx.wait();
 
@@ -279,11 +280,11 @@ async function spinFromBlockchain() {
     if (!event) throw new Error("No result found.");
     const { randomNumber, result } = event.args;
 
-    // cari index sesuai hadiah
     let index = prizes.findIndex(p => p.name === result);
     if (index === -1) index = Number(randomNumber) % prizes.length;
 
     animateSpin(index, result);
+
   } catch (err) {
     console.error(err);
     resultText.textContent = "❌ Transaction failed.";
