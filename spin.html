@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Faylotto Spin Wheel</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.umd.min.js"></script>
 <style>
   body {
     background: radial-gradient(circle, #111 0%, #000 100%);
@@ -14,9 +15,44 @@
     justify-content: center;
     height: 100vh;
     color: #fff;
-    font-family: "Poppins", sans-serif;
+    font-family: "Ubuntu", sans-serif;
     overflow: hidden;
-    position: relative;
+  }
+
+  /* 🪙 Wallet Buttons */
+  .wallet-controls {
+    position: absolute;
+    top: 25px;
+    right: 25px;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .wallet-btn {
+    background: linear-gradient(145deg, #00b4d8, #0077b6);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: bold;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .wallet-btn:hover {
+    transform: scale(1.05);
+    background: linear-gradient(145deg, #48cae4, #0096c7);
+  }
+
+  .wallet-address {
+    background: #222;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #0ff;
+    border: 1px solid #0ff;
   }
 
   .wheel-container {
@@ -61,29 +97,20 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 
-      0 8px 25px rgba(255, 215, 0, 0.6),
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.6),
       inset 0 2px 4px rgba(255, 255, 255, 0.3);
     border: 3px solid #fff;
     transition: all 0.2s ease;
     z-index: 15;
   }
-  
-  #centerBtn:hover:not(:disabled) {
+
+  #centerBtn:hover {
     transform: translate(-50%, -50%) scale(1.05);
-    box-shadow: 
-      0 12px 35px rgba(255, 215, 0, 0.8),
-      inset 0 2px 4px rgba(255, 255, 255, 0.4);
-  }
-  
-  #centerBtn:active:not(:disabled) {
-    transform: translate(-50%, -50%) scale(0.95);
   }
 
   #centerBtn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    transform: translate(-50%, -50%) scale(0.95);
   }
 
   .result {
@@ -91,254 +118,165 @@
     font-size: 20px;
     text-align: center;
     transition: all 0.5s ease;
-    min-height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+    min-height: 30px;
   }
 
-  .result img {
-    width: 30px;
-    height: 30px;
+  .glow {
+    filter: drop-shadow(0 0 15px gold);
   }
 </style>
 </head>
-<body>
 
-<div class="wheel-container">
-  <div class="pointer"></div>
-  <svg id="wheel" viewBox="0 0 500 500"></svg>
-  <div id="centerBtn">SPIN</div>
-</div>
-<div class="result" id="resultText">Press SPIN to play</div>
+<body>
+  <div class="wallet-controls">
+    <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
+    <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
+    <div id="walletAddress" class="wallet-address" style="display:none;">-</div>
+  </div>
+
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <svg id="wheel" viewBox="0 0 500 500"></svg>
+    <div id="centerBtn">SPIN</div>
+  </div>
+  <div class="result" id="resultText">Press SPIN to play</div>
+
+  <audio id="clickSound" src="click.mp3" preload="auto"></audio>
+  <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
+  <audio id="winSound" src="win.mp3" preload="auto"></audio>
 
 <script>
-const prizes = [
-  { name: "1 ETH", icon: "eth.png", month: 0, frequency: "1x_year", weight: 0.01 }, // Januari
-  { name: "0.7 ETH", icon: "eth.png", month: 11, frequency: "1x_11months", weight: 0.02 }, // Desember
-  { name: "MacBook", icon: "macbook.png", month: 10, frequency: "1x_10months", weight: 0.03 }, // November
-  { name: "iPhone", icon: "iphone.png", month: 9, frequency: "1x_10months", weight: 0.03 }, // Oktober
-  { name: "0.1 ETH", icon: "eth.png", frequency: "5x_month", weight: 0.5 },
-  { name: "0.05 ETH", icon: "eth.png", frequency: "5x_15days", weight: 1.0 },
-  { name: "0.005 ETH", icon: "eth.png", frequency: "10x_7days", weight: 2.0 },
-  { name: "0.0005 ETH", icon: "eth.png", frequency: "50x_3days", weight: 3.0 },
-  { name: "0.0001 ETH", icon: "eth.png", frequency: "100x_day", weight: 5.0 },
-  { name: "2 FPoint", icon: "fpoint.svg", frequency: "unlimited", weight: 10.0 },
-  { name: "5 FPoint", icon: "fpoint.svg", frequency: "unlimited", weight: 10.0 },
-  { name: "7 FPoint", icon: "fpoint.svg", frequency: "unlimited", weight: 10.0 }
+const CONTRACT_ADDRESS = "PASTE_YOUR_CONTRACT_ADDRESS_HERE"; // 🔹 ganti alamat kontrakmu
+const ABI = [
+  "event BetPlaced(address indexed player, uint256 randomNumber, string result, bool prizeAvailable)",
+  "event ETHAwarded(address indexed player, uint256 amount, string prizeName)",
+  "event FaylottoAwarded(address indexed player, uint256 amount)",
+  "function placeBet() external payable"
 ];
 
-const colors = [
-  "#FFB703","#FB8500","#219EBC","#8ECAE6","#FF69B4","#90EE90",
-  "#FFD700","#40E0D0","#ADFF2F","#FF6347","#9370DB","#20B2AA"
-];
-
-const svg = document.getElementById("wheel");
-const resultText = document.getElementById("resultText");
+let provider, signer, contract, userAddress;
 const btn = document.getElementById("centerBtn");
+const connectBtn = document.getElementById("connectBtn");
+const disconnectBtn = document.getElementById("disconnectBtn");
+const walletAddressDiv = document.getElementById("walletAddress");
+const resultText = document.getElementById("resultText");
+const clickSound = document.getElementById("clickSound");
+const spinSound = document.getElementById("spinSound");
+const winSound = document.getElementById("winSound");
+const svg = document.getElementById("wheel");
 
-const radius = 240;
-const cx = 250;
-const cy = 250;
-const total = prizes.length;
-const slice = 360 / total;
+const prizes = [
+  { name: "1 ETH", icon: "eth.png"},
+  { name: "0.7 ETH", icon: "eth.png"},
+  { name: "MacBook", icon: "macbook.png"},
+  { name: "iPhone", icon: "iphone.png"},
+  { name: "0.1 ETH", icon: "eth.png"},
+  { name: "0.05 ETH", icon: "eth.png"},
+  { name: "0.005 ETH", icon: "eth.png"},
+  { name: "0.0005 ETH", icon: "eth.png"},
+  { name: "0.0001 ETH", icon: "eth.png"},
+  { name: "2 FPoint", icon: "fpoint.svg"},
+  { name: "5 FPoint", icon: "fpoint.svg"},
+  { name: "7 FPoint", icon: "fpoint.svg"}
+];
 
-// Buat wheel segments
+const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;
 for (let i = 0; i < total; i++) {
-  const startAngle = (i * slice - 90) * (Math.PI / 180);
-  const endAngle = ((i + 1) * slice - 90) * (Math.PI / 180);
+  const startAngle = (i * slice - 90) * Math.PI / 180;
+  const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;
   const x1 = cx + radius * Math.cos(startAngle);
   const y1 = cy + radius * Math.sin(startAngle);
   const x2 = cx + radius * Math.cos(endAngle);
   const y2 = cy + radius * Math.sin(endAngle);
-  const pathData = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`;
-
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", pathData);
-  path.setAttribute("fill", colors[i % colors.length]);
-  path.setAttribute("stroke", "rgba(255,255,255,0.8)");
+  path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);
+  path.setAttribute("fill", `hsl(${i * 30}, 80%, 50%)`);
+  path.setAttribute("stroke", "#fff");
   path.setAttribute("stroke-width", "2");
-  path.setAttribute("stroke-linejoin", "round");
   svg.appendChild(path);
-
-  // Label (teks)
-  const angle = (i + 0.5) * slice - 90;
-  const textRadius = radius * 0.75;
-  const textX = cx + textRadius * Math.cos((angle * Math.PI) / 180);
-  const textY = cy + textRadius * Math.sin((angle * Math.PI) / 180);
-  
-  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  text.setAttribute("x", textX);
-  text.setAttribute("y", textY);
-  text.setAttribute("fill", "#000");
-  text.setAttribute("font-size", "10");
-  text.setAttribute("font-weight", "bold");
-  text.setAttribute("text-anchor", "middle");
-  text.setAttribute("alignment-baseline", "middle");
-  text.setAttribute("transform", `rotate(${angle}, ${textX}, ${textY})`);
-  text.textContent = prizes[i].name;
-  svg.appendChild(text);
-
-  // Ikon
-  const iconRadius = radius * 0.5;
-  const iconX = cx + iconRadius * Math.cos((angle * Math.PI) / 180);
-  const iconY = cy + iconRadius * Math.sin((angle * Math.PI) / 180);
-  
-  const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
-  image.setAttribute("href", prizes[i].icon);
-  image.setAttribute("x", iconX - 15);
-  image.setAttribute("y", iconY - 15);
-  image.setAttribute("width", "30");
-  image.setAttribute("height", "30");
-  image.setAttribute("transform", `rotate(${angle}, ${iconX}, ${iconY})`);
-  svg.appendChild(image);
+  prizes[i].path = path;
 }
 
-// State management
-let spinning = false;
-let currentRotation = 0;
-const COOLDOWN_DURATION = 5000; // 5 detik cooldown
+let spinning = false, currentRotation = 0, animation = null;
 
-// Reset wheel to 0 rotation
-function resetWheel() {
-  gsap.killTweensOf(svg);
-  gsap.set(svg, { 
-    rotation: 0,
-    transformOrigin: "center center"
-  });
-  currentRotation = 0;
+async function connectWallet() {
+  if (!window.ethereum) return alert("🦊 Install MetaMask!");
+  provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  signer = await provider.getSigner();
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+  userAddress = await signer.getAddress();
+  connectBtn.style.display = "none";
+  disconnectBtn.style.display = "inline-block";
+  walletAddressDiv.style.display = "inline-block";
+  walletAddressDiv.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+  console.log("✅ Connected:", userAddress);
 }
 
-// Reset button state
-function resetButton() {
-  btn.textContent = "SPIN";
-  btn.disabled = false;
-  spinning = false;
+function disconnectWallet() {
+  provider = signer = contract = userAddress = null;
+  connectBtn.style.display = "inline-block";
+  disconnectBtn.style.display = "none";
+  walletAddressDiv.style.display = "none";
 }
 
-// Cooldown handler
-function startCooldown() {
-  let timeLeft = COOLDOWN_DURATION / 1000;
-  btn.disabled = true;
-  btn.textContent = `Wait ${timeLeft}s...`;
+async function spinFromBlockchain() {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+  try {
+    btn.disabled = true;
+    clickSound.play();
+    resultText.textContent = "⏳ Waiting for blockchain...";
+    spinSound.play();
 
-  const countdown = setInterval(() => {
-    timeLeft--;
-    if (timeLeft > 0) {
-      btn.textContent = `Wait ${timeLeft}s...`;
-    } else {
-      clearInterval(countdown);
-      resetButton();
-    }
-  }, 1000);
-}
+    const tx = await contract.placeBet({ value: ethers.parseEther("0.001") });
+    const receipt = await tx.wait();
+    const event = receipt.logs
+      .map(log => { try { return contract.interface.parseLog(log); } catch { return null; } })
+      .filter(e => e && e.name === "BetPlaced")[0];
 
-// Filter hadiah berdasarkan bulan dan frekuensi
-function getAvailablePrizes() {
-  const currentMonth = new Date().getMonth(); // 0 = Jan, 11 = Des
-  return prizes.filter(prize => {
-    // Hadiah dengan bulan spesifik (1 ETH, 0.7 ETH, MacBook, iPhone)
-    if (prize.month !== undefined) {
-      return prize.month === currentMonth;
-    }
-    // Hadiah tanpa batasan bulan (ETH kecil dan FPoint)
-    return true;
-  });
-}
+    if (!event) throw new Error("No result found.");
+    const { randomNumber, result } = event.args;
+    const index = Number(randomNumber) % prizes.length;
+    animateSpin(index, result);
 
-// Weighted random selection untuk hadiah yang tersedia
-function getWeightedRandomIndex(availablePrizes) {
-  if (availablePrizes.length === 0) return 0; // Fallback
-  const totalWeight = availablePrizes.reduce((sum, prize) => sum + (prize.weight || 1), 0);
-  let random = Math.random() * totalWeight;
-  
-  for (let i = 0; i < availablePrizes.length; i++) {
-    random -= availablePrizes[i].weight || 1;
-    if (random <= 0) {
-      // Cari indeks asli di array prizes
-      return prizes.findIndex(p => p.name === availablePrizes[i].name);
-    }
-  }
-  return prizes.findIndex(p => p.name === availablePrizes[availablePrizes.length - 1].name);
-}
-
-// Calculate winning index from final rotation
-function getWinningIndex(rotation) {
-  const normalized = (rotation % 360 + 360) % 360;
-  const index = Math.floor((360 - normalized) / slice) % total;
-  return index;
-}
-
-// Spin animation - 30 DETIK
-function spinWheel() {
-  if (spinning) return;
-  
-  // Reset wheel SEBELUM spin baru
-  resetWheel();
-  
-  spinning = true;
-  btn.disabled = true;
-  btn.textContent = "SPINNING...";
-  resultText.innerHTML = "🎡 Spinning...";
-  resultText.style.color = "#00FFFF";
-
-  // Dapatkan hadiah yang tersedia berdasarkan bulan
-  const availablePrizes = getAvailablePrizes();
-  if (availablePrizes.length === 0) {
-    resultText.innerHTML = "No prizes available this month!";
+  } catch (err) {
+    console.error(err);
+    resultText.textContent = "❌ Transaction failed.";
     resetButton();
-    return;
   }
+}
 
-  // Pilih hadiah secara acak dengan bobot
-  const randomIndex = getWeightedRandomIndex(availablePrizes);
-  const targetSlice = slice * randomIndex;
-  const fullRotations = 30; // 30 full rotations
-  const totalRotation = fullRotations * 360 + targetSlice;
-
-  // GSAP timeline untuk perfect control
-  const tl = gsap.timeline({
-    onUpdate: () => {
-      currentRotation = gsap.getProperty(svg, "rotation");
-    },
-    onComplete: () => {
-      const winnerIndex = getWinningIndex(currentRotation);
-      const prize = prizes[winnerIndex];
-      
-      resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize.name}</span> <img src="${prize.icon}" alt="${prize.name}">`;
-      resultText.style.color = "#FFD700";
-      
-      // Mulai cooldown
-      setTimeout(() => {
-        resetWheel();
-        startCooldown();
-      }, 2000); // 2 detik delay sebelum reset & cooldown
-    }
-  });
-
-  // Spin 30 detik
-  tl.to(svg, {
+function animateSpin(index, resultName) {
+  if (animation) gsap.killTweensOf(svg);
+  prizes.forEach(p => p.path.classList.remove("glow"));
+  const targetSlice = slice * index + slice / 2;
+  const totalRotation = currentRotation + 12 * 360 + targetSlice;
+  gsap.fromTo(svg, { rotation: currentRotation }, {
     rotation: totalRotation,
     duration: 30,
-    ease: "power2.inOut",
-    transformOrigin: "center center"
+    ease: "power3.inOut",
+    transformOrigin: "center center",
+    onUpdate: () => currentRotation = gsap.getProperty(svg, "rotation"),
+    onComplete: () => {
+      spinSound.pause();
+      winSound.play();
+      const prize = prizes[index];
+      prize.path.classList.add("glow");
+      resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${resultName}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;
+      setTimeout(resetButton, 2000);
+    }
   });
 }
 
-// Event listeners
-btn.addEventListener("click", spinWheel);
+function resetButton() {
+  btn.disabled = false;
+  btn.textContent = "SPIN";
+  spinSound.pause();
+}
 
-// Keyboard support
-document.addEventListener('keydown', function(e) {
-  if (e.code === 'Space' && !spinning && !btn.disabled) {
-    e.preventDefault();
-    spinWheel();
-  }
-});
-
-// Initial reset
-resetWheel();
+connectBtn.addEventListener("click", connectWallet);
+disconnectBtn.addEventListener("click", disconnectWallet);
+btn.addEventListener("click", spinFromBlockchain);
 </script>
 </body>
 </html>
