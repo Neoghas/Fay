@@ -175,9 +175,23 @@ const prizes = [
   { name: "7 FPoint", icon: "fpoint.svg"}
 ];
 
-const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;
+const colors = [
+  "#FFB703","#FB8500","#219EBC","#8ECAE6","#FF69B4","#90EE90",
+  "#FFD700","#40E0D0","#ADFF2F","#FF6347","#9370DB","#20B2AA"
+];
 
-// Render wheel
+const svg = document.getElementById("wheel");
+const resultText = document.getElementById("resultText");
+const btn = document.getElementById("centerBtn");
+const clickSound = document.getElementById("clickSound");
+const spinSound = document.getElementById("spinSound");
+const winSound = document.getElementById("winSound");
+
+const radius = 240;
+const cx = 250, cy = 250;
+const total = prizes.length;
+const slice = 360 / total;
+
 for (let i = 0; i < total; i++) {
   const startAngle = (i * slice - 90) * Math.PI / 180;
   const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;
@@ -187,11 +201,36 @@ for (let i = 0; i < total; i++) {
   const y2 = cy + radius * Math.sin(endAngle);
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);
-  path.setAttribute("fill", `hsl(${i * 30}, 80%, 50%)`);
+  path.setAttribute("fill", colors[i]);
   path.setAttribute("stroke", "#fff");
   path.setAttribute("stroke-width", "2");
   svg.appendChild(path);
   prizes[i].path = path;
+
+  const angle = (i + 0.5) * slice - 90;
+  const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+  const imgX = cx + radius * 0.55 * Math.cos(angle * Math.PI / 180) - 20;
+  const imgY = cy + radius * 0.55 * Math.sin(angle * Math.PI / 180) - 20;
+  img.setAttributeNS("http://www.w3.org/1999/xlink", "href", prizes[i].icon);
+  img.setAttribute("x", imgX);
+  img.setAttribute("y", imgY);
+  img.setAttribute("width", "40");
+  img.setAttribute("height", "40");
+  svg.appendChild(img);
+
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  const textX = cx + radius * 0.8 * Math.cos(angle * Math.PI / 180);
+  const textY = cy + radius * 0.8 * Math.sin(angle * Math.PI / 180);
+  text.setAttribute("x", textX);
+  text.setAttribute("y", textY);
+  text.setAttribute("fill", "#fff");
+  text.setAttribute("font-size", "15");
+  text.setAttribute("font-weight", "bold");
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("alignment-baseline", "middle");
+  text.setAttribute("transform", `rotate(${angle}, ${textX}, ${textY})`);
+  text.textContent = prizes[i].name;
+  svg.appendChild(text);
 }
 
 // State
