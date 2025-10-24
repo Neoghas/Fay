@@ -175,9 +175,14 @@ const prizes = [
   { name: "7 FPoint", icon: "fpoint.svg"}
 ];
 
+const colors = [
+  "#FFB703","#FB8500","#219EBC","#8ECAE6","#FF69B4","#90EE90",
+  "#FFD700","#40E0D0","#ADFF2F","#FF6347","#9370DB","#20B2AA"
+];
+
 const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;
 
-// Render wheel
+// Render wheel dengan icon & teks
 for (let i = 0; i < total; i++) {
   const startAngle = (i * slice - 90) * Math.PI / 180;
   const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;
@@ -185,16 +190,45 @@ for (let i = 0; i < total; i++) {
   const y1 = cy + radius * Math.sin(startAngle);
   const x2 = cx + radius * Math.cos(endAngle);
   const y2 = cy + radius * Math.sin(endAngle);
+
+  // slice color
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);
-  path.setAttribute("fill", `hsl(${i * 30}, 80%, 50%)`);
+  path.setAttribute("fill", colors[i]);
   path.setAttribute("stroke", "#fff");
   path.setAttribute("stroke-width", "2");
   svg.appendChild(path);
   prizes[i].path = path;
+
+  // icon
+  const angle = (i + 0.5) * slice - 90;
+  const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+  const imgX = cx + radius * 0.55 * Math.cos(angle * Math.PI / 180) - 20;
+  const imgY = cy + radius * 0.55 * Math.sin(angle * Math.PI / 180) - 20;
+  img.setAttributeNS("http://www.w3.org/1999/xlink", "href", prizes[i].icon);
+  img.setAttribute("x", imgX);
+  img.setAttribute("y", imgY);
+  img.setAttribute("width", "40");
+  img.setAttribute("height", "40");
+  svg.appendChild(img);
+
+  // teks
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  const textX = cx + radius * 0.8 * Math.cos(angle * Math.PI / 180);
+  const textY = cy + radius * 0.8 * Math.sin(angle * Math.PI / 180);
+  text.setAttribute("x", textX);
+  text.setAttribute("y", textY);
+  text.setAttribute("fill", "#fff");
+  text.setAttribute("font-size", "15");
+  text.setAttribute("font-weight", "bold");
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("alignment-baseline", "middle");
+  text.setAttribute("transform", `rotate(${angle}, ${textX}, ${textY})`);
+  text.textContent = prizes[i].name;
+  svg.appendChild(text);
 }
 
-let spinning = false, currentRotation = 0, animation = null;
+let currentRotation = 0, animation = null;
 
 async function connectWallet() {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
@@ -216,6 +250,16 @@ function disconnectWallet() {
   walletAddressDiv.style.display = "none";
 }
 
+function getWinningIndex(rotation) {
+  const normalized = (360 - (rotation % 360) + 360) % 360;
+  return Math.floor(normalized / slice) % total;
+}
+
+function resetButton() {
+  btn.disabled = false;
+  btn.textContent = "SPIN";
+}
+
 async function spinFromBlockchain() {
   if (!contract) return alert("⚠️ Connect your wallet first!");
   try {
@@ -225,7 +269,6 @@ async function spinFromBlockchain() {
     spinSound.currentTime = 0;
     spinSound.play();
 
-    // Fixed: ethers.utils.parseEther
     const tx = await contract.placeBet({ value: ethers.utils.parseEther("0.000256") });
     const receipt = await tx.wait();
 
@@ -234,18 +277,13 @@ async function spinFromBlockchain() {
       .filter(e => e && e.name === "BetPlaced")[0];
 
     if (!event) throw new Error("No result found.");
-
     const { randomNumber, result } = event.args;
 
-    // Sinkron index
+    // cari index sesuai hadiah
     let index = prizes.findIndex(p => p.name === result);
-    if (index === -1) {
-      // fallback random index dari blockchain
-      index = Number(randomNumber) % prizes.length;
-    }
+    if (index === -1) index = Number(randomNumber) % prizes.length;
 
     animateSpin(index, result);
-
   } catch (err) {
     console.error(err);
     resultText.textContent = "❌ Transaction failed.";
@@ -256,6 +294,7 @@ async function spinFromBlockchain() {
 function animateSpin(index, resultName) {
   if (animation) gsap.killTweensOf(svg);
   prizes.forEach(p => p.path.classList.remove("glow"));
+
   const targetSlice = slice * index + slice / 2;
   const totalRotation = currentRotation + 12 * 360 + targetSlice;
 
@@ -264,22 +303,17 @@ function animateSpin(index, resultName) {
     duration: 30,
     ease: "power3.inOut",
     transformOrigin: "center center",
-    onUpdate: () => currentRotation = animation.progress() * (totalRotation - currentRotation),
+    onUpdate: () => currentRotation = gsap.getProperty(svg, "rotation"),
     onComplete: () => {
       spinSound.pause();
-      winSound.play();
+      animation = null;
       const prize = prizes[index];
       prize.path.classList.add("glow");
-      resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${resultName}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;
+      winSound.play();
+      resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize.name}</span> <img src="${prize.icon}" alt="${prize.name}" style="width:50px;height:50px;object-fit:contain;">`;
       setTimeout(resetButton, 2000);
     }
   });
-}
-
-function resetButton() {
-  btn.disabled = false;
-  btn.textContent = "SPIN";
-  spinSound.pause();
 }
 
 connectBtn.addEventListener("click", connectWallet);
