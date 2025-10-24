@@ -1,106 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Spin Wheel</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faylotto Spin Wheel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <style>
-body {
-  background: radial-gradient(circle at center, #111 0%, #000 100%);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  overflow: hidden;
-  font-family: 'Poppins', sans-serif;
-}
+  body {
+    background: radial-gradient(circle, #111 0%, #000 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: #fff;
+    font-family: "Poppins", sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
 
-#wheel-container {
-  position: relative;
-  width: 500px;
-  height: 500px;
-}
+  .wheel-container {
+    position: relative;
+    width: 350px;
+    height: 350px;
+  }
 
-#wheel {
-  width: 100%;
-  height: 100%;
-  transition: filter 0.3s;
-}
+  svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
 
-#pointer {
-  position: absolute;
-  top: -10px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 50px;
-  height: 70px;
-  background: red;
-  clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
-  z-index: 10;
-  filter: drop-shadow(0 0 5px #ff0000);
-}
+  .pointer {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 30px solid #ff0000;
+    z-index: 20;
+    filter: drop-shadow(0 0 10px #ff0000);
+  }
 
-#centerBtn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 120px;
-  height: 120px;
-  background: gold;
-  color: black;
-  border-radius: 50%;
-  border: none;
-  font-weight: bold;
-  font-size: 22px;
-  cursor: pointer;
-  z-index: 5;
-  box-shadow: 0 0 15px rgba(255,255,0,0.5);
-  transition: all 0.2s;
-}
-#centerBtn:hover { transform: translate(-50%, -50%) scale(1.05); }
+  #centerBtn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, #FFD700, #FFA500);
+    color: black;
+    font-weight: bold;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 
+      0 8px 25px rgba(255, 215, 0, 0.6),
+      inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    border: 3px solid #fff;
+    transition: all 0.2s ease;
+    z-index: 15;
+  }
+  
+  #centerBtn:hover:not(:disabled) {
+    transform: translate(-50%, -50%) scale(1.05);
+    box-shadow: 
+      0 12px 35px rgba(255, 215, 0, 0.8),
+      inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  }
+  
+  #centerBtn:active:not(:disabled) {
+    transform: translate(-50%, -50%) scale(0.95);
+  }
 
-#resultText {
-  margin-top: 20px;
-  text-align: center;
-  font-size: 24px;
-}
+  #centerBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
 
-.glow {
-  filter: drop-shadow(0 0 25px gold) brightness(1.4);
-}
+  .result {
+    margin-top: 30px;
+    font-size: 20px;
+    text-align: center;
+    transition: all 0.5s ease;
+    min-height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .result img {
+    width: 30px;
+    height: 30px;
+  }
 </style>
 </head>
 <body>
-<div id="wheel-container">
-  <div id="pointer"></div>
-  <svg id="wheel" viewBox="0 0 500 500"></svg>
-  <button id="centerBtn">SPIN</button>
-</div>
-<div id="resultText"></div>
 
-<!-- Suara -->
-<audio id="clickSound" src="click.mp3" preload="auto"></audio>
-<audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
-<audio id="winSound" src="win.mp3" preload="auto"></audio>
+<div class="wheel-container">
+  <div class="pointer"></div>
+  <svg id="wheel" viewBox="0 0 500 500"></svg>
+  <div id="centerBtn">SPIN</div>
+</div>
+<div class="result" id="resultText">Press SPIN to play</div>
 
 <script>
 const prizes = [
-  { name: "1 ETH Jackpot", icon: "icons/eth.png" },
-  { name: "0.7 ETH Big Win", icon: "icons/eth.png" },
-  { name: "MacBook", icon: "icons/macbook.png" },
-  { name: "iPhone or Worth ETH", icon: "icons/iphone.png" },
-  { name: "0.1 ETH Monthly Prize", icon: "icons/eth.png" },
-  { name: "0.05 ETH Monthly Prize", icon: "icons/eth.png" },
-  { name: "0.005 ETH Weekly", icon: "icons/eth.png" },
-  { name: "0.0005 ETH 4-Day Prize", icon: "icons/eth.png" },
-  { name: "0.0001 ETH Daily Prize", icon: "icons/eth.png" },
-  { name: "Won 2 LPoint", icon: "icons/lpoint.png" },
-  { name: "Won 5 LPoint", icon: "icons/lpoint.png" },
-  { name: "Won 7 LPoint", icon: "icons/lpoint.png" }
+  { name: "1 ETH", icon: "eth.png", weight: 0.01 }, // 1x setahun (Januari)
+  { name: "0.7 ETH", icon: "eth.png", weight: 0.02 }, // 1x sebelas bulan (Desember)
+  { name: "MacBook", icon: "macbook.png", weight: 0.03 }, // 1x sepuluh bulan (November)
+  { name: "iPhone", icon: "iphone.png", weight: 0.03 }, // 1x sepuluh bulan (Oktober)
+  { name: "0.1 ETH", icon: "eth.png", weight: 0.1 }, // 5x sebulan
+  { name: "0.05 ETH", icon: "eth.png", weight: 0.2 }, // 5x setiap 15 hari
+  { name: "0.005 ETH", icon: "eth.png", weight: 0.5 }, // 10x setiap 7 hari
+  { name: "0.0005 ETH", icon: "eth.png", weight: 1.0 }, // 50x setiap 3 hari
+  { name: "0.0001 ETH", icon: "eth.png", weight: 2.0 }, // 100x setiap hari
+  { name: "2 FPoint", icon: "fpoint.svg", weight: 5.0 }, // unlimited setiap hari
+  { name: "5 FPoint", icon: "fpoint.svg", weight: 5.0 }, // unlimited setiap hari
+  { name: "7 FPoint", icon: "fpoint.svg", weight: 5.0 } // unlimited setiap hari
 ];
 
 const colors = [
@@ -111,111 +137,183 @@ const colors = [
 const svg = document.getElementById("wheel");
 const resultText = document.getElementById("resultText");
 const btn = document.getElementById("centerBtn");
-const clickSound = document.getElementById("clickSound");
-const spinSound = document.getElementById("spinSound");
-const winSound = document.getElementById("winSound");
 
 const radius = 240;
-const cx = 250, cy = 250;
+const cx = 250;
+const cy = 250;
 const total = prizes.length;
 const slice = 360 / total;
 
+// Buat wheel segments
 for (let i = 0; i < total; i++) {
-  const startAngle = (i * slice - 90) * Math.PI / 180;
-  const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;
+  const startAngle = (i * slice - 90) * (Math.PI / 180);
+  const endAngle = ((i + 1) * slice - 90) * (Math.PI / 180);
   const x1 = cx + radius * Math.cos(startAngle);
   const y1 = cy + radius * Math.sin(startAngle);
   const x2 = cx + radius * Math.cos(endAngle);
   const y2 = cy + radius * Math.sin(endAngle);
+  const pathData = `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`;
+
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);
-  path.setAttribute("fill", colors[i]);
-  path.setAttribute("stroke", "#fff");
+  path.setAttribute("d", pathData);
+  path.setAttribute("fill", colors[i % colors.length]);
+  path.setAttribute("stroke", "rgba(255,255,255,0.8)");
   path.setAttribute("stroke-width", "2");
+  path.setAttribute("stroke-linejoin", "round");
   svg.appendChild(path);
-  prizes[i].path = path;
 
+  // Label (teks)
   const angle = (i + 0.5) * slice - 90;
-  const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
-  const imgX = cx + radius * 0.55 * Math.cos(angle * Math.PI / 180) - 20;
-  const imgY = cy + radius * 0.55 * Math.sin(angle * Math.PI / 180) - 20;
-  img.setAttributeNS("http://www.w3.org/1999/xlink", "href", prizes[i].icon);
-  img.setAttribute("x", imgX);
-  img.setAttribute("y", imgY);
-  img.setAttribute("width", "40");
-  img.setAttribute("height", "40");
-  svg.appendChild(img);
-
+  const textRadius = radius * 0.75;
+  const textX = cx + textRadius * Math.cos((angle * Math.PI) / 180);
+  const textY = cy + textRadius * Math.sin((angle * Math.PI) / 180);
+  
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  const textX = cx + radius * 0.8 * Math.cos(angle * Math.PI / 180);
-  const textY = cy + radius * 0.8 * Math.sin(angle * Math.PI / 180);
   text.setAttribute("x", textX);
   text.setAttribute("y", textY);
   text.setAttribute("fill", "#000");
-  text.setAttribute("font-size", "11");
+  text.setAttribute("font-size", "10");
   text.setAttribute("font-weight", "bold");
   text.setAttribute("text-anchor", "middle");
   text.setAttribute("alignment-baseline", "middle");
   text.setAttribute("transform", `rotate(${angle}, ${textX}, ${textY})`);
   text.textContent = prizes[i].name;
   svg.appendChild(text);
+
+  // Ikon
+  const iconRadius = radius * 0.5;
+  const iconX = cx + iconRadius * Math.cos((angle * Math.PI) / 180);
+  const iconY = cy + iconRadius * Math.sin((angle * Math.PI) / 180);
+  
+  const image = document.createElementNS("http://www.w3.org/2000/svg", "image");
+  image.setAttribute("href", prizes[i].icon);
+  image.setAttribute("x", iconX - 15);
+  image.setAttribute("y", iconY - 15);
+  image.setAttribute("width", "30");
+  image.setAttribute("height", "30");
+  image.setAttribute("transform", `rotate(${angle}, ${iconX}, ${iconY})`);
+  svg.appendChild(image);
 }
 
+// State management
 let spinning = false;
 let currentRotation = 0;
-let animation = null;
+const COOLDOWN_DURATION = 5000; // 5 detik cooldown
 
+// Reset wheel to 0 rotation
+function resetWheel() {
+  gsap.killTweensOf(svg);
+  gsap.set(svg, { 
+    rotation: 0,
+    transformOrigin: "center center"
+  });
+  currentRotation = 0;
+}
+
+// Reset button state
+function resetButton() {
+  btn.textContent = "SPIN";
+  btn.disabled = false;
+  spinning = false;
+}
+
+// Cooldown handler
+function startCooldown() {
+  let timeLeft = COOLDOWN_DURATION / 1000;
+  btn.disabled = true;
+  btn.textContent = `Wait ${timeLeft}s...`;
+
+  const countdown = setInterval(() => {
+    timeLeft--;
+    if (timeLeft > 0) {
+      btn.textContent = `Wait ${timeLeft}s...`;
+    } else {
+      clearInterval(countdown);
+      resetButton();
+    }
+  }, 1000);
+}
+
+// Weighted random selection
+function getWeightedRandomIndex() {
+  const totalWeight = prizes.reduce((sum, prize) => sum + prize.weight, 0);
+  let random = Math.random() * totalWeight;
+  
+  for (let i = 0; i < prizes.length; i++) {
+    random -= prizes[i].weight;
+    if (random <= 0) return i;
+  }
+  return prizes.length - 1; // Fallback
+}
+
+// Calculate winning index from final rotation
 function getWinningIndex(rotation) {
   const normalized = (360 - (rotation % 360) + 360) % 360;
-  return Math.floor(normalized / slice) % total;
+  let index = Math.floor(normalized / slice) % total;
+  return (total - index - 1 + total) % total; // Adjust untuk pointer di jam 12
 }
 
-function resetButton() {
-  btn.disabled = false;
-  btn.textContent = "SPIN";
-}
-
+// Spin animation - 30 DETIK
 function spinWheel() {
   if (spinning) return;
+  
+  // Reset wheel SEBELUM spin baru
+  resetWheel();
+  
   spinning = true;
-  clickSound.play();
   btn.disabled = true;
-  resultText.textContent = "🎡 Spinning...";
+  btn.textContent = "SPINNING...";
+  resultText.innerHTML = "🎡 Spinning...";
   resultText.style.color = "#00FFFF";
-  spinSound.currentTime = 0;
-  spinSound.play();
 
-  if (animation) gsap.killTweensOf(svg);
-  prizes.forEach(p => p.path.classList.remove("glow"));
-
-  const randomIndex = Math.floor(Math.random() * total);
+  // Generate random target berdasarkan bobot
+  const randomIndex = getWeightedRandomIndex();
   const targetSlice = slice * randomIndex + slice / 2;
-  const fullRotations = 12;
-  const totalRotation = currentRotation + fullRotations * 360 + targetSlice;
+  const fullRotations = 30; // 30 full rotations
+  const totalRotation = fullRotations * 360 + targetSlice;
 
-  animation = gsap.fromTo(svg, 
-    { rotation: currentRotation }, 
-    {
-      rotation: totalRotation,
-      duration: 30,
-      ease: "power3.inOut",
-      transformOrigin: "center center",
-      onUpdate: () => currentRotation = gsap.getProperty(svg, "rotation"),
-      onComplete: () => {
-        spinSound.pause();
-        spinning = false;
-        animation = null;
-        const winnerIndex = getWinningIndex(currentRotation);
-        const prize = prizes[winnerIndex];
-        winSound.play();
-        prize.path.classList.add("glow");
-        resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize.name}</span>`;
-        setTimeout(resetButton, 2000);
-      }
-    });
+  // GSAP timeline untuk perfect control
+  const tl = gsap.timeline({
+    onUpdate: () => {
+      currentRotation = gsap.getProperty(svg, "rotation");
+    },
+    onComplete: () => {
+      const winnerIndex = getWinningIndex(currentRotation);
+      const prize = prizes[winnerIndex];
+      
+      resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize.name}</span> <img src="${prize.icon}" alt="${prize.name}">`;
+      resultText.style.color = "#FFD700";
+      
+      // Mulai cooldown
+      setTimeout(() => {
+        resetWheel();
+        startCooldown();
+      }, 2000); // 2 detik delay sebelum reset & cooldown
+    }
+  });
+
+  // Spin 30 detik
+  tl.to(svg, {
+    rotation: totalRotation,
+    duration: 30,
+    ease: "power2.inOut",
+    transformOrigin: "center center"
+  });
 }
 
+// Event listeners
 btn.addEventListener("click", spinWheel);
+
+// Keyboard support
+document.addEventListener('keydown', function(e) {
+  if (e.code === 'Space' && !spinning && !btn.disabled) {
+    e.preventDefault();
+    spinWheel();
+  }
+});
+
+// Initial reset
+resetWheel();
 </script>
 </body>
 </html>
