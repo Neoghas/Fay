@@ -115,10 +115,10 @@
 
 <script>
 const prizes = [
-  { name: "1 ETH", icon: "eth.png", month: 0, frequency: "1x_year" }, // Januari
-  { name: "0.7 ETH", icon: "eth.png", month: 11, frequency: "1x_11months" }, // Desember
-  { name: "MacBook", icon: "macbook.png", month: 10, frequency: "1x_10months" }, // November
-  { name: "iPhone", icon: "iphone.png", month: 9, frequency: "1x_10months" }, // Oktober
+  { name: "1 ETH", icon: "eth.png", month: 0, frequency: "1x_year", weight: 0.01 }, // Januari
+  { name: "0.7 ETH", icon: "eth.png", month: 11, frequency: "1x_11months", weight: 0.02 }, // Desember
+  { name: "MacBook", icon: "macbook.png", month: 10, frequency: "1x_10months", weight: 0.03 }, // November
+  { name: "iPhone", icon: "iphone.png", month: 9, frequency: "1x_10months", weight: 0.03 }, // Oktober
   { name: "0.1 ETH", icon: "eth.png", frequency: "5x_month", weight: 0.5 },
   { name: "0.05 ETH", icon: "eth.png", frequency: "5x_15days", weight: 1.0 },
   { name: "0.005 ETH", icon: "eth.png", frequency: "10x_7days", weight: 2.0 },
@@ -237,15 +237,14 @@ function startCooldown() {
 // Filter hadiah berdasarkan bulan dan frekuensi
 function getAvailablePrizes() {
   const currentMonth = new Date().getMonth(); // 0 = Jan, 11 = Des
-  const availablePrizes = prizes.filter(prize => {
+  return prizes.filter(prize => {
+    // Hadiah dengan bulan spesifik (1 ETH, 0.7 ETH, MacBook, iPhone)
     if (prize.month !== undefined) {
-      // Hadiah dengan bulan spesifik (1 ETH, 0.7 ETH, MacBook, iPhone)
       return prize.month === currentMonth;
     }
     // Hadiah tanpa batasan bulan (ETH kecil dan FPoint)
     return true;
   });
-  return availablePrizes;
 }
 
 // Weighted random selection untuk hadiah yang tersedia
@@ -286,7 +285,12 @@ function spinWheel() {
 
   // Dapatkan hadiah yang tersedia berdasarkan bulan
   const availablePrizes = getAvailablePrizes();
-  
+  if (availablePrizes.length === 0) {
+    resultText.innerHTML = "No prizes available this month!";
+    resetButton();
+    return;
+  }
+
   // Pilih hadiah secara acak dengan bobot
   const randomIndex = getWeightedRandomIndex(availablePrizes);
   const targetSlice = slice * randomIndex;
