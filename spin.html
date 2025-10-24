@@ -262,34 +262,60 @@ function resetButton() {
 }
 
 async function spinFromBlockchain() {
-  if (!contract) return alert("⚠️ Connect your wallet first!");
-  try {
-    btn.disabled = true;
-    clickSound.play();
-    resultText.textContent = "⏳ Waiting for blockchain...";
-    spinSound.currentTime = 0;
-    spinSound.play();
+  if (!window.ethereum) {
+    alert("🦊 Please install MetaMask!");
+    return;
+  }
 
-    // ✅ Biaya transaksi fix
-    const tx = await contract.placeBet({ value: ethers.utils.parseEther("0.000256") });
+  try {
+    // 1️⃣ Connect wallet
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    const signer = await provider.getSigner();
+
+    // 2️⃣ Create contract with signer
+    const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    // 3️⃣ Show animasi spin mulai
+    startSpinAnimation();
+
+    console.log("Sending transaction...");
+    
+    // 4️⃣ Send transaction dengan gas limit aman
+    const tx = await contract.placeBet({
+      value: ethers.utils.parseEther("0.000256"),
+      gasLimit: 300000
+    });
+
+    console.log("Transaction sent:", tx.hash);
+    updateResultText("⏳ Waiting for confirmation...");
+
+    // 5️⃣ Tunggu konfirmasi
     const receipt = await tx.wait();
 
-    const event = receipt.logs
-      .map(log => { try { return contract.interface.parseLog(log); } catch { return null; } })
-      .filter(e => e && e.name === "BetPlaced")[0];
-
-    if (!event) throw new Error("No result found.");
-    const { randomNumber, result } = event.args;
-
-    let index = prizes.findIndex(p => p.name === result);
-    if (index === -1) index = Number(randomNumber) % prizes.length;
-
-    animateSpin(index, result);
+    if (receipt.status === 1) {
+      console.log("Transaction confirmed:", receipt);
+      // animasi berhenti di hasil pemenang
+      showWinningSegment();
+      updateResultText("🎉 Spin berhasil!");
+    } else {
+      console.error("Transaction reverted:", receipt);
+      updateResultText("❌ Transaction reverted.");
+    }
 
   } catch (err) {
-    console.error(err);
-    resultText.textContent = "❌ Transaction failed.";
-    resetButton();
+    console.error("Spin error:", err);
+
+    if (err.code === 4001) {
+      updateResultText("❌ Transaction rejected by user.");
+    } else if (err.code === -32603) {
+      updateResultText("❌ Contract error / require failed.");
+    } else {
+      updateResultText(`❌ Transaction failed: ${err.message}`);
+    }
+
+    // reset animasi spin
+    resetSpinAnimation();
   }
 }
 
