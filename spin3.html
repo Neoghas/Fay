@@ -248,96 +248,89 @@ for (let i = 0; i < total; i++) {
 
 let spinning = false, currentRotation = 0, animation = null;
 
-async function connectWallet() {
-  if (!window.ethereum) return alert("🦊 Install MetaMask!");
-  provider = new ethers.BrowserProvider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
-  signer = await provider.getSigner();
-  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-  userAddress = await signer.getAddress();
-  connectBtn.style.display = "none";
-  disconnectBtn.style.display = "inline-block";
-  walletAddressDiv.style.display = "inline-block";
-  walletAddressDiv.textContent = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
-}
-
-function disconnectWallet() {
-  provider = signer = contract = userAddress = null;
-  connectBtn.style.display = "inline-block";
-  disconnectBtn.style.display = "none";
-  walletAddressDiv.style.display = "none";
-}
-
-function getWinningIndex(rotation) {
-  const normalized = (360 - (rotation % 360) + 360) % 360;
-  return Math.floor(normalized / slice) % total;
-}
-
-function resetButton() {
-  btn.disabled = false;
-  btn.textContent = "SPIN";
-}
-
-async function spinFromBlockchain() {
-  if (!contract) return alert("⚠️ Connect your wallet first!");
-  try {
-    btn.disabled = true;
-    clickSound.play();
-    resultText.textContent = "⏳ Waiting for blockchain...";
-    spinSound.currentTime = 0;
-    spinSound.play();
-
-    const tx = await contract.placeBet({ value: ethers.utils.parseEther("0.000256") });
-    const receipt = await tx.wait();
-
-    const event = receipt.logs
-      .map(log => { try { return contract.interface.parseLog(log); } catch { return null; } })
-      .filter(e => e && e.name === "BetPlaced")[0];
-
-    if (!event) throw new Error("No result found.");
-    const { randomNumber, result } = event.args;
-
-    // mapping result kontrak ke JS prize.name
-    let displayName = prizeMap[result] || result;
-    let index = prizes.findIndex(p => p.name === displayName);
-    if (index === -1) index = Number(randomNumber) % prizes.length;
-
-    animateSpin(index, displayName);
-
-  } catch (err) {
-    console.error(err);
-    resultText.textContent = "❌ Transaction failed.";
-    resetButton();
-  }
-}
-
-function animateSpin(index, prizeName) {
-  if (animation) gsap.killTweensOf(svg);
-  prizes.forEach(p => p.path.classList.remove("glow"));
-
-  const targetSlice = slice * index + slice / 2;
-  const totalRotation = currentRotation + 12 * 360 + targetSlice;
-
-  animation = gsap.fromTo(svg, { rotation: currentRotation }, {
-    rotation: totalRotation,
-    duration: 30,
-    ease: "power3.inOut",
-    transformOrigin: "center center",
-    onUpdate: () => currentRotation = gsap.getProperty(svg, "rotation"),
-    onComplete: () => {
-      spinSound.pause();
-      animation = null;
-      const prize = prizes[index];
-      prize.path.classList.add("glow");
-      winSound.play();
-      resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize.name}</span> <img src="${prize.icon}" alt="${prize.name}" style="width:50px;height:50px;object-fit:contain;">`;
-      setTimeout(resetButton, 2000);
-    }
-  });
-}
-
-connectBtn.addEventListener("click", connectWallet);
-disconnectBtn.addEventListener("click", disconnectWallet);
+async function connectWallet() {  
+  if (!window.ethereum) return alert("🦊 Install MetaMask!");  
+  provider = new ethers.BrowserProvider(window.ethereum);  
+  await provider.send("eth_requestAccounts", []);  
+  signer = await provider.getSigner();  
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);  
+  userAddress = await signer.getAddress();  
+  connectBtn.style.display = "none";  
+  disconnectBtn.style.display = "inline-block";  
+  walletAddressDiv.style.display = "inline-block";  
+  walletAddressDiv.textContent = userAddress.slice(0,6) + "..." + userAddress.slice(-4);  
+}  
+  
+function disconnectWallet() {  
+  provider = signer = contract = userAddress = null;  
+  connectBtn.style.display = "inline-block";  
+  disconnectBtn.style.display = "none";  
+  walletAddressDiv.style.display = "none";  
+}  
+  
+async function spinFromBlockchain() {  
+  if (!contract) return alert("⚠️ Connect your wallet first!");  
+  try {  
+    btn.disabled = true;  
+    clickSound.play();  
+    resultText.textContent = "⏳ Waiting for blockchain...";  
+    spinSound.currentTime = 0;  
+    spinSound.play();  
+  
+    const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });  
+    const receipt = await tx.wait();  
+  
+    // Ambil event BetPlaced  
+    const event = receipt.logs  
+      .map(log => { try { return contract.interface.parseLog(log); } catch { return null; } })  
+      .filter(e => e && e.name === "BetPlaced")[0];  
+  
+    if (!event) throw new Error("No result found.");  
+    const { randomNumber, result } = event.args;  
+  
+    // Sinkron animasi pointer dengan hadiah  
+    let index = prizes.findIndex(p => p.name === result);  
+    if (index === -1) index = 0; // fallback  
+    animateSpin(index, result);  
+  
+  } catch (err) {  
+    console.error(err);  
+    resultText.textContent = "❌ Transaction failed.";  
+    resetButton();  
+  }  
+}  
+  
+function animateSpin(index, resultName) {  
+  if (animation) gsap.killTweensOf(svg);  
+  prizes.forEach(p => p.path.classList.remove("glow"));  
+  const targetSlice = slice * index + slice / 2;  
+  const totalRotation = currentRotation + 12 * 360 + targetSlice;  
+  
+  animation = gsap.fromTo(svg, { rotation: currentRotation }, {  
+    rotation: totalRotation,  
+    duration: 30,  
+    ease: "power3.inOut",  
+    transformOrigin: "center center",  
+    onUpdate: () => currentRotation = gsap.getProperty(svg, "rotation"),  
+    onComplete: () => {  
+      spinSound.pause();  
+      winSound.play();  
+      const prize = prizes[index];  
+      prize.path.classList.add("glow");  
+      resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${resultName}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;  
+      setTimeout(resetButton, 2000);  
+    }  
+  });  
+}  
+  
+function resetButton() {  
+  btn.disabled = false;  
+  btn.textContent = "SPIN";  
+  spinSound.pause();  
+}  
+  
+connectBtn.addEventListener("click", connectWallet);  
+disconnectBtn.addEventListener("click", disconnectWallet);  
 btn.addEventListener("click", spinFromBlockchain);
 </script>
 </body>
