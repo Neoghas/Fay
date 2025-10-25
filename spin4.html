@@ -71,11 +71,21 @@
   overflow: visible;
 }
 
+  .wheel-container {
+  position: relative;
+  width: 350px;
+  height: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
 /* Garis listrik neon di tepi bundaran */
 .wheel-container::after {
   content: "";
   position: absolute;
-  inset: -6px; /* sedikit keluar biar tepi terlihat tebal */
+  inset: -6px;
   border-radius: 50%;
   border: 5px solid transparent;
   background: conic-gradient(
@@ -87,13 +97,14 @@
   );
   mask: radial-gradient(farthest-side, transparent calc(100% - 6px), black 100%);
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 6px), black 100%);
-  animation: electricSpiral 2.5s linear infinite, electricPulse 1.8s ease-in-out infinite alternate;
+  animation: electricSpiral 3s linear infinite, electricPulse 1.8s ease-in-out infinite alternate;
   box-shadow:
     0 0 8px #00eaff,
     0 0 16px #b44bff,
     0 0 25px #ff6be7,
     inset 0 0 12px #00eaff;
   pointer-events: none;
+  transition: all 0.5s ease;
 }
 
 /* Spiral berputar */
@@ -109,7 +120,7 @@
 /* Efek kedipan listrik */
 @keyframes electricPulse {
   0% {
-    opacity: 0.8;
+    opacity: 0.85;
     box-shadow:
       0 0 8px #00eaff,
       0 0 16px #b44bff,
@@ -119,10 +130,10 @@
   50% {
     opacity: 1;
     box-shadow:
-      0 0 14px #00ffff,
-      0 0 28px #bb66ff,
-      0 0 45px #ff88ee,
-      inset 0 0 18px #00ffff;
+      0 0 18px #00ffff,
+      0 0 36px #bb66ff,
+      0 0 60px #ff88ee,
+      inset 0 0 22px #00ffff;
   }
   100% {
     opacity: 0.85;
@@ -134,7 +145,41 @@
   }
 }
 
-  #centerBtn {
+/* Ketika roda berputar (aktif) */
+.wheel-container.spinning::after {
+  animation: electricSpiralFast 1s linear infinite, electricPulseFast 1s ease-in-out infinite alternate;
+  box-shadow:
+    0 0 20px #00ffff,
+    0 0 40px #b44bff,
+    0 0 80px #ff6be7,
+    inset 0 0 25px #00ffff;
+  filter: brightness(1.5);
+}
+
+/* Spiral cepat saat spin */
+@keyframes electricSpiralFast {
+  from {
+    transform: rotate(0deg) scale(1.05);
+  }
+  to {
+    transform: rotate(360deg) scale(1.1);
+  }
+}
+
+/* Pulse cepat saat spin */
+@keyframes electricPulseFast {
+  0% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.9;
+  }
+}
+
+  #enterBtn {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -161,7 +206,7 @@
 }
 
 /* Saat hover, cahaya lebih kuat */
-#centerBtn:hover {
+#enterBtn:hover {
   transform: translate(-50%, -50%) scale(1.08);
   box-shadow:
     0 0 30px rgba(255, 240, 100, 0.9),
@@ -169,28 +214,121 @@
 }
 
 /* Saat disable */
-#centerBtn:disabled {
+#enterBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 /* Animasi glow lembut */
-@keyframes btnGlow {
+@keyframes btnGlo {
   0% {
-    box-shadow:
+    ox-shadow:
       0 0 18px rgba(255, 215, 0, 0.8),
       inset 0 2px 4px rgba(255, 255, 255, 0.3);
   }
   50% {
-    box-shadow:
+    ox-shadow:
       0 0 30px rgba(255, 255, 180, 0.9),
       inset 0 3px 6px rgba(255, 255, 255, 0.5);
   }
   100% {
-    box-shadow:
+    ox-shadow:
       0 0 18px rgba(255, 215, 0, 0.8),
       inset 0 2px 4px rgba(255, 255, 255, 0.3);
   }
+}
+
+#centerBtn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 85px;
+  height: 85px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #0ff, #7b00ff, #ff58d6);
+  color: #fff;
+  font-weight: bold;
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 3px solid transparent;
+  box-shadow:
+    0 0 25px rgba(0, 255, 255, 0.8),
+    0 0 45px rgba(170, 0, 255, 0.6),
+    inset 0 0 15px rgba(255, 90, 220, 0.8);
+  z-index: 15;
+  transition: all 0.3s ease;
+  animation: btnGlow 2s ease-in-out infinite alternate;
+  overflow: hidden;
+}
+
+/* Efek aliran listrik melingkar */
+#centerBtn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  background: conic-gradient(
+    from 0deg,
+    #00ffff,
+    #7b00ff,
+    #ff58d6,
+    #00ffff
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black 100%);
+  animation: electricRing 1.8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Animasi rotasi arus listrik */
+@keyframes electricRing {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Glow lembut di tombol */
+@keyframes btnGlow {
+  0% {
+    box-shadow:
+      0 0 20px #00ffff,
+      0 0 40px #7b00ff,
+      inset 0 0 15px #ff58d6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 30px #00ffff,
+      0 0 60px #b44bff,
+      inset 0 0 20px #ff6be7;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  100% {
+    box-shadow:
+      0 0 20px #00ffff,
+      0 0 40px #7b00ff,
+      inset 0 0 15px #ff58d6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Hover – nyala lebih terang */
+#centerBtn:hover {
+  filter: brightness(1.3);
+  box-shadow:
+    0 0 35px #00ffff,
+    0 0 70px #ff6be7,
+    inset 0 0 25px #ff8cff;
 }
 
 /* Teks cost ETH di bawah SPIN */
@@ -482,6 +620,16 @@ function resetButton() {
   btn.textContent = "SPIN";
   spinSound.pause();
 }
+
+const wheelContainer = document.querySelector('.wheel-container');
+
+// Saat mulai spin
+wheelContainer.classList.add('spinning');
+
+// Saat spin berhenti
+setTimeout(() => {
+  wheelContainer.classList.remove('spinning');
+}, 30000); // misal durasi spin 30 detik
 
 connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
