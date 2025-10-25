@@ -176,6 +176,16 @@ svg g {
   animation: pulseGlow 1s infinite alternate;
   transform-origin: center center;
 }
+  @keyframes glowDots {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+  }
 </style>
 </head>
 
@@ -272,7 +282,24 @@ const radius = 240,
   total = prizes.length,
   slice = 360 / total;
 
-// Render wheel
+// Tambahkan <defs> untuk efek arus listrik
+const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+defs.innerHTML = `
+  <linearGradient id="electricFlow" x1="0%" y1="0%" x2="100%" y2="100%">
+    <stop offset="0%" stop-color="#00f0ff">
+      <animate attributeName="offset" values="0;1;0" dur="5s" repeatCount="indefinite" />
+    </stop>
+    <stop offset="50%" stop-color="#c800ff">
+      <animate attributeName="offset" values="0.5;1;0.5" dur="5s" repeatCount="indefinite" />
+    </stop>
+    <stop offset="100%" stop-color="#ff77c8">
+      <animate attributeName="offset" values="1;0;1" dur="5s" repeatCount="indefinite" />
+    </stop>
+  </linearGradient>
+`;
+svg.appendChild(defs);
+
+// Render wheel (isi segmen)
 for (let i = 0; i < total; i++) {
   const startAngle = (i * slice - 90) * Math.PI / 180;
   const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;
@@ -284,12 +311,40 @@ for (let i = 0; i < total; i++) {
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);
   path.setAttribute("fill", colors[i % colors.length]);
-  path.setAttribute("stroke", "#fff");
-  path.setAttribute("stroke-width", "2");
+  path.setAttribute("stroke", "url(#electricFlow)");
+  path.setAttribute("stroke-width", "3");
   svg.appendChild(path);
   prizes[i].path = path;
+}
 
-  const angle = (i + 0.5) * slice - 90;
+// Tambahkan ring luar dengan arus listrik
+const outerRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+outerRing.setAttribute("cx", cx);
+outerRing.setAttribute("cy", cy);
+outerRing.setAttribute("r", radius + 12);
+outerRing.setAttribute("fill", "none");
+outerRing.setAttribute("stroke", "url(#electricFlow)");
+outerRing.setAttribute("stroke-width", "6");
+outerRing.setAttribute("stroke-dasharray", "15 10");
+outerRing.setAttribute("stroke-linecap", "round");
+outerRing.style.filter = "drop-shadow(0 0 10px #00f0ff)";
+svg.appendChild(outerRing);
+
+// Lampu-lampu warna-warni di tepi
+for (let i = 0; i < 36; i++) {
+  const angle = (i * 10) * Math.PI / 180;
+  const x = cx + (radius + 20) * Math.cos(angle);
+  const y = cy + (radius + 20) * Math.sin(angle);
+  const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  dot.setAttribute("cx", x);
+  dot.setAttribute("cy", y);
+  dot.setAttribute("r", 4);
+  dot.setAttribute("fill", `hsl(${i * 10}, 100%, 60%)`);
+  dot.style.filter = "drop-shadow(0 0 6px currentColor)";
+  dot.style.animation = `glowDots 2.2s ease-in-out infinite`;
+  dot.style.animationDelay = `${i * 0.1}s`;
+  svg.appendChild(dot);
+}
 
   // icon
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
