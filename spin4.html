@@ -404,6 +404,28 @@ const colors = [
   "#6A5ACD"
 ];
 
+function drawWheel(ctx, radius) {
+  const numSegments = colors.length;
+  const anglePerSegment = (2 * Math.PI) / numSegments;
+
+  for (let i = 0; i < numSegments; i++) {
+    const startAngle = i * anglePerSegment;
+    const endAngle = startAngle + anglePerSegment;
+
+    // buat gradient radial (tengah terang, pinggir gelap)
+    const grad = ctx.createRadialGradient(0, 0, radius * 0.1, 0, 0, radius);
+    grad.addColorStop(0, "white"); // tengah terang
+    grad.addColorStop(1, colors[i]); // pinggir warna utama
+
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
+  }
+}
+
 const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;  
   
 // Render wheel dengan icon & teks  
@@ -562,14 +584,6 @@ function resetButton() {
 }
 
 const wheelContainer = document.querySelector('.wheel-container');
-
-// Saat mulai spin
-wheelContainer.classList.add('spinning');
-
-// Saat spin berhenti
-setTimeout(() => {
-  wheelContainer.classList.remove('spinning');
-}, 30000); // misal durasi spin 30 detik
 
 connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
