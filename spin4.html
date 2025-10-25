@@ -484,13 +484,17 @@ async function spinFromBlockchain() {
     clickSound.play();  
   
     // 🕓 Saat baru klik tombol → tunggu transaksi muncul di MetaMask  
-    resultText.textContent = "⏳ Waiting Transaction...";  
+    resultText.innerHTML = `<img src="load.svg" 
+  style="width:28px;height:28px;vertical-align:middle;margin-right:6px;">
+  Waiting Transaction...`;  
   
     // 💰 Kirim transaksi ke kontrak  
     const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });  
   
     // 🎡 Setelah transaksi dikonfirmasi di blockchain  
-    resultText.textContent = "🎡 Spinning...";  
+    resultText.innerHTML = `<img src="loading.svg" 
+  style="width:28px;height:28px;vertical-align:middle;margin-right:6px;">
+  Spinning...`;  
 spinSound.currentTime = 0;  
     spinSound.play();  
   
@@ -517,7 +521,9 @@ spinSound.currentTime = 0;
     animateSpin(result);  
   } catch (err) {  
     console.error(err);  
-    resultText.textContent = "❌ Transaction failed.";  
+    resultText.innerHTML = `<img src="failed.svg" 
+  style="width:28px;height:28px;vertical-align:middle;margin-right:6px;">
+  Transaction failed.";  
     resetButton();  
   }  
 }
@@ -557,7 +563,9 @@ function animateSpin(resultName) {
         winSound.play();
         const prize = prizes[index];
         prize.path.classList.add("glow");
-        resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${displayName}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;
+        resultText.innerHTML = `<img src="win.png" 
+  style="width:28px;height:28px;vertical-align:middle;margin-right:6px;">
+  You won: <span style="color:gold;font-size:24px;">${displayName}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;
         setTimeout(resetButton, 2000);
       }
     }
