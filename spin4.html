@@ -1,122 +1,211 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faylotto Spin Wheel</title>
-    <link rel="stylesheet" href="styles.css">
-  <style>
-    body {
-    font-family: Arial, sans-serif;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faylotto Spin Wheel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.umd.min.js"></script>
+<style>
+  body {
+    background: radial-gradient(circle, #111 0%, #000 100%);
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
     height: 100vh;
-    margin: 0;
-    background-color: #f0f0f0;
-}
+    color: #fff;
+    font-family: "Ubuntu", sans-serif;
+    overflow: hidden;
+  }
 
-.container {
-    text-align: center;
-}
-
-h1 {
-    color: #333;
-    margin-bottom: 20px;
-}
-
-#walletStatus {
-    margin-bottom: 20px;
-}
-
-button {
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 5px;
-}
-
-button:hover {
-    background-color: #45a049;
-}
-
-#walletAddress {
-    color: #333;
-    font-weight: bold;
-}
-
-.wheel-container {
-    position: relative;
-}
-
-#wheel {
-    transform-origin: center;
-}
-
-.spin-btn {
+  /* Wallet Buttons */
+  .wallet-controls {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 100px;
-    height: 100px;
-    background-color: #ff4444;
-    border-radius: 50%;
+    top: 25px;
+    right: 25px;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 18px;
-    color: white;
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .wallet-btn {
+    background: linear-gradient(145deg, #00b4d8, #0077b6);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: bold;
+    padding: 10px 18px;
     cursor: pointer;
-    z-index: 10;
+    transition: 0.2s;
+  }
+
+  .wallet-btn:hover {
+    transform: scale(1.05);
+    background: linear-gradient(145deg, #48cae4, #0096c7);
+  }
+
+  .wallet-address {
+    background: #222;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #0ff;
+    border: 1px solid #0ff;
+  }
+
+  .wheel-container {
+    position: relative;
+    width: 350px;
+    height: 350px;
 }
 
-.spin-btn:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
+/* Pastikan animasi yang keluar dari SVG terlihat */
+svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;  /* kunci supaya efek glow tidak terpotong */
 }
 
-#resultText {
-    margin-top: 20px;
+/* Optional: jika ada group <g> di dalam SVG */
+svg g {
+    transform-origin: center center;
+    overflow: visible;
+}
+
+  #centerBtn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 85px;
+  height: 85px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #FFD700, #FFA500);
+  color: fff;
+  font-weight: bold;
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow:
+    0 0 20px rgba(255, 200, 0, 0.8),
+    inset 0 3px 5px rgba(255, 255, 255, 0.4);
+  border: 3px solid #fff;
+  transition: all 0.3s ease;
+  z-index: 15;
+  animation: btnGlow 3s infinite alternate;
+}
+
+/* Saat hover, cahaya lebih kuat */
+#centerBtn:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  box-shadow:
+    0 0 30px rgba(255, 240, 100, 0.9),
+    inset 0 4px 8px rgba(255, 255, 255, 0.6);
+}
+
+/* Saat disable */
+#centerBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Animasi glow lembut */
+@keyframes btnGlow {
+  0% {
+    box-shadow:
+      0 0 18px rgba(255, 215, 0, 0.8),
+      inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(255, 255, 180, 0.9),
+      inset 0 3px 6px rgba(255, 255, 255, 0.5);
+  }
+  100% {
+    box-shadow:
+      0 0 18px rgba(255, 215, 0, 0.8),
+      inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Teks cost ETH di bawah SPIN */
+#centerBtn .cost {
+  font-size: 10px;
+  color: #fff;
+  font-weight: bold;
+  margin-top: 2px;
+  text-shadow: 0 0 5px #00ff6a, 0 0 10px #00ff6a;
+}
+
+  .result {
+    margin-top: 30px;
     font-size: 20px;
-    color: #333;
+    text-align: center;
+    transition: all 0.5s ease;
+    min-height: 30px;
+  }
+
+  @keyframes pulseGlow {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px #00ffff)
+            drop-shadow(0 0 20px #a26bff)
+            drop-shadow(0 0 30px #ff70b8);
+  }
+  50% {
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 15px #6bffff)
+            drop-shadow(0 0 30px #b57bff)
+            drop-shadow(0 0 45px #ff7bd6);
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px #00ffff)
+            drop-shadow(0 0 20px #a26bff)
+            drop-shadow(0 0 30px #ff70b8);
+  }
 }
 
 .glow {
-    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+  animation: pulseGlow 1s infinite alternate;
+  transform-origin: center center;
 }
-  </style>
+  
+</style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>Faylotto Spin Wheel</h1>
-        <div id="walletStatus">
-            <button id="connectBtn">Connect Wallet</button>
-            <button id="disconnectBtn" style="display:none;">Disconnect</button>
-            <span id="walletAddress" style="display:none; margin-left:10px;"></span>
-        </div>
-        <div class="wheel-container">
-            <svg id="wheel" width="500" height="500" viewBox="0 0 500 500">
-                <!-- Wheel slices will be generated by JavaScript -->
-            </svg>
-            <div id="centerBtn" class="spin-btn">SPIN</div>
-            <div id="resultText">Click "SPIN" to start!</div>
-        </div>
+  <div class="wallet-controls">
+    <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
+    <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
+    <div id="walletAddress" class="wallet-address" style="display:none;">-</div>
+  </div>
+
+  <div class="wheel-container">
+    <svg id="wheel" viewBox="0 0 500 500"></svg>
+    <div id="centerBtn">
+  SPIN<br>
+  <span class="cost">0.000256 ETH</span>
     </div>
+  </div>
+  <div class="result" id="resultText">Press SPIN to play</div>
 
-    <!-- Audio Files -->
-    <audio id="clickSound" src="click.mp3"></audio>
-    <audio id="spinSound" src="spin.mp3" loop></audio>
-    <audio id="winSound" src="win.mp3"></audio>
+  <audio id="clickSound" src="click.mp3" preload="auto"></audio>
+  <audio id="spinSound" src="spin.mp" preload="auto" loop></audio>
+  <audio id="winSound" src="win.mp3" preload="auto"></audio>
 
-    <!-- External Libraries -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
-    <script>
-      let provider, signer, contract, userAddress;
+<script>
+// === CONTRACT ===
+const CONTRACT_ADDRESS = "0x85Ff2021Fee19c1Dcc9f019b4C57F86E2FA280f1";
+const ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner_","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"result","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"randomNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"contractBalance","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"totalBets","type":"uint256"},{"indexed":false,"internalType":"string","name":"highestAvailablePrize","type":"string"},{"indexed":false,"internalType":"bool","name":"prizeAvailable","type":"bool"},{"indexed":false,"internalType":"uint256","name":"winChance","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetUnliked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentIndex","type":"uint256"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"prizeName","type":"string"}],"name":"ETHAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoMinted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"freeSpinNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"random","type":"uint256"}],"name":"FreeSpinPlayed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"OwnerDepositFaylotto","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"rating","type":"uint8"}],"name":"RatingAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"oldRating","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"newRating","type":"uint8"}],"name":"RatingEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"}],"name":"ReferralAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"ReferralRewardEarned","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"uid","type":"string"}],"name":"UIDGenerated","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersPaused","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersUnpaused","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[],"name":"INITIAL_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refereeUID","type":"string"}],"name":"addReferralByUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner_","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"a","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"claimReferralReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"claimedReferralRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyUsedQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint256","name":"commentIndex","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"freeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeSpinData","outputs":[{"internalType":"uint256","name":"freeSpinsUsed","type":"uint256"},{"internalType":"uint256","name":"lastActive","type":"uint256"},{"internalType":"uint256","name":"walletCreated","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"freeSpinQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"generateUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getAverageRating","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getComments","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getPublicBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getRatingCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getUserBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserLike","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserRating","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"prize","type":"string"}],"name":"isPrizeAvailable","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"lastPrizeTimestamps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastResetTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"likeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"minInactiveTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minWalletAge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ownerDepositFaylotto","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowStart","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"publicHistoryLimit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint8","name":"rating","type":"uint8"}],"name":"rateBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrals","outputs":[{"internalType":"address","name":"inviter","type":"address"},{"internalType":"uint256","name":"rewardEarned","type":"uint256"},{"internalType":"string","name":"uid","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinBetPaid","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"spinPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalBetsEver","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"uidToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"unpause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"userTransfersPaused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawFaylottoFromContract","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
+
+let provider, signer, contract, userAddress;
 const btn = document.getElementById("centerBtn");
 const connectBtn = document.getElementById("connectBtn");
 const disconnectBtn = document.getElementById("disconnectBtn");
@@ -127,203 +216,219 @@ const spinSound = document.getElementById("spinSound");
 const winSound = document.getElementById("winSound");
 const svg = document.getElementById("wheel");
 
-const CONTRACT_ADDRESS = "0x85Ff2021Fee19c1Dcc9f019b4C57F86E2FA280f1"; // Ganti dengan alamat kontrak yang dideploy
-const ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner_","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"result","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"randomNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"contractBalance","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"totalBets","type":"uint256"},{"indexed":false,"internalType":"string","name":"highestAvailablePrize","type":"string"},{"indexed":false,"internalType":"bool","name":"prizeAvailable","type":"bool"},{"indexed":false,"internalType":"uint256","name":"winChance","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetUnliked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentIndex","type":"uint256"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"prizeName","type":"string"}],"name":"ETHAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoMinted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"freeSpinNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"random","type":"uint256"}],"name":"FreeSpinPlayed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"OwnerDepositFaylotto","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"rating","type":"uint8"}],"name":"RatingAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"oldRating","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"newRating","type":"uint8"}],"name":"RatingEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"}],"name":"ReferralAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"ReferralRewardEarned","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"uid","type":"string"}],"name":"UIDGenerated","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersPaused","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersUnpaused","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[],"name":"INITIAL_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refereeUID","type":"string"}],"name":"addReferralByUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner_","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"a","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"claimReferralReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"claimedReferralRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyUsedQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint256","name":"commentIndex","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"freeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeSpinData","outputs":[{"internalType":"uint256","name":"freeSpinsUsed","type":"uint256"},{"internalType":"uint256","name":"lastActive","type":"uint256"},{"internalType":"uint256","name":"walletCreated","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"freeSpinQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"generateUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getAverageRating","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getComments","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getPublicBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getRatingCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getUserBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserLike","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserRating","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"prize","type":"string"}],"name":"isPrizeAvailable","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"lastPrizeTimestamps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastResetTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"likeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"minInactiveTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minWalletAge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ownerDepositFaylotto","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowStart","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"publicHistoryLimit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint8","name":"rating","type":"uint8"}],"name":"rateBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrals","outputs":[{"internalType":"address","name":"inviter","type":"address"},{"internalType":"uint256","name":"rewardEarned","type":"uint256"},{"internalType":"string","name":"uid","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinBetPaid","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"spinPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalBetsEver","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"uidToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"unpause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"userTransfersPaused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawFaylottoFromContract","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
-
 const prizes = [
-    { name: "1 ETH Jackpot", icon: "eth.png" },
-    { name: "0.7 ETH", icon: "eth.png" },
-    { name: "MacBook", icon: "macbook.png" },
-    { name: "iPhone", icon: "iphone.png" },
-    { name: "0.1 ETH", icon: "eth.png" },
-    { name: "0.05 ETH", icon: "eth.png" },
-    { name: "0.005 ETH", icon: "eth.png" },
-    { name: "0.0005 ETH", icon: "eth.png" },
-    { name: "0.0001 ETH", icon: "eth.png" },
-    { name: "2 Faylotto", icon: "fpoint.svg" },
-    { name: "5 Faylotto", icon: "fpoint.svg" },
-    { name: "7 Faylotto", icon: "fpoint.svg" },
-    { name: "Try Again", icon: "again.png" },
-    { name: "No Prize", icon: "again.png" }
+  { name: "1 ETH", icon: "eth.png" },
+  { name: "0.7 ETH", icon: "eth.png" },
+  { name: "MacBook", icon: "macbook.png" },
+  { name: "iPhone", icon: "iphone.png" },
+  { name: "0.1 ETH", icon: "eth.png" },
+  { name: "0.05 ETH", icon: "eth.png" },
+  { name: "0.005 ETH", icon: "eth.png" },
+  { name: "0.0005 ETH", icon: "eth.png" },
+  { name: "0.0001 ETH", icon: "eth.png" },
+  { name: "2 Faylotto", icon: "fpoint.svg" },
+  { name: "5 Faylotto", icon: "fpoint.svg" },
+  { name: "7 Faylotto", icon: "fpoint.svg" },
+  { name: "Try Again", icon: "again.png" },
+  { name: "No Prize", icon: "again.png" }
 ];
 
-const prizeIndexMap = {
-    "1 ETH Jackpot": 0,
-    "0.7 ETH Big Win": 1,
-    "Won MacBook!": 2,
-    "iPhone or Worth ETH": 3,
-    "0.1 ETH Monthly Prize": 4,
-    "0.05 ETH Monthly Prize": 5,
-    "0.005 ETH Weekly": 6,
-    "0.0005 ETH Three-day Prize": 7,
-    "0.0001 ETH Daily Prize": 8,
-    "Won 2 Faylotto": 9,
-    "Won 5 Faylotto": 10,
-    "Won 7 Faylotto": 11,
-    "Try Again": 12,
-    "No Prize": 13
+const prizeMap = {
+  "1 ETH Jackpot": "1 ETH",
+  "0.7 ETH Big Win": "0.7 ETH",
+  "Won MacBook!": "MacBook Air",
+  "iPhone or Worth ETH": "iPhone Promax",
+  "0.1 ETH Monthly Prize": "0.1 ETH",
+  "0.05 ETH Monthly Prize": "0.05 ETH",
+  "0.005 ETH Weekly": "0.005 ETH",
+  "0.0005 ETH Three-day Prize": "0.0005 ETH",
+  "0.0001 ETH Daily Prize": "0.0001 ETH",
+  "Won 2 Faylotto": "2 Faylotto",
+  "Won 5 Faylotto": "5 Faylotto",
+  "Won 7 Faylotto": "7 Faylotto",
+  "Try Again": "Try Again",
+  "No Prize": "No Prize"
 };
 
 const colors = [
-    "#FFB703", "#FB8500", "#219EBC", "#8ECAE6", "#FF69B4",
-    "#90EE90", "#FFD700", "#40E0D0", "#ADFF2F", "#FF6347",
-    "#9370DB", "#20B2AA", "#FF4500", "#6A5ACD"
+  "#FFB703",
+  "#FB8500",
+  "#219EBC",
+  "#8ECAE6",
+  "#FF69B4",
+  "#90EE90",
+  "#FFD700",
+  "#40E0D0",
+  "#ADFF2F",
+  "#FF6347",
+  "#9370DB",
+  "#20B2AA",
+  "#FF4500",
+  "#6A5ACD"
 ];
 
-const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;
+const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;  
+  
+// Render wheel dengan icon & teks  
+for (let i = 0; i < total; i++) {  
+  const startAngle = (i * slice - 90) * Math.PI / 180;  
+  const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;  
+  const x1 = cx + radius * Math.cos(startAngle);  
+  const y1 = cy + radius * Math.sin(startAngle);  
+  const x2 = cx + radius * Math.cos(endAngle);  
+  const y2 = cy + radius * Math.sin(endAngle);  
+  
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");  
+  path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);  
+  path.setAttribute("fill", colors[i]);  
+  path.setAttribute("stroke", "#fff");  
+  path.setAttribute("stroke-width", "2");  
+  svg.appendChild(path);  
+  prizes[i].path = path;  
+  
+  const angle = (i + 0.5) * slice - 90;
 
-// Render wheel
-for (let i = 0; i < total; i++) {
-    const startAngle = (i * slice - 90) * Math.PI / 180;
-    const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;
-    const x1 = cx + radius * Math.cos(startAngle);
-    const y1 = cy + radius * Math.sin(startAngle);
-    const x2 = cx + radius * Math.cos(endAngle);
-    const y2 = cy + radius * Math.sin(endAngle);
+  // icon
+  const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+  const imgX = cx + radius * 0.55 * Math.cos(angle * Math.PI / 180) - 20;
+  const imgY = cy + radius * 0.55 * Math.sin(angle * Math.PI / 180) - 20;
+  img.setAttributeNS("http://www.w3.org/1999/xlink", "href", prizes[i].icon);
+  img.setAttribute("x", imgX);
+  img.setAttribute("y", imgY);
+  img.setAttribute("width", "40");
+  img.setAttribute("height", "40");
+  svg.appendChild(img);
 
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);
-    path.setAttribute("fill", colors[i % colors.length]);
-    path.setAttribute("stroke", "#fff");
-    path.setAttribute("stroke-width", "2");
-    svg.appendChild(path);
-    prizes[i].path = path;
-
-    const angle = (i + 0.5) * slice - 90;
-    const imgX = cx + radius * 0.55 * Math.cos(angle * Math.PI / 180) - 20;
-    const imgY = cy + radius * 0.55 * Math.sin(angle * Math.PI / 180) - 20;
-    const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
-    img.setAttributeNS("http://www.w3.org/1999/xlink", "href", prizes[i].icon);
-    img.setAttribute("x", imgX);
-    img.setAttribute("y", imgY);
-    img.setAttribute("width", "40");
-    img.setAttribute("height", "40");
-    svg.appendChild(img);
-
-    const textX = cx + radius * 0.8 * Math.cos(angle * Math.PI / 180);
-    const textY = cy + radius * 0.8 * Math.sin(angle * Math.PI / 180);
-    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    text.setAttribute("x", textX);
-    text.setAttribute("y", textY);
-    text.setAttribute("fill", "#fff");
-    text.setAttribute("font-size", "15");
-    text.setAttribute("font-weight", "bold");
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("alignment-baseline", "middle");
-    text.setAttribute("transform", `rotate(${angle}, ${textX}, ${textY})`);
-    text.textContent = prizes[i].name;
-    svg.appendChild(text);
+  // teks
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  const textX = cx + radius * 0.8 * Math.cos(angle * Math.PI / 180);
+  const textY = cy + radius * 0.8 * Math.sin(angle * Math.PI / 180);
+  text.setAttribute("x", textX);
+  text.setAttribute("y", textY);
+  text.setAttribute("fill", "#fff");
+  text.setAttribute("font-size", "15");
+  text.setAttribute("font-weight", "bold");
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("alignment-baseline", "middle");
+  text.setAttribute("transform", `rotate(${angle}, ${textX}, ${textY})`);
+  text.textContent = prizes[i].name;
+  svg.appendChild(text);
 }
 
-let currentRotation = 0, animation = null;
+let spinning = false,
+  currentRotation = 0,
+  animation = null;
 
 async function connectWallet() {
-    if (!window.ethereum) return alert("🦊 Install MetaMask!");
-    provider = new ethers.BrowserProvider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = await provider.getSigner();
-    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-    userAddress = await signer.getAddress();
-    connectBtn.style.display = "none";
-    disconnectBtn.style.display = "inline-block";
-    walletAddressDiv.style.display = "inline-block";
-    walletAddressDiv.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+  if (!window.ethereum) return alert("🦊 Install MetaMask!");
+  provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  signer = await provider.getSigner();
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+  userAddress = await signer.getAddress();
+  connectBtn.style.display = "none";
+  disconnectBtn.style.display = "inline-block";
+  walletAddressDiv.style.display = "inline-block";
+  walletAddressDiv.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
 }
 
 function disconnectWallet() {
-    provider = signer = contract = userAddress = null;
-    connectBtn.style.display = "inline-block";
-    disconnectBtn.style.display = "none";
-    walletAddressDiv.style.display = "none";
+  provider = signer = contract = userAddress = null;
+  connectBtn.style.display = "inline-block";
+  disconnectBtn.style.display = "none";
+  walletAddressDiv.style.display = "none";
 }
 
 async function spinFromBlockchain() {
-    if (!contract) return alert("⚠️ Connect your wallet first!");
-    try {
-        btn.disabled = true;
-        clickSound.play();
-        resultText.textContent = "⏳ Waiting for blockchain...";
-        spinSound.currentTime = 0;
-        spinSound.play();
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+  try {
+    btn.disabled = true;
+    clickSound.play();
+    resultText.textContent = "⏳ Waiting for blockchain...";
+    spinSound.currentTime = 0;
+    spinSound.play();
 
-        const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });
-        const receipt = await tx.wait();
+    const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });
+    const receipt = await tx.wait();
 
-        const events = receipt.logs
-            .map(log => {
-                try {
-                    return contract.interface.parseLog(log);
-                } catch (e) {
-                    console.error("Error parsing log:", e);
-                    return null;
-                }
-            })
-            .filter(e => e && e.name === "BetPlaced");
-
-        if (events.length === 0) throw new Error("No BetPlaced event found.");
-        const event = events[0];
-        const { result } = event.args;
-        console.log("Raw result from contract:", result);
-
-        if (!result || typeof result !== "string" || !(result in prizeIndexMap)) {
-            throw new Error(`Invalid or unmapped result from contract: ${result}`);
+    // Ambil event BetPlaced
+    const event = receipt.logs
+      .map(log => {
+        try {
+          return contract.interface.parseLog(log);
+        } catch {
+          return null;
         }
+      })
+      .filter(e => e && e.name === "BetPlaced")[0];
 
-        const index = prizeIndexMap[result];
-        animateSpin(index, result);
-    } catch (err) {
-        console.error("Transaction error:", err);
-        resultText.textContent = "❌ Transaction failed: " + err.message;
-        resetButton();
+    if (!event) {
+      throw new Error("No BetPlaced event found.");
     }
+
+    const { result } = event.args;
+    console.log("Raw result from contract:", result); // Debug
+    animateSpin(result);
+  } catch (err) {
+    console.error(err);
+    resultText.textContent = "❌ Transaction failed.";
+    resetButton();
+  }
 }
 
-function animateSpin(index, resultName) {
-    console.log("Animating with index:", index, "for result:", resultName);
-    if (index < 0 || index >= prizes.length) {
-        console.error(`Invalid index: ${index} for result: ${resultName}`);
-        resultText.textContent = "Error: Invalid spin result";
-        resetButton();
-        return;
+function animateSpin(resultName) {
+  console.log("Received resultName from backend:", resultName);
+  const displayName = prizeMap[resultName] || "No Prize";
+  console.log("Mapped displayName:", displayName);
+  const index = prizes.findIndex(p => p.name === displayName);
+  console.log("Calculated index:", index);
+
+  if (index === -1) {
+    console.error(`Hadiah tidak ditemukan: ${displayName}`);
+    resultText.textContent = "Error: Hadiah tidak valid";
+    resetButton();
+    return;
+  }
+
+  if (animation) gsap.killTweensOf(svg);
+  prizes.forEach(p => p.path.classList.remove("glow"));
+
+  const targetSlice = slice * index + slice / 2;
+  const totalRotation = currentRotation + 12 * 360 + targetSlice;
+  const duration = 30 + Math.random() * 5;
+
+  animation = gsap.fromTo(
+    svg,
+    { rotation: currentRotation },
+    {
+      rotation: totalRotation,
+      duration: duration,
+      ease: "power3.inOut",
+      transformOrigin: "center center",
+      onUpdate: () => (currentRotation = gsap.getProperty(svg, "rotation")),
+      onComplete: () => {
+        spinSound.pause();
+        winSound.play();
+        const prize = prizes[index];
+        prize.path.classList.add("glow");
+        resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${displayName}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;
+        setTimeout(resetButton, 2000);
+      }
     }
-
-    if (animation) gsap.killTweensOf(svg);
-    prizes.forEach(p => p.path.classList.remove("glow"));
-
-    const targetSlice = slice * index + slice / 2;
-    const totalRotation = currentRotation + 12 * 360 + targetSlice;
-    const duration = 30 + Math.random() * 5; // 30-35 detik untuk efek dramatis
-
-    animation = gsap.fromTo(
-        svg,
-        { rotation: currentRotation },
-        {
-            rotation: totalRotation,
-            duration: duration,
-            ease: "power3.inOut",
-            transformOrigin: "center center",
-            onUpdate: () => (currentRotation = gsap.getProperty(svg, "rotation")),
-            onComplete: () => {
-                spinSound.pause();
-                winSound.play();
-                const prize = prizes[index];
-                prize.path.classList.add("glow");
-                resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${prize.name}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;
-                setTimeout(resetButton, 2000);
-            }
-        }
-    );
+  );
 }
 
 function resetButton() {
-    btn.disabled = false;
-    btn.textContent = "SPIN";
-    spinSound.pause();
+  btn.disabled = false;
+  btn.textContent = "SPIN";
+  spinSound.pause();
 }
 
 connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
-btn.addEventListener("click", spinFromBlockchain);
-    </script>
+btn.addEventListener("click", spinFromBlockchain);   
+</script>
+
 </body>
-</html>
+</body>
+    </html>
