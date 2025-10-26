@@ -19,7 +19,6 @@
     font-family: "Ubuntu", sans-serif;
     overflow: hidden;
   }
-
 /* Wallet Buttons */
 .wallet-controls {
   position: absolute;
@@ -46,30 +45,60 @@
   background: linear-gradient(145deg, #48cae4, #0096c7);
 }
 
-/* Box info wallet */
+/* Box info wallet cyberpunk */
 .wallet-info {
   position: absolute;
-  top: 70px; /* jarak dari tombol */
+  top: 70px;
   right: 25px;
-  background: #111;
-  border-radius: 10px;
+  background: linear-gradient(145deg, #00eaff, #a26bff, #ff88ee);
+  border-radius: 12px;
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 180px;
-  border: 1px solid #0ff;
+  min-width: 200px;
+  border: 2px solid #0ff;
+  box-shadow:
+    0 0 10px #00eaff,
+    0 0 20px #a26bff,
+    0 0 30px #ff88ee;
+  color: #fff;
+  animation: neonPulse 2s ease-in-out infinite alternate;
+}
+
+/* Neon pulsing animation */
+@keyframes neonPulse {
+  0% {
+    box-shadow:
+      0 0 10px #00eaff,
+      0 0 20px #a26bff,
+      0 0 30px #ff88ee;
+  }
+  50% {
+    box-shadow:
+      0 0 15px #00ffff,
+      0 0 30px #bb66ff,
+      0 0 45px #ff88ee;
+  }
+  100% {
+    box-shadow:
+      0 0 12px #00eaff,
+      0 0 24px #a26bff,
+      0 0 36px #ff88ee;
+  }
 }
 
 .wallet-address {
   font-size: 14px;
   font-weight: bold;
   color: #0ff;
+  text-shadow: 0 0 3px #0ff, 0 0 6px #a26bff;
 }
 
 .wallet-balance {
   font-size: 13px;
   color: #0ff;
+  text-shadow: 0 0 2px #0ff, 0 0 4px #ff88ee;
 }
 
   .heel-container {
@@ -340,6 +369,11 @@ svg g {
   <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
 </div>
 
+<div class="wallet-controls">
+  <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
+  <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
+</div>
+
 <!-- Box info wallet di bawah tombol -->
 <div id="walletInfo" class="wallet-info" style="display:none;">
   <div id="walletAddress" class="wallet-address">-</div>
@@ -479,6 +513,8 @@ let spinning = false,
   currentRotation = 0,
   animation = null;
 
+  let balanceInterval;
+
 async function connectWallet() {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
   
@@ -494,15 +530,26 @@ async function connectWallet() {
 
   // info wallet
   walletInfo.style.display = "flex";
-  walletAddress.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+  walletAddress.textContent = userAddress;
 
-  // ambil ETH balance
-  const balance = await provider.getBalance(userAddress);
-  ethBalance.textContent = "ETH: " + ethers.formatEther(balance);
+  // update saldo langsung & realtime
+  async function updateBalances() {
+    try {
+      const ethBal = await provider.getBalance(userAddress);
+      ethBalance.textContent = "ETH: " + parseFloat(ethers.formatEther(ethBal)).toFixed(6);
 
-  // ambil Faylotto balance (contoh: fungsi balanceOf di kontrak)
-  const fBalance = await contract.balanceOf(userAddress);
-  faylottoBalance.textContent = "Faylotto: " + fBalance.toString();
+      const fBal = await contract.balanceOf(userAddress);
+      faylottoBalance.textContent = "Faylotto: " + parseFloat(ethers.formatUnits(fBal, 18)).toFixed(3);
+    } catch(e) {
+      console.error("Error fetching balances:", e);
+    }
+  }
+
+  // update pertama
+  await updateBalances();
+
+  // interval update setiap 5 detik
+  balanceInterval = setInterval(updateBalances, 5000);
 }
 
 function disconnectWallet() {
@@ -510,9 +557,10 @@ function disconnectWallet() {
   
   connectBtn.style.display = "inline-block";
   disconnectBtn.style.display = "none";
-  
   walletInfo.style.display = "none";
-}
+
+  if (balanceInterval) clearInterval(balanceInterval);
+                                     }
 
 async function spinFromBlockchain() {
 if (!contract) return alert("⚠️ Connect your wallet first!");
