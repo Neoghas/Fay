@@ -479,119 +479,64 @@ let spinning = false,
   currentRotation = 0,
   animation = null;
 
-  async function connectWallet() {
+async function connectWallet() {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
-  
   provider = new ethers.BrowserProvider(window.ethereum);
   await provider.send("eth_requestAccounts", []);
   signer = await provider.getSigner();
   contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
   userAddress = await signer.getAddress();
-
-  // tombol
   connectBtn.style.display = "none";
   disconnectBtn.style.display = "inline-block";
-
-  // info wallet
-  walletInfo.style.display = "flex";
-  walletAddress.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
-
-  // ambil ETH balance
-  const balance = await provider.getBalance(userAddress);
-  ethBalance.textContent = "ETH: " + ethers.formatEther(balance);
-
-  // ambil Faylotto balance
-  const fBalance = await contract.balanceOf(userAddress);
-  faylottoBalance.textContent = "Faylotto: " + fBalance.toString();
+  walletAddressDiv.style.display = "inline-block";
+  walletAddressDiv.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
 }
 
 function disconnectWallet() {
   provider = signer = contract = userAddress = null;
-  
   connectBtn.style.display = "inline-block";
   disconnectBtn.style.display = "none";
-  
-  walletInfo.style.display = "none";
+  walletAddressDiv.style.display = "none";
 }
 
-  async function connectWallet() {
-  if (!window.ethereum) return alert("🦊 Install MetaMask!");
-  
-  provider = new ethers.BrowserProvider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
-  signer = await provider.getSigner();
-  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-  userAddress = await signer.getAddress();
+async function spinFromBlockchain() {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+  try {
+    btn.disabled = true;
+    clickSound.play();
+    resultText.textContent = "⏳ Waiting for blockchain...";
+    spinSound.currentTime = 0;
+    spinSound.play();
 
-  // tombol
-  connectBtn.style.display = "none";
-  disconnectBtn.style.display = "inline-block";
+    const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });
+    const receipt = await tx.wait();
 
-  // info wallet
-  walletInfo.style.display = "flex";
-  walletAddress.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+    // Ambil event BetPlaced
+    const event = receipt.logs
+      .map(log => {
+        try {
+          return contract.interface.parseLog(log);
+        } catch {
+          return null;
+        }
+      })
+      .filter(e => e && e.name === "BetPlaced")[0];
 
-  // ambil ETH balance
-  const balance = await provider.getBalance(userAddress);
-  ethBalance.textContent = "ETH: " + ethers.formatEther(balance);
+    if (!event) {
+      throw new Error("No BetPlaced event found.");
+    }
 
-  // ambil Faylotto balance (contoh: fungsi balanceOf di kontrak)
-  const fBalance = await contract.balanceOf(userAddress);
-  faylottoBalance.textContent = "Faylotto: " + fBalance.toString();
+    const { result } = event.args;
+    console.log("Raw result from contract:", result); // Debug
+    animateSpin(result);
+  } catch (err) {
+    console.error(err);
+    resultText.textContent = "❌ Transaction failed.";
+    resetButton();
+  }
 }
 
-function disconnectWallet() {
-  provider = signer = contract = userAddress = null;
-  
-  connectBtn.style.display = "inline-block";
-  disconnectBtn.style.display = "none";
-  
-  walletInfo.style.display = "none";
-}
-  
-function animateSpin(resultName) {  
-  console.log("Received resultName:", resultName);  
-  const displayName = prizeMap[resultName] || "No Prize";  
-  console.log("Mapped displayName:", displayName);  
-  const index = prizes.findIndex(p => p.name === displayName);  
-  console.log("Calculated index:", index);  
-  
-  if (index === -1) {  
-    console.error(`Hadiah tidak ditemukan: ${displayName}`);  
-    resultText.textContent = "Error: Hadiah tidak valid";  
-    resetButton();  
-    return;  
-  }  
-  
-  if (animation) gsap.killTweensOf(svg);  
-  prizes.forEach(p => p.path.classList.remove("glow"));  
-  
-  const targetSlice = slice * index + slice / 2;  
-  const totalRotation = currentRotation + 12 * 360 + targetSlice;  
-  const duration = 30 + Math.random() * 5;  
-  
-  animation = gsap.fromTo(  
-    svg,  
-    { rotation: currentRotation },  
-    {  
-      rotation: totalRotation,  
-      duration: duration,  
-      ease: "power3.inOut",  
-      transformOrigin: "center center",  
-      onUpdate: () => (currentRotation = gsap.getProperty(svg, "rotation")),  
-      onComplete: () => {  
-        spinSound.pause();  
-        winSound.play();  
-        const prize = prizes[index];  
-        prize.path.classList.add("glow");  
-        resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${displayName}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;  
-        setTimeout(resetButton, 2000);  
-      }  
-    }  
-  );  
- }
-
-  function animateSpin(resultName) {
+function animateSpin(resultName) {
   console.log("Received resultName from backend:", resultName);
   const displayName = prizeMap[resultName] || "No Prize";
   console.log("Mapped displayName:", displayName);
@@ -641,7 +586,7 @@ function resetButton() {
 
 connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
-btn.addEventListener("click", spinFromBlockchain);
+btn.addEventListener("click", spinFromBlockchain);   
 </script>
 
 </body>
