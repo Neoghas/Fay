@@ -491,19 +491,19 @@ async function connectWallet() {
 
   // ambil ETH balance
   const balance = await provider.getBalance(userAddress);
-  ethBalance.textContent = "ETH: " + ethers.formatEther(balance);
+  const ethDisplay = parseFloat(ethers.formatEther(balance)).toFixed(7);
+  ethBalance.textContent = `ETH: ${ethDisplay}`;
 
-  // ambil Faylotto balance (contoh: fungsi balanceOf di kontrak)
+  // ambil Faylotto balance
   const fBalance = await contract.balanceOf(userAddress);
-  faylottoBalance.textContent = "Faylotto: " + fBalance.toString();
+  const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2); // asumsinya 18 desimal di kontrak
+  faylottoBalance.textContent = `Faylotto: ${fDisplay}`;
 }
 
 function disconnectWallet() {
   provider = signer = contract = userAddress = null;
-  
   connectBtn.style.display = "inline-block";
   disconnectBtn.style.display = "none";
-  
   walletInfo.style.display = "none";
 }
 
