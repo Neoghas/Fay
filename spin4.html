@@ -517,50 +517,43 @@ let spinning = false,
 
 async function connectWallet() {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
-  
+
   provider = new ethers.BrowserProvider(window.ethereum);
   await provider.send("eth_requestAccounts", []);
   signer = await provider.getSigner();
   contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
   userAddress = await signer.getAddress();
 
-  // tombol
+  // Tombol connect/disconnect
   connectBtn.style.display = "none";
   disconnectBtn.style.display = "inline-block";
 
-  // info wallet
+  // Tampilkan info wallet
   walletInfo.style.display = "flex";
-  walletAddress.textContent = userAddress;
+  walletAddress.textContent = "Address: " + userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
 
-  // update saldo langsung & realtime
+  // Fungsi refresh saldo
   async function updateBalances() {
-    try {
-      const ethBal = await provider.getBalance(userAddress);
-      ethBalance.textContent = "ETH: " + parseFloat(ethers.formatEther(ethBal)).toFixed(6);
+    const balance = await provider.getBalance(userAddress);
+    ethBalance.textContent = "ETH: " + parseFloat(ethers.formatEther(balance)).toFixed(7);
 
-      const fBal = await contract.balanceOf(userAddress);
-      faylottoBalance.textContent = "Faylotto: " + parseFloat(ethers.formatUnits(fBal, 18)).toFixed(3);
-    } catch(e) {
-      console.error("Error fetching balances:", e);
-    }
+    const fBalance = await contract.balanceOf(userAddress);
+    faylottoBalance.textContent = "Faylotto: " + parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(3);
   }
 
-  // update pertama
   await updateBalances();
 
-  // interval update setiap 5 detik
+  // Refresh otomatis tiap 10 detik
   balanceInterval = setInterval(updateBalances, 5000);
 }
 
 function disconnectWallet() {
   provider = signer = contract = userAddress = null;
-  
   connectBtn.style.display = "inline-block";
   disconnectBtn.style.display = "none";
   walletInfo.style.display = "none";
-
-  if (balanceInterval) clearInterval(balanceInterval);
-                                     }
+  clearInterval(balanceInterval); // hentikan auto refresh
+      }
 
 async function spinFromBlockchain() {
 if (!contract) return alert("⚠️ Connect your wallet first!");
