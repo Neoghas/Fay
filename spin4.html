@@ -333,126 +333,31 @@ svg g {
   transform-origin: center center;
 }
 
-.result-popup img.icon {
-  width: 65px;
-  height: 65px;
-  vertical-align: middle;
-  margin-bottom: 12px;
-  filter: drop-shadow(0 0 12px rgba(255, 0, 255, 0.4));
-}
-
-.result-popup img.prize {
-  width: 55px;
-  height: 55px;
-  vertical-align: middle;
-  margin-left: 12px;
-  border-radius: 12px;
-  box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-}
-
-.popup-btn {
-  margin-top: 20px;
-  background: linear-gradient(135deg, #7b2ff7, #f107a3, #00f0ff);
-  border: none;
-  border-radius: 12px;
-  color: #fff;
-  font-weight: bold;
-  padding: 12px 26px;
-  cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
-}
-
-.popup-btn:hover {
-  transform: scale(1.07);
-  box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
-}
-
-/* container utama popup */
+/* Popup Result */
 .result-popup {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(120, 0, 255, 0.15);
-  backdrop-filter: blur(15px) saturate(180%);
-  -webkit-backdrop-filter: blur(15px) saturate(180%);
-  border: 1.5px solid rgba(160, 0, 255, 0.3);
-  border-radius: 22px;
-  padding: 28px 40px;
+  background: rgba(20, 20, 20, 0.95);
+  color: #fff;
+  border: 2px solid gold;
+  border-radius: 20px;
+  padding: 30px 40px;
   text-align: center;
   font-size: 20px;
-  color: #fff;
   z-index: 9999;
+  box-shadow: 0 0 25px gold;
   display: none;
-  opacity: 0;
-  transition: opacity 0.8s ease, transform 0.8s ease;
-  box-shadow:
-    inset 0 0 20px rgba(200, 0, 255, 0.25),
-    0 0 25px rgba(187, 0, 255, 0.4),
-    0 0 50px rgba(0, 255, 255, 0.2);
-  animation: softGlow 6s ease-in-out infinite alternate;
-  overflow: hidden;
 }
-
-/* glow lembut */
-@keyframes softGlow {
-  0% {
-    box-shadow:
-      inset 0 0 18px rgba(200, 0, 255, 0.25),
-      0 0 25px rgba(187, 0, 255, 0.4),
-      0 0 50px rgba(0, 255, 255, 0.2);
-  }
-  50% {
-    box-shadow:
-      inset 0 0 30px rgba(200, 0, 255, 0.45),
-      0 0 45px rgba(187, 0, 255, 0.6),
-      0 0 70px rgba(0, 255, 255, 0.3);
-  }
-  100% {
-    box-shadow:
-      inset 0 0 18px rgba(200, 0, 255, 0.25),
-      0 0 25px rgba(187, 0, 255, 0.4),
-      0 0 50px rgba(0, 255, 255, 0.2);
-  }
+.result-popup img {
+  width: 60px;
+  height: 60px;
+  vertical-align: middle;
+  margin-left: 10px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px gold;
 }
-
-/* partikel lembut melayang */
-.result-popup span.particle {
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.6;
-  animation: floatSoft 10s infinite ease-in-out alternate;
-}
-
-@keyframes floatSoft {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.5;
-  }
-  50% {
-    transform: translate(20px, -30px) scale(1.3);
-    opacity: 0.9;
-  }
-  100% {
-    transform: translate(-15px, 25px) scale(1);
-    opacity: 0.6;
-  }
-}
-
-/* efek muncul / hilang */
-.result-popup.show {
-  display: block;
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.result-popup.hide {
-  opacity: 0;
-  transform: translate(-50%, -50%) scale(0.97);
-  pointer-events: none;
-}
-  
 </style>
 </head>
 
@@ -473,7 +378,7 @@ svg g {
     <svg id="wheel" viewBox="0 0 500 500"></svg>
     <div id="centerBtn">
   SPIN<br>
-  <span class="cost"><center>Cost</center><br>0.000256 ETH</span>
+  <span class="cost"><center>Cost</center>0.000256 ETH</span>
     </div>
   </div>
   <div class="result" id="resultText">Press SPIN to play</div>
@@ -747,51 +652,6 @@ function animateSpin(resultName) {
       }
       }
   );
-}
-
-function createParticles(popup) {
-  // hapus partikel lama
-  popup.querySelectorAll(".particle").forEach(p => p.remove());
-
-  // buat 6–8 partikel acak
-  const particleCount = 6 + Math.floor(Math.random() * 3);
-  const colors = ["#ff9ff3", "#feca57", "#54a0ff", "#5f27cd", "#1dd1a1", "#48dbfb", "#c8d6e5"];
-  
-  for (let i = 0; i < particleCount; i++) {
-    const span = document.createElement("span");
-    span.classList.add("particle");
-    span.style.background = colors[Math.floor(Math.random() * colors.length)];
-    span.style.width = `${6 + Math.random() * 8}px`;
-    span.style.height = span.style.width;
-    span.style.top = `${Math.random() * 90}%`;
-    span.style.left = `${Math.random() * 90}%`;
-    span.style.animationDuration = `${8 + Math.random() * 4}s`;
-    span.style.animationDelay = `${Math.random() * 2}s`;
-    popup.appendChild(span);
-  }
-}
-
-function playSoftDing() {
-  const audio = new Audio("https://cdn.pixabay.com/download/audio/2022/03/15/audio_70ed1d9b16.mp3?filename=soft-bell-notification-1.mp3");
-  audio.volume = 0.3;
-  audio.play();
-}
-
-function showPopup() {
-  const popup = document.querySelector(".result-popup");
-  createParticles(popup);
-  playSoftDing();
-
-  popup.classList.remove("hide");
-  popup.style.display = "block";
-  setTimeout(() => popup.classList.add("show"), 10);
-}
-
-function hidePopup() {
-  const popup = document.querySelector(".result-popup");
-  popup.classList.remove("show");
-  popup.classList.add("hide");
-  setTimeout(() => (popup.style.display = "none"), 800);
 }
 
 connectBtn.addEventListener("click", connectWallet);
