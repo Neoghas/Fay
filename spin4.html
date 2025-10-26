@@ -46,64 +46,31 @@
   background: linear-gradient(145deg, #48cae4, #0096c7);
 }
 
-/* Neon wallet info box */
+/* Box info wallet */
 .wallet-info {
   position: absolute;
-  top: 70px;
+  top: 70px; /* jarak dari tombol */
   right: 25px;
   background: #111;
-  border-radius: 12px;
-  padding: 14px 18px;
+  border-radius: 10px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  min-width: 200px;
-  border: 2px solid #0ff;
-  box-shadow: 
-    0 0 10px #0ff,
-    0 0 20px #7b00ff,
-    0 0 30px #ff5edc,
-    inset 0 0 6px #00eaff;
-  animation: neonPulse 2s ease-in-out infinite alternate;
-}
-
-/* Neon pulsing animation */
-@keyframes neonPulse {
-  0% {
-    box-shadow: 
-      0 0 10px #0ff,
-      0 0 20px #7b00ff,
-      0 0 30px #ff5edc,
-      inset 0 0 6px #00eaff;
-  }
-  50% {
-    box-shadow: 
-      0 0 18px #00ffff,
-      0 0 36px #bb66ff,
-      0 0 60px #ff88ee,
-      inset 0 0 12px #00ffff;
-  }
-  100% {
-    box-shadow: 
-      0 0 12px #0ff,
-      0 0 24px #7b00ff,
-      0 0 40px #ff5edc,
-      inset 0 0 8px #00eaff;
-  }
+  min-width: 180px;
+  border: 1px solid #0ff;
 }
 
 .wallet-address {
   font-size: 14px;
   font-weight: bold;
   color: #0ff;
-  text-shadow: 0 0 4px #0ff, 0 0 8px #7b00ff;
 }
 
 .wallet-balance {
   font-size: 13px;
   color: #0ff;
-  text-shadow: 0 0 3px #0ff, 0 0 6px #ff5edc;
-}
+  }
   
   .heel-container {
     position: relative;
@@ -371,11 +338,13 @@ svg g {
   <div class="wallet-controls">
   <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
   <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
-  </div>
+</div>
 
-  <div class="wallet-controls">
-  <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
-  <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
+<!-- Box info wallet di bawah tombol -->
+<div id="walletInfo" class="wallet-info" style="display:none;">
+  <div id="walletAddress" class="wallet-address">-</div>
+  <div id="ethBalance" class="wallet-balance">ETH: -</div>
+  <div id="faylottoBalance" class="wallet-balance">Faylotto: -</div>
 </div>
 
 <!-- Box info wallet neon -->
@@ -552,50 +521,40 @@ function disconnectWallet() {
   walletInfo.style.display = "none";
 }
 
-  async function spinFromBlockchain() {  
-  if (!contract) return alert("⚠️ Connect your wallet first!");  
-  try {  
-    btn.disabled = true;  
-    clickSound.play();  
+  async function connectWallet() {
+  if (!window.ethereum) return alert("🦊 Install MetaMask!");
   
-    // 🕓 Saat baru klik tombol → tunggu transaksi muncul di MetaMask  
-    resultText.textContent = "⏳ Waiting for blockchain...";  
-    spinSound.currentTime = 0;  
-    spinSound.play();  
+  provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  signer = await provider.getSigner();
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+  userAddress = await signer.getAddress();
+
+  // tombol
+  connectBtn.style.display = "none";
+  disconnectBtn.style.display = "inline-block";
+
+  // info wallet
+  walletInfo.style.display = "flex";
+  walletAddress.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+
+  // ambil ETH balance
+  const balance = await provider.getBalance(userAddress);
+  ethBalance.textContent = "ETH: " + ethers.formatEther(balance);
+
+  // ambil Faylotto balance (contoh: fungsi balanceOf di kontrak)
+  const fBalance = await contract.balanceOf(userAddress);
+  faylottoBalance.textContent = "Faylotto: " + fBalance.toString();
+}
+
+function disconnectWallet() {
+  provider = signer = contract = userAddress = null;
   
-    // 💰 Kirim transaksi ke kontrak  
-    const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });  
+  connectBtn.style.display = "inline-block";
+  disconnectBtn.style.display = "none";
   
-    // 🎡 Setelah transaksi dikonfirmasi di blockchain  
-    resultText.textContent = "🎡 Spinning...";  
-  
-    // Tunggu konfirmasi blok  
-    const receipt = await tx.wait();  
-  
-    // 🔍 Ambil event BetPlaced dari log  
-    const event = receipt.logs  
-      .map(log => {  
-        try {  
-          return contract.interface.parseLog(log);  
-        } catch {  
-          return null;  
-        }  
-      })  
-      .filter(e => e && e.name === "BetPlaced")[0];  
-  
-    if (!event) throw new Error("No BetPlaced event found.");  
-  
-    const { result } = event.args;  
-    console.log("Raw result from contract:", result);  
-  
-    // Jalankan animasi spin berdasarkan hasil kontrak  
-    animateSpin(result);  
-  } catch (err) {  
-    console.error(err);  
-    resultText.textContent = "❌ Transaction failed.";  
-    resetButton();  
-  }  
-}  
+  walletInfo.style.display = "none";
+}
   
 function animateSpin(resultName) {  
   console.log("Received resultName:", resultName);  
