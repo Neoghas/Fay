@@ -338,7 +338,7 @@ svg g {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.95);
+  transform: translate(-50%, -50%);
   background: rgba(120, 0, 255, 0.15);
   backdrop-filter: blur(15px) saturate(180%);
   -webkit-backdrop-filter: blur(15px) saturate(180%);
@@ -350,78 +350,50 @@ svg g {
   color: #fff;
   z-index: 9999;
   display: none;
+  opacity: 0; /* mulai transparan */
+  transition: opacity 0.8s ease, transform 0.8s ease;
   box-shadow:
     inset 0 0 20px rgba(200, 0, 255, 0.25),
     0 0 25px rgba(187, 0, 255, 0.4),
     0 0 50px rgba(0, 255, 255, 0.2);
-  animation: popupPulse 6s ease-in-out infinite alternate;
-  overflow: hidden; /* biar partikel tetap di area popup */
+  animation: softGlow 6s ease-in-out infinite alternate;
 }
 
 /* animasi glow lembut */
-@keyframes popupPulse {
+@keyframes softGlow {
   0% {
     box-shadow:
-      inset 0 0 15px rgba(200, 0, 255, 0.25),
+      inset 0 0 18px rgba(200, 0, 255, 0.25),
       0 0 25px rgba(187, 0, 255, 0.4),
       0 0 50px rgba(0, 255, 255, 0.2);
   }
   50% {
     box-shadow:
-      inset 0 0 25px rgba(200, 0, 255, 0.4),
-      0 0 40px rgba(187, 0, 255, 0.6),
+      inset 0 0 30px rgba(200, 0, 255, 0.45),
+      0 0 45px rgba(187, 0, 255, 0.6),
       0 0 70px rgba(0, 255, 255, 0.3);
   }
   100% {
     box-shadow:
-      inset 0 0 15px rgba(200, 0, 255, 0.25),
+      inset 0 0 18px rgba(200, 0, 255, 0.25),
       0 0 25px rgba(187, 0, 255, 0.4),
       0 0 50px rgba(0, 255, 255, 0.2);
   }
 }
 
-/* partikel neon */
-.result-popup::before,
-.result-popup::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.7;
-  animation: floatParticles 10s infinite ease-in-out alternate;
+/* kelas aktif (muncul lembut) */
+.result-popup.show {
+  display: block;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
 
-.result-popup::before {
-  width: 12px;
-  height: 12px;
-  background: rgba(255, 0, 255, 0.8);
-  top: 10%;
-  left: 15%;
-  animation-delay: 1s;
-}
-
-.result-popup::after {
-  width: 8px;
-  height: 8px;
-  background: rgba(0, 255, 255, 0.8);
-  bottom: 15%;
-  right: 20%;
-  animation-delay: 3s;
-}
-
-@keyframes floatParticles {
-  0% {
-    transform: translate(0, 0) scale(1);
-    opacity: 0.7;
+/* kelas hilang lembut */
+.result-popup.hide {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.97);
+  pointer-events: none;
   }
-  50% {
-    transform: translate(15px, -20px) scale(1.2);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(-10px, 20px) scale(1);
-    opacity: 0.7;
-  }
-}
 
 .result-popup img.icon {
   width: 65px;
@@ -752,6 +724,20 @@ function animateSpin(resultName) {
       }
       }
   );
+}
+
+  function showPopup() {
+  const popup = document.querySelector(".result-popup");
+  popup.classList.remove("hide");
+  popup.style.display = "block";
+  setTimeout(() => popup.classList.add("show"), 10);
+}
+
+function hidePopup() {
+  const popup = document.querySelector(".result-popup");
+  popup.classList.remove("show");
+  popup.classList.add("hide");
+  setTimeout(() => (popup.style.display = "none"), 800); // sesuai durasi fade
 }
 
 function resetButton() {
