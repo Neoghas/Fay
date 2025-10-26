@@ -324,6 +324,63 @@ svg g {
   animation: pulseGlow 1s infinite alternate;
   transform-origin: center center;
 }
+
+.result-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: radial-gradient(circle at top, #1a1a2e, #111);
+  color: #fff;
+  border: 2px solid gold;
+  border-radius: 20px;
+  padding: 25px 35px;
+  text-align: center;
+  font-size: 20px;
+  z-index: 9999;
+  box-shadow: 0 0 30px gold;
+  display: none;
+  animation: popupZoom 0.3s ease-out forwards;
+}
+
+@keyframes popupZoom {
+  from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.result-popup img.icon {
+  width: 60px;
+  height: 60px;
+  vertical-align: middle;
+  margin-bottom: 10px;
+}
+
+.result-popup img.prize {
+  width: 55px;
+  height: 55px;
+  vertical-align: middle;
+  margin-left: 10px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px gold;
+}
+
+.popup-btn {
+  margin-top: 18px;
+  background: linear-gradient(145deg, #ff00c8, #8a2be2, #00f0ff);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: bold;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: 0.2s;
+  box-shadow: 0 0 10px #ff00ff;
+}
+
+.popup-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px #00f0ff;
+}
   
 </style>
 </head>
@@ -349,6 +406,8 @@ svg g {
     </div>
   </div>
   <div class="result" id="resultText">Press SPIN to play</div>
+
+  <div id="resultPopup" class="result-popup"></div>
 
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp" preload="auto" loop></audio>
@@ -575,14 +634,30 @@ function animateSpin(resultName) {
       transformOrigin: "center center",
       onUpdate: () => (currentRotation = gsap.getProperty(svg, "rotation")),
       onComplete: () => {
-        spinSound.pause();
-        winSound.play();
-        const prize = prizes[index];
-        prize.path.classList.add("glow");
-        resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${displayName}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;
-        setTimeout(resetButton, 2000);
+  spinSound.pause();
+  winSound.play();
+  const prize = prizes[index];
+  prize.path.classList.add("glow");
+
+  // --- Popup hasil menang ---
+  const popup = document.getElementById("resultPopup");
+  popup.innerHTML = `
+    <img src="win.png" class="icon" alt="confetti">
+    <div class="text">
+      You won: <span style="color:gold;font-size:24px;">${displayName}</span>
+      <img src="${prize.icon}" class="prize" alt="prize">
+    </div>
+    <button id="closePopupBtn" class="popup-btn">OK</button>
+  `;
+  popup.style.display = "block";
+
+  // Tombol OK untuk menutup popup
+  document.getElementById("closePopupBtn").onclick = () => {
+    popup.style.display = "none";
+    resetButton();
+  };
       }
-    }
+      }
   );
 }
 
