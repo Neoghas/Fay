@@ -477,52 +477,51 @@ function disconnectWallet() {
   walletAddressDiv.style.display = "none";
 }
 
-async function spinFromBlockchain() {  
-  if (!contract) {
-    // ganti ⚠️ Connect your wallet first! dengan PNG
-    const warningIcon = '<img src="warning.svg" alt="Warning" style="width:34px; vertical-align:middle;">';
-    return alert(warningIcon + " Connect your wallet first!");  
-  }
+async function spinFromBlockchain() {
+if (!contract) return alert("⚠️ Connect your wallet first!");
+try {
+btn.disabled = true;
+clickSound.play();
 
-  try {  
-    btn.disabled = true;  
-    clickSound.play();  
+// 🕓 Saat baru klik tombol → tunggu transaksi muncul di MetaMask    
+resultText.textContent = "⏳ Waiting Transaction...";    
 
-    // Ganti ⏳ Waiting Transaction... dengan PNG jam
-    resultText.innerHTML = '<img src="load.svg" alt="Waiting" style="width:35px; vertical-align:middle;"> Waiting Transaction...';  
+// 💰 Kirim transaksi ke kontrak    
+const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });    
 
-    // 💰 Kirim transaksi ke kontrak
-    const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });  
+// 🎡 Setelah transaksi dikonfirmasi di blockchain    
+resultText.textContent = "🎡 Spinning...";
 
-    // 🎡 Setelah transaksi dikonfirmasi → ganti emoji roda dengan PNG
-    resultText.innerHTML = '<img src="loading.svg" alt="Spinning" style="width:35px; vertical-align:middle;"> Spinning...';
-    spinSound.currentTime = 0;  
-    spinSound.play();  
+spinSound.currentTime = 0;
+spinSound.play();
 
-    // Tunggu konfirmasi blok
-    const receipt = await tx.wait();  
+// Tunggu konfirmasi blok    
+const receipt = await tx.wait();    
 
-    // Ambil event BetPlaced
-    const event = receipt.logs  
-      .map(log => {  
-        try { return contract.interface.parseLog(log); }  
-        catch { return null; }  
-      })  
-      .filter(e => e && e.name === "BetPlaced")[0];  
+// 🔍 Ambil event BetPlaced dari log    
+const event = receipt.logs    
+  .map(log => {    
+    try {    
+      return contract.interface.parseLog(log);    
+    } catch {    
+      return null;    
+    }    
+  })    
+  .filter(e => e && e.name === "BetPlaced")[0];    
 
-    if (!event) throw new Error("No BetPlaced event found.");  
+if (!event) throw new Error("No BetPlaced event found.");    
 
-    const { result } = event.args;  
-    console.log("Raw result from contract:", result);  
+const { result } = event.args;    
+console.log("Raw result from contract:", result);    
 
-    // Jalankan animasi spin
-    animateSpin(result);  
-  } catch (err) {  
-    console.error(err);  
-    // ganti ❌ Transaction failed. dengan PNG
-    resultText.innerHTML = '<img src="failed.svg" alt="Error" style="width:35x; vertical-align:middle;"> Transaction failed.';
-    resetButton();  
-  }  
+// Jalankan animasi spin berdasarkan hasil kontrak    
+animateSpin(result);
+
+} catch (err) {
+console.error(err);
+resultText.textContent = "❌ Transaction failed.";
+resetButton();
+}
 }
 
 function animateSpin(resultName) {
