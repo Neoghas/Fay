@@ -62,19 +62,11 @@
   line-height: 1.7;
   border: 2px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 0 20px rgba(255, 105, 255, 0.4);
+  animation: glowPulse 3s infinite alternate;
   background-size: 200% 200%;
-  opacity: 0;
-  transform: translateY(-10px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
-  animation: gradientShift 6s infinite alternate ease-in-out;
 }
 
-.wallet-info.active {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@keyframes gradientShift {
+@keyframes glowPulse {
   0% { background-position: 0% 50%; box-shadow: 0 0 10px #a56bff; }
   100% { background-position: 100% 50%; box-shadow: 0 0 25px #ff7fd1; }
 }
@@ -337,7 +329,7 @@ svg g {
 
 <body>
   <div class="wallet-controls">
-  <button id="connectBtn" class="wallet-btn">Connect Walle</button>
+  <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
   <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
 </div>
 
@@ -493,15 +485,14 @@ async function connectWallet() {
 
   document.getElementById("connectBtn").style.display = "none";
   document.getElementById("disconnectBtn").style.display = "inline-block";
-
-  const walletInfo = document.getElementById("wallet-info");
-  walletInfo.style.display = "block";
-  setTimeout(() => walletInfo.classList.add("active"), 50); // efek fade-in halus
+  document.getElementById("wallet-info").style.display = "block";
 
   document.getElementById("walletAddress").textContent =
     userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
 
   await updateBalances();
+
+  // auto refresh tiap 5 detik
   balanceInterval = setInterval(updateBalances, 5000);
 }
 
@@ -509,10 +500,12 @@ async function updateBalances() {
   if (!provider || !userAddress) return;
 
   try {
+    // ETH balance (6 desimal)
     const balanceETH = await provider.getBalance(userAddress);
     const formattedETH = Number(ethers.formatEther(balanceETH)).toFixed(6);
     document.getElementById("ethBalance").textContent = formattedETH;
 
+    // Faylotto balance (2 desimal)
     const fayBalance = await contract.balanceOf(userAddress);
     const formattedFay = Number(ethers.formatUnits(fayBalance, 18)).toFixed(2);
     document.getElementById("fayBalance").textContent = formattedFay;
@@ -527,10 +520,7 @@ function disconnectWallet() {
 
   document.getElementById("connectBtn").style.display = "inline-block";
   document.getElementById("disconnectBtn").style.display = "none";
-
-  const walletInfo = document.getElementById("wallet-info");
-  walletInfo.classList.remove("active");
-  setTimeout(() => (walletInfo.style.display = "none"), 600);
+  document.getElementById("wallet-info").style.display = "none";
 }
 
 async function spinFromBlockchain() {
