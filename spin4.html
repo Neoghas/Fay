@@ -28,7 +28,6 @@
   display: flex;
   flex-direction: row;
   gap: 10px;
-  z-index: 10;
 }
 
 .wallet-btn {
@@ -47,28 +46,30 @@
   background: linear-gradient(145deg, #48cae4, #0096c7);
 }
 
-/* Futuristic Info Box */
+/* Box info wallet */
 .wallet-info {
   position: absolute;
-  top: 80px;
+  top: 70px; /* jarak dari tombol */
   right: 25px;
-  background: linear-gradient(135deg, #00eaff, #a56bff, #ff7fd1);
-  border-radius: 14px;
-  padding: 14px 18px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: bold;
-  min-width: 230px;
-  line-height: 1.7;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 20px rgba(255, 105, 255, 0.4);
-  animation: glowPulse 3s infinite alternate;
-  background-size: 200% 200%;
+  background: #111;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+  border: 1px solid #0ff;
 }
 
-@keyframes glowPulse {
-  0% { background-position: 0% 50%; box-shadow: 0 0 10px #a56bff; }
-  100% { background-position: 100% 50%; box-shadow: 0 0 25px #ff7fd1; }
+.wallet-address {
+  font-size: 14px;
+  font-weight: bold;
+  color: #0ff;
+}
+
+.wallet-balance {
+  font-size: 13px;
+  color: #0ff;
 }
 
   .wheel-container {
@@ -333,10 +334,11 @@ svg g {
   <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
 </div>
 
-<div id="wallet-info" class="wallet-info" style="display:none;">
-  <div><strong>Address:</strong> <span id="walletAddress">-</span></div>
-  <div><strong>ETH:</strong> <span id="ethBalance">0.000000</span></div>
-  <div><strong>Faylotto:</strong> <span id="fayBalance">0.00</span></div>
+<!-- Box info wallet di bawah tombol -->
+<div id="walletInfo" class="wallet-info" style="display:none;">
+  <div id="walletAddress" class="wallet-address">-</div>
+  <div id="ethBalance" class="wallet-balance">ETH: -</div>
+  <div id="faylottoBalance" class="wallet-balance">Faylotto: -</div>
 </div>
 
   <div class="wheel-container">
@@ -470,57 +472,39 @@ let spinning = false,
   currentRotation = 0,
   animation = null;
 
-let provider, signer, contract, userAddress;
-let balanceInterval;
-
 async function connectWallet() {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
-
+  
   provider = new ethers.BrowserProvider(window.ethereum);
   await provider.send("eth_requestAccounts", []);
   signer = await provider.getSigner();
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
   userAddress = await signer.getAddress();
 
-  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+  // tombol
+  connectBtn.style.display = "none";
+  disconnectBtn.style.display = "inline-block";
 
-  document.getElementById("connectBtn").style.display = "none";
-  document.getElementById("disconnectBtn").style.display = "inline-block";
-  document.getElementById("wallet-info").style.display = "block";
+  // info wallet
+  walletInfo.style.display = "flex";
+  walletAddress.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
 
-  document.getElementById("walletAddress").textContent =
-    userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+  // ambil ETH balance
+  const balance = await provider.getBalance(userAddress);
+  ethBalance.textContent = "ETH: " + ethers.formatEther(balance);
 
-  await updateBalances();
-
-  // auto refresh tiap 5 detik
-  balanceInterval = setInterval(updateBalances, 5000);
-}
-
-async function updateBalances() {
-  if (!provider || !userAddress) return;
-
-  try {
-    // ETH balance (6 desimal)
-    const balanceETH = await provider.getBalance(userAddress);
-    const formattedETH = Number(ethers.formatEther(balanceETH)).toFixed(6);
-    document.getElementById("ethBalance").textContent = formattedETH;
-
-    // Faylotto balance (2 desimal)
-    const fayBalance = await contract.balanceOf(userAddress);
-    const formattedFay = Number(ethers.formatUnits(fayBalance, 18)).toFixed(2);
-    document.getElementById("fayBalance").textContent = formattedFay;
-  } catch (err) {
-    console.error("Balance update error:", err);
-  }
+  // ambil Faylotto balance (contoh: fungsi balanceOf di kontrak)
+  const fBalance = await contract.balanceOf(userAddress);
+  faylottoBalance.textContent = "Faylotto: " + fBalance.toString();
 }
 
 function disconnectWallet() {
   provider = signer = contract = userAddress = null;
-  clearInterval(balanceInterval);
-
-  document.getElementById("connectBtn").style.display = "inline-block";
-  document.getElementById("disconnectBtn").style.display = "none";
-  document.getElementById("wallet-info").style.display = "none";
+  
+  connectBtn.style.display = "inline-block";
+  disconnectBtn.style.display = "none";
+  
+  walletInfo.style.display = "none";
 }
 
 async function spinFromBlockchain() {
