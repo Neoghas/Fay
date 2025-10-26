@@ -21,40 +21,89 @@
   }
 
   /* Wallet Buttons */
-  .wallet-controls {
-    position: absolute;
-    top: 25px;
-    right: 25px;
-    display: flex;
-    flex-direction: row;
-    gap: 10px;
-  }
+.wallet-controls {
+  position: absolute;
+  top: 25px;
+  right: 25px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
 
-  .wallet-btn {
-    background: linear-gradient(145deg, #00b4d8, #0077b6);
-    border: none;
-    border-radius: 10px;
-    color: #fff;
-    font-weight: bold;
-    padding: 10px 18px;
-    cursor: pointer;
-    transition: 0.2s;
-  }
+.wallet-btn {
+  background: linear-gradient(145deg, #00b4d8, #0077b6);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: bold;
+  padding: 10px 18px;
+  cursor: pointer;
+  transition: 0.2s;
+}
 
-  .wallet-btn:hover {
-    transform: scale(1.05);
-    background: linear-gradient(145deg, #48cae4, #0096c7);
-  }
+.wallet-btn:hover {
+  transform: scale(1.05);
+  background: linear-gradient(145deg, #48cae4, #0096c7);
+}
 
-  .wallet-address {
-    background: #222;
-    border-radius: 10px;
-    padding: 10px 16px;
-    font-size: 14px;
-    font-weight: bold;
-    color: #0ff;
-    border: 1px solid #0ff;
+/* Neon wallet info box */
+.wallet-info {
+  position: absolute;
+  top: 70px;
+  right: 25px;
+  background: #111;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px;
+  border: 2px solid #0ff;
+  box-shadow: 
+    0 0 10px #0ff,
+    0 0 20px #7b00ff,
+    0 0 30px #ff5edc,
+    inset 0 0 6px #00eaff;
+  animation: neonPulse 2s ease-in-out infinite alternate;
+}
+
+/* Neon pulsing animation */
+@keyframes neonPulse {
+  0% {
+    box-shadow: 
+      0 0 10px #0ff,
+      0 0 20px #7b00ff,
+      0 0 30px #ff5edc,
+      inset 0 0 6px #00eaff;
   }
+  50% {
+    box-shadow: 
+      0 0 18px #00ffff,
+      0 0 36px #bb66ff,
+      0 0 60px #ff88ee,
+      inset 0 0 12px #00ffff;
+  }
+  100% {
+    box-shadow: 
+      0 0 12px #0ff,
+      0 0 24px #7b00ff,
+      0 0 40px #ff5edc,
+      inset 0 0 8px #00eaff;
+  }
+}
+
+.wallet-address {
+  font-size: 14px;
+  font-weight: bold;
+  color: #0ff;
+  text-shadow: 0 0 4px #0ff, 0 0 8px #7b00ff;
+}
+
+.wallet-balance {
+  font-size: 13px;
+  color: #0ff;
+  text-shadow: 0 0 3px #0ff, 0 0 6px #ff5edc;
+}
 
   .heel-container {
     position: relative;
@@ -320,10 +369,16 @@ svg g {
 
 <body>
   <div class="wallet-controls">
-    <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
-    <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
-    <div id="walletAddress" class="wallet-address" style="display:none;">-</div>
-  </div>
+  <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
+  <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
+</div>
+
+<!-- Box info wallet neon -->
+<div id="walletInfo" class="wallet-info" style="display:none;">
+  <div id="walletAddress" class="wallet-address">-</div>
+  <div id="ethBalance" class="wallet-balance">ETH: -</div>
+  <div id="faylottoBalance" class="wallet-balance">Faylotto: -</div>
+</div>
   
   <div class="wheel-container">
     <svg id="wheel" viewBox="0 0 500 500"></svg>
@@ -459,22 +514,37 @@ let spinning = false,
 
 async function connectWallet() {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
+  
   provider = new ethers.BrowserProvider(window.ethereum);
   await provider.send("eth_requestAccounts", []);
   signer = await provider.getSigner();
   contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
   userAddress = await signer.getAddress();
+
+  // tombol
   connectBtn.style.display = "none";
   disconnectBtn.style.display = "inline-block";
-  walletAddressDiv.style.display = "inline-block";
-  walletAddressDiv.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+
+  // info wallet
+  walletInfo.style.display = "flex";
+  walletAddress.textContent = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+
+  // ambil ETH balance
+  const balance = await provider.getBalance(userAddress);
+  ethBalance.textContent = "ETH: " + ethers.formatEther(balance);
+
+  // ambil Faylotto balance
+  const fBalance = await contract.balanceOf(userAddress);
+  faylottoBalance.textContent = "Faylotto: " + fBalance.toString();
 }
 
 function disconnectWallet() {
   provider = signer = contract = userAddress = null;
+  
   connectBtn.style.display = "inline-block";
   disconnectBtn.style.display = "none";
-  walletAddressDiv.style.display = "none";
+  
+  walletInfo.style.display = "none";
 }
 
 async function spinFromBlockchain() {
