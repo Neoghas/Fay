@@ -481,10 +481,9 @@ svg g {
     </div>
   </div>
   <div class="result" id="resultText">Press SPIN to play</div>
-
-  <div class="result" id="resultText">Press SPIN to play</div>
-<div id="spinPopup" class="popup">Popup Spin Content</div>
-
+  
+<div id="spinPopup" class="popup"></div>
+  
  <div id="resultPopup" class="result-popup"></div>
 
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
@@ -558,6 +557,9 @@ const colors = [
 ];
 
 const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;  
+
+const resultText = document.getElementById("resultText");
+const spinPopup = document.getElementById("spinPopup");
   
 // Render wheel dengan icon & teks  
 for (let i = 0; i < total; i++) {  
@@ -663,9 +665,11 @@ resultText.textContent = "⏳ Waiting Transaction...";
 // 💰 Kirim transaksi ke kontrak    
 const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });    
 
-// 🎡 Setelah transaksi dikonfirmasi di blockchain    
+// 🎡 Setelah transaksi dikonfirmasi di blockchain  
 resultText.textContent = "🎡 Spinning...";
-
+resultText.classList.remove("hidden");
+  resultText.classList.add("glow");
+  
 spinSound.currentTime = 0;
 spinSound.play();
 
@@ -808,16 +812,7 @@ function animateSpin(resultName) {
   );
 }
 
-  const resultText = document.getElementById("resultText");
-const spinPopup = document.getElementById("spinPopup");
-
 // Tampilkan spinning + efek glow
-function showSpinning() {
-  resultText.textContent = "🎡 Spinning...";
-  resultText.classList.remove("hidden");
-  resultText.classList.add("glow");
-}
-
 // Hilangkan efek glow + fade
 function hideResult() {
   resultText.classList.remove("glow");
