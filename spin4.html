@@ -338,31 +338,57 @@ svg g {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(20, 20, 20, 0.95);
+  transform: translate(-50%, -50%) scale(0.9);
+  background: radial-gradient(circle at top, #1a1a2e, #111);
   color: #fff;
   border: 2px solid gold;
   border-radius: 20px;
-  padding: 30px 40px;
+  padding: 25px 35px;
   text-align: center;
   font-size: 20px;
   z-index: 9999;
-  box-shadow: 0 0 25px gold;
+  box-shadow: 0 0 30px gold;
   display: none;
+  animation: popupZoom 0.3s ease-out forwards;
 }
+
+@keyframes popupZoom {
+  from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
 .result-popup img.icon {
-  width: 50px;
-  height: 50px;
-  vertical-align: middle;
-  margin-right: 10px;
-}
-.result-popup img.prize {
   width: 60px;
   height: 60px;
+  vertical-align: middle;
+  margin-bottom: 10px;
+}
+
+.result-popup img.prize {
+  width: 55px;
+  height: 55px;
   vertical-align: middle;
   margin-left: 10px;
   border-radius: 12px;
   box-shadow: 0 0 10px gold;
+}
+
+.popup-btn {
+  margin-top: 18px;
+  background: linear-gradient(145deg, #ff00c8, #8a2be2, #00f0ff);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: bold;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: 0.2s;
+  box-shadow: 0 0 10px #ff00ff;
+}
+
+.popup-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 20px #00f0ff;
 }
 </style>
 </head>
@@ -389,7 +415,7 @@ svg g {
   </div>
   <div class="result" id="resultText">Press SPIN to play</div>
 
-  <div id="resultPopup" class="result-popup"></div>
+ <div id="resultPopup" class="result-popup"></div>
 
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
@@ -641,7 +667,7 @@ function animateSpin(resultName) {
   // --- Popup hasil menang ---
   const popup = document.getElementById("resultPopup");
   popup.innerHTML = `
-    <img src="win.png" class="icon" alt="confetti">
+    <img src="./img/confetti.png" class="icon" alt="confetti">
     <div class="text">
       You won: <span style="color:gold;font-size:24px;">${displayName}</span>
       <img src="${prize.icon}" class="prize" alt="prize">
@@ -656,9 +682,8 @@ function animateSpin(resultName) {
     resetButton();
   };
       }
+  };
       }
-  );
-}
 
 connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
