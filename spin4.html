@@ -410,7 +410,7 @@ svg g {
   <div id="resultPopup" class="result-popup"></div>
 
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
-  <audio id="spinSound" src="spin.mp" preload="auto" loop></audio>
+  <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
   <audio id="winSound" src="win.mp3" preload="auto"></audio>
 <script>
 // === CONTRACT ===
@@ -571,11 +571,19 @@ async function spinFromBlockchain() {
   try {
     btn.disabled = true;
     clickSound.play();
-    resultText.textContent = "⏳ Waiting for blockchain...";
-    spinSound.currentTime = 0;
-    spinSound.play();
+    resultText.textContent = "⏳ Waiting for Transaction...";
 
     const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });
+
+    // 🎡 Setelah transaksi dikonfirmasi di blockchain
+resultText.textContent = "🎡 Spinning...";
+
+spinSound.currentTime = 0;
+spinSound.play();
+
+// Tunggu konfirmasi blok
+const receipt = await tx.wait();
+    
     const receipt = await tx.wait();
 
     // Ambil event BetPlaced
