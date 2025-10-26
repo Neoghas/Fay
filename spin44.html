@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Faylotto Spin Wheel</title>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.umd.min.js"></script>
 <style>
@@ -18,8 +19,8 @@
     font-family: "Ubuntu", sans-serif;
     overflow: hidden;
   }
-
-  /* Wallet Buttons */
+  
+/* Wallet Buttons */
   .wallet-controls {
     position: absolute;
     top: 25px;
@@ -56,12 +57,16 @@
   }
 
   .wheel-container {
-    position: relative;
-    width: 350px;
-    height: 350px;
+  position: relative;
+  width: 350px;
+  height: 350px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
 }
 
-/* Pastikan animasi yang keluar dari SVG terlihat */
+  /* Pastikan animasi yang keluar dari SVG terlihat */
 svg {
     width: 100%;
     height: 100%;
@@ -75,7 +80,51 @@ svg g {
     overflow: visible;
 }
 
-  #centerBtn {
+/* Lingkaran listrik menempel di tepi wheel */
+.wheel-container::after {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%;
+  border: 7px solid transparent;
+  background: conic-gradient(
+    from 0deg,
+    #00eaff,
+    #7b00ff,
+    #ff5edc,
+    #00eaff
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 6px), black 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black 100%);
+  animation: electricFlow 2.5s linear infinite, sparkFlicker 1.2s ease-in-out infinite alternate;
+  box-shadow:
+    0 0 10px #00eaff,
+    0 0 20px #b44bff,
+    0 0 30px #ff6be7,
+    inset 0 0 12px #00eaff;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Efek arus listrik mengalir melingkar */
+@keyframes electricFlow {
+  0% {
+    transform: rotate(0deg);
+    filter: hue-rotate(0deg) brightness(1);
+  }
+  100% {
+    transform: rotate(360deg);
+    filter: hue-rotate(360deg) brightness(1.3);
+  }
+}
+
+/* Percikan cepat saat spin */
+@keyframes sparkFlickerFast {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 1; }
+}
+
+  #enterBtn {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -102,7 +151,7 @@ svg g {
 }
 
 /* Saat hover, cahaya lebih kuat */
-#centerBtn:hover {
+#enterBtn:hover {
   transform: translate(-50%, -50%) scale(1.08);
   box-shadow:
     0 0 30px rgba(255, 240, 100, 0.9),
@@ -110,28 +159,111 @@ svg g {
 }
 
 /* Saat disable */
-#centerBtn:disabled {
+#enterBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 /* Animasi glow lembut */
-@keyframes btnGlow {
+@keyframes btnGlo {
   0% {
-    box-shadow:
+    ox-shadow:
       0 0 18px rgba(255, 215, 0, 0.8),
       inset 0 2px 4px rgba(255, 255, 255, 0.3);
   }
   50% {
-    box-shadow:
+    ox-shadow:
       0 0 30px rgba(255, 255, 180, 0.9),
       inset 0 3px 6px rgba(255, 255, 255, 0.5);
   }
   100% {
-    box-shadow:
+    ox-shadow:
       0 0 18px rgba(255, 215, 0, 0.8),
       inset 0 2px 4px rgba(255, 255, 255, 0.3);
   }
+}
+
+#centerBtn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 85px;
+  height: 85px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #0ff, #7b00ff, #ff58d6);
+  color: #fff;
+  font-weight: bold;
+  font-size: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 3px solid transparent;
+  box-shadow:
+    0 0 25px rgba(0, 255, 255, 0.8),
+    0 0 45px rgba(170, 0, 255, 0.6),
+    inset 0 0 15px rgba(255, 90, 220, 0.8);
+  z-index: 15;
+  transition: all 0.3s ease;
+  animation: btnGlow 2s ease-in-out infinite alternate;
+  overflow: hidden;
+}
+
+/* Efek aliran listrik melingkar */
+#centerBtn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  background: conic-gradient(
+    from 0deg,
+    #00ffff,
+    #7b00ff,
+    #ff58d6,
+    #00ffff
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), black 100%);
+  animation: electricRing 1.8s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Glow lembut di tombol */
+@keyframes btnGlow {
+  0% {
+    box-shadow:
+      0 0 20px #00ffff,
+      0 0 40px #7b00ff,
+      inset 0 0 15px #ff58d6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    box-shadow:
+      0 0 30px #00ffff,
+      0 0 60px #b44bff,
+      inset 0 0 20px #ff6be7;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+  100% {
+    box-shadow:
+      0 0 20px #00ffff,
+      0 0 40px #7b00ff,
+      inset 0 0 15px #ff58d6;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Hover – nyala lebih terang */
+#centerBtn:hover {
+  filter: brightness(1.3);
+  box-shadow:
+    0 0 35px #00ffff,
+    0 0 70px #ff6be7,
+    inset 0 0 25px #ff8cff;
 }
 
 /* Teks cost ETH di bawah SPIN */
@@ -199,7 +331,6 @@ svg g {
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp" preload="auto" loop></audio>
   <audio id="winSound" src="win.mp3" preload="auto"></audio>
-
 <script>
 // === CONTRACT ===
 const CONTRACT_ADDRESS = "0x85Ff2021Fee19c1Dcc9f019b4C57F86E2FA280f1";
@@ -218,19 +349,19 @@ const svg = document.getElementById("wheel");
 
 const prizes = [
   { name: "1 ETH", icon: "eth.png" },
-  { name: "0.7 ETH", icon: "eth.png" },
+  { name: "Try Again", icon: "again.png" },
   { name: "MacBook", icon: "macbook.png" },
-  { name: "iPhone", icon: "iphone.png" },
+  { name: "5 Faylotto", icon: "fpoint.png" },
   { name: "0.1 ETH", icon: "eth.png" },
   { name: "0.05 ETH", icon: "eth.png" },
+  { name: "0.7 ETH", icon: "eth.png" },
+  { name: "2 Faylotto", icon: "fpoint.png" },
   { name: "0.005 ETH", icon: "eth.png" },
   { name: "0.0005 ETH", icon: "eth.png" },
-  { name: "0.0001 ETH", icon: "eth.png" },
-  { name: "2 Faylotto", icon: "fpoint.svg" },
-  { name: "5 Faylotto", icon: "fpoint.svg" },
-  { name: "7 Faylotto", icon: "fpoint.svg" },
-  { name: "Try Again", icon: "again.png" },
-  { name: "No Prize", icon: "again.png" }
+  { name: "No Prize", icon: "no.png" },
+  { name: "0.0001 ETH", icon: "eth.png" },  
+  { name: "iPhone", icon: "iphone.png" },
+  { name: "7 Faylotto", icon: "fpoint.png" }
 ];
 
 const prizeMap = {
@@ -251,20 +382,20 @@ const prizeMap = {
 };
 
 const colors = [
-  "#FFB703",
   "#FB8500",
-  "#219EBC",
-  "#8ECAE6",
-  "#FF69B4",
-  "#90EE90",
-  "#FFD700",
-  "#40E0D0",
-  "#ADFF2F",
   "#FF6347",
-  "#9370DB",
-  "#20B2AA",
+  "#571aff",
+  "#72a2b8",
+  "#FF69B4",
+  "#65a765",
+  "#FFB703",
+  "#33b3a6",
+  "#79b321",
+  "#219EBC",
   "#FF4500",
-  "#6A5ACD"
+  "#20B2AA",
+  "#6A5ACD",
+  "#9370DB"
 ];
 
 const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;  
