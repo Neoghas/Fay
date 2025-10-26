@@ -46,6 +46,14 @@
   background: linear-gradient(145deg, #48cae4, #0096c7);
 }
 
+  .wallet-address {
+  cursor: pointer;
+  user-select: none;
+}
+.wallet-address:hover {
+  opacity: 0.8;
+}
+
 /* Box info wallet */
 .wallet-info {
   position: absolute;
@@ -636,6 +644,13 @@ async function connectWallet() {
   // info wallet
   walletInfo.style.display = "flex";
   walletAddress.textContent = `User: ${userAddress.slice(0, 5)}...${userAddress.slice(-5)}`;
+  walletAddress.addEventListener("click", () => {
+  navigator.clipboard.writeText(userAddress);
+  walletAddress.textContent = `Copied ✅`;
+  setTimeout(() => {
+    walletAddress.textContent = `User: ${userAddress.slice(0, 5)}...${userAddress.slice(-5)}`;
+  }, 1200);
+});
 
   // ambil ETH balance
   const balance = await provider.getBalance(userAddress);
