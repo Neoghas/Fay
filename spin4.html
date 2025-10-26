@@ -476,6 +476,9 @@ svg g {
   </div>
   <div class="result" id="resultText">Press SPIN to play</div>
 
+  <div class="result" id="resultText">Press SPIN to play</div>
+<div id="spinPopup" class="popup">Popup Spin Content</div>
+
  <div id="resultPopup" class="result-popup"></div>
 
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
@@ -798,6 +801,46 @@ function animateSpin(resultName) {
     }
   );
 }
+
+  const resultText = document.getElementById("resultText");
+const spinPopup = document.getElementById("spinPopup");
+
+// Tampilkan spinning + efek glow
+function showSpinning() {
+  resultText.textContent = "🎡 Spinning...";
+  resultText.classList.remove("hidden");
+  resultText.classList.add("glow");
+}
+
+// Hilangkan efek glow + fade
+function hideResult() {
+  resultText.classList.remove("glow");
+  resultText.classList.add("hidden");
+}
+
+// Reset ke default
+function resetResult() {
+  resultText.textContent = "Press SPIN to play";
+  resultText.classList.remove("hidden", "glow");
+}
+
+// Monitor popup spin muncul/hilang
+function monitorSpinPopup() {
+  const observer = new MutationObserver(() => {
+    if (spinPopup.style.display === "block") {
+      hideResult();
+    } else {
+      resetResult();
+    }
+  });
+  observer.observe(spinPopup, { attributes: true, attributeFilter: ["style"] });
+}
+
+monitorSpinPopup();
+
+// Contoh penggunaan
+showSpinning();
+spinPopup.style.display = "block"; // popup muncul
   
 connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
