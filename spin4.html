@@ -483,8 +483,6 @@ svg g {
   <div class="result" id="resultText">Press SPIN to play</div>
   
 <div id="spinPopup" class="popup"></div>
-  
- <div id="resultPopup" class="result-popup"></div>
 
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
@@ -667,8 +665,6 @@ const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });
 
 // 🎡 Setelah transaksi dikonfirmasi di blockchain  
 resultText.textContent = "🎡 Spinning...";
-resultText.classList.remove("hidden");
-  resultText.classList.add("glow");
   
 spinSound.currentTime = 0;
 spinSound.play();
@@ -811,37 +807,6 @@ function animateSpin(resultName) {
     }
   );
 }
-
-// Tampilkan spinning + efek glow
-// Hilangkan efek glow + fade
-function hideResult() {
-  resultText.classList.remove("glow");
-  resultText.classList.add("hidden");
-}
-
-// Reset ke default
-function resetResult() {
-  resultText.textContent = "Press SPIN to play";
-  resultText.classList.remove("hidden", "glow");
-}
-
-// Monitor popup spin muncul/hilang
-function monitorSpinPopup() {
-  const observer = new MutationObserver(() => {
-    if (spinPopup.style.display === "block") {
-      hideResult();
-    } else {
-      resetResult();
-    }
-  });
-  observer.observe(spinPopup, { attributes: true, attributeFilter: ["style"] });
-}
-
-monitorSpinPopup();
-
-// Contoh penggunaan
-showSpinning();
-spinPopup.style.display = "block"; // popup muncul
   
 connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
