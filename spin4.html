@@ -462,7 +462,7 @@ svg g {
 
 <body>
   <div class="wallet-controls">
-  <button id="connectBtn" class="wallet-btn">Connect Walle</button>
+  <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
   <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
 </div>
 
@@ -606,38 +606,81 @@ let spinning = false,
   currentRotation = 0,
   animation = null;
 
+const SEPOLIA_BASE_CHAIN_ID = "0x14a34"; // contoh Sepolia Base Testnet chainId, sesuaikan dengan Base Testnet actual
+const SEPOLIA_BASE_RPC = "https://base-sepolia.drpc.org"; // ganti sesuai RPC resmi
+
 async function connectWallet() {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
-  
+
   provider = new ethers.BrowserProvider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
+  const accounts = await provider.send("eth_requestAccounts", []);
   signer = await provider.getSigner();
-  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
   userAddress = await signer.getAddress();
 
-  // tombol
+  // ==== 1. Cek Jaringan Sepolia Base Testnet ====
+  const network = await provider.getNetwork();
+  if (network.chainId !== parseInt(SEPOLIA_BASE_CHAIN_ID, 16)) {
+    try {
+      // Coba switch network
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: SEPOLIA_BASE_CHAIN_ID }],
+      });
+    } catch (switchError) {
+      // Jika network belum ada, add network
+      if (switchError.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: SEPOLIA_BASE_CHAIN_ID,
+            chainName: "Sepolia Base Testnet",
+            rpcUrls: [SEPOLIA_BASE_RPC],
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            blockExplorerUrls: ["https://sepolia.basescan.org"]
+          }]
+        });
+      } else {
+        return alert("Silakan ganti jaringan ke Sepolia Base Testnet!");
+      }
+    }
+  }
+
+  // ==== 2. Signature Permission ====
+  const localTime = new Date().toLocaleString();
+  const message = `Welcome ${userAddress} to Faylotto SpinBet, Play And Enjoy. (${localTime})`;
+  try {
+    const signature = await signer.signMessage(message);
+    console.log("User signature:", signature);
+  } catch (err) {
+    return alert("Signature permission diperlukan untuk melanjutkan!");
+  }
+
+  // ==== 3. Buat kontrak ====
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+  // ==== 4. Tombol ====
   connectBtn.style.display = "none";
   disconnectBtn.style.display = "inline-block";
 
-  // info wallet
+  // ==== 5. Info Wallet ====
   walletInfo.style.display = "flex";
   walletAddress.textContent = `User: ${userAddress.slice(0, 8)}...${userAddress.slice(-8)}`;
   walletAddress.addEventListener("click", () => {
-  navigator.clipboard.writeText(userAddress);
-  walletAddress.textContent = `Copied ✅`;
-  setTimeout(() => {
-    walletAddress.textContent = `User: ${userAddress.slice(0, 5)}...${userAddress.slice(-5)}`;
-  }, 1200);
-});
+    navigator.clipboard.writeText(userAddress);
+    walletAddress.textContent = `Copied ✅`;
+    setTimeout(() => {
+      walletAddress.textContent = `User: ${userAddress.slice(0, 8)}...${userAddress.slice(-8)}`;
+    }, 1200);
+  });
 
-  // ambil ETH balance
+  // ==== 6. Ambil ETH balance ====
   const balance = await provider.getBalance(userAddress);
   const ethDisplay = parseFloat(ethers.formatEther(balance)).toFixed(8);
   ethBalance.textContent = `ETH: ${ethDisplay}`;
 
-  // ambil Faylotto balance
+  // ==== 7. Ambil Faylotto balance ====
   const fBalance = await contract.balanceOf(userAddress);
-  const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2); // asumsinya 18 desimal di kontrak
+  const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2);
   faylottoBalance.textContent = `Faylotto: ${fDisplay}`;
 }
 
