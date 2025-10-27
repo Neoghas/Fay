@@ -46,15 +46,7 @@
   background: linear-gradient(145deg, #48cae4, #0096c7);
 }
 
-  .wallet-address {
-  cursor: pointer;
-  user-select: none;
-}
-.wallet-address:hover {
-  opacity: 0.8;
-}
-
-/* Wallet info box */
+  /* Wallet info box futuristik */
 .wallet-info {
   position: absolute;
   top: 75px;
@@ -69,9 +61,48 @@
   font-weight: bold;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.1);
   transition: box-shadow 0.5s ease-in-out, transform 0.5s ease-in-out;
+  overflow: hidden;
 }
 
-/* Keyframes futuristik glow */
+/* === Efek garis tepi bergerak seperti aliran listrik === */
+.wallet-info::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  padding: 2px; /* ketebalan garis luar */
+  background: linear-gradient(
+    120deg,
+    #00ffff,
+    #b28aff,
+    #ff80c8,
+    #00ffff
+  );
+  background-size: 300% 300%;
+  animation: borderFlow 5s linear infinite;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude; /* Firefox pakai -moz, Chrome pakai standard */
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+/* Efek kilauan listrik bergerak */
+@keyframes borderFlow {
+  0% {
+    background-position: 0% 50%;
+    filter: drop-shadow(0 0 2px #00ffff) drop-shadow(0 0 5px #ff80c8);
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: drop-shadow(0 0 6px #00ffff) drop-shadow(0 0 12px #b28aff);
+  }
+  100% {
+    background-position: 0% 50%;
+    filter: drop-shadow(0 0 2px #00ffff) drop-shadow(0 0 5px #ff80c8);
+  }
+}
+
+/* Glow lembut keseluruhan (bisa dipicu JS) */
 @keyframes softGlow {
   0% {
     box-shadow: 0 0 8px rgba(0, 255, 255, 0.2), 0 0 15px rgba(255, 128, 200, 0.1);
@@ -87,20 +118,28 @@
   }
 }
 
-/* Class untuk trigger glow */
+/* Aktifkan saat connect wallet */
 .glow {
   animation: softGlow 5s ease-in-out;
+}
+
+  .wallet-address {
+  cursor: pointer;
+  user-select: none;
+}
+.wallet-address:hover {
+  opacity: 0.8;
 }
 
 .wallet-address {
   font-size: 14px;
   font-weight: bold;
-  color: #0ff;
+  color: #fff;
 }
 
 .wallet-balance {
   font-size: 13px;
-  color: #0ff;
+  color: #fff;
 }
 
   .wheel-container {
