@@ -606,10 +606,12 @@ let spinning = false,
   currentRotation = 0,
   animation = null;
 
-const SEPOLIA_BASE_CHAIN_ID = "0x14a34"; // contoh Sepolia Base Testnet chainId, sesuaikan dengan Base Testnet actual
-const SEPOLIA_BASE_RPC = "https://base-sepolia.drpc.org"; // ganti sesuai RPC resmi
+const SEPOLIA_BASE_CHAIN_ID = "0x14a34"; // Sepolia Base Testnet chainId
+const SEPOLIA_BASE_RPC = "https://base-sepolia.drpc.org"; // RPC resmi
+const AUTO_CONNECT_KEY = "faylottoWallet"; // key di localStorage
+const AUTO_CONNECT_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 hari
 
-async function connectWallet() {
+async function connectWallet(auto = false) {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
 
   provider = new ethers.BrowserProvider(window.ethereum);
@@ -621,13 +623,11 @@ async function connectWallet() {
   const network = await provider.getNetwork();
   if (network.chainId !== parseInt(SEPOLIA_BASE_CHAIN_ID, 16)) {
     try {
-      // Coba switch network
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: SEPOLIA_BASE_CHAIN_ID }],
       });
     } catch (switchError) {
-      // Jika network belum ada, add network
       if (switchError.code === 4902) {
         await window.ethereum.request({
           method: "wallet_addEthereumChain",
@@ -645,14 +645,20 @@ async function connectWallet() {
     }
   }
 
-  // ==== 2. Signature Permission ====
-  const localTime = new Date().toLocaleString();
-  const message = `Welcome ${userAddress} to Faylotto SpinBet, Play And Enjoy. (${localTime})`;
-  try {
-    const signature = await signer.signMessage(message);
-    console.log("User signature:", signature);
-  } catch (err) {
-    return alert("Signature permission diperlukan untuk melanjutkan!");
+  // ==== 2. Signature Permission (hanya jika manual connect) ====
+  if (!auto) {
+    const localTime = new Date().toLocaleString();
+    const message = `Welcome ${userAddress} to Faylotto SpinBet, Play And Enjoy. (${localTime})`;
+    try {
+      const signature = await signer.signMessage(message);
+      console.log("User signature:", signature);
+
+      // Simpan di localStorage untuk auto-reconnect
+      const expire = Date.now() + AUTO_CONNECT_DURATION;
+      localStorage.setItem(AUTO_CONNECT_KEY, JSON.stringify({ userAddress, expire }));
+    } catch (err) {
+      return alert("Signature permission diperlukan untuk melanjutkan!");
+    }
   }
 
   // ==== 3. Buat kontrak ====
@@ -674,21 +680,38 @@ async function connectWallet() {
   });
 
   // ambil ETH balance
-const balance = await provider.getBalance(userAddress);
-const ethDisplay = parseFloat(ethers.formatEther(balance)).toFixed(8);
-ethBalance.textContent = ETH: ${ethDisplay};
+  const balance = await provider.getBalance(userAddress);
+  const ethDisplay = parseFloat(ethers.formatEther(balance)).toFixed(8);
+  ethBalance.textContent = `ETH: ${ethDisplay}`;
 
-// ambil Faylotto balance
-const fBalance = await contract.balanceOf(userAddress);
-const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2); // asumsinya 18 desimal di kontrak
-faylottoBalance.textContent = Faylotto: ${fDisplay};
+  // ambil Faylotto balance
+  const fBalance = await contract.balanceOf(userAddress);
+  const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2);
+  faylottoBalance.textContent = `Faylotto: ${fDisplay}`;
 }
+
+// ==== Auto-reconnect saat halaman di-refresh ====
+window.addEventListener("load", async () => {
+  const stored = localStorage.getItem(AUTO_CONNECT_KEY);
+  if (stored) {
+    const { userAddress: storedAddress, expire } = JSON.parse(stored);
+    if (Date.now() < expire) {
+      await connectWallet(true); // auto connect
+      console.log("Auto-reconnect wallet:", storedAddress);
+    } else {
+      localStorage.removeItem(AUTO_CONNECT_KEY);
+    }
+  }
+});
 
 function disconnectWallet() {
   provider = signer = contract = userAddress = null;
   connectBtn.style.display = "inline-block";
   disconnectBtn.style.display = "none";
   walletInfo.style.display = "none";
+
+  // hapus data auto-connect
+  localStorage.removeItem(AUTO_CONNECT_KEY);
 }
 
 async function spinFromBlockchain() {
