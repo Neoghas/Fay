@@ -462,7 +462,7 @@ svg g {
 
 <body>
   <div class="wallet-controls">
-  <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
+  <button id="connectBtn" class="wallet-btn">Connect Walle</button>
   <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
 </div>
 
@@ -606,15 +606,11 @@ let spinning = false,
   currentRotation = 0,
   animation = null;
 
-  // ================= Configuration =================
-const SEPOLIA_BASE_CHAIN_ID = "0x14a34"; // Base Sepolia Testnet
-const SEPOLIA_BASE_RPC = "https://base-sepolia.drpc.org"; // RPC resmi Base Sepolia
-const AUTO_CONNECT_KEY = "faylottoWallet"; // localStorage key
+const SEPOLIA_BASE_CHAIN_ID = "0x14a34"; // Sepolia Base Testnet chainId
+const SEPOLIA_BASE_RPC = "https://base-sepolia.drpc.org"; // RPC resmi
+const AUTO_CONNECT_KEY = "faylottoWallet"; // key di localStorage
 const AUTO_CONNECT_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 hari
 
-let provider, signer, contract, userAddress;
-
-// ================= Connect Wallet =================
 async function connectWallet(auto = false) {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
 
@@ -623,7 +619,7 @@ async function connectWallet(auto = false) {
   signer = await provider.getSigner();
   userAddress = await signer.getAddress();
 
-  // ==== 1. Cek Jaringan Base Sepolia ====
+  // ==== 1. Cek Jaringan Sepolia Base Testnet ====
   const network = await provider.getNetwork();
   if (network.chainId !== parseInt(SEPOLIA_BASE_CHAIN_ID, 16)) {
     try {
@@ -649,7 +645,7 @@ async function connectWallet(auto = false) {
     }
   }
 
-  // ==== 2. Signature Permission (hanya manual connect) ====
+  // ==== 2. Signature Permission (hanya jika manual connect) ====
   if (!auto) {
     const localTime = new Date().toLocaleString();
     const message = `Welcome ${userAddress} to Faylotto SpinBet, Play And Enjoy. (${localTime})`;
@@ -668,7 +664,7 @@ async function connectWallet(auto = false) {
   // ==== 3. Buat kontrak ====
   contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-  // ==== 4. Tombol Wallet ====
+  // ==== 4. Tombol ====
   connectBtn.style.display = "none";
   disconnectBtn.style.display = "inline-block";
 
@@ -683,46 +679,38 @@ async function connectWallet(auto = false) {
     }, 1200);
   });
 
-  // ==== 6. Balance (optional hide) ====
-  try {
-    const balance = await provider.getBalance(userAddress);
-    const ethDisplay = parseFloat(ethers.formatEther(balance)).toFixed(6);
-    ethBalance.textContent = `ETH: ${ethDisplay}`;
+  // ambil ETH balance
+  const balance = await provider.getBalance(userAddress);
+  const ethDisplay = parseFloat(ethers.formatEther(balance)).toFixed(8);
+  ethBalance.textContent = `ETH: ${ethDisplay}`;
 
-    const fBalance = await contract.balanceOf(userAddress);
-    const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2);
-    faylottoBalance.textContent = `Faylotto: ${fDisplay}`;
-  } catch (err) {
-    console.log("Balance fetch error:", err);
-  }
+  // ambil Faylotto balance
+  const fBalance = await contract.balanceOf(userAddress);
+  const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2);
+  faylottoBalance.textContent = `Faylotto: ${fDisplay}`;
 }
 
-// ================= Auto-reconnect =================
+// ==== Auto-reconnect saat halaman di-refresh ====
 window.addEventListener("load", async () => {
-  initWheel(); // pastikan wheel sudah di-init
-
   const stored = localStorage.getItem(AUTO_CONNECT_KEY);
   if (stored) {
     const { userAddress: storedAddress, expire } = JSON.parse(stored);
     if (Date.now() < expire) {
-      setTimeout(async () => {
-        await connectWallet(true); // auto connect tanpa signature
-        console.log("Auto-reconnect wallet:", storedAddress);
-      }, 500); // delay 0.5s agar wheel aman
+      await connectWallet(true); // auto connect
+      console.log("Auto-reconnect wallet:", storedAddress);
     } else {
       localStorage.removeItem(AUTO_CONNECT_KEY);
     }
   }
 });
 
-// ================= Disconnect Wallet =================
 function disconnectWallet() {
   provider = signer = contract = userAddress = null;
   connectBtn.style.display = "inline-block";
   disconnectBtn.style.display = "none";
   walletInfo.style.display = "none";
 
-  // hapus auto-connect
+  // hapus data auto-connect
   localStorage.removeItem(AUTO_CONNECT_KEY);
 }
 
