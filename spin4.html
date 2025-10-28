@@ -1254,7 +1254,6 @@ async function connectWallet(auto = false) {
   const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2);
   faylottoBalance.textContent = `Faylotto: ${fDisplay}`;
 
-  await checkFreeSpinEligibility();
   setupReferralListeners();
   await initializeReferralSection();
   await handlePendingReferral();
@@ -1878,13 +1877,24 @@ function resetButton() {
 
 /**
  * 1. FUNGSI UTAMA: Pengecekan kelayakan free spin
- * Membaca data kontrak untuk menentukan apakah user layak.
+ * Membaca data kontrak DAN MENGEMBALIKAN status kelayakan.
+ * Juga mengupdate state global userFreeSpinState.
  */
 async function checkFreeSpinEligibility() {
-  if (!contract) return;
+  // Reset state default sebelum cek
+  userFreeSpinState.eligible = false;
+  userFreeSpinState.remaining = 0;
+
+  if (!contract || !userAddress) {
+    console.warn("checkFreeSpinEligibility skipped: Contract or userAddress not ready.");
+    updateSpinButtonUI(); // Update ke tombol normal
+    return false; // Kembalikan false jika tidak bisa cek
+  }
+
+  console.log("Memulai pengecekan free spin eligibility...");
 
   try {
-    // 1. Ambil data konstan dari kontrak
+    // 1. Ambil data konstan
     const [quota, minAge, minInactive] = await Promise.all([
       contract.freeSpinQuota(),
       contract.minWalletAge(),
@@ -1893,12 +1903,17 @@ async function checkFreeSpinEligibility() {
 
     // 2. Ambil data spesifik user
     const userData = await contract.freeSpinData(userAddress);
-    
-    // 3. Ambil timestamp block terbaru (lebih akurat daripada Date.now())
+
+    // 3. Ambil timestamp block terbaru
     const block = await provider.getBlock("latest");
+    if (!block) {
+      console.error("Gagal mendapatkan block terbaru!");
+      updateSpinButtonUI();
+      return false; // Kembalikan false
+    }
     const now = block.timestamp;
 
-    // 4. Konversi BigInt ke Number untuk perbandingan
+    // 4. Konversi BigInt ke Number
     const quotaNum = Number(quota);
     const minAgeNum = Number(minAge);
     const minInactiveNum = Number(minInactive);
@@ -1909,42 +1924,44 @@ async function checkFreeSpinEligibility() {
     };
 
     const remaining = quotaNum - freeSpinsUsed;
+    console.log("Sisa free spin:", remaining);
 
-    // 5. Cek kondisi kelayakan (logic di kontrak)
+    // 5. Cek kuota dulu
     if (remaining <= 0) {
-      return; // Sudah habis
+      console.log("Kuota free spin habis.");
+      updateSpinButtonUI(); // Tombol normal
+      return false; // Kembalikan false
     }
 
-    // Jika walletCreated == 0, cek pertama PASTI gagal (sesuai logic kontrak)
+    // 6. Cek kondisi umur & inaktif
     const isOldEnough = (walletCreated > 0) && (now >= (walletCreated + minAgeNum));
-    const isInactiveEnough = (now >= (lastActive + minInactiveNum));
+    const isInactiveEnough = (lastActive === 0) || (now >= (lastActive + minInactiveNum));
 
-    console.log(`Pengecekan Free Spin:
+    console.log(`Hasil Pengecekan Free Spin:
       Sisa: ${remaining}
-      Cukup Umur? ${isOldEnough} (Dibuat: ${walletCreated}, Perlu: ${minAgeNum})
-      Cukup Inaktif? ${isInactiveEnough} (Terakhir Aktif: ${lastActive}, Perlu: ${minInactiveNum})
-      Timestamp Sekarang: ${now}`);
+      Cukup Umur? ${isOldEnough} (Dibuat: ${walletCreated}, Perlu: ${minAgeNum}, Sekarang: ${now})
+      Cukup Inaktif? ${isInactiveEnough} (Terakhir Aktif: ${lastActive}, Perlu: ${minInactiveNum}, Sekarang: ${now})`);
 
-    // 6. JIKA LAYAK
+    // 7. JIKA LAYAK
     if (isOldEnough && isInactiveEnough) {
+      console.log("User LAYAK mendapatkan free spin.");
       userFreeSpinState.eligible = true;
       userFreeSpinState.remaining = remaining;
-      
-      showFreeSpinPopup();
-      updateSpinButtonUI();
+      // Tidak perlu popup lagi di sini, biarkan handleSpinClick yg atur
+      updateSpinButtonUI(); // Update tombol ke "Spin Free X"
+      return true; // Kembalikan true
+    } else {
+      // Jika tidak layak
+      console.log("User TIDAK LAYAK mendapatkan free spin saat ini.");
+      updateSpinButtonUI(); // Update tombol ke normal
+      return false; // Kembalikan false
     }
 
   } catch (err) {
-    console.error("Gagal mengecek kelayakan free spin:", err);
+    console.error("Error besar saat mengecek kelayakan free spin:", err);
+    updateSpinButtonUI(); // Tombol normal jika error
+    return false; // Kembalikan false
   }
-}
-
-/**
- * 2. Menampilkan popup (sesuai permintaan Anda)
- */
-function showFreeSpinPopup() {
-  // Anda bisa ganti alert() ini dengan popup HTML/CSS yang lebih cantik
-  alert("Selamat anda mendapatkan spin gratis. (Tombol Spin sekarang)");
 }
 
 /**
@@ -2092,13 +2109,56 @@ function mapRewardToResultString(rewardAmount) {
   return "No Prize"; 
   }
 
-function handleSpinClick() {
-  if (userFreeSpinState.eligible && userFreeSpinState.remaining > 0) {
-    // Jika layak dan punya sisa, panggil fungsi spin gratis
-    spinFreeFromBlockchain();
-  } else {
-    // Jika tidak, panggil fungsi spin berbayar biasa
-    spinFromBlockchain();
+/**
+ * Event listener utama untuk tombol spin.
+ * SELALU cek kelayakan TERKINI sebelum spin.
+ */
+async function handleSpinClick() {
+  const btn = document.getElementById("centerBtn");
+  if (!contract || !userAddress) return alert("⚠️ Connect your wallet first!");
+  if (btn.disabled) return; // Jangan lakukan apa-apa jika tombol disabled
+
+  console.log("Tombol SPIN diklik. Mengecek kelayakan...");
+  btn.disabled = true; // Disable tombol sementara cek
+  resultText.textContent = "⏳ Mengecek status...";
+
+  try {
+    // Panggil checkFreeSpinEligibility dan tunggu hasilnya (true/false)
+    const isEligibleNow = await checkFreeSpinEligibility();
+
+    // Berdasarkan hasil cek TERBARU:
+    if (isEligibleNow) {
+      console.log("Kelayakan dikonfirmasi. Memanggil spinFreeFromBlockchain...");
+      // Tidak perlu popup di sini, langsung spin saja
+      await spinFreeFromBlockchain(); // Tunggu spin gratis selesai
+    } else {
+      // Cek apakah walletCreated masih 0 (perlu registrasi)
+      const userData = await contract.freeSpinData(userAddress); // Baca lagi
+      if (Number(userData.walletCreated) === 0 && Number(userData.freeSpinsUsed) < Number(await contract.freeSpinQuota())) {
+        // Jika belum registrasi DAN kuota masih ada -> lakukan registrasi
+        console.log("User belum registrasi & kuota ada. Memanggil spinFreeFromBlockchain untuk registrasi...");
+        if(confirm("Anda sepertinya belum terdaftar untuk free spin. Lakukan pendaftaran sekarang? (Tidak ada biaya gas)")){
+             await spinFreeFromBlockchain(); // Panggil fungsi spin free untuk registrasi
+        } else {
+             resultText.textContent = "Pendaftaran dibatalkan.";
+             resetButton(); // Aktifkan tombol lagi
+        }
+      } else {
+        // Jika tidak eligible karena alasan lain (belum cukup umur/inaktif/habis)
+        // atau jika sudah registrasi -> Lakukan spin berbayar
+        console.log("Tidak eligible untuk free spin ATAU sudah registrasi. Memanggil spinFromBlockchain...");
+        await spinFromBlockchain(); // Tunggu spin berbayar selesai
+      }
+    }
+  } catch (err) {
+    // Tangani error dari checkFreeSpinEligibility atau spin itu sendiri
+    console.error("Error pada handleSpinClick:", err);
+    resultText.textContent = `❌ Error: ${err.message.substring(0,100)}`;
+    resetButton(); // Pastikan tombol aktif lagi jika ada error
+  } finally {
+     // Pastikan tombol diaktifkan kembali di akhir, KECUALI jika animasi sedang berjalan
+     // (resetButton() sudah dipanggil oleh onComplete atau catch error spin)
+     // Jadi tidak perlu enable di sini lagi.
   }
 }
 
