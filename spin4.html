@@ -735,6 +735,8 @@ svg g {
     transform: rotate(360deg); /* Efek berputar */
 }
 
+  /* Spin History */
+  
    .history-container {
     max-width: 600px;
     margin: 20px auto;
@@ -787,6 +789,129 @@ svg g {
   button.load-btn:hover {
     background: #0056b3;
   }
+
+  /* ========== STYLING REFERRAL ========== */
+.referral-container {
+  background-color: #2c2c3a; /* Sedikit lebih gelap */
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #444;
+  margin-top: 25px;
+  display: none; /* Sembunyi secara default, JS akan menampilkan */
+}
+
+.referral-container h2 {
+  margin-top: 0;
+  color: #f39c12; /* Emas */
+  text-align: center;
+}
+
+.status-text {
+  text-align: center;
+  color: #aaa;
+  font-style: italic;
+  margin-bottom: 15px;
+}
+
+/* Sembunyikan view default */
+#noUidView,
+#hasUidView,
+#claimRewardBtn {
+  display: none;
+}
+
+.ref-btn {
+  background-color: #f39c12;
+  color: #1a1a2e;
+  font-weight: bold;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  width: 100%;
+  font-size: 16px;
+}
+
+.ref-btn:hover:not(:disabled) {
+  background-color: #e67e22;
+}
+
+.ref-btn:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+}
+
+.ref-btn.claim-btn {
+  background-color: #2ecc71; /* Hijau */
+  color: white;
+}
+.ref-btn.claim-btn:hover:not(:disabled) {
+  background-color: #27ae60;
+}
+
+.info-box {
+  margin-bottom: 15px;
+}
+
+.info-box strong {
+  display: block;
+  color: #bbb;
+  margin-bottom: 5px;
+}
+
+.uid-display {
+  font-size: 1.2em;
+  color: #f39c12;
+  font-weight: bold;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.link-wrapper {
+  display: flex;
+}
+
+.link-wrapper input[type="text"] {
+  flex-grow: 1;
+  padding: 8px;
+  background-color: #1a1a2e;
+  border: 1px solid #444;
+  color: white;
+  border-radius: 5px 0 0 5px;
+}
+
+.small-btn {
+  width: auto;
+  font-size: 14px;
+  border-radius: 0 5px 5px 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.stat-item {
+  background-color: #1a1a2e;
+  padding: 15px;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.stat-item span {
+  display: block;
+  color: #aaa;
+  font-size: 0.9em;
+}
+
+.stat-item strong {
+  display: block;
+  font-size: 1.5em;
+  color: white;
+  margin-top: 5px;
+}
 </style>
 </head>
 
@@ -843,6 +968,47 @@ svg g {
   <button id="loadPublicHistoryBtn" class="load-btn">Refresh Riwayat Public</button> <!-- Opsional -->
   <div id="publicHistory"></div>
 </div>
+
+  <div class="referral-container" id="referralSection">
+  <h2>🌟 Program Referral Anda</h2>
+  <div id="referralStatus" class="status-text">
+    Harap hubungkan wallet untuk melihat info referral.
+  </div>
+
+  <div id="noUidView">
+    <p>Anda belum memiliki kode referral unik. Buat satu untuk mulai mengundang!</p>
+    <button id="generateUIDBtn" class="ref-btn">Buat UID Saya</button>
+  </div>
+
+  <div id="hasUidView">
+    <div class="info-box">
+      <strong>UID Anda:</strong>
+      <span id="userUID" class="uid-display"></span>
+    </div>
+    <div class="info-box">
+      <strong>Link Undangan:</strong>
+      <div class="link-wrapper">
+        <input type="text" id="referralLink" readonly />
+        <button id="copyLinkBtn" class="ref-btn small-btn">Salin</button>
+      </div>
+    </div>
+
+    <h3>Statistik Anda</h3>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <span>Total Undangan</span>
+        <strong id="referralCount">0</strong>
+      </div>
+      <div class="stat-item">
+        <span>Reward (ETH)</span>
+        <strong id="referralReward">0.00</strong>
+      </div>
+    </div>
+    <button id="claimRewardBtn" class="ref-btn claim-btn">
+      Klaim Reward Saya
+    </button>
+  </div>
+  </div>
     
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
@@ -879,6 +1045,7 @@ svg g {
 const CONTRACT_ADDRESS = "0x85Ff2021Fee19c1Dcc9f019b4C57F86E2FA280f1";
 const ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner_","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"result","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"randomNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"contractBalance","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"totalBets","type":"uint256"},{"indexed":false,"internalType":"string","name":"highestAvailablePrize","type":"string"},{"indexed":false,"internalType":"bool","name":"prizeAvailable","type":"bool"},{"indexed":false,"internalType":"uint256","name":"winChance","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetUnliked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentIndex","type":"uint256"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"prizeName","type":"string"}],"name":"ETHAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoMinted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"freeSpinNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"random","type":"uint256"}],"name":"FreeSpinPlayed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"OwnerDepositFaylotto","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"rating","type":"uint8"}],"name":"RatingAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"oldRating","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"newRating","type":"uint8"}],"name":"RatingEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"}],"name":"ReferralAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"ReferralRewardEarned","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"uid","type":"string"}],"name":"UIDGenerated","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersPaused","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersUnpaused","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[],"name":"INITIAL_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refereeUID","type":"string"}],"name":"addReferralByUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner_","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"a","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"claimReferralReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"claimedReferralRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyUsedQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint256","name":"commentIndex","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"freeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeSpinData","outputs":[{"internalType":"uint256","name":"freeSpinsUsed","type":"uint256"},{"internalType":"uint256","name":"lastActive","type":"uint256"},{"internalType":"uint256","name":"walletCreated","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"freeSpinQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"generateUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getAverageRating","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getComments","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getPublicBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getRatingCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getUserBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserLike","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserRating","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"prize","type":"string"}],"name":"isPrizeAvailable","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"lastPrizeTimestamps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastResetTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"likeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"minInactiveTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minWalletAge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ownerDepositFaylotto","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowStart","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"publicHistoryLimit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint8","name":"rating","type":"uint8"}],"name":"rateBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrals","outputs":[{"internalType":"address","name":"inviter","type":"address"},{"internalType":"uint256","name":"rewardEarned","type":"uint256"},{"internalType":"string","name":"uid","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinBetPaid","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"spinPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalBetsEver","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"uidToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"unpause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"userTransfersPaused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawFaylottoFromContract","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
 
+let refCodeFromURL = null;
 let provider, signer, contract, userAddress;
 const btn = document.getElementById("centerBtn");
 const connectBtn = document.getElementById("connectBtn");
@@ -1083,6 +1250,10 @@ async function connectWallet(auto = false) {
   const fBalance = await contract.balanceOf(userAddress);
   const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2);
   faylottoBalance.textContent = `Faylotto: ${fDisplay}`;
+
+  setupReferralListeners();
+  await initializeReferralSection();
+  await handlePendingReferral();
 
   document.getElementById("loadUserHistoryBtn").addEventListener("click", () => loadUserHistory(true));
   document.getElementById("loadPublicHistoryBtn").addEventListener("click", () => loadPublicHistory(true));
@@ -1453,6 +1624,236 @@ function publicScrollHandler() {
     }
   }
     }
+
+  // ===================================
+// === FUNGSI-FUNGSI REFERRAL BARU ===
+// ===================================
+
+/**
+ * Mendaftarkan event listener untuk tombol-tombol referral
+ */
+function setupReferralListeners() {
+  // Pastikan listener hanya didaftar sekali
+  const genBtn = document.getElementById('generateUIDBtn');
+  if (genBtn && !genBtn.dataset.listener) { // Cek penanda
+    genBtn.addEventListener('click', handleGenerateUID);
+    genBtn.dataset.listener = 'true'; // Beri penanda
+  }
+  
+  const copyBtn = document.getElementById('copyLinkBtn');
+  if (copyBtn && !copyBtn.dataset.listener) {
+    copyBtn.addEventListener('click', copyReferralLink);
+    copyBtn.dataset.listener = 'true';
+  }
+  
+  const claimBtn = document.getElementById('claimRewardBtn');
+  if (claimBtn && !claimBtn.dataset.listener) {
+    claimBtn.addEventListener('click', handleClaimReward);
+    claimBtn.dataset.listener = 'true';
+  }
+}
+
+/**
+ * Menampilkan UI referral (untuk si pengundang)
+ */
+async function initializeReferralSection() {
+  if (!contract) return;
+
+  const referralDiv = document.getElementById('referralSection');
+  const status = document.getElementById('referralStatus');
+  const noUidView = document.getElementById('noUidView');
+  const hasUidView = document.getElementById('hasUidView');
+  
+  referralDiv.style.display = 'block';
+  status.textContent = 'Memuat data referral...';
+
+  try {
+    // 1. Cek info referral user (termasuk UID)
+    const info = await contract.referrals(userAddress);
+    const uid = info.uid;
+
+    if (!uid) { // JS akan memberi string kosong jika tidak ada
+      // User belum punya UID
+      noUidView.style.display = 'block';
+      hasUidView.style.display = 'none';
+      status.textContent = 'Anda belum memiliki UID referral.';
+    } else {
+      // User sudah punya UID
+      noUidView.style.display = 'none';
+      hasUidView.style.display = 'block';
+      
+      // Tampilkan UID dan link
+      document.getElementById('userUID').textContent = uid;
+      const link = `${window.location.origin}${window.location.pathname}?ref=${uid}`;
+      document.getElementById('referralLink').value = link;
+
+      // 2. Ambil data statistik
+      const [count, reward] = await Promise.all([
+        contract.getReferralCount(userAddress),
+        contract.getReferralReward(userAddress)
+      ]);
+
+      const rewardEther = ethers.formatEther(reward);
+      document.getElementById('referralCount').textContent = Number(count);
+      document.getElementById('referralReward').textContent = `${parseFloat(rewardEther).toFixed(6)} ETH`;
+
+      // 3. Tampilkan/sembunyikan tombol klaim
+      const claimBtn = document.getElementById('claimRewardBtn');
+      if (Number(reward) > 0) {
+        claimBtn.style.display = 'block';
+      } else {
+        claimBtn.style.display = 'none';
+      }
+      
+      status.textContent = 'Data referral berhasil dimuat.';
+    }
+  } catch (err) {
+    console.error("Gagal memuat info referral:", err);
+    status.textContent = "Gagal memuat data referral.";
+  }
+}
+
+/**
+ * Menangani pendaftaran kode (untuk si undangan/referee)
+ */
+async function handlePendingReferral() {
+  const refCode = localStorage.getItem('pendingRefCode');
+  if (!refCode || !contract) {
+    return; // Tidak ada kode referral yang tertunda
+  }
+
+  console.log(`Memproses kode referral tertunda: ${refCode}`);
+  
+  try {
+    // Cek dulu apakah user sudah punya inviter
+    const info = await contract.referrals(userAddress);
+    
+    if (info.inviter !== ethers.ZeroAddress) {
+      console.log('Anda sudah memiliki inviter.');
+      localStorage.removeItem('pendingRefCode'); // Bersihkan
+      return;
+    }
+    
+    // Jika belum punya, kirim transaksi addReferralByUID
+    alert(`Kami mendeteksi Anda diundang oleh ${refCode}. Harap konfirmasi transaksi untuk mendaftarkan referral Anda.`);
+    
+    const tx = await contract.addReferralByUID(refCode);
+    resultText.textContent = "⏳ Memproses pendaftaran referral..."; // (Opsional)
+    
+    await tx.wait();
+    
+    alert('Sukses! Anda berhasil terdaftar sebagai referral.');
+    resultText.textContent = "Pendaftaran referral sukses!"; // (Opsional)
+    localStorage.removeItem('pendingRefCode'); // Bersihkan setelah sukses
+    
+  } catch (err) {
+    console.error("Gagal mendaftar referral:", err);
+    // Tampilkan error, tapi jangan hapus kodenya, mungkin jaringan gagal
+    // Kontrak akan me-revert jika UID salah atau sudah punya inviter
+    if (err.message.includes("Already has inviter")) {
+         localStorage.removeItem('pendingRefCode');
+    } else {
+        alert(`Gagal mendaftar referral: ${err.message}`);
+    }
+  }
+}
+
+/**
+ * Mengirim transaksi generateUID
+ */
+async function handleGenerateUID() {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+
+  const btn = document.getElementById('generateUIDBtn');
+  const status = document.getElementById('referralStatus');
+
+  btn.disabled = true;
+  btn.textContent = 'Memproses di wallet...';
+  status.textContent = 'Menunggu konfirmasi transaksi...';
+
+  try {
+    const tx = await contract.generateUID();
+    btn.textContent = 'Menunggu konfirmasi block...';
+    
+    await tx.wait();
+    
+    alert('UID berhasil dibuat!');
+    status.textContent = 'UID dibuat! Memuat ulang data...';
+    await initializeReferralSection(); // Refresh UI untuk menampilkan UID baru
+    
+  } catch (err) {
+    console.error("Gagal generate UID:", err);
+    alert(`Gagal membuat UID: ${err.message}`);
+    status.textContent = 'Gagal membuat UID.';
+    btn.disabled = false;
+    btn.textContent = 'Buat UID Saya';
+  }
+}
+
+/**
+ * Mengirim transaksi claimReferralReward
+ */
+async function handleClaimReward() {
+  if (!contract) return alert("⚠️ Connect yourral wallet first!");
+
+  const btn = document.getElementById('claimRewardBtn');
+  const status = document.getElementById('referralStatus');
+
+  btn.disabled = true;
+  btn.textContent = 'Memproses klaim...';
+  status.textContent = 'Menunggu konfirmasi transaksi...';
+
+  try {
+    const tx = await contract.claimReferralReward();
+    btn.textContent = 'Menunggu konfirmasi block...';
+    
+    await tx.wait();
+    
+    alert('Reward berhasil diklaim!');
+    status.textContent = 'Reward diklaim! Memuat ulang data...';
+    await initializeReferralSection(); // Refresh UI untuk update saldo reward
+    
+  } catch (err) {
+    console.error("Gagal klaim reward:", err);
+    alert(`Gagal klaim reward: ${err.message}`);
+    status.textContent = 'Gagal klaim reward.';
+    btn.disabled = false;
+    btn.textContent = 'Klaim Reward Saya';
+  }
+}
+
+/**
+ * Menyalin link referral ke clipboard
+ */
+function copyReferralLink() {
+  const linkInput = document.getElementById('referralLink');
+  navigator.clipboard.writeText(linkInput.value)
+    .then(() => {
+      alert('Link referral disalin ke clipboard!');
+    })
+    .catch(err => {
+      console.error('Gagal menyalin link:', err);
+      alert('Gagal menyalin link.');
+    });
+  }
+
+  // Fungsi ini dijalankan saat halaman dimuat
+function checkURLForReferrer() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const refCode = urlParams.get('ref'); // Cari ?ref=...
+  
+  if (refCode) {
+    console.log("Kode referral ditemukan di URL:", refCode);
+    // Simpan di localStorage agar tidak hilang jika halaman refresh
+    localStorage.setItem('pendingRefCode', refCode);
+    
+    // Opsional: Bersihkan URL agar tidak terlihat
+    // window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
+// Panggil fungsi ini saat window/jendela dimuat
+window.addEventListener("load", checkURLForReferrer);
 
 // tambahkan efek futuristik glow 5 detik
 walletInfo.classList.add("glow");
