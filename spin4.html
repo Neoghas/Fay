@@ -795,7 +795,7 @@ svg g {
     </div>
 
     <div class="wallet-controls">
-      <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
+      <button id="connectBtn" class="wallet-btn">Connect Walle</button>
       <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
     </div>
   </nav>
@@ -1264,55 +1264,68 @@ document.getElementById("year").textContent = new Date().getFullYear();
 </script>
 
   <script>
-// === Infinite Scroll History ===
 let publicOffset = 0;
 const publicLimit = 10;
 let isLoading = false;
 let hasMore = true;
 
-// Pastikan ini tidak menimpa fungsi lain
 window.addEventListener("DOMContentLoaded", () => {
   const historyContainer = document.getElementById("history");
-  if (!historyContainer) return; // kalau tidak ada elemen, hentikan
+  const loadingDiv = document.getElementById("loading");
+
+  if (!historyContainer) return;
 
   async function loadHistory() {
     if (isLoading || !hasMore) return;
     isLoading = true;
+    loadingDiv.style.display = "block";
 
     try {
-      // Pastikan contract sudah diinisialisasi di script lain
       if (typeof contract === "undefined") {
         console.warn("⚠️ Contract belum siap, menunggu koneksi wallet...");
         return;
       }
 
-      const allBets = await contract.getPublicBets();
-      const slice = allBets.slice(publicOffset, publicOffset + publicLimit);
+      // Ambil total bet yang sudah pernah dibuat
+      const total = Number(await contract.totalBetsEver());
+      if (publicOffset >= total) {
+        hasMore = false;
+        loadingDiv.textContent = "No more history.";
+        return;
+      }
 
-      slice.forEach((bet) => {
-        const div = document.createElement("div");
-        div.className = "history-item";
-        div.innerHTML = `
-          <p><strong>${bet.player}</strong></p>
-          <p>${bet.result}</p>
-          <p>${new Date(bet.timestamp * 1000).toLocaleString()}</p>
-        `;
-        historyContainer.appendChild(div);
-      });
+      const end = Math.min(publicOffset + publicLimit, total);
 
-      publicOffset += slice.length;
-      if (slice.length < publicLimit) hasMore = false;
+      // Ambil data 10 bet per batch dari mapping
+      for (let i = publicOffset; i < end; i++) {
+        const bet = await contract.publicBetsBuffer(i % 100); // pakai buffer 100
+        if (bet && bet.player !== "0x0000000000000000000000000000000000000000") {
+          const div = document.createElement("div");
+          div.className = "history-item";
+          div.innerHTML = `
+            <p><strong>${bet.player}</strong></p>
+            <p>${bet.result}</p>
+            <p>${new Date(Number(bet.timestamp) * 1000).toLocaleString()}</p>
+          `;
+          historyContainer.appendChild(div);
+        }
+      }
+
+      publicOffset += publicLimit;
+      if (publicOffset >= total) hasMore = false;
     } catch (err) {
       console.error("❌ Gagal memuat history:", err);
+      loadingDiv.textContent = "Error loading history.";
     } finally {
+      loadingDiv.style.display = "none";
       isLoading = false;
     }
   }
 
-  // Saat pertama kali halaman dimuat
+  // Load pertama kali
   loadHistory();
 
-  // Infinite scroll listener
+  // Infinite scroll
   window.addEventListener("scroll", () => {
     if (
       window.innerHeight + window.scrollY >=
