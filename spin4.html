@@ -799,7 +799,7 @@ svg g {
     </div>
 
     <div class="wallet-controls">
-      <button id="connectBtn" class="wallet-btn">Connect Walle</button>
+      <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
       <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
     </div>
   </nav>
@@ -833,14 +833,14 @@ svg g {
   <!-- Elemen HTML untuk Riwayat User Pribadi -->
 <div class="history-container">
   <h2>Riwayat Spin Saya</h2>
-  <button id="loadUserHistoryBtn" class="load-btn">Refresh Riwayat Saya</button> <!-- Opsional, untuk refresh manual -->
+  <button id="connectBtn" class="wallet-btn">Refresh Riwayat Saya</button> <!-- Opsional, untuk refresh manual -->
   <div id="userHistory"></div>
 </div>
 
 <!-- Elemen HTML untuk Riwayat Public -->
 <div class="history-container">
   <h2>Riwayat Spin Public (Terbaru)</h2>
-  <button id="loadPublicHistoryBtn" class="load-btn">Refresh Riwayat Public</button> <!-- Opsional -->
+  <button id="connectBtn" class="wallet-btn">Refresh Riwayat Public</button> <!-- Opsional -->
   <div id="publicHistory"></div>
 </div>
     
@@ -1282,16 +1282,33 @@ function renderBets(ul, bets, startIndex, count, isPublic = false) {
     
     // PERBAIKAN DI SINI: Menggunakan Number(bet.winChance)
     li.innerHTML = `
+
       <strong>Spin #${i + 1} ${playerInfo}</strong><br>
+
       Hasil: ${bet.result}<br>
+
+      Jumlah Taruhan: ${ethers.formatEther(bet.amount)} ETH<br>
+
       Waktu: ${new Date(Number(bet.timestamp) * 1000).toLocaleString()}<br>
+
       Random: ${bet.randomNumber}<br>
+
       Saldo Kontrak: ${ethers.formatEther(bet.contractBalance)} ETH<br>
+
       Hadiah Tersedia: ${bet.prizeAvailable ? "Ya" : "Tidak"}<br>
+
       Peluang Menang: ${Number(bet.winChance) / 1000}% (estimasi)<br> 
-      Hadiah Tertinggi: ${bet.highestAvailablePrize}
+
+      Hadiah Tertinggi: ${bet.highestAvailablePrize}<br>
+
+      Spin Player ke: ${Number(bet.playerBetCount)}<br>
+
+      Spin Total Kontrak: ${Number(bet.totalBets)}
+
     `;
+
     ul.appendChild(li);
+
   }
 }
 
