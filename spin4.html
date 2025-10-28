@@ -735,54 +735,58 @@ svg g {
     transform: rotate(360deg); /* Efek berputar */
 }
 
-  .history-section {
-  width: 90%;
-  max-width: 500px;
-  margin: 100px auto;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 20px;
-  color: #fff;
-  text-align: center;
-  backdrop-filter: blur(12px);
-}
-
-.history-section h2 {
-  margin-bottom: 20px;
-  font-size: 1.5rem;
-  color: #a5b4fc;
-}
-
-.history-container {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 70vh;
-  overflow-y: auto;
-  scroll-behavior: smooth;
-}
-
-.history-item {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 12px;
-  text-align: left;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease, background 0.3s ease;
-}
-
-.history-item:hover {
-  transform: scale(1.02);
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.loading {
-  display: none;
-  color: #aaa;
-  font-size: 0.9rem;
-  margin-top: 10px;
-}
+   .history-container {
+    max-width: 600px;
+    margin: 20px auto;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .history-container h2 {
+    background: #f0f0f0;
+    padding: 10px;
+    margin: 0;
+    text-align: center;
+  }
+  #userHistory, #publicHistory {
+    overflow-y: auto; /* Agar bisa di-scroll */
+    height: 400px; /* Tinggi tetap, sesuaikan sesuai kebutuhan */
+    padding: 10px;
+  }
+  .history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .history-list li {
+    background: #fff;
+    margin: 10px 0;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .loader {
+    text-align: center;
+    padding: 10px;
+    font-style: italic;
+    color: gray;
+    display: none; /* Awalnya hidden, JS akan tampilkan saat load */
+  }
+  button.load-btn {
+    display: block;
+    margin: 10px auto;
+    padding: 10px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  button.load-btn:hover {
+    background: #0056b3;
+  }
 </style>
 </head>
 
@@ -826,12 +830,20 @@ svg g {
   
   <div id="resultPopup" class="result-popup"></div>
 
-  <section class="history-section">
-  <h2>Spin History</h2>
-  <div id="history" class="history-container"></div>
-  <div id="loading" class="loading">Loading...</div>
-  </section>
+  <!-- Elemen HTML untuk Riwayat User Pribadi -->
+<div class="history-container">
+  <h2>Riwayat Spin Saya</h2>
+  <button id="loadUserHistoryBtn" class="load-btn">Refresh Riwayat Saya</button> <!-- Opsional, untuk refresh manual -->
+  <div id="userHistory"></div>
+</div>
 
+<!-- Elemen HTML untuk Riwayat Public -->
+<div class="history-container">
+  <h2>Riwayat Spin Public (Terbaru)</h2>
+  <button id="loadPublicHistoryBtn" class="load-btn">Refresh Riwayat Public</button> <!-- Opsional -->
+  <div id="publicHistory"></div>
+</div>
+    
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
   <audio id="winSound" src="win.mp3" preload="auto"></audio>
@@ -986,6 +998,14 @@ const SEPOLIA_BASE_RPC = "https://base-sepolia.drpc.org"; // RPC resmi
 const AUTO_CONNECT_KEY = "faylottoWallet"; // key di localStorage
 const AUTO_CONNECT_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 hari
 
+let allUserBets = [];
+let userCurrentIndex = 0;
+const ITEMS_PER_LOAD = 15;
+const INITIAL_LOAD = 10;
+
+let allPublicBets = [];
+let publicCurrentIndex = 0;
+
 async function connectWallet(auto = false) {
   if (!window.ethereum) return alert("🦊 Install MetaMask!");
 
@@ -1063,6 +1083,13 @@ async function connectWallet(auto = false) {
   const fBalance = await contract.balanceOf(userAddress);
   const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2);
   faylottoBalance.textContent = `Faylotto: ${fDisplay}`;
+
+  document.getElementById("loadUserHistoryBtn").addEventListener("click", () => loadUserHistory(true));
+  document.getElementById("loadPublicHistoryBtn").addEventListener("click", () => loadPublicHistory(true));
+
+  // Opsional: Muat riwayat otomatis setelah connect
+  loadUserHistory();
+  loadPublicHistory();
 }
 
 // ==== Auto-reconnect saat halaman di-refresh ====
@@ -1246,6 +1273,152 @@ function animateSpin(resultName) {
   );
 }
 
+// Fungsi helper untuk render batch item ke list
+function renderBets(ul, bets, startIndex, count, isPublic = false) {
+  for (let i = startIndex; i < startIndex + count && i < bets.length; i++) {
+    const bet = bets[i];
+    const li = document.createElement("li");
+    const playerInfo = isPublic ? `(Player: ${bet.player.slice(0, 6)}...${bet.player.slice(-4)})` : "";
+    li.innerHTML = `
+      <strong>Spin #${i + 1} ${playerInfo}</strong><br>
+      Hasil: ${bet.result}<br>
+      Waktu: ${new Date(Number(bet.timestamp) * 1000).toLocaleString()}<br>
+      Random: ${bet.randomNumber}<br>
+      Saldo Kontrak: ${ethers.formatEther(bet.contractBalance)} ETH<br>
+      Hadiah Tersedia: ${bet.prizeAvailable ? "Ya" : "Tidak"}<br>
+      Peluang Menang: ${bet.winChance / 1000}% (estimasi)<br>
+      Hadiah Tertinggi: ${bet.highestAvailablePrize}
+    `;
+    ul.appendChild(li);
+  }
+}
+
+// Fungsi untuk memuat riwayat user pribadi dengan infinite scroll
+async function loadUserHistory(refresh = false) {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+
+  const historyDiv = document.getElementById("userHistory");
+  if (refresh || allUserBets.length === 0) {
+    try {
+      allUserBets = await contract.getUserBets();
+      userCurrentIndex = 0;
+      historyDiv.innerHTML = ""; // Kosongkan dulu jika refresh
+
+      if (allUserBets.length === 0) {
+        historyDiv.innerHTML = "<p>Tidak ada riwayat spin pribadi.</p>";
+        return;
+      }
+
+      const ul = document.createElement("ul");
+      ul.classList.add("history-list");
+      historyDiv.appendChild(ul);
+
+      // Muat initial 10
+      renderBets(ul, allUserBets, 0, INITIAL_LOAD);
+      userCurrentIndex = INITIAL_LOAD;
+
+      // Tambahkan loader placeholder
+      const loader = document.createElement("div");
+      loader.classList.add("loader");
+      loader.textContent = "Memuat lebih banyak...";
+      historyDiv.appendChild(loader);
+
+      // Setup scroll listener
+      historyDiv.removeEventListener("scroll", userScrollHandler); // Hapus jika ada
+      historyDiv.addEventListener("scroll", userScrollHandler);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memuat riwayat user: " + err.message);
+    }
+  }
+}
+
+// Handler scroll untuk user history
+function userScrollHandler() {
+  const historyDiv = document.getElementById("userHistory");
+  const ul = historyDiv.querySelector("ul");
+  const loader = historyDiv.querySelector(".loader");
+
+  if (historyDiv.scrollTop + historyDiv.clientHeight >= historyDiv.scrollHeight - 50) { // Dekat bottom
+    if (userCurrentIndex < allUserBets.length) {
+      loader.style.display = "block"; // Tampilkan loader
+
+      // Simulasi delay (karena data lokal, cepat)
+      setTimeout(() => {
+        renderBets(ul, allUserBets, userCurrentIndex, ITEMS_PER_LOAD);
+        userCurrentIndex += ITEMS_PER_LOAD;
+        if (userCurrentIndex >= allUserBets.length) {
+          loader.textContent = "Tidak ada lagi riwayat.";
+        }
+        loader.style.display = userCurrentIndex < allUserBets.length ? "block" : "none";
+      }, 500); // Delay 0.5 detik untuk efek loading
+    }
+  }
+}
+
+// Fungsi untuk memuat riwayat public dengan infinite scroll (mirip user)
+async function loadPublicHistory(refresh = false) {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+
+  const historyDiv = document.getElementById("publicHistory");
+  if (refresh || allPublicBets.length === 0) {
+    try {
+      allPublicBets = await contract.getPublicBets();
+      publicCurrentIndex = 0;
+      historyDiv.innerHTML = ""; // Kosongkan dulu jika refresh
+
+      if (allPublicBets.length === 0) {
+        historyDiv.innerHTML = "<p>Tidak ada riwayat spin public.</p>";
+        return;
+      }
+
+      const ul = document.createElement("ul");
+      ul.classList.add("history-list");
+      historyDiv.appendChild(ul);
+
+      // Muat initial 10
+      renderBets(ul, allPublicBets, 0, INITIAL_LOAD, true);
+      publicCurrentIndex = INITIAL_LOAD;
+
+      // Tambahkan loader placeholder
+      const loader = document.createElement("div");
+      loader.classList.add("loader");
+      loader.textContent = "Memuat lebih banyak...";
+      historyDiv.appendChild(loader);
+
+      // Setup scroll listener
+      historyDiv.removeEventListener("scroll", publicScrollHandler); // Hapus jika ada
+      historyDiv.addEventListener("scroll", publicScrollHandler);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memuat riwayat public: " + err.message);
+    }
+  }
+}
+
+// Handler scroll untuk public history
+function publicScrollHandler() {
+  const historyDiv = document.getElementById("publicHistory");
+  const ul = historyDiv.querySelector("ul");
+  const loader = historyDiv.querySelector(".loader");
+
+  if (historyDiv.scrollTop + historyDiv.clientHeight >= historyDiv.scrollHeight - 50) { // Dekat bottom
+    if (publicCurrentIndex < allPublicBets.length) {
+      loader.style.display = "block"; // Tampilkan loader
+
+      // Simulasi delay
+      setTimeout(() => {
+        renderBets(ul, allPublicBets, publicCurrentIndex, ITEMS_PER_LOAD, true);
+        publicCurrentIndex += ITEMS_PER_LOAD;
+        if (publicCurrentIndex >= allPublicBets.length) {
+          loader.textContent = "Tidak ada lagi riwayat.";
+        }
+        loader.style.display = publicCurrentIndex < allPublicBets.length ? "block" : "none";
+      }, 500);
+    }
+  }
+    }
+
 // tambahkan efek futuristik glow 5 detik
 walletInfo.classList.add("glow");
 
@@ -1258,77 +1431,6 @@ connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
 btn.addEventListener("click", spinFromBlockchain);
 document.getElementById("year").textContent = new Date().getFullYear();
-</script>
-
-<script>
-let publicOffset = 0;
-const publicLimit = 10;
-let isLoading = false;
-let hasMore = true;
-
-window.addEventListener("DOMContentLoaded", async () => {
-  const historyContainer = document.getElementById("history");
-  const loadingDiv = document.getElementById("loading");
-
-  if (!historyContainer) return;
-
-  // === Inisialisasi contract ===
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
-  const signer = await provider.getSigner();
-
-  const contractAddress = "0x85Ff2021Fee19c1Dcc9f019b4C57F86E2FA280f1"; // ganti alamat kontrak kamu
-  const contract = new ethers.Contract(contractAddress, abi, signer);
-
-  let allBets = [];
-
-  async function loadHistory() {
-    if (isLoading || !hasMore) return;
-    isLoading = true;
-    loadingDiv.style.display = "block";
-
-    try {
-      // Ambil semua history hanya sekali (dari kontrak)
-      if (allBets.length === 0) {
-        allBets = await contract.getPublicBets();
-        console.log(`✅ Total history diterima: ${allBets.length}`);
-      }
-
-      // Potong sebagian untuk infinite scroll
-      const slice = allBets.slice(publicOffset, publicOffset + publicLimit);
-
-      slice.forEach((bet) => {
-        const div = document.createElement("div");
-        div.className = "history-item";
-        div.innerHTML = `
-          <p><strong>${bet.player}</strong></p>
-          <p>${bet.result}</p>
-          <p>${new Date(Number(bet.timestamp) * 1000).toLocaleString()}</p>
-        `;
-        historyContainer.appendChild(div);
-      });
-
-      publicOffset += slice.length;
-      if (slice.length < publicLimit) hasMore = false;
-    } catch (err) {
-      console.error("❌ Error loading history:", err);
-      loadingDiv.textContent = "Error loading history: " + err.message;
-    } finally {
-      isLoading = false;
-      loadingDiv.style.display = "none";
-    }
-  }
-
-  // Muat awal
-  await loadHistory();
-
-  // Infinite scroll listener
-  window.addEventListener("scroll", () => {
-    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
-      loadHistory();
-    }
-  });
-});
 </script>
   
 </body>
