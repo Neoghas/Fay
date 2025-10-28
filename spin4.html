@@ -1302,10 +1302,11 @@ async function loadUserHistory(refresh = false) {
   const historyDiv = document.getElementById("userHistory");
   if (refresh || allUserBets.length === 0) {
     try {
-      allUserBets = await contract.getUserBets();
-
       // --- PERBAIKAN DI SINI ---
-      allUserBets.reverse();
+      // 1. Ambil data
+      const data = await contract.getUserBets();
+      // 2. Buat salinan baru [...data] lalu di-reverse
+      allUserBets = [...data].reverse();
       // -------------------------
 
       userCurrentIndex = 0;
@@ -1315,6 +1316,8 @@ async function loadUserHistory(refresh = false) {
         historyDiv.innerHTML = "<p>Tidak ada riwayat spin pribadi.</p>";
         return;
       }
+
+      // ... (sisa kode Anda sudah benar)
 
       const ul = document.createElement("ul");
       ul.classList.add("history-list");
@@ -1370,12 +1373,11 @@ async function loadPublicHistory(refresh = false) {
   const historyDiv = document.getElementById("publicHistory");
   if (refresh || allPublicBets.length === 0) {
     try {
-      allPublicBets = await contract.getPublicBets();
-      
       // --- PERBAIKAN DI SINI ---
-      // Balik urutan array agar yang terbaru (indeks terakhir)
-      // menjadi yang pertama (indeks 0)
-      allPublicBets.reverse(); 
+      // 1. Ambil data
+      const data = await contract.getPublicBets();
+      // 2. Buat salinan baru [...data] lalu di-reverse
+      allPublicBets = [...data].reverse();
       // -------------------------
 
       publicCurrentIndex = 0;
@@ -1386,6 +1388,8 @@ async function loadPublicHistory(refresh = false) {
         return;
       }
 
+      // ... (sisa kode Anda sudah benar)
+      
       const ul = document.createElement("ul");
       ul.classList.add("history-list");
       historyDiv.appendChild(ul);
