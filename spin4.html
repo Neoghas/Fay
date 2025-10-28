@@ -799,7 +799,7 @@ svg g {
     </div>
 
     <div class="wallet-controls">
-      <button id="connectBtn" class="wallet-btn">Connect Walle</button>
+      <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
       <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
     </div>
   </nav>
@@ -1303,6 +1303,11 @@ async function loadUserHistory(refresh = false) {
   if (refresh || allUserBets.length === 0) {
     try {
       allUserBets = await contract.getUserBets();
+
+      // --- PERBAIKAN DI SINI ---
+      allUserBets.reverse();
+      // -------------------------
+
       userCurrentIndex = 0;
       historyDiv.innerHTML = ""; // Kosongkan dulu jika refresh
 
@@ -1366,6 +1371,13 @@ async function loadPublicHistory(refresh = false) {
   if (refresh || allPublicBets.length === 0) {
     try {
       allPublicBets = await contract.getPublicBets();
+      
+      // --- PERBAIKAN DI SINI ---
+      // Balik urutan array agar yang terbaru (indeks terakhir)
+      // menjadi yang pertama (indeks 0)
+      allPublicBets.reverse(); 
+      // -------------------------
+
       publicCurrentIndex = 0;
       historyDiv.innerHTML = ""; // Kosongkan dulu jika refresh
 
@@ -1378,7 +1390,7 @@ async function loadPublicHistory(refresh = false) {
       ul.classList.add("history-list");
       historyDiv.appendChild(ul);
 
-      // Muat initial 10
+      // Muat initial 10 (sekarang ini adalah data terbaru)
       renderBets(ul, allPublicBets, 0, INITIAL_LOAD, true);
       publicCurrentIndex = INITIAL_LOAD;
 
