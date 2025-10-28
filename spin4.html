@@ -12,6 +12,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.umd.min.js"></script>
 <style>
+  Tolong ini cssnya supaya responsif di berbagai device PC, tablet, dan hp:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faylotto Spin Wheel</title>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@700&display=swap" rel="stylesheet">
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.umd.min.js"></script>
+<style>
   html, body {
   margin: 0;
   padding: 0;
@@ -19,7 +35,6 @@
   overflow-x: hidden; /* mencegah geser horizontal */
   }
   
-/* Ganti kode 'body' Anda */
 body {
     font-family: 'Ubuntu', sans-serif;
     font-weight: bold;
@@ -34,41 +49,53 @@ body {
     flex-direction: column;
     align-items: center;
     overflow-x: hidden;
-    /* PERBAIKAN: Naikkan ukuran font dasar untuk PC */
-    font-size: 1.1rem; /* Naik dari 1rem */
+    font-size: 1rem; /* Gunakan rem agar fleksibel */
     padding-top: 70px; /* Memberikan ruang untuk navbar */
 }
 
-/* Ganti kode '.container' Anda */
+/* Container */
 .container {
     width: 100%; /* Gunakan persentase agar fleksibel */
-    /* PERBAIKAN: Lebarkan container utama di PC */
-    max-width: 1400px; /* Naik dari 1200px */
+    max-width: 1250px;
     margin: auto;
-    padding: 25px; /* Sedikit padding ekstra untuk ruang napas */
+    padding: 20px;
     background: #000000;
     box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     backdrop-filter: blur(10px);
     box-sizing: border-box;
-    margin-top: 25px; /* Sedikit jarak ekstra dari navbar */
-    
-    /* Perbaikan Responsif: */
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Memusatkan item di dalamnya */
-    position: relative; /* Kunci untuk .wallet-info versi desktop */
+    align-items: center;
+    margin-top: 20px; /* Tambahkan jarak dari navbar */
 }
 
-/* Ganti kode 'Media Query' 1600px Anda */
+/* Media Query untuk layar kecil (Laptop kecil & Tablet) */
+@media (max-width: 1024px) {
+    body {
+        font-size: 0.9rem;
+    }
+    .container {
+        width: 95%;
+    }
+}
+
+/* Media Query untuk layar sangat kecil (Tablet & Mobile) */
+@media (max-width: 768px) {
+    body {
+        font-size: 0.8rem;
+    }
+    .container {
+        width: 100%;
+        padding: 15px;
+    }
+}
+
+/* Media Query untuk layar besar (Monitor besar & Ultrawide) */
 @media (min-width: 1600px) {
     body {
-        /* PERBAIKAN: Sesuaikan agar skala tetap bagus di layar besar */
-        font-size: 1.25rem; /* Sedikit penyesuaian dari 1.2rem */
+        font-size: 1.2rem;
     }
-    /* PERBAIKAN: Tambahkan ini agar container juga melebar di layar ultrawide */
     .container {
-        max-width: 1600px;
+        max-width: 1200px;
     }
 }
   
@@ -77,10 +104,9 @@ body {
   position: relative;
   width: 100%;
   text-align: center;
-  margin-top: 140px; /* kasih jarak dari navbar (akan di-override di mobile) */
+  margin-top: 140px; /* kasih jarak dari navbar */
   margin-bottom: 40px;
   animation: fadeIn 1.2s ease-in-out;
-  order: 1; /* Urutan setelah wallet-info di mobile */
 }
 
 .hero-title {
@@ -130,7 +156,7 @@ body {
   align-items: center;
   background: rgba(10, 10, 20, 0.85);
   backdrop-filter: blur(8px);
-  padding: 0 35px;
+  padding: 0 35px; /* ← Tambahkan ruang kanan agar tombol tidak kepotong */
   box-sizing: border-box;
   z-index: 9999;
 }
@@ -219,9 +245,8 @@ body {
   color: #fff;
   font-weight: bold;
   box-shadow: 0 0 8px rgba(0, 255, 255, 0.1);
-  transition: box-shadow 0.5s ease-in-out, transform 0.5s ease-in-out, position 0.3s ease, width 0.3s ease;
+  transition: box-shadow 0.5s ease-in-out, transform 0.5s ease-in-out;
   overflow: hidden;
-  order: 0; /* Urutan default di desktop */
 }
 
 /* === Efek garis tepi bergerak seperti aliran listrik === */
@@ -286,6 +311,11 @@ body {
   animation: softGlow 5s ease-in-out;
 }
 
+/* Aktifkan saat connect wallet */
+.glow {
+  animation: softGlow 5s ease-in-out;
+}
+
   .wallet-address {
   cursor: pointer;
   user-select: none;
@@ -305,18 +335,10 @@ body {
   color: #fff;
 }
 
-/* Pembungkus <center> tag */
-.container > center {
-  width: 350px; /* Ukuran desktop */
-  height: 350px; /* Ukuran desktop */
-  transition: width 0.3s ease, height 0.3s ease;
-  order: 2; /* Urutan di layout flex */
-}
-
   .wheel-container {
   position: relative;
-  width: 100%; /* Selalu penuhi pembungkus <center> */
-  height: 100%; /* Selalu penuhi pembungkus <center> */
+  width: 350px;
+  height: 350px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -421,20 +443,20 @@ svg g {
   cursor: not-allowed;
 }
 
-/* Animasi glow lembut (FIXED TYPO) */
-@keyframes btnGlow {
+/* Animasi glow lembut */
+@keyframes btnGlo {
   0% {
-    box-shadow:
+    ox-shadow:
       0 0 18px rgba(255, 215, 0, 0.8),
       inset 0 2px 4px rgba(255, 255, 255, 0.3);
   }
   50% {
-    box-shadow:
+    ox-shadow:
       0 0 30px rgba(255, 255, 180, 0.9),
       inset 0 3px 6px rgba(255, 255, 255, 0.5);
   }
   100% {
-    box-shadow:
+    ox-shadow:
       0 0 18px rgba(255, 215, 0, 0.8),
       inset 0 2px 4px rgba(255, 255, 255, 0.3);
   }
@@ -538,7 +560,6 @@ svg g {
     text-align: center;
     transition: all 0.5s ease;
     min-height: 30px;
-    order: 3; /* Urutan di layout flex */
   }
 
   @keyframes pulseGlow {
@@ -593,11 +614,6 @@ svg g {
   animation: softGlow 18s ease-in-out infinite alternate, 
              subtleScale 18s ease-in-out infinite alternate;
   overflow: hidden;
-
-  /* Perbaikan Responsif */
-  width: 90%;
-  max-width: 500px; /* Batas atas */
-  box-sizing: border-box;
 }
 
 /* glow lembut */
@@ -699,22 +715,12 @@ svg g {
 
   /* ===== Minimal Footer Style ===== */
   footer {
-        width: 100%; /* Penuhi lebar body */
         text-align: center;
         margin-top: 20px;
         padding: 10px;
         background: #000; /* Warna gelap */
         color: #ddd; /* Warna teks */
         font-size: 12px;
-        box-sizing: border-box; /* Agar padding tidak menambah lebar */
-    }
-    
-    footer p {
-        display: flex;
-        flex-wrap: wrap; /* Izinkan wrapping di mobile */
-        justify-content: center;
-        align-items: center;
-        gap: 5px 10px; /* Jarak antar item */
     }
 
     .social-icons {
@@ -746,28 +752,24 @@ svg g {
 }
 
   /* Spin History */
+  
    .history-container {
     max-width: 600px;
-    width: 100%; /* Penuhi lebar container flex */
-    margin: 10px 0; /* Margin atas/bawah, 0 kiri/kanan */
-    border: 1px solid #444; /* Warna lebih gelap */
+    margin: 20px auto;
+    border: 1px solid #ddd;
     border-radius: 8px;
     overflow: hidden;
-    background: #1a1a2e; /* Latar belakang gelap */
-    order: 4; /* Urutan di layout flex */
   }
   .history-container h2 {
-    background: #2c2c3a; /* Latar belakang header lebih gelap */
-    padding: 12px;
+    background: #f0f0f0;
+    padding: 10px;
     margin: 0;
     text-align: center;
-    color: #f39c12; /* Emas */
   }
   #userHistory, #publicHistory {
     overflow-y: auto; /* Agar bisa di-scroll */
     height: 400px; /* Tinggi tetap, sesuaikan sesuai kebutuhan */
     padding: 10px;
-    box-sizing: border-box;
   }
   .history-list {
     list-style: none;
@@ -775,21 +777,19 @@ svg g {
     margin: 0;
   }
   .history-list li {
-    background: #2c2c3a; /* Latar belakang item list */
-    color: #eee;
+    background: #fff;
     margin: 10px 0;
     padding: 15px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     font-size: 14px;
     line-height: 1.5;
-    border-left: 4px solid #f39c12; /* Aksen emas */
   }
   .loader {
     text-align: center;
     padding: 10px;
     font-style: italic;
-    color: #888;
+    color: gray;
     display: none; /* Awalnya hidden, JS akan tampilkan saat load */
   }
   button.load-btn {
@@ -812,12 +812,8 @@ svg g {
   padding: 20px;
   border-radius: 10px;
   border: 1px solid #444;
-  margin-top: 10px;
+  margin-top: 25px;
   display: none; /* Sembunyi secara default, JS akan menampilkan */
-  width: 100%; /* Penuhi lebar */
-  max-width: 600px; /* Samakan dengan history */
-  box-sizing: border-box;
-  order: 5; /* Urutan di layout flex */
 }
 
 .referral-container h2 {
@@ -932,162 +928,968 @@ svg g {
   color: white;
   margin-top: 5px;
 }
+</style>
+</head>
 
+<body>
 
-/*
-===========================================
-=== BAGIAN RESPONSIVE (WAJIB DI BAWAH) ===
-===========================================
-*/
+  <nav class="navbar">
+    <div class="navbar-left">
+      <img src="logo.svg" alt="Faylotto Logo" class="logo">
+      <span class="brand-name">Faylotto</span>
+    </div>
 
-/* -- Target: Tablet (Potrait) & HP (Landscape) -- */
-@media (max-width: 768px) {
-    body {
-        font-size: 0.95rem;
-        padding-top: 60px; /* Navbar lebih kecil */
-    }
-    .container {
-        width: 95%;
-        padding: 15px;
-        margin-top: 10px;
-    }
+    <div class="wallet-controls">
+      <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
+      <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
+    </div>
+  </nav>
+
+  <div class="container">
+
+<!-- Box info wallet di bawah tombol -->
+<div id="walletInfo" class="wallet-info" style="display:none;">
+  <div id="walletAddress" class="wallet-address"> Address: -</div>
+  <div id="ethBalance" class="wallet-balance">Balance: - ETH</div>
+  <div id="faylottoBalance" class="wallet-balance">Balance: - Faylotto</div>
+</div>
+
+  <!-- Hero Section -->
+<section class="hero">
+  <h1 class="hero-title">Decentralized Spin Betting</h1>
+  <p class="hero-subtitle">Play, win, and good luck!</p>
+</section>
+
+  <center><div class="wheel-container">
+    <svg id="wheel" viewBox="0 0 500 500"></svg>
+    <div id="centerBtn">
+  SPIN<br>
+  <span class="cost"><center>Cost</center>0.000256 ETH</span>
+    </div>
+  </div></center>
+  <div class="result" id="resultText">Press SPIN to play</div>
+  
+  <div id="resultPopup" class="result-popup"></div>
+
+  <!-- Elemen HTML untuk Riwayat User Pribadi -->
+<div class="history-container">
+  <h2>Riwayat Spin Saya</h2>
+  <button id="loadUserHistoryBtn" class="load-btn">Refresh Riwayat Saya</button> <!-- Opsional, untuk refresh manual -->
+  <div id="userHistory"></div>
+</div>
+
+<!-- Elemen HTML untuk Riwayat Public -->
+<div class="history-container">
+  <h2>Riwayat Spin Public (Terbaru)</h2>
+  <button id="loadPublicHistoryBtn" class="load-btn">Refresh Riwayat Public</button> <!-- Opsional -->
+  <div id="publicHistory"></div>
+</div>
+
+  <div class="referral-container" id="referralSection">
+  <h2>🌟 Program Referral Anda</h2>
+  <div id="referralStatus" class="status-text">
+    Harap hubungkan wallet untuk melihat info referral.
+  </div>
+
+  <div id="noUidView">
+    <p>Anda belum memiliki kode referral unik. Buat satu untuk mulai mengundang!</p>
+    <button id="generateUIDBtn" class="ref-btn">Buat UID Saya</button>
+  </div>
+
+  <div id="hasUidView">
+    <div class="info-box">
+      <strong>UID Anda:</strong>
+      <span id="userUID" class="uid-display"></span>
+    </div>
+    <div class="info-box">
+      <strong>Link Undangan:</strong>
+      <div class="link-wrapper">
+        <input type="text" id="referralLink" readonly />
+        <button id="copyLinkBtn" class="ref-btn small-btn">Salin</button>
+      </div>
+    </div>
+
+    <h3>Statistik Anda</h3>
+    <div class="stats-grid">
+      <div class="stat-item">
+        <span>Total Undangan</span>
+        <strong id="referralCount">0</strong>
+      </div>
+      <div class="stat-item">
+        <span>Reward (ETH)</span>
+        <strong id="referralReward">0.00</strong>
+      </div>
+    </div>
+    <button id="claimRewardBtn" class="ref-btn claim-btn">
+      Klaim Reward Saya
+    </button>
+  </div>
+  </div>
     
-    /* Navbar */
-    .navbar {
-        height: 60px;
-        padding: 0 15px;
-    }
-    .brand-name {
-        font-size: 20px;
-    }
-    .logo {
-        width: 38px;
-        height: 38px;
-    }
-    .wallet-btn {
-        padding: 8px 16px;
-        font-size: 14px;
-    }
+  <audio id="clickSound" src="click.mp3" preload="auto"></audio>
+  <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
+  <audio id="winSound" src="win.mp3" preload="auto"></audio>
+</div>
+  
+  <footer>
+    <div id="footer" class="social-icons">
+        <a href="https://x.com/FaylottoXyz" target="_blank"><i class="fa-brands fa-twitter"></i></a>
+        <a href="https://t.me/FaylottoXyz" target="_blank"><i class="fa-brands fa-telegram"></i></a>
+        <a href="https://t.me/Faylotto" target="_blank"><i class="fa-brands fa-telegram"></i></a>
+        <a href="https://discord.gg/6uMYTdCZwJ" target="_blank"><i class="fa-brands fa-discord"></i></a>
+        <a href="https://facebook.com/Faylotto" target="_blank"><i class="fa-brands fa-facebook"></i></a>
+    </div>
+    <p>
+  © Powered By Faylotto.
+  <span>
+    <a href="https://docs.faylotto.xyz/policy/AllRightsReserved" style="color: #007bff; text-decoration: none;" target="_blank">
+      2025 All rights reserved.
+    </a>
+  </span>
+  Play responsibly.
+    <span>
+    <a href="privacypolicy" style="color: #007bff; text-decoration: none;" target="_blank">
+      Privacy Policy.
+    </a>
+    </span>
+    </p>
+  </footer>
 
-    /* Hero */
-    .hero {
-        margin-top: 10px; /* Kurangi jarak karena wallet-info ada di atasnya */
-        margin-bottom: 20px;
-    }
-    .hero-title {
-        font-size: 28px;
-    }
-    .hero-subtitle {
-        font-size: 16px;
-    }
+<script>
 
-    /* Info Wallet */
-    .wallet-info {
-        position: relative; /* Ubah jadi statis */
-        top: auto;
-        right: auto;
-        width: 100%;
-        max-width: 600px; /* Samakan dengan history */
-        margin: 0 auto 15px auto; /* Tepat di bawah navbar, di atas hero */
-        box-sizing: border-box;
-        padding: 12px 15px;
-        order: -1; /* Pindahkan ke atas .hero */
-    }
+// === CONTRACT ===
+const CONTRACT_ADDRESS = "0x85Ff2021Fee19c1Dcc9f019b4C57F86E2FA280f1";
+const ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner_","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"result","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"randomNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"contractBalance","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"totalBets","type":"uint256"},{"indexed":false,"internalType":"string","name":"highestAvailablePrize","type":"string"},{"indexed":false,"internalType":"bool","name":"prizeAvailable","type":"bool"},{"indexed":false,"internalType":"uint256","name":"winChance","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetUnliked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentIndex","type":"uint256"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"prizeName","type":"string"}],"name":"ETHAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoMinted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"freeSpinNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"random","type":"uint256"}],"name":"FreeSpinPlayed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"OwnerDepositFaylotto","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"rating","type":"uint8"}],"name":"RatingAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"oldRating","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"newRating","type":"uint8"}],"name":"RatingEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"}],"name":"ReferralAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"ReferralRewardEarned","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"uid","type":"string"}],"name":"UIDGenerated","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersPaused","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersUnpaused","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[],"name":"INITIAL_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refereeUID","type":"string"}],"name":"addReferralByUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner_","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"a","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"claimReferralReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"claimedReferralRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyUsedQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint256","name":"commentIndex","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"freeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeSpinData","outputs":[{"internalType":"uint256","name":"freeSpinsUsed","type":"uint256"},{"internalType":"uint256","name":"lastActive","type":"uint256"},{"internalType":"uint256","name":"walletCreated","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"freeSpinQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"generateUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getAverageRating","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getComments","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getPublicBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getRatingCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getUserBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"totalBets","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserLike","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserRating","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"prize","type":"string"}],"name":"isPrizeAvailable","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"lastPrizeTimestamps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastResetTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"likeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"minInactiveTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minWalletAge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ownerDepositFaylotto","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowStart","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"publicHistoryLimit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint8","name":"rating","type":"uint8"}],"name":"rateBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrals","outputs":[{"internalType":"address","name":"inviter","type":"address"},{"internalType":"uint256","name":"rewardEarned","type":"uint256"},{"internalType":"string","name":"uid","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinBetPaid","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"spinPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalBetsEver","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"uidToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"unpause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"userTransfersPaused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawFaylottoFromContract","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
 
-    /* Wheel */
-    .container > center {
-        width: 85vw; /* Skala dengan layar */
-        height: 85vw; /* Skala dengan layar */
-        max-width: 350px;
-        max-height: 350px;
-    }
-    
-    #centerBtn {
-        width: 75px;
-        height: 75px;
-        font-size: 15px;
-    }
-    #centerBtn .cost {
-        font-size: 9px;
-    }
+let refCodeFromURL = null;
+let provider, signer, contract, userAddress;
+const btn = document.getElementById("centerBtn");
+const connectBtn = document.getElementById("connectBtn");
+const disconnectBtn = document.getElementById("disconnectBtn");
+const walletAddressDiv = document.getElementById("walletAddress");
+const resultText = document.getElementById("resultText");
+const clickSound = document.getElementById("clickSound");
+const spinSound = document.getElementById("spinSound");
+const winSound = document.getElementById("winSound");
+const svg = document.getElementById("wheel");
 
-    /* History */
-    .history-container {
-        max-width: 100%; /* Izinkan full-width */
-    }
-    
-    /* Referral */
-    .stats-grid {
-        grid-template-columns: 1fr; /* Tumpuk statistik */
-    }
+const prizes = [
+  { name: "1 ETH", icon: "eth.png" },
+  { name: "Try Again", icon: "again.png" },
+  { name: "MacBook", icon: "macbook.png" },
+  { name: "5 Faylotto", icon: "fpoint.png" },
+  { name: "0.1 ETH", icon: "eth.png" },
+  { name: "0.05 ETH", icon: "eth.png" },
+  { name: "0.7 ETH", icon: "eth.png" },
+  { name: "2 Faylotto", icon: "fpoint.png" },
+  { name: "0.005 ETH", icon: "eth.png" },
+  { name: "0.0005 ETH", icon: "eth.png" },
+  { name: "No Prize", icon: "no.png" },
+  { name: "0.0001 ETH", icon: "eth.png" },  
+  { name: "iPhone", icon: "iphone.png" },
+  { name: "7 Faylotto", icon: "fpoint.png" }
+];
+
+const prizeMap = {
+  "1 ETH Jackpot": "1 ETH",
+  "0.7 ETH Big Win": "0.7 ETH",
+  "Won MacBook!": "MacBook Air",
+  "iPhone or Worth ETH": "iPhone Promax",
+  "0.1 ETH Monthly Prize": "0.1 ETH",
+  "0.05 ETH Monthly Prize": "0.05 ETH",
+  "0.005 ETH Weekly": "0.005 ETH",
+  "0.0005 ETH Three-day Prize": "0.0005 ETH",
+  "0.0001 ETH Daily Prize": "0.0001 ETH",
+  "Won 2 Faylotto": "2 Faylotto",
+  "Won 5 Faylotto": "5 Faylotto",
+  "Won 7 Faylotto": "7 Faylotto",
+  "Try Again": "Try Again",
+  "No Prize": "No Prize"
+};
+
+const colors = [
+  "#FB8500",
+  "#FF6347",
+  "#571aff",
+  "#72a2b8",
+  "#FF69B4",
+  "#65a765",
+  "#FFB703",
+  "#33b3a6",
+  "#79b321",
+  "#219EBC",
+  "#FF4500",
+  "#20B2AA",
+  "#6A5ACD",
+  "#334e77"
+];
+
+const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;  
+
+// Render wheel dengan icon & teks  
+for (let i = 0; i < total; i++) {  
+  const startAngle = (i * slice - 90) * Math.PI / 180;  
+  const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;  
+  const x1 = cx + radius * Math.cos(startAngle);  
+  const y1 = cy + radius * Math.sin(startAngle);  
+  const x2 = cx + radius * Math.cos(endAngle);  
+  const y2 = cy + radius * Math.sin(endAngle);  
+  
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");  
+  path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);  
+  path.setAttribute("fill", colors[i]);  
+  path.setAttribute("stroke", "#fff");  
+  path.setAttribute("stroke-width", "2");  
+  svg.appendChild(path);  
+  prizes[i].path = path;  
+  
+  const angle = (i + 0.5) * slice - 90;
+
+  // icon
+  const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+  const imgX = cx + radius * 0.55 * Math.cos(angle * Math.PI / 180) - 20;
+  const imgY = cy + radius * 0.55 * Math.sin(angle * Math.PI / 180) - 20;
+  img.setAttributeNS("http://www.w3.org/1999/xlink", "href", prizes[i].icon);
+  img.setAttribute("x", imgX);
+  img.setAttribute("y", imgY);
+  img.setAttribute("width", "40");
+  img.setAttribute("height", "40");
+  svg.appendChild(img);
+
+  // teks
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  const textX = cx + radius * 0.8 * Math.cos(angle * Math.PI / 180);
+  const textY = cy + radius * 0.8 * Math.sin(angle * Math.PI / 180);
+  text.setAttribute("x", textX);
+  text.setAttribute("y", textY);
+  text.setAttribute("fill", "#fff");
+  text.setAttribute("font-size", "15");
+  text.setAttribute("font-weight", "bold");
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("alignment-baseline", "middle");
+  text.setAttribute("transform", `rotate(${angle}, ${textX}, ${textY})`);
+  text.textContent = prizes[i].name;
+  svg.appendChild(text);
 }
 
-/* -- Target: HP (Potrait) -- */
-@media (max-width: 480px) {
-    body {
-        font-size: 0.9rem;
-    }
-    .container {
-        padding: 10px;
-        width: 98%;
-    }
+let spinning = false,
+  currentRotation = 0,
+  animation = null;
 
-    /* Navbar */
-    .navbar-left {
-        gap: 5px;
-    }
-    .brand-name {
-        display: none; /* Sembunyikan nama, hemat ruang */
-    }
-    .wallet-btn {
-        padding: 8px 10px;
-        font-size: 12px;
-    }
-    
-    /* Hero */
-    .hero {
-        margin-top: 10px;
-    }
-    .hero-title {
-        font-size: 24px;
-    }
-    .hero-subtitle {
-        font-size: 14px;
-    }
+const SEPOLIA_BASE_CHAIN_ID = "0x14a34"; // Sepolia Base Testnet chainId
+const SEPOLIA_BASE_RPC = "https://base-sepolia.drpc.org"; // RPC resmi
+const AUTO_CONNECT_KEY = "faylottoWallet"; // key di localStorage
+const AUTO_CONNECT_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 hari
 
-    /* Wheel */
-    .container > center {
-        width: 90vw; /* Buat 90% dari lebar layar */
-        height: 90vw;
-    }
-    
-    /* Popup */
-    .result-popup {
-        width: 95%; /* Hampir penuhi layar */
-        padding: 20px 15px;
-        font-size: 16px;
-    }
-    .result-popup img.icon,
-    .result-popup img.prize {
-        width: 45px;
-        height: 45px;
-    }
-    
-    /* Footer */
-    footer p {
-        font-size: 11px;
-        flex-direction: column; /* Tumpuk link footer */
-    }
-    footer p span {
-        display: block;
-        margin-top: 5px;
-    }
-    .social-icons a {
-        padding: 8px;
-        font-size: 14px;
-        margin: 0 3px;
+let allUserBets = [];
+let userCurrentIndex = 0;
+const ITEMS_PER_LOAD = 15;
+const INITIAL_LOAD = 10;
+
+let allPublicBets = [];
+let publicCurrentIndex = 0;
+
+async function connectWallet(auto = false) {
+  if (!window.ethereum) return alert("🦊 Install MetaMask!");
+
+  provider = new ethers.BrowserProvider(window.ethereum);
+  const accounts = await provider.send("eth_requestAccounts", []);
+  signer = await provider.getSigner();
+  userAddress = await signer.getAddress();
+
+  // ==== 1. Cek Jaringan Sepolia Base Testnet ====
+  const network = await provider.getNetwork();
+  if (network.chainId !== parseInt(SEPOLIA_BASE_CHAIN_ID, 16)) {
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: SEPOLIA_BASE_CHAIN_ID }],
+      });
+    } catch (switchError) {
+      if (switchError.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: SEPOLIA_BASE_CHAIN_ID,
+            chainName: "Sepolia Base Testnet",
+            rpcUrls: [SEPOLIA_BASE_RPC],
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            blockExplorerUrls: ["https://sepolia.basescan.org"]
+          }]
+        });
+      } else {
+        return alert("Silakan ganti jaringan ke Sepolia Base Testnet!");
+      }
     }
   }
+
+  // ==== 2. Signature Permission (hanya jika manual connect) ====
+  if (!auto) {
+    const localTime = new Date().toLocaleString();
+    const message = `Welcome ${userAddress} to Faylotto SpinBet, Play And Enjoy. (${localTime})`;
+    try {
+      const signature = await signer.signMessage(message);
+      console.log("User signature:", signature);
+
+      // Simpan di localStorage untuk auto-reconnect
+      const expire = Date.now() + AUTO_CONNECT_DURATION;
+      localStorage.setItem(AUTO_CONNECT_KEY, JSON.stringify({ userAddress, expire }));
+    } catch (err) {
+      return alert("Signature permission diperlukan untuk melanjutkan!");
+    }
+  }
+
+  // ==== 3. Buat kontrak ====
+  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+  // ==== 4. Tombol ====
+  connectBtn.style.display = "none";
+  disconnectBtn.style.display = "inline-block";
+
+  // ==== 5. Info Wallet ====
+  walletInfo.style.display = "flex";
+  walletAddress.textContent = `User: ${userAddress.slice(0, 8)}...${userAddress.slice(-8)}`;
+  walletAddress.addEventListener("click", () => {
+    navigator.clipboard.writeText(userAddress);
+    walletAddress.textContent = `Copied ✅`;
+    setTimeout(() => {
+      walletAddress.textContent = `User: ${userAddress.slice(0, 8)}...${userAddress.slice(-8)}`;
+    }, 1200);
+  });
+
+  // ambil ETH balance
+  const balance = await provider.getBalance(userAddress);
+  const ethDisplay = parseFloat(ethers.formatEther(balance)).toFixed(8);
+  ethBalance.textContent = `ETH: ${ethDisplay}`;
+
+  // ambil Faylotto balance
+  const fBalance = await contract.balanceOf(userAddress);
+  const fDisplay = parseFloat(ethers.formatUnits(fBalance, 18)).toFixed(2);
+  faylottoBalance.textContent = `Faylotto: ${fDisplay}`;
+
+  setupReferralListeners();
+  await initializeReferralSection();
+  await handlePendingReferral();
+
+  document.getElementById("loadUserHistoryBtn").addEventListener("click", () => loadUserHistory(true));
+  document.getElementById("loadPublicHistoryBtn").addEventListener("click", () => loadPublicHistory(true));
+
+  // Opsional: Muat riwayat otomatis setelah connect
+  loadUserHistory();
+  loadPublicHistory();
+}
+
+// ==== Auto-reconnect saat halaman di-refresh ====
+window.addEventListener("load", async () => {
+  const stored = localStorage.getItem(AUTO_CONNECT_KEY);
+  if (stored) {
+    const { userAddress: storedAddress, expire } = JSON.parse(stored);
+    if (Date.now() < expire) {
+      await connectWallet(true); // auto connect
+      console.log("Auto-reconnect wallet:", storedAddress);
+    } else {
+      localStorage.removeItem(AUTO_CONNECT_KEY);
+    }
+  }
+});
+
+function disconnectWallet() {
+  provider = signer = contract = userAddress = null;
+  connectBtn.style.display = "inline-block";
+  disconnectBtn.style.display = "none";
+  walletInfo.style.display = "none";
+
+  // hapus data auto-connect
+  localStorage.removeItem(AUTO_CONNECT_KEY);
+}
+
+async function spinFromBlockchain() {
+if (!contract) return alert("⚠️ Connect your wallet first!");
+try {
+btn.disabled = true;
+clickSound.play();
+
+// 🕓 Saat baru klik tombol → tunggu transaksi muncul di MetaMask    
+resultText.textContent = "⏳ Waiting Transaction...";    
+
+// 💰 Kirim transaksi ke kontrak    
+const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });    
+
+// 🎡 Setelah transaksi dikonfirmasi di blockchain  
+resultText.textContent = "🎡 Spinning...";
+  
+spinSound.currentTime = 0;
+spinSound.play();
+
+// Tunggu konfirmasi blok    
+const receipt = await tx.wait();    
+
+// 🔍 Ambil event BetPlaced dari log    
+const event = receipt.logs    
+  .map(log => {    
+    try {    
+      return contract.interface.parseLog(log);    
+    } catch {    
+      return null;    
+    }    
+  })    
+  .filter(e => e && e.name === "BetPlaced")[0];    
+
+if (!event) throw new Error("No BetPlaced event found.");    
+
+const { result } = event.args;    
+console.log("Raw result from contract:", result);    
+
+// Jalankan animasi spin berdasarkan hasil kontrak    
+animateSpin(result);
+
+} catch (err) {
+console.error(err);
+resultText.textContent = "❌ Transaction failed.";
+resetButton();
+}
+}
+
+function createParticles(popup) {
+  // hapus partikel lama
+  popup.querySelectorAll(".particle").forEach(p => p.remove());
+
+  // buat 6–8 partikel acak
+  const particleCount = 6 + Math.floor(Math.random() * 3);
+  const colors = ["#ff9ff3", "#feca57", "#54a0ff", "#5f27cd", "#1dd1a1", "#48dbfb", "#c8d6e5"];
+  
+  for (let i = 0; i < particleCount; i++) {
+    const span = document.createElement("span");
+    span.classList.add("particle");
+    span.style.background = colors[Math.floor(Math.random() * colors.length)];
+    span.style.width = `${6 + Math.random() * 8}px`;
+    span.style.height = span.style.width;
+    span.style.top = `${Math.random() * 90}%`;
+    span.style.left = `${Math.random() * 90}%`;
+    span.style.animationDuration = `${8 + Math.random() * 4}s`;
+    span.style.animationDelay = `${Math.random() * 2}s`;
+    popup.appendChild(span);
+  }
+}
+
+function playSoftDing() {
+  const audio = new Audio("winn.mp3");
+  audio.volume = 1;
+  audio.play();
+}
+
+function showPopup() {
+  const popup = document.querySelector(".result-popup");
+  createParticles(popup);
+  playSoftDing();
+
+  popup.classList.remove("hide");
+  popup.style.display = "block";
+  setTimeout(() => popup.classList.add("show"), 10);
+}
+
+function hidePopup() {
+  const popup = document.querySelector(".result-popup");
+  popup.classList.remove("show");
+  popup.classList.add("hide");
+  setTimeout(() => (popup.style.display = "none"), 800);
+}
+
+function animateSpin(resultName) {
+  console.log("Received resultName from backend:", resultName);
+  const displayName = prizeMap[resultName] || "No Prize";
+  console.log("Mapped displayName:", displayName);
+  const index = prizes.findIndex(p => p.name === displayName);
+  console.log("Calculated index:", index);
+
+  if (index === -1) {
+    console.error(`Hadiah tidak ditemukan: ${displayName}`);
+    resultText.textContent = "Error: Hadiah tidak valid";
+    resetButton();
+    return;
+  }
+
+  if (animation) gsap.killTweensOf(svg);
+  prizes.forEach(p => p.path.classList.remove("glow"));
+
+  const targetSlice = slice * index + slice / 2;
+  const totalRotation = currentRotation + 12 * 360 + targetSlice;
+  const duration = 30 + Math.random() * 5;
+
+  animation = gsap.fromTo(
+    svg,
+    { rotation: currentRotation },
+    {
+      rotation: totalRotation,
+      duration: duration,
+      ease: "power3.inOut",
+      transformOrigin: "center center",
+      onUpdate: () => (currentRotation = gsap.getProperty(svg, "rotation")),
+      onComplete: () => {
+        spinSound.pause();
+        winSound.play();
+        const prize = prizes[index];
+        prize.path.classList.add("glow");
+
+        // --- Popup hasil menang ---
+        const popup = document.getElementById("resultPopup");
+        popup.innerHTML = `
+          <img src="win.png" class="icon">
+          <div class="text">
+            You won: <span style="color:gold;font-size:24px;">${displayName}</span>
+            <img src="${prize.icon}" class="prize" alt="prize">
+          </div>
+          <button id="closePopupBtn" class="popup-btn">OK</button>
+        `;
+        popup.style.display = "block";
+
+        // Tambahkan partikel dreamy di popup
+        createParticles(popup);
+        playSoftDing();
+
+        showPopup(); // untuk muncul
+        setTimeout(hidePopup, 20000); // otomatis hilang setelah 4 detik
+
+        // Tombol OK untuk menutup popup
+        document.getElementById("closePopupBtn").onclick = () => {
+          popup.style.display = "none";
+          resetButton();
+        };
+      }
+    }
+  );
+}
+
+// Fungsi helper untuk render batch item ke list
+function renderBets(ul, bets, startIndex, count, isPublic = false) {
+  for (let i = startIndex; i < startIndex + count && i < bets.length; i++) {
+    const bet = bets[i];
+    const li = document.createElement("li");
+    const playerInfo = isPublic ? `(Player: ${bet.player.slice(0, 6)}...${bet.player.slice(-4)})` : "";
+    
+    // PERBAIKAN DI SINI: Menggunakan Number(bet.winChance)
+    li.innerHTML = `
+
+      <strong>Spin #${i + 1} ${playerInfo}</strong><br>
+
+      Hasil: ${bet.result}<br>
+
+      Jumlah Taruhan: ${ethers.formatEther(bet.amount)} ETH<br>
+
+      Waktu: ${new Date(Number(bet.timestamp) * 1000).toLocaleString()}<br>
+
+      Random: ${bet.randomNumber}<br>
+
+      Saldo Kontrak: ${ethers.formatEther(bet.contractBalance)} ETH<br>
+
+      Hadiah Tersedia: ${bet.prizeAvailable ? "Ya" : "Tidak"}<br>
+
+      Peluang Menang: ${Number(bet.winChance) / 1000}% (estimasi)<br> 
+
+      Hadiah Tertinggi: ${bet.highestAvailablePrize}<br>
+
+      Spin Player ke: ${Number(bet.playerBetCount)}<br>
+
+      Spin Total Kontrak: ${Number(bet.totalBets)}
+
+    `;
+
+    ul.appendChild(li);
+
+  }
+}
+
+// Fungsi untuk memuat riwayat user pribadi dengan infinite scroll
+async function loadUserHistory(refresh = false) {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+
+  const historyDiv = document.getElementById("userHistory");
+  if (refresh || allUserBets.length === 0) {
+    try {
+      // --- PERBAIKAN DI SINI ---
+      // 1. Ambil data
+      const data = await contract.getUserBets();
+      // 2. Buat salinan baru [...data] lalu di-reverse
+      allUserBets = [...data].reverse();
+      // -------------------------
+
+      userCurrentIndex = 0;
+      historyDiv.innerHTML = ""; // Kosongkan dulu jika refresh
+
+      if (allUserBets.length === 0) {
+        historyDiv.innerHTML = "<p>Tidak ada riwayat spin pribadi.</p>";
+        return;
+      }
+
+      // ... (sisa kode Anda sudah benar)
+
+      const ul = document.createElement("ul");
+      ul.classList.add("history-list");
+      historyDiv.appendChild(ul);
+
+      // Muat initial 10
+      renderBets(ul, allUserBets, 0, INITIAL_LOAD);
+      userCurrentIndex = INITIAL_LOAD;
+
+      // Tambahkan loader placeholder
+      const loader = document.createElement("div");
+      loader.classList.add("loader");
+      loader.textContent = "Memuat lebih banyak...";
+      historyDiv.appendChild(loader);
+
+      // Setup scroll listener
+      historyDiv.removeEventListener("scroll", userScrollHandler); // Hapus jika ada
+      historyDiv.addEventListener("scroll", userScrollHandler);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memuat riwayat user: " + err.message);
+    }
+  }
+}
+
+// Handler scroll untuk user history
+function userScrollHandler() {
+  const historyDiv = document.getElementById("userHistory");
+  const ul = historyDiv.querySelector("ul");
+  const loader = historyDiv.querySelector(".loader");
+
+  if (historyDiv.scrollTop + historyDiv.clientHeight >= historyDiv.scrollHeight - 50) { // Dekat bottom
+    if (userCurrentIndex < allUserBets.length) {
+      loader.style.display = "block"; // Tampilkan loader
+
+      // Simulasi delay (karena data lokal, cepat)
+      setTimeout(() => {
+        renderBets(ul, allUserBets, userCurrentIndex, ITEMS_PER_LOAD);
+        userCurrentIndex += ITEMS_PER_LOAD;
+        if (userCurrentIndex >= allUserBets.length) {
+          loader.textContent = "Tidak ada lagi riwayat.";
+        }
+        loader.style.display = userCurrentIndex < allUserBets.length ? "block" : "none";
+      }, 500); // Delay 0.5 detik untuk efek loading
+    }
+  }
+}
+
+// Fungsi untuk memuat riwayat public dengan infinite scroll (mirip user)
+async function loadPublicHistory(refresh = false) {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+
+  const historyDiv = document.getElementById("publicHistory");
+  if (refresh || allPublicBets.length === 0) {
+    try {
+      // --- PERBAIKAN DI SINI ---
+      // 1. Ambil data
+      const data = await contract.getPublicBets();
+      // 2. Buat salinan baru [...data] lalu di-reverse
+      allPublicBets = [...data].reverse();
+      // -------------------------
+
+      publicCurrentIndex = 0;
+      historyDiv.innerHTML = ""; // Kosongkan dulu jika refresh
+
+      if (allPublicBets.length === 0) {
+        historyDiv.innerHTML = "<p>Tidak ada riwayat spin public.</p>";
+        return;
+      }
+
+      // ... (sisa kode Anda sudah benar)
+      
+      const ul = document.createElement("ul");
+      ul.classList.add("history-list");
+      historyDiv.appendChild(ul);
+
+      // Muat initial 10 (sekarang ini adalah data terbaru)
+      renderBets(ul, allPublicBets, 0, INITIAL_LOAD, true);
+      publicCurrentIndex = INITIAL_LOAD;
+
+      // Tambahkan loader placeholder
+      const loader = document.createElement("div");
+      loader.classList.add("loader");
+      loader.textContent = "Memuat lebih banyak...";
+      historyDiv.appendChild(loader);
+
+      // Setup scroll listener
+      historyDiv.removeEventListener("scroll", publicScrollHandler); // Hapus jika ada
+      historyDiv.addEventListener("scroll", publicScrollHandler);
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memuat riwayat public: " + err.message);
+    }
+  }
+}
+
+// Handler scroll untuk public history
+function publicScrollHandler() {
+  const historyDiv = document.getElementById("publicHistory");
+  const ul = historyDiv.querySelector("ul");
+  const loader = historyDiv.querySelector(".loader");
+
+  if (historyDiv.scrollTop + historyDiv.clientHeight >= historyDiv.scrollHeight - 50) { // Dekat bottom
+    if (publicCurrentIndex < allPublicBets.length) {
+      loader.style.display = "block"; // Tampilkan loader
+
+      // Simulasi delay
+      setTimeout(() => {
+        renderBets(ul, allPublicBets, publicCurrentIndex, ITEMS_PER_LOAD, true);
+        publicCurrentIndex += ITEMS_PER_LOAD;
+        if (publicCurrentIndex >= allPublicBets.length) {
+          loader.textContent = "Tidak ada lagi riwayat.";
+        }
+        loader.style.display = publicCurrentIndex < allPublicBets.length ? "block" : "none";
+      }, 500);
+    }
+  }
+    }
+
+  // ===================================
+// === FUNGSI-FUNGSI REFERRAL BARU ===
+// ===================================
+
+/**
+ * Mendaftarkan event listener untuk tombol-tombol referral
+ */
+function setupReferralListeners() {
+  // Pastikan listener hanya didaftar sekali
+  const genBtn = document.getElementById('generateUIDBtn');
+  if (genBtn && !genBtn.dataset.listener) { // Cek penanda
+    genBtn.addEventListener('click', handleGenerateUID);
+    genBtn.dataset.listener = 'true'; // Beri penanda
+  }
+  
+  const copyBtn = document.getElementById('copyLinkBtn');
+  if (copyBtn && !copyBtn.dataset.listener) {
+    copyBtn.addEventListener('click', copyReferralLink);
+    copyBtn.dataset.listener = 'true';
+  }
+  
+  const claimBtn = document.getElementById('claimRewardBtn');
+  if (claimBtn && !claimBtn.dataset.listener) {
+    claimBtn.addEventListener('click', handleClaimReward);
+    claimBtn.dataset.listener = 'true';
+  }
+}
+
+/**
+ * Menampilkan UI referral (untuk si pengundang)
+ */
+async function initializeReferralSection() {
+  if (!contract) return;
+
+  const referralDiv = document.getElementById('referralSection');
+  const status = document.getElementById('referralStatus');
+  const noUidView = document.getElementById('noUidView');
+  const hasUidView = document.getElementById('hasUidView');
+  
+  referralDiv.style.display = 'block';
+  status.textContent = 'Memuat data referral...';
+
+  try {
+    // 1. Cek info referral user (termasuk UID)
+    const info = await contract.referrals(userAddress);
+    const uid = info.uid;
+
+    if (!uid) { // JS akan memberi string kosong jika tidak ada
+      // User belum punya UID
+      noUidView.style.display = 'block';
+      hasUidView.style.display = 'none';
+      status.textContent = 'Anda belum memiliki UID referral.';
+    } else {
+      // User sudah punya UID
+      noUidView.style.display = 'none';
+      hasUidView.style.display = 'block';
+      
+      // Tampilkan UID dan link
+      document.getElementById('userUID').textContent = uid;
+      const link = `${window.location.origin}${window.location.pathname}?ref=${uid}`;
+      document.getElementById('referralLink').value = link;
+
+      // 2. Ambil data statistik
+      const [count, reward] = await Promise.all([
+        contract.getReferralCount(userAddress),
+        contract.getReferralReward(userAddress)
+      ]);
+
+      const rewardEther = ethers.formatEther(reward);
+      document.getElementById('referralCount').textContent = Number(count);
+      document.getElementById('referralReward').textContent = `${parseFloat(rewardEther).toFixed(6)} ETH`;
+
+      // 3. Tampilkan/sembunyikan tombol klaim
+      const claimBtn = document.getElementById('claimRewardBtn');
+      if (Number(reward) > 0) {
+        claimBtn.style.display = 'block';
+      } else {
+        claimBtn.style.display = 'none';
+      }
+      
+      status.textContent = 'Data referral berhasil dimuat.';
+    }
+  } catch (err) {
+    console.error("Gagal memuat info referral:", err);
+    status.textContent = "Gagal memuat data referral.";
+  }
+}
+
+/**
+ * Menangani pendaftaran kode (untuk si undangan/referee)
+ */
+async function handlePendingReferral() {
+  const refCode = localStorage.getItem('pendingRefCode');
+  if (!refCode || !contract) {
+    return; // Tidak ada kode referral yang tertunda
+  }
+
+  console.log(`Memproses kode referral tertunda: ${refCode}`);
+  
+  try {
+    // Cek dulu apakah user sudah punya inviter
+    const info = await contract.referrals(userAddress);
+    
+    if (info.inviter !== ethers.ZeroAddress) {
+      console.log('Anda sudah memiliki inviter.');
+      localStorage.removeItem('pendingRefCode'); // Bersihkan
+      return;
+    }
+    
+    // Jika belum punya, kirim transaksi addReferralByUID
+    alert(`Kami mendeteksi Anda diundang oleh ${refCode}. Harap konfirmasi transaksi untuk mendaftarkan referral Anda.`);
+    
+    const tx = await contract.addReferralByUID(refCode);
+    resultText.textContent = "⏳ Memproses pendaftaran referral..."; // (Opsional)
+    
+    await tx.wait();
+    
+    alert('Sukses! Anda berhasil terdaftar sebagai referral.');
+    resultText.textContent = "Pendaftaran referral sukses!"; // (Opsional)
+    localStorage.removeItem('pendingRefCode'); // Bersihkan setelah sukses
+    
+  } catch (err) {
+    console.error("Gagal mendaftar referral:", err);
+    // Tampilkan error, tapi jangan hapus kodenya, mungkin jaringan gagal
+    // Kontrak akan me-revert jika UID salah atau sudah punya inviter
+    if (err.message.includes("Already has inviter")) {
+         localStorage.removeItem('pendingRefCode');
+    } else {
+        alert(`Gagal mendaftar referral: ${err.message}`);
+    }
+  }
+}
+
+/**
+ * Mengirim transaksi generateUID
+ */
+async function handleGenerateUID() {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+
+  const btn = document.getElementById('generateUIDBtn');
+  const status = document.getElementById('referralStatus');
+
+  btn.disabled = true;
+  btn.textContent = 'Memproses di wallet...';
+  status.textContent = 'Menunggu konfirmasi transaksi...';
+
+  try {
+    const tx = await contract.generateUID();
+    btn.textContent = 'Menunggu konfirmasi block...';
+    
+    await tx.wait();
+    
+    alert('UID berhasil dibuat!');
+    status.textContent = 'UID dibuat! Memuat ulang data...';
+    await initializeReferralSection(); // Refresh UI untuk menampilkan UID baru
+    
+  } catch (err) {
+    console.error("Gagal generate UID:", err);
+    alert(`Gagal membuat UID: ${err.message}`);
+    status.textContent = 'Gagal membuat UID.';
+    btn.disabled = false;
+    btn.textContent = 'Buat UID Saya';
+  }
+}
+
+/**
+ * Mengirim transaksi claimReferralReward
+ */
+async function handleClaimReward() {
+  if (!contract) return alert("⚠️ Connect yourral wallet first!");
+
+  const btn = document.getElementById('claimRewardBtn');
+  const status = document.getElementById('referralStatus');
+
+  btn.disabled = true;
+  btn.textContent = 'Memproses klaim...';
+  status.textContent = 'Menunggu konfirmasi transaksi...';
+
+  try {
+    const tx = await contract.claimReferralReward();
+    btn.textContent = 'Menunggu konfirmasi block...';
+    
+    await tx.wait();
+    
+    alert('Reward berhasil diklaim!');
+    status.textContent = 'Reward diklaim! Memuat ulang data...';
+    await initializeReferralSection(); // Refresh UI untuk update saldo reward
+    
+  } catch (err) {
+    console.error("Gagal klaim reward:", err);
+    alert(`Gagal klaim reward: ${err.message}`);
+    status.textContent = 'Gagal klaim reward.';
+    btn.disabled = false;
+    btn.textContent = 'Klaim Reward Saya';
+  }
+}
+
+/**
+ * Menyalin link referral ke clipboard
+ */
+function copyReferralLink() {
+  const linkInput = document.getElementById('referralLink');
+  navigator.clipboard.writeText(linkInput.value)
+    .then(() => {
+      alert('Link referral disalin ke clipboard!');
+    })
+    .catch(err => {
+      console.error('Gagal menyalin link:', err);
+      alert('Gagal menyalin link.');
+    });
+  }
+
+  // Fungsi ini dijalankan saat halaman dimuat
+function checkURLForReferrer() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const refCode = urlParams.get('ref'); // Cari ?ref=...
+  
+  if (refCode) {
+    console.log("Kode referral ditemukan di URL:", refCode);
+    // Simpan di localStorage agar tidak hilang jika halaman refresh
+    localStorage.setItem('pendingRefCode', refCode);
+    
+    // Opsional: Bersihkan URL agar tidak terlihat
+    // window.history.replaceState({}, document.title, window.location.pathname);
+  }
+}
+
+// Panggil fungsi ini saat window/jendela dimuat
+window.addEventListener("load", checkURLForReferrer);
+
+// tambahkan efek futuristik glow 5 detik
+walletInfo.classList.add("glow");
+
+// hapus class glow setelah 5 detik agar bisa trigger lagi di connect berikutnya
+setTimeout(() => {
+  walletInfo.classList.remove("glow");
+}, 5000);
+  
+connectBtn.addEventListener("click", connectWallet);
+disconnectBtn.addEventListener("click", disconnectWallet);
+btn.addEventListener("click", spinFromBlockchain);
+document.getElementById("year").textContent = new Date().getFullYear();
+</script>
+  
+</body>
+</body>
+    </html>
+
+Tulis cssnya saja
 </style>
 </head>
 
