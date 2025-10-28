@@ -1253,52 +1253,66 @@ setTimeout(() => {
   walletInfo.classList.remove("glow");
 }, 5000);
 
-async function loadPublicBets() {
+// === WEB3 SETUP ===
+let provider, contract;
+async function initContract() {
+  if (window.ethereum) {
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+    await loadMoreBets(); // load pertama
+  } else {
+    console.error("MetaMask not found");
+  }
+}
+
+// === LOAD DATA ===
+async function loadMoreBets() {
   if (isLoading || !hasMore) return;
   isLoading = true;
-  document.getElementById("loadingIndicator").className = "loading-visible";
 
   try {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const contract = new ethers.Contract(contractAddress, abi, provider);
-    const bets = await contract.getPublicBets(publicOffset, publicLimit);
+    const bets = await contract.getPublicBets();
+    const sliced = bets.slice(publicOffset, publicOffset + publicLimit);
 
-    const container = document.getElementById("betHistory");
-    if (bets.length === 0) {
+    if (sliced.length === 0) {
       hasMore = false;
-      document.getElementById("loadingIndicator").innerText = "No more history";
       return;
     }
 
-    bets.forEach(bet => {
+    const container = document.getElementById("bet-history");
+    sliced.forEach((bet, index) => {
       const div = document.createElement("div");
       div.className = "bet-item";
       div.innerHTML = `
-        <p><b>${bet.result}</b> — ${new Date(bet.timestamp * 1000).toLocaleString()}</p>
-        <p>Player: ${bet.player.slice(0, 6)}...${bet.player.slice(-4)}</p>
-        <p>Random: ${bet.randomNumber}</p>
+        <div><strong>Player:</strong> ${bet.player}</div>
+        <div><strong>Result:</strong> ${bet.result}</div>
+        <div><strong>Amount:</strong> ${ethers.utils.formatEther(bet.amount)} ETH</div>
+        <div><strong>Time:</strong> ${new Date(bet.timestamp * 1000).toLocaleString()}</div>
+        <hr>
       `;
       container.appendChild(div);
     });
 
-    publicOffset += bets.length;
+    publicOffset += sliced.length;
   } catch (err) {
     console.error("Error loading bets:", err);
   } finally {
     isLoading = false;
-    document.getElementById("loadingIndicator").className = "loading-hidden";
   }
 }
 
+// === AUTO LOAD SAAT SCROLL ===
 window.addEventListener("scroll", () => {
-  const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
-  if (scrollTop + clientHeight >= scrollHeight - 150) {
-    loadPublicBets();
+  if (
+    window.innerHeight + window.scrollY >=
+    document.body.offsetHeight - 300
+  ) {
+    loadMoreBets();
   }
 });
 
-// Auto-load saat halaman dibuka
-loadPublicBets();
+// === START ===
+initContract();
   
 connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
