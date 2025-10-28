@@ -1422,6 +1422,7 @@ async function connectWallet(auto = false) {
   setupReferralListeners();
   await initializeReferralSection();
   await handlePendingReferral();
+  await checkFreeSpinEligibility();
 
   document.getElementById("loadUserHistoryBtn").addEventListener("click", () => loadUserHistory(true));
   document.getElementById("loadPublicHistoryBtn").addEventListener("click", () => loadPublicHistory(true));
@@ -2023,6 +2024,213 @@ function checkURLForReferrer() {
 // Panggil fungsi ini saat window/jendela dimuat
 window.addEventListener("load", checkURLForReferrer);
 
+// === Variabel Global Baru untuk Free Spin ===
+let userFreeSpinState = {
+  eligible: false,
+  remaining: 0
+};
+
+// === Utility Function (WAJIB ADA) ===
+// Fungsi ini dipanggil oleh animateSpin() dan blok catch, tapi belum Anda definisikan.
+function resetButton() {
+  const btn = document.getElementById("centerBtn");
+  if (btn) {
+    btn.disabled = false;
+  }
+  // Setelah spin selesai, update UI tombol (kembali normal jika free spin habis)
+  updateSpinButtonUI(); 
+}
+
+/**
+ * 1. FUNGSI UTAMA: Pengecekan kelayakan free spin
+ * Membaca data kontrak untuk menentukan apakah user layak.
+ */
+async function checkFreeSpinEligibility() {
+  if (!contract) return;
+
+  try {
+    // 1. Ambil data konstan dari kontrak
+    const [quota, minAge, minInactive] = await Promise.all([
+      contract.freeSpinQuota(),
+      contract.minWalletAge(),
+      contract.minInactiveTime()
+    ]);
+
+    // 2. Ambil data spesifik user
+    const userData = await contract.freeSpinData(userAddress);
+    
+    // 3. Ambil timestamp block terbaru (lebih akurat daripada Date.now())
+    const block = await provider.getBlock("latest");
+    const now = block.timestamp;
+
+    // 4. Konversi BigInt ke Number untuk perbandingan
+    const quotaNum = Number(quota);
+    const minAgeNum = Number(minAge);
+    const minInactiveNum = Number(minInactive);
+    const { freeSpinsUsed, lastActive, walletCreated } = {
+      freeSpinsUsed: Number(userData.freeSpinsUsed),
+      lastActive: Number(userData.lastActive),
+      walletCreated: Number(userData.walletCreated)
+    };
+
+    const remaining = quotaNum - freeSpinsUsed;
+
+    // 5. Cek kondisi kelayakan (logic di kontrak)
+    if (remaining <= 0) {
+      return; // Sudah habis
+    }
+
+    // Jika walletCreated == 0, cek pertama PASTI gagal (sesuai logic kontrak)
+    const isOldEnough = (walletCreated > 0) && (now >= (walletCreated + minAgeNum));
+    const isInactiveEnough = (now >= (lastActive + minInactiveNum));
+
+    console.log(`Pengecekan Free Spin:
+      Sisa: ${remaining}
+      Cukup Umur? ${isOldEnough} (Dibuat: ${walletCreated}, Perlu: ${minAgeNum})
+      Cukup Inaktif? ${isInactiveEnough} (Terakhir Aktif: ${lastActive}, Perlu: ${minInactiveNum})
+      Timestamp Sekarang: ${now}`);
+
+    // 6. JIKA LAYAK
+    if (isOldEnough && isInactiveEnough) {
+      userFreeSpinState.eligible = true;
+      userFreeSpinState.remaining = remaining;
+      
+      showFreeSpinPopup();
+      updateSpinButtonUI();
+    }
+
+  } catch (err) {
+    console.error("Gagal mengecek kelayakan free spin:", err);
+  }
+}
+
+/**
+ * 2. Menampilkan popup (sesuai permintaan Anda)
+ */
+function showFreeSpinPopup() {
+  // Anda bisa ganti alert() ini dengan popup HTML/CSS yang lebih cantik
+  alert("Selamat anda mendapatkan spin gratis. (Tombol Spin sekarang)");
+}
+
+/**
+ * 3. Update UI Tombol Spin
+ * Mengubah teks tombol berdasarkan status free spin.
+ */
+function updateSpinButtonUI() {
+  const btn = document.getElementById("centerBtn");
+  if (!btn) return;
+
+  if (userFreeSpinState.eligible && userFreeSpinState.remaining > 0) {
+    // Sesuai permintaan Anda: "Spin Free 3", "Spin Free 2", dst.
+    btn.innerHTML = `SPIN FREE ${userFreeSpinState.remaining}`;
+    // Hapus cost span jika ada
+    const costSpan = btn.querySelector(".cost");
+    if (costSpan) costSpan.remove();
+
+  } else {
+    // Kembali ke normal
+    btn.innerHTML = `SPIN<br><span class="cost"><center>Cost</center>0.000256 ETH</span>`;
+  }
+}
+
+/**
+ * 4. Fungsi Spin Gratis Baru
+ * Mirip 'spinFromBlockchain' tapi memanggil 'freeSpin()'
+ */
+async function spinFreeFromBlockchain() {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+  
+  const btn = document.getElementById("centerBtn");
+  
+  try {
+    btn.disabled = true;
+    clickSound.play();
+    resultText.textContent = "⏳ Waiting Free Transaction...";
+
+    // 💰 Kirim transaksi ke fungsi freeSpin()
+    const tx = await contract.freeSpin(); 
+
+    resultText.textContent = "🎡 Spinning Free...";
+    spinSound.currentTime = 0;
+    spinSound.play();
+
+    // Tunggu konfirmasi blok
+    const receipt = await tx.wait();
+
+    // 🔍 Ambil event 'FreeSpinPlayed' (BUKAN 'BetPlaced')
+    const event = receipt.logs
+      .map(log => {
+        try { return contract.interface.parseLog(log); } catch { return null; }
+      })
+      .filter(e => e && e.name === "FreeSpinPlayed")[0];
+
+    if (!event) throw new Error("No FreeSpinPlayed event found.");
+
+    // 1. Update status state
+    userFreeSpinState.remaining--;
+    if (userFreeSpinState.remaining <= 0) {
+      userFreeSpinState.eligible = false;
+    }
+    // 2. Update tombol SEKARANG (sebelum animasi)
+    updateSpinButtonUI(); 
+
+    // 3. Ambil 'rewardAmount' dan petakan ke hasil string
+    const { rewardAmount } = event.args;
+    const resultString = mapRewardToResultString(rewardAmount);
+
+    if (resultString === "No Prize") {
+         console.warn("Free spin menghasilkan '3 Faylotto', tapi hadiah ini tidak ada di roda Anda. Menampilkan 'No Prize'.");
+    }
+
+    // 4. Jalankan animasi spin
+    animateSpin(resultString);
+
+  } catch (err) {
+    console.error(err);
+    resultText.textContent = "❌ Free spin failed.";
+    resetButton(); // Pastikan tombol aktif lagi jika gagal
+  }
+}
+
+/**
+ * 5. Helper untuk mapping hasil 'freeSpin()'
+ * Kontrak freeSpin() hanya mengeluarkan event 'rewardAmount' (angka),
+ * sedangkan 'animateSpin()' butuh 'resultName' (string). Kita harus konversi.
+ */
+function mapRewardToResultString(rewardAmount) {
+  // Konversi ke BigInt untuk perbandingan yang aman
+  const amount = BigInt(rewardAmount.toString());
+  const base = 10n ** 18n; // 1 ETH (18 decimals)
+
+  if (amount === 2n * base) {
+    return "Won 2 Faylotto";
+  }
+  if (amount === 5n * base) {
+    return "Won 5 Faylotto";
+  }
+  if (amount === 7n * base) {
+    return "Won 7 Faylotto";
+  }
+  if (amount === 3n * base) {
+    // !! PENTING: Kontrak Anda memberi 3 FAY, tapi prizeMap Anda
+    // tidak memiliki "Won 3 Faylotto". Kita fallback ke "Try Again".
+    return "Try Again"; 
+  }
+  
+  // Fallback jika ada hasil tak terduga
+  return "No Prize"; 
+  }
+
+function handleSpinClick() {
+  if (userFreeSpinState.eligible && userFreeSpinState.remaining > 0) {
+    // Jika layak dan punya sisa, panggil fungsi spin gratis
+    spinFreeFromBlockchain();
+  } else {
+    // Jika tidak, panggil fungsi spin berbayar biasa
+    spinFromBlockchain();
+  }
+}
+
 // tambahkan efek futuristik glow 5 detik
 walletInfo.classList.add("glow");
 
@@ -2033,7 +2241,7 @@ setTimeout(() => {
   
 connectBtn.addEventListener("click", connectWallet);
 disconnectBtn.addEventListener("click", disconnectWallet);
-btn.addEventListener("click", spinFromBlockchain);
+btn.addEventListener("click", handleSpinClick);
 document.getElementById("year").textContent = new Date().getFullYear();
 </script>
   
