@@ -1969,8 +1969,7 @@ function updateSpinButtonUI() {
 }
 
 /**
- * 4. Fungsi Spin Gratis Baru
- * Mirip 'spinFromBlockchain' tapi memanggil 'freeSpin()'
+ * 4. Fungsi Spin Gratis Baru (Dengan Penanganan Registrasi & Error)
  */
 async function spinFreeFromBlockchain() {
   if (!contract) return alert("⚠️ Connect your wallet first!");
@@ -1985,21 +1984,32 @@ async function spinFreeFromBlockchain() {
     // 💰 Kirim transaksi ke fungsi freeSpin()
     const tx = await contract.freeSpin(); 
 
-    resultText.textContent = "🎡 Spinning Free...";
-    spinSound.currentTime = 0;
-    spinSound.play();
-
-    // Tunggu konfirmasi blok
+    // Tidak langsung spinning, tunggu konfirmasi dulu
+    resultText.textContent = "⏳ Confirming Transaction...";
     const receipt = await tx.wait();
 
-    // 🔍 Ambil event 'FreeSpinPlayed' (BUKAN 'BetPlaced')
+    // 🔍 Coba ambil event 'FreeSpinPlayed'
     const event = receipt.logs
       .map(log => {
         try { return contract.interface.parseLog(log); } catch { return null; }
       })
       .filter(e => e && e.name === "FreeSpinPlayed")[0];
 
-    if (!event) throw new Error("No FreeSpinPlayed event found.");
+    // --- PENANGANAN UNTUK PANGGILAN INISIALISASI/REGISTRASI ---
+    if (!event) {
+        // Ini berarti panggilan pertama berhasil (registrasi)
+        console.log("Panggilan freeSpin pertama berhasil (registrasi).");
+        resultText.textContent = "✅ Akun Terdaftar!";
+        alert("Akun Anda berhasil didaftarkan untuk free spin. Silakan tunggu 1 menit lagi, lalu coba spin gratis.");
+        resetButton(); // Aktifkan tombol lagi (masih bertuliskan Spin Free X)
+        return; // Hentikan fungsi di sini, jangan lanjutkan ke spin
+    }
+    // --------------------------------------------------------
+
+    // --- JIKA EVENT ADA (Ini adalah spin aktual) ---
+    resultText.textContent = "🎡 Spinning Free...";
+    spinSound.currentTime = 0;
+    spinSound.play();
 
     // 1. Update status state
     userFreeSpinState.remaining--;
@@ -2013,20 +2023,46 @@ async function spinFreeFromBlockchain() {
     const { rewardAmount } = event.args;
     const resultString = mapRewardToResultString(rewardAmount);
 
-    if (resultString === "No Prize") {
-         console.warn("Free spin menghasilkan '3 Faylotto', tapi hadiah ini tidak ada di roda Anda. Menampilkan 'No Prize'.");
+    if (resultString === "Try Again") { // Sebelumnya "No Prize"
+         console.warn("Free spin menghasilkan '3 Faylotto', dipetakan ke 'Try Again'.");
     }
 
     // 4. Jalankan animasi spin
     animateSpin(resultString);
 
   } catch (err) {
-    console.error(err);
-    resultText.textContent = "❌ Free spin failed.";
+    console.error("Gagal free spin:", err);
+    spinSound.pause(); // Hentikan suara spin jika error
+
+    // --- PENANGANAN ERROR YANG LEBIH BAIK ---
+    let userMessage = "❌ Free spin failed.";
+    
+    // Periksa pesan error dari kontrak (jika ada)
+    const reason = err.reason || (err.data ? contract.interface.parseError(err.data)?.args[0] : null) || err.message;
+
+    if (reason) {
+        if (reason.includes("Wallet too new for free spin")) {
+            userMessage = "⏳ Akun terdaftar! Harap tunggu 1 menit lagi.";
+        } else if (reason.includes("Last active too recent")) {
+            userMessage = "⏳ Anda baru saja spin. Harap tunggu 1 menit lagi.";
+        } else if (reason.includes("No free spins left")) {
+            userMessage = "❌ Kuota free spin Anda sudah habis.";
+            // Jika habis, paksa update state & UI
+            userFreeSpinState.eligible = false;
+            userFreeSpinState.remaining = 0;
+            updateSpinButtonUI(); 
+        } else {
+             // Error umum lainnya
+             userMessage = `❌ Error: ${reason.substring(0, 100)}`; // Potong pesan error panjang
+        }
+    }
+    
+    resultText.textContent = userMessage;
+    alert(userMessage); // Tampilkan pesan yang jelas ke user
     resetButton(); // Pastikan tombol aktif lagi jika gagal
   }
 }
-
+  
 /**
  * 5. Helper untuk mapping hasil 'freeSpin()'
  * Kontrak freeSpin() hanya mengeluarkan event 'rewardAmount' (angka),
