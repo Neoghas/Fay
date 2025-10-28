@@ -795,7 +795,7 @@ svg g {
     </div>
 
     <div class="wallet-controls">
-      <button id="connectBtn" class="wallet-btn">Connect Walle</button>
+      <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
       <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
     </div>
   </nav>
@@ -826,14 +826,11 @@ svg g {
   
   <div id="resultPopup" class="result-popup"></div>
 
-  <!-- History Section -->
-<section class="history-section">
+  <section class="history-section">
   <h2>Spin History</h2>
-  <div id="history" class="history-container">
-    <!-- Data history akan otomatis muncul di sini -->
-  </div>
+  <div id="history" class="history-container"></div>
   <div id="loading" class="loading">Loading...</div>
-</section>
+  </section>
 
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
@@ -1263,17 +1260,27 @@ btn.addEventListener("click", spinFromBlockchain);
 document.getElementById("year").textContent = new Date().getFullYear();
 </script>
 
-  <script>
+<script>
 let publicOffset = 0;
 const publicLimit = 10;
 let isLoading = false;
 let hasMore = true;
 
-window.addEventListener("DOMContentLoaded", () => {
+window.addEventListener("DOMContentLoaded", async () => {
   const historyContainer = document.getElementById("history");
   const loadingDiv = document.getElementById("loading");
 
   if (!historyContainer) return;
+
+  // === Inisialisasi contract ===
+  const provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  const signer = await provider.getSigner();
+
+  const contractAddress = "0x85Ff2021Fee19c1Dcc9f019b4C57F86E2FA280f1"; // ganti alamat kontrak kamu
+  const contract = new ethers.Contract(contractAddress, abi, signer);
+
+  let allBets = [];
 
   async function loadHistory() {
     if (isLoading || !hasMore) return;
@@ -1281,62 +1288,49 @@ window.addEventListener("DOMContentLoaded", () => {
     loadingDiv.style.display = "block";
 
     try {
-      if (typeof contract === "undefined") {
-        console.warn("⚠️ Contract belum siap, menunggu koneksi wallet...");
-        return;
+      // Ambil semua history hanya sekali (dari kontrak)
+      if (allBets.length === 0) {
+        allBets = await contract.getPublicBets();
+        console.log(`✅ Total history diterima: ${allBets.length}`);
       }
 
-      // Ambil total bet yang sudah pernah dibuat
-      const total = Number(await contract.totalBetsEver());
-      if (publicOffset >= total) {
-        hasMore = false;
-        loadingDiv.textContent = "No more history.";
-        return;
-      }
+      // Potong sebagian untuk infinite scroll
+      const slice = allBets.slice(publicOffset, publicOffset + publicLimit);
 
-      const end = Math.min(publicOffset + publicLimit, total);
+      slice.forEach((bet) => {
+        const div = document.createElement("div");
+        div.className = "history-item";
+        div.innerHTML = `
+          <p><strong>${bet.player}</strong></p>
+          <p>${bet.result}</p>
+          <p>${new Date(Number(bet.timestamp) * 1000).toLocaleString()}</p>
+        `;
+        historyContainer.appendChild(div);
+      });
 
-      // Ambil data 10 bet per batch dari mapping
-      for (let i = publicOffset; i < end; i++) {
-        const bet = await contract.publicBetsBuffer(i % 100); // pakai buffer 100
-        if (bet && bet.player !== "0x0000000000000000000000000000000000000000") {
-          const div = document.createElement("div");
-          div.className = "history-item";
-          div.innerHTML = `
-            <p><strong>${bet.player}</strong></p>
-            <p>${bet.result}</p>
-            <p>${new Date(Number(bet.timestamp) * 1000).toLocaleString()}</p>
-          `;
-          historyContainer.appendChild(div);
-        }
-      }
-
-      publicOffset += publicLimit;
-      if (publicOffset >= total) hasMore = false;
+      publicOffset += slice.length;
+      if (slice.length < publicLimit) hasMore = false;
     } catch (err) {
-      console.error("❌ Gagal memuat history:", err);
-      loadingDiv.textContent = "Error loading history.";
+      console.error("❌ Error loading history:", err);
+      loadingDiv.textContent = "Error loading history: " + err.message;
     } finally {
-      loadingDiv.style.display = "none";
       isLoading = false;
+      loadingDiv.style.display = "none";
     }
   }
 
-  // Load pertama kali
-  loadHistory();
+  // Muat awal
+  await loadHistory();
 
-  // Infinite scroll
+  // Infinite scroll listener
   window.addEventListener("scroll", () => {
-    if (
-      window.innerHeight + window.scrollY >=
-      document.body.offsetHeight - 200
-    ) {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
       loadHistory();
     }
   });
 });
-  </script>
-
+</script>
+  
 </body>
 </body>
     </html>
