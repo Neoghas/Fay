@@ -1647,7 +1647,7 @@ function renderBets(ul, bets, startIndex, count, isPublic = false) {
       
           <button class="like-btn" id="like-btn-${globalBetId}" onclick="handleLikeToggle(${globalBetId})">
             <img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;">
-            Like (<span id="like-count-${globalBetId}">...</span>)
+            Like (<span id="like-count-${globalBetId}">0</span>) 
         </button>
           
           <div class="star-rating" id="stars-${globalBetId}" data-current-rating="0">
@@ -2497,6 +2497,52 @@ async function handleLikeToggle(globalBetId) {
     } finally {
         likeBtn.disabled = false; 
     }
+}
+
+  /**
+ * FUNGSI BARU: Helper untuk update visual bintang (terisi/kosong).
+ */
+function updateStarDisplay(starsDiv, rating) {
+    if (!starsDiv) return;
+    const stars = starsDiv.querySelectorAll('span');
+    stars.forEach(star => {
+        // Pastikan star punya dataset value sebelum konversi
+        const starValue = star.dataset.value ? parseInt(star.dataset.value) : 0;
+        star.classList.toggle('filled', starValue > 0 && starValue <= rating);
+        star.innerHTML = starValue > 0 && starValue <= rating ? '★' : '☆'; // Ganti simbol
+    });
+}
+
+/**
+ * FUNGSI BARU: Helper untuk highlight bintang saat hover.
+ */
+function highlightStars(globalBetId, hoverValue) {
+    const starsDiv = document.getElementById(`stars-${globalBetId}`);
+    if (!starsDiv || starsDiv.dataset.processing === 'true') return; // Jangan highlight saat proses
+    const stars = starsDiv.querySelectorAll('span');
+    stars.forEach(star => {
+        const starValue = star.dataset.value ? parseInt(star.dataset.value) : 0;
+        star.classList.toggle('hover', starValue > 0 && starValue <= hoverValue);
+        // Ganti simbol saat hover juga
+        star.innerHTML = starValue > 0 && starValue <= hoverValue ? '★' : '☆';
+    });
+}
+
+/**
+ * FUNGSI BARU: Helper untuk reset highlight bintang saat mouse leave.
+ */
+function resetStarsHighlight(globalBetId) {
+    const starsDiv = document.getElementById(`stars-${globalBetId}`);
+    if (!starsDiv || starsDiv.dataset.processing === 'true') return;
+    const stars = starsDiv.querySelectorAll('span');
+    // Ambil rating yg tersimpan di dataset
+    const currentRating = starsDiv.dataset.currentRating ? parseInt(starsDiv.dataset.currentRating) : 0;
+    stars.forEach(star => {
+        star.classList.remove('hover');
+        // Kembalikan ke state rating asli
+        const starValue = star.dataset.value ? parseInt(star.dataset.value) : 0;
+        star.innerHTML = starValue > 0 && starValue <= currentRating ? '★' : '☆';
+    });
 }
 
 /**
