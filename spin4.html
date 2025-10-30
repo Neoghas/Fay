@@ -1019,7 +1019,14 @@ svg g {
 
 /* === STYLING FITUR EDIT KOMENTAR === */
 
-/* Tombol "Edit" kecil */
+/* TAMBAHKAN STYLE BARU INI (Untuk container induk) */
+.comment-view-mode {
+  display: flex;             /* 1. Aktifkan flexbox */
+  justify-content: space-between; /* 2. Dorong item ke ujung (kiri dan kanan) */
+  align-items: center;      /* 3. Sejajarkan teks dan tombol secara vertikal */
+}
+
+/* MODIFIKASI .edit-btn ANDA (Hapus margin-left) */
 .edit-btn {
   background: #007bff;
   border: none;
@@ -1028,8 +1035,19 @@ svg g {
   font-size: 12px;
   cursor: pointer;
   padding: 5px 10px;
-  margin-left: 10px;
+  /* margin-left: 10px; */  /* <-- HAPUS ATAU JADIKAN KOMENTAR BARIS INI */
   font-weight: bold;
+  
+  /* Tambahan: Pastikan tombol tidak menyusut */
+  flex-shrink: 0; 
+}
+
+/* MODIFIKASI KECIL PADA TEKS KOMENTAR (Agar flexbox bekerja) */
+.comment-view-mode p {
+  margin: 2px 0; 
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  flex-grow: 1; /* Biarkan paragraf mengambil sisa ruang */
 }
 .edit-btn:hover {
   text-decoration: underline;
@@ -2632,9 +2650,8 @@ async function loadCommentCount(prefix, globalBetId) {
 
 }
 
-
 /**
- * FUNGSI 3 (MODIFIKASI): Mengambil data komentar DAN PFP komentator.
+ * FUNGSI 3 (MODIFIKASI): Teks alamat komentator sekarang bisa diklik.
  */
 async function loadComments(prefix, globalBetId) {
   if (!contract) return; 
@@ -2663,16 +2680,14 @@ async function loadComments(prefix, globalBetId) {
     // Render setiap komentar
     comments.forEach((comment, i) => { // 'i' adalah commentIndex
       const commentEl = document.createElement("div");
-      commentEl.className = "comment-item"; // Ini akan jadi flex container
+      commentEl.className = "comment-item"; 
       commentEl.id = `comment-${prefix}-${globalBetId}-${i}`; 
       
       const userAddr = comment.user;
       const timestamp = new Date(Number(comment.timestamp) * 1000).toLocaleString();
       
-      // --- PERUBAHAN DI SINI: AMBIL PFP UNTUK KOMENTAR ---
-      // Pastikan fungsi getDeterministicPfpUrl sudah ada!
+      // Ambil PFP (sudah ada)
       const pfpUrl = getDeterministicPfpUrl(userAddr); 
-      // ------------------------------------------------
 
       let editButtonHtml = "";
       if (userAddress && userAddr.toLowerCase() === userAddress.toLowerCase()) {
@@ -2683,14 +2698,21 @@ async function loadComments(prefix, globalBetId) {
         `;
       }
       
-      // --- PERUBAHAN DI SINI: STRUKTUR HTML BARU DENGAN PFP ---
       commentEl.innerHTML = `
         <div class="comment-pfp-wrapper">
           <img src="${pfpUrl}" class="comment-pfp" alt="PFP" onclick="showUserProfile('${userAddr}')">
         </div>
         
         <div class="comment-content-wrapper">
-          <strong>${userAddr.slice(0, 6)}...${userAddr.slice(-4)}:</strong>
+        
+          <strong>
+            {/* Teks alamat sekarang dibungkus span agar bisa diklik */}
+            <span class="clickable-address" onclick="showUserProfile('${userAddr}')">
+              ${userAddr.slice(0, 6)}...${userAddr.slice(-4)}
+            </span>:
+          </strong>
+          {/* === AKHIR PERBAIKAN === */}
+          
           <small>${timestamp}</small><br><br>
           
           <div class="comment-view-mode" id="view-mode-${prefix}-${globalBetId}-${i}">
@@ -2705,7 +2727,6 @@ async function loadComments(prefix, globalBetId) {
           </div>
         </div>
       `;
-      // --- AKHIR PERUBAHAN HTML ---
       
       listDiv.appendChild(commentEl);
     });
@@ -2715,8 +2736,6 @@ async function loadComments(prefix, globalBetId) {
     listDiv.innerHTML = "<small>Gagal memuat komentar.</small>";
   }
 }
-
-
 
 async function handleSendComment(prefix, globalBetId) {
 
