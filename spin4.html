@@ -858,6 +858,209 @@ svg g {
   color: white;
   margin-top: 5px;
 }
+
+/* === STYLING LIKE & RATING === */
+
+/* Tombol Like/Unlike */
+.like-btn {
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
+  display: inline-flex; /* Agar ikon dan teks sejajar */
+  align-items: center;
+  gap: 5px; /* Jarak antara ikon dan teks */
+}
+.like-btn img {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
+.like-btn:hover:not(:disabled) {
+  background: #444;
+}
+.like-btn:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+/* State "Liked" (Tombol menjadi Unlike) */
+.like-btn.liked {
+  background: #007bff; /* Biru */
+  border-color: #0056b3;
+  color: white;
+}
+.like-btn.liked:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+/* Rating Bintang */
+.star-rating {
+  font-size: 22px; /* Ukuran bintang */
+  cursor: pointer;
+  display: inline-block;
+  color: #777; /* Warna bintang kosong */
+}
+.star-rating span {
+  transition: color 0.2s; /* Efek hover halus */
+}
+.star-rating span.filled {
+  color: #f39c12; /* Warna bintang terisi (emas) */
+}
+.star-rating span.hover {
+  color: #f7b74f; /* Warna saat di-hover (emas lebih muda) */
+}
+.avg-rating {
+  font-size: 12px; 
+  color: #999;
+  margin-left: -10px; /* Sedikit ke kiri agar dekat bintang */
+}
+
+/* === STYLING FITUR KOMENTAR === */
+
+/* Tombol Pemicu Komentar */
+.comment-toggle-btn {
+  background: #333;
+  color: #eee;
+  border: 1px solid #555;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
+}
+.comment-toggle-btn:hover {
+  background: #444;
+}
+.comment-toggle-btn img { /* Style untuk ikon di tombol */
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  margin-right: 5px; /* Jarak ikon ke teks */
+}
+
+/* Kontainer utama komentar */
+.comments-section {
+  margin-top: 15px;
+  border-top: 1px solid #555;
+  padding-top: 10px;
+}
+
+/* Daftar komentar */
+.comments-list {
+  max-height: 200px; /* Batasi tinggi, beri scroll jika banyak */
+  overflow-y: auto;
+  margin-bottom: 10px;
+  padding-right: 5px; /* Ruang untuk scrollbar */
+}
+.loader-comment {
+  font-style: italic;
+  color: #888;
+}
+
+/* Setiap item komentar */
+.comment-item {
+  border-bottom: 1px solid #444;
+  padding: 8px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.comment-item strong {
+  color: #f39c12; /* Oranye */
+  font-size: 14px;
+}
+.comment-item small {
+  color: #999;
+  display: inline;
+  margin-left: 10px;
+}
+.comment-item p {
+  margin: 4px 0 0 0;
+  word-wrap: break-word; /* Agar teks panjang tidak merusak layout */
+}
+
+/* Area input komentar baru */
+.comment-input-area {
+  display: flex;
+  margin-top: 10px;
+}
+.comment-input-area input {
+  flex-grow: 1; /* Input memanjang */
+  background: #1a1a2e;
+  border: 1px solid #555;
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  font-family: Arial, sans-serif;
+  font-weight: normal; /* Pastikan font normal */
+}
+.comment-input-area button {
+  background: #f39c12;
+  border: none;
+  color: #1a1a2e;
+  font-weight: bold;
+  padding: 8px 12px;
+  margin-left: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.comment-input-area button:disabled {
+  background: #555;
+}
+
+/* === STYLING FITUR EDIT KOMENTAR === */
+
+/* Tombol "Edit" kecil */
+.edit-btn {
+  background: none;
+  border: none;
+  color: #007bff; /* Biru */
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 10px;
+  font-weight: bold;
+}
+.edit-btn:hover {
+  text-decoration: underline;
+}
+
+/* Area Mode Edit (Textarea, Save, Cancel) */
+.comment-edit-mode {
+  display: none; /* Sembunyi secara default */
+  margin-top: 5px;
+}
+.comment-edit-mode textarea {
+  width: 95%; /* Sedikit lebih sempit agar pas */
+  min-height: 50px;
+  background: #333;
+  color: white;
+  border: 1px solid #666;
+  border-radius: 4px;
+  padding: 5px;
+  margin-bottom: 5px;
+  font-family: Arial, sans-serif; /* Samakan font */
+}
+.comment-edit-mode button {
+  background: #28a745; /* Hijau untuk "Save" */
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: bold;
+}
+.comment-edit-mode button.cancel-btn {
+  background: #777; /* Abu-abu untuk "Cancel" */
+  margin-left: 5px;
+}
+.comment-edit-mode button:disabled {
+  background: #555;
+}
 </style>
 </head>
 
@@ -1394,53 +1597,101 @@ function animateSpin(resultName) {
 
 // Fungsi helper untuk render batch item ke list
 function renderBets(ul, bets, startIndex, count, isPublic = false) {
+  if (!ul || !Array.isArray(bets)) {
+    console.error("Invalid arguments for renderBets", { ul, bets });
+    return;
+  }
+
   for (let i = startIndex; i < startIndex + count && i < bets.length; i++) {
     const bet = bets[i];
-    
-    // --- TAMBAHAN DI SINI ---
-    // 1. Dapatkan nama tampilan (displayName) dari prizeMap
-    const displayName = prizeMap[bet.result] || "No Prize"; // Gunakan fallback jika tidak ada
-    // 2. Cari objek prize yang cocok di array 'prizes'
+    if (!bet || typeof bet !== 'object') {
+      console.warn(`Skipping invalid bet data at index ${i}:`, bet);
+      continue;
+    }
+
+    // --- CARI IKON HADIAH ---
+    const displayName = prizeMap[bet.result] || "No Prize";
     const prize = prizes.find(p => p.name === displayName);
-    // 3. Siapkan URL ikon (gunakan fallback jika prize tidak ditemukan)
-    const iconUrl = prize ? prize.icon : "default_icon.png"; // Ganti 'default_icon.png' jika perlu
-    // -----------------------
+    const iconUrl = prize ? prize.icon : "default_icon.png";
 
     const li = document.createElement("li");
-    li.style.textAlign = "left"; // <-- Tambahkan ini untuk rata kiri
-    
+    li.style.textAlign = "left";
+
     const playerInfo = isPublic ? `(Player: ${String(bet.player || '').slice(0, 10)}...${String(bet.player || '').slice(-10)})` : "";
-    
-    // Safely access properties with fallback values (seperti kode Anda sebelumnya)
+
+    // Ambil data lain
     const result = bet.result || 'N/A';
     const amount = bet.amount ? ethers.formatEther(bet.amount) : 'N/A';
     const timestamp = bet.timestamp ? new Date(Number(bet.timestamp) * 1000).toLocaleString() : 'N/A';
     const randomNumber = bet.randomNumber ? bet.randomNumber.toString() : 'N/A';
-    // Hapus contractBalance jika tidak ada di struct Anda
-    // const contractBalance = bet.contractBalance ? ethers.formatEther(bet.contractBalance) : 'N/A';
-    const prizeAvailable = typeof bet.prizeAvailable === 'boolean' ? (bet.prizeAvailable ? "Yes" : "No") : 'N/A';
+    const prizeAvailable = typeof bet.prizeAvailable === 'boolean' ? (bet.prizeAvailable ? "Ya" : "Tidak") : 'N/A';
     const winChance = typeof bet.winChance !== 'undefined' ? `${Number(bet.winChance) / 1000}%` : 'N/A';
     const highestPrize = bet.highestAvailablePrize || 'N/A';
     const playerBetCount = typeof bet.playerBetCount !== 'undefined' ? Number(bet.playerBetCount) + 1 : 'N/A';
-    // Pastikan struct Anda punya globalBetId (dari perbaikan sebelumnya)
-    const globalBetId = typeof bet.globalBetId !== 'undefined' ? bet.globalBetId.toString() : (startIndex + i + 1); // Fallback ke nomor urut jika ID tidak ada
+    const globalBetId = typeof bet.globalBetId !== 'undefined' ? bet.globalBetId.toString() : (startIndex + i + 1);
 
-
+    // Buat HTML untuk list item
     li.innerHTML = `
-      Spin BetId: <span style="color:gold;">#${globalBetId}</span><br>
-      Address: <span style="color:gold;"><strong>${playerInfo}</strong></span><br>
-      Results: <span style="color:gold;">${result}</span>
-            <img src="${iconUrl}" class="prize" alt="${displayName}" style="width: 30px; height: 30px; vertical-align: middle; margin-left: 5px;"><br>
-      Bet Cost: <span style="color:gold;">${amount} ETH</span><br>
-      Betting Time: <span style="color:gold;">${timestamp}</span><br>
-      Random: <span style="color:gold;">#${randomNumber}</span><br>
-      Prizes Available: <span style="color:gold;">${prizeAvailable}</span><br>
-      Chance to Win: <span style="color:gold;">${winChance} (estimation)</span><br>
-      Ultimate Prize: <span style="color:gold;">${highestPrize}</span><br>
-      Bet Amount: <span style="color:gold;">${playerBetCount}</span><br>
-      `;
+      {/* BAGIAN DETAIL SPIN */}
+      Spin BetId: <span style="color:gold;">#${globalBetId}</span> ${playerInfo}<br>
+      Hasil: <span style="color:gold;">${result}</span>
+            <img src="${iconUrl}" class="prize" alt="${displayName}" style="width: 20px; height: 20px; vertical-align: middle; margin-left: 5px;"><br>
+      Taruhan: <span style="color:gold;">${amount} ETH</span><br>
+      Waktu: <span style="color:gold;">${timestamp}</span><br>
+      Random #: <span style="color:gold;">${randomNumber}</span><br>
+      Hadiah Tersedia: <span style="color:gold;">${prizeAvailable}</span><br>
+      Peluang Menang: <span style="color:gold;">${winChance} (estimasi)</span><br>
+      Hadiah Tertinggi: <span style="color:gold;">${highestPrize}</span><br>
+      Spin Player ke: <span style="color:gold;">${playerBetCount}</span><br>
+
+      {/* --- BAGIAN INTERAKSI BARU (LIKE & RATING) --- */}
+      <div class="bet-interactions" style="margin-top: 10px; display: flex; align-items: center; gap: 15px;">
+      
+          {/* Tombol Like/Unlike (Toggle) */}
+          <button class="like-btn" id="like-btn-${globalBetId}" onclick="handleLikeToggle(${globalBetId})">
+            {/* Placeholder awal, akan diganti */}
+            <img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;">
+            Like (<span id="like-count-${globalBetId}">...</span>)
+        </button>
+          
+          {/* Rating Bintang */}
+          <div class="star-rating" id="stars-${globalBetId}" data-current-rating="0">
+              ${[1, 2, 3, 4, 5].map(starValue => `
+                  <span data-value="${starValue}" 
+                        onclick="handleRating(${globalBetId}, ${starValue})" 
+                        onmouseover="highlightStars(${globalBetId}, ${starValue})" 
+                        onmouseleave="resetStarsHighlight(${globalBetId})">☆</span>
+              `).join('')}
+          </div>
+          <span class="avg-rating" id="avg-rating-${globalBetId}" style="font-size: 12px; color: #999;"></span>
+
+      </div>
+      {/* --- AKHIR BAGIAN INTERAKSI --- */}
+
+      {/* GARIS PEMISAH */}
+      <hr style="border-color: #444; margin: 10px 0;">
+      
+      {/* BAGIAN KOMENTAR (Sudah ada) */}
+      <button class="comment-toggle-btn" 
+              id="btn-toggle-${globalBetId}" 
+              onclick="toggleComments(${globalBetId})">
+          <img src="comment-icon.png" style="width:16px; height:16px; vertical-align:middle;"> Komentar (0)
+      </button>
+      <div class="comments-section" id="comments-section-${globalBetId}" style="display:none;">
+        <div class="comments-list" id="comments-list-${globalBetId}"><p class="loader-comment">Memuat komentar...</p></div>
+        <div class="comment-input-area">
+          <input type="text" id="comment-input-${globalBetId}" placeholder="Tulis komentar...">
+          <button class="comment-send-btn" onclick="handleSendComment(${globalBetId})">Kirim</button>
+        </div>
+      </div>
+    `;
 
     ul.appendChild(li);
+    
+    // Panggil fungsi untuk mengambil JUMLAH komentar
+    loadCommentCount(globalBetId); 
+    // Panggil fungsi BARU untuk mengambil data Like & Rating
+    loadLikeAndRatingData(globalBetId); 
   }
 }
 
@@ -2119,6 +2370,356 @@ async function handleSpinClick() {
      // Jadi tidak perlu enable di sini lagi.
   }
 }
+
+/**
+ * FUNGSI BARU: Memuat data Like & Rating dari kontrak dan UPDATE UI TOMBOL.
+ */
+async function loadLikeAndRatingData(globalBetId) {
+    if (!contract || !userAddress) return; 
+
+    const likeBtn = document.getElementById(`like-btn-${globalBetId}`);
+    // Perbaiki ID span count agar konsisten
+    const likeCountSpanId = `like-count-${globalBetId}`; 
+    const starsDiv = document.getElementById(`stars-${globalBetId}`);
+    const avgRatingSpan = document.getElementById(`avg-rating-${globalBetId}`);
+
+    // PENTING: Periksa semua elemen target
+    if (!likeBtn || !starsDiv || !avgRatingSpan) {
+        console.error(`Missing elements for like/rating UI for bet ${globalBetId}`);
+        return; 
+    }
+
+    try {
+        const [count, userLike, userRatingNum, avgRatingBigInt] = await Promise.all([
+            contract.getLikeCount(globalBetId),
+            contract.getUserLike(globalBetId, userAddress),
+            contract.getUserRating(globalBetId, userAddress),
+            contract.getAverageRating(globalBetId)
+        ]);
+        
+        const likeCount = Number(count);
+
+        // --- Update Tampilan Tombol Like/Unlike ---
+        if (userLike) {
+            // Jika user SUDAH like -> tampilkan tombol UNLIKE
+            likeBtn.classList.add('liked'); // Tambah class 'liked' (untuk style)
+            likeBtn.innerHTML = `
+                <img src="dislike.png" alt="Unlike" style="width: 16px; height: 16px; vertical-align: middle;"> 
+                Unlike (<span id="${likeCountSpanId}">${likeCount}</span>) 
+            `;
+        } else {
+             // Jika user BELUM like -> tampilkan tombol LIKE
+             likeBtn.classList.remove('liked'); // Hapus class 'liked'
+             likeBtn.innerHTML = `
+                <img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;"> 
+                Like (<span id="${likeCountSpanId}">${likeCount}</span>)
+             `;
+        }
+
+        // --- Update Rating (Kode sama seperti sebelumnya) ---
+        const currentRating = Number(userRatingNum);
+        starsDiv.dataset.currentRating = currentRating; 
+        updateStarDisplay(starsDiv, currentRating); 
+
+        const avgRatingCount = await contract.getRatingCount(globalBetId); 
+        if (Number(avgRatingCount) > 0) {
+            const avgRating = Number(avgRatingBigInt) / 100; 
+            avgRatingSpan.textContent = `(${avgRating.toFixed(1)} avg)`;
+        } else {
+            avgRatingSpan.textContent = `(No ratings)`;
+        }
+
+    } catch (err) {
+        console.error(`Gagal load like/rating data for bet ${globalBetId}:`, err);
+        // Tampilkan error di UI jika perlu
+        const countSpan = document.getElementById(likeCountSpanId);
+        if(countSpan) countSpan.textContent = "?";
+        avgRatingSpan.textContent = "(Error)";
+    }
+}
+
+/**
+ * FUNGSI BARU: Menangani klik tombol Like/Unlike (Toggle).
+ */
+async function handleLikeToggle(globalBetId) {
+    if (!contract || !userAddress) return alert("⚠️ Connect your wallet first!");
+
+    const likeBtn = document.getElementById(`like-btn-${globalBetId}`);
+    if (!likeBtn || likeBtn.disabled) return;
+
+    const originalHTML = likeBtn.innerHTML; 
+    likeBtn.disabled = true;
+    likeBtn.innerHTML = `<img src="loading.gif" alt="..." style="width: 16px; height: 16px;"> Processing...`; 
+
+    try {
+        const tx = await contract.likeSpin(globalBetId); 
+        await tx.wait();
+
+        // Sukses, muat ulang data like/rating untuk update UI
+        await loadLikeAndRatingData(globalBetId);
+
+    } catch (err) {
+        console.error("Gagal like/unlike:", err);
+        alert("Gagal memperbarui Like/Unlike: " + err.message);
+        likeBtn.innerHTML = originalHTML; // Kembalikan ke state awal jika error
+    } finally {
+        likeBtn.disabled = false; 
+    }
+}
+
+/**
+ * FUNGSI 1: Menampilkan atau menyembunyikan area komentar.
+ */
+async function toggleComments(globalBetId) {
+  const section = document.getElementById(`comments-section-${globalBetId}`);
+  const button = document.getElementById(`btn-toggle-${globalBetId}`);
+  if (!section || !button) return;
+
+  if (section.style.display === "none") {
+    // Jika tersembunyi -> Tampilkan
+    section.style.display = "block";
+    // Panggil fungsi untuk memuat komentar HANYA saat dibuka
+    await loadComments(globalBetId);
+  } else {
+    // Jika terlihat -> Sembunyikan
+    section.style.display = "none";
+    // Update count saat ditutup
+    loadCommentCount(globalBetId);
+  }
+}
+
+/**
+ * FUNGSI 2: Hanya mengambil jumlah komentar untuk tombol.
+ */
+async function loadCommentCount(globalBetId) {
+    const button = document.getElementById(`btn-toggle-${globalBetId}`);
+    // Pastikan contract sudah siap
+    if (!button || !contract) return;
+
+    // Hanya update jika section sedang tersembunyi
+    const section = document.getElementById(`comments-section-${globalBetId}`);
+    if (section && section.style.display === "block") {
+      return;
+    }
+
+    try {
+        // Panggil getComments untuk mendapatkan panjang array
+        const comments = await contract.getComments(globalBetId);
+        // Ganti 'comment-icon.png' dengan path ikon Anda
+        button.innerHTML = `<img src="comment-icon.png" style="width:16px; height:16px; vertical-align:middle;"> Komentar (${comments.length})`;
+    } catch(err) {
+        console.error("Gagal load comment count:", err);
+        button.innerHTML = `<img src="comment-icon.png" style="width:16px; height:16px; vertical-align:middle;"> Komentar (?)`;
+    }
+}
+
+
+/**
+ * FUNGSI 3: Mengambil data komentar dari kontrak dan menampilkannya.
+ */
+async function loadComments(globalBetId) {
+  if (!contract) return; // Pastikan kontrak sudah ada
+
+  const listDiv = document.getElementById(`comments-list-${globalBetId}`);
+  if (!listDiv) return;
+
+  listDiv.innerHTML = "<p class='loader-comment'>Memuat komentar...</p>"; // Tampilkan loader
+
+  try {
+    const comments = await contract.getComments(globalBetId);
+
+    // Update tombol toggle
+    const button = document.getElementById(`btn-toggle-${globalBetId}`);
+    if (button) {
+      // Ganti 'comment-icon.png' dengan path ikon Anda
+      button.innerHTML = `<img src="comment-icon.png" style="width:16px; height:16px; vertical-align:middle;"> Sembunyikan Komentar (${comments.length})`;
+    }
+
+    if (comments.length === 0) {
+      listDiv.innerHTML = "<small>Belum ada komentar.</small>";
+      return;
+    }
+
+    listDiv.innerHTML = ""; // Kosongkan loader
+
+    // Render setiap komentar
+    comments.forEach((comment, i) => { // 'i' adalah commentIndex
+      const commentEl = document.createElement("div");
+      commentEl.className = "comment-item";
+      commentEl.id = `comment-${globalBetId}-${i}`;
+
+      const userAddr = comment.user;
+      const timestamp = new Date(Number(comment.timestamp) * 1000).toLocaleString();
+
+      let editButtonHtml = "";
+      // Tampilkan tombol "Edit" HANYA jika alamat user cocok
+      // Pastikan userAddress sudah terdefinisi
+      if (userAddress && userAddr.toLowerCase() === userAddress.toLowerCase()) {
+        editButtonHtml = `
+          <button class="edit-btn" id="edit-btn-${globalBetId}-${i}" onclick="toggleEditMode(${globalBetId}, ${i}, true)">
+            Edit
+          </button>
+        `;
+      }
+
+      commentEl.innerHTML = `
+        <strong>${userAddr.slice(0, 6)}...${userAddr.slice(-4)}:</strong>
+        <small>${timestamp}</small>
+
+        <div class="comment-view-mode" id="view-mode-${globalBetId}-${i}">
+          <p style="margin: 2px 0; word-wrap: break-word;">${comment.text}</p>
+          ${editButtonHtml}
+        </div>
+
+        <div class="comment-edit-mode" id="edit-mode-${globalBetId}-${i}">
+          <textarea id="edit-input-${globalBetId}-${i}">${comment.text}</textarea>
+          <button onclick="handleSendEdit(${globalBetId}, ${i})">Save</button>
+          <button class="cancel-btn" onclick="toggleEditMode(${globalBetId}, ${i}, false)">Cancel</button>
+        </div>
+      `;
+      listDiv.appendChild(commentEl);
+    });
+
+  } catch (err) {
+    console.error(`Gagal memuat komentar untuk bet ${globalBetId}:`, err);
+    listDiv.innerHTML = "<small>Gagal memuat komentar.</small>";
+  }
+}
+
+/**
+ * FUNGSI 4: Mengirim komentar baru ke kontrak.
+ */
+async function handleSendComment(globalBetId) {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+
+  const input = document.getElementById(`comment-input-${globalBetId}`);
+  // Tombol kirim adalah elemen saudara berikutnya dari input
+  const btn = input ? input.nextElementSibling : null;
+  if (!input || !btn) return console.error("Elemen input/button komentar tidak ditemukan");
+
+  const text = input.value.trim(); // Ambil teks dan hapus spasi ekstra
+
+  if (!text) {
+    return alert("Komentar tidak boleh kosong!");
+  }
+  // Batasi panjang komentar jika perlu (misal, sesuai batasan kontrak 256 bytes)
+  if (text.length > 250) {
+       return alert("Komentar terlalu panjang (maks 250 karakter).");
+  }
+
+  btn.disabled = true;
+  input.disabled = true;
+  btn.textContent = "Mengirim...";
+
+  try {
+    const tx = await contract.addComment(globalBetId, text);
+    await tx.wait();
+
+    alert("Komentar berhasil dikirim!");
+    input.value = ""; // Kosongkan input
+
+    // Muat ulang daftar komentar agar komentar baru muncul
+    await loadComments(globalBetId);
+
+  } catch (err) {
+    console.error("Gagal mengirim komentar:", err);
+    let userMessage = "Transaksi komentar gagal.";
+    // Coba dapatkan pesan error dari revert kontrak
+    const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`; // Ambil 100 karakter pertama
+    alert(userMessage);
+  } finally {
+    // Pastikan tombol diaktifkan kembali
+    if (btn) btn.disabled = false;
+    if (input) input.disabled = false;
+    if (btn) btn.textContent = "Kirim";
+  }
+}
+
+/**
+ * FUNGSI 5: Beralih antara mode lihat dan mode edit untuk komentar.
+ */
+function toggleEditMode(globalBetId, index, isEditing) {
+  const viewMode = document.getElementById(`view-mode-${globalBetId}-${index}`);
+  const editMode = document.getElementById(`edit-mode-${globalBetId}-${index}`);
+  const input = document.getElementById(`edit-input-${globalBetId}-${index}`);
+
+  if (!viewMode || !editMode || !input) return console.error("Elemen mode edit/view tidak ditemukan");
+
+  if (isEditing) {
+    // Masuk mode edit
+    viewMode.style.display = 'none';
+    editMode.style.display = 'block';
+    input.focus(); // Fokus ke textarea
+  } else {
+    // Kembali ke mode lihat (Cancel)
+    viewMode.style.display = 'block';
+    editMode.style.display = 'none';
+
+    // Reset teks di textarea ke teks asli dari elemen <p>
+    const originalTextElement = viewMode.querySelector('p');
+    if (originalTextElement) {
+        input.value = originalTextElement.textContent;
+    }
+  }
+}
+
+/**
+ * FUNGSI 6: Mengirim komentar yang sudah diedit ke kontrak.
+ */
+async function handleSendEdit(globalBetId, index) {
+  if (!contract) return alert("⚠️ Connect your wallet first!");
+
+  const input = document.getElementById(`edit-input-${globalBetId}-${index}`);
+  if (!input) return console.error("Elemen input edit tidak ditemukan");
+
+  const newText = input.value.trim();
+
+  if (!newText) {
+    return alert("Komentar tidak boleh kosong!");
+  }
+   if (newText.length > 250) {
+       return alert("Komentar terlalu panjang (maks 250 karakter).");
+   }
+
+  // Tombol save adalah elemen saudara berikutnya dari textarea
+  const saveBtn = input.nextElementSibling;
+  // Tombol cancel adalah elemen setelah tombol save
+  const cancelBtn = saveBtn ? saveBtn.nextElementSibling : null;
+
+  // Disable UI sementara
+  if (saveBtn) saveBtn.disabled = true;
+  if (cancelBtn) cancelBtn.disabled = true;
+  input.disabled = true;
+  if (saveBtn) saveBtn.textContent = "Saving...";
+
+  try {
+    const tx = await contract.editComment(globalBetId, index, newText);
+    await tx.wait();
+
+    alert("Komentar berhasil diperbarui!");
+
+    // 1. Perbarui teks di Mode Tampilan (<p>)
+    const viewParagraph = document.querySelector(`#view-mode-${globalBetId}-${index} p`);
+    if (viewParagraph) viewParagraph.textContent = newText;
+
+    // 2. Kembali ke Mode Tampilan
+    toggleEditMode(globalBetId, index, false);
+
+  } catch (err) {
+    console.error("Gagal edit komentar:", err);
+    let userMessage = "Gagal mengedit komentar.";
+    const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    alert(userMessage);
+  } finally {
+    // Aktifkan kembali UI
+    if (saveBtn) saveBtn.disabled = false;
+    if (cancelBtn) cancelBtn.disabled = false;
+    input.disabled = false;
+    if (saveBtn) saveBtn.textContent = "Save";
+  }
+      }
 
 // tambahkan efek futuristik glow 5 detik
 walletInfo.classList.add("glow");
