@@ -1067,6 +1067,69 @@ svg g {
 .comment-edit-mode button:disabled {
   background: #555;
 }
+
+  /* === STYLING MODAL PROFIL (SAMA SEPERTI SEBELUMNYA) === */
+.profile-modal-backdrop {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 9998;
+  display: none; /* Diubah oleh JS */
+  align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.profile-modal-content {
+  background: #2c2c3a; border: 1px solid #555;
+  border-radius: 12px; padding: 20px 25px;
+  width: 90%; max-width: 500px;
+  box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+  position: relative;
+  transform: scale(0.95); transition: transform 0.3s ease;
+  color: #eee;
+}
+.profile-modal-backdrop.show { opacity: 1; }
+.profile-modal-backdrop.show .profile-modal-content { transform: scale(1); }
+.profile-modal-close {
+  position: absolute; top: 10px; right: 15px;
+  background: none; border: none; color: #aaa;
+  font-size: 30px; font-weight: bold; cursor: pointer;
+}
+.profile-modal-content h3 { margin-top: 0; color: #f39c12; text-align: center; }
+.profile-address-display {
+  font-family: 'Courier New', Courier, monospace; font-size: 14px;
+  background: #1a1a2e; padding: 8px; border-radius: 5px;
+  word-wrap: break-word; text-align: center; color: #f39c12; margin-bottom: 15px;
+}
+.profile-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+.profile-stat-item { background: #1a1a2e; padding: 10px; border-radius: 5px; text-align: center; }
+.profile-stat-item span { display: block; font-size: 0.8em; color: #aaa; }
+.profile-stat-item strong { display: block; font-size: 1.2em; color: white; margin-top: 5px; }
+.profile-details { background: #1a1a2e; padding: 15px; border-radius: 5px; font-size: 14px; line-height: 1.6; }
+.profile-details span { color: white; font-weight: bold; }
+
+/* CSS untuk PFP (Tanpa Tombol Edit) */
+.pfp-container {
+  width: 100px; height: 100px;
+  margin: 0 auto 15px auto; /* Pusatkan */
+}
+#profile-modal-pfp {
+  width: 100%; height: 100%;
+  border-radius: 50%; /* Bulat */
+  border: 3px solid #f39c12;
+  object-fit: cover;
+  background-color: #1a1a2e; /* Warna latar jika gambar gagal dimuat */
+}
+
+/* CSS untuk Alamat yang Bisa Diklik */
+.clickable-address {
+  color: #00aaff;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: bold; /* Buat lebih menonjol */
+}
+.clickable-address:hover {
+  color: #4dc4ff;
+}
 </style>
 </head>
 
@@ -1163,6 +1226,46 @@ svg g {
     </button>
   </div>
   </div>
+
+    <div id="userProfileModal" class="profile-modal-backdrop" style="display:none;" onclick="closeProfileModal()">
+    <div class="profile-modal-content" onclick="event.stopPropagation()">
+        <button class="profile-modal-close" onclick="closeProfileModal()">×</button>
+        <h3>Profil Player</h3>
+        
+        <div class="pfp-container">
+            <img id="profile-modal-pfp" src="default-pfp.png" alt="Profile Picture">
+        </div>
+        
+        <div class="profile-address-display" id="profile-address">
+            (Loading...)
+        </div>
+
+        <div class="profile-stats-grid">
+            <div class="profile-stat-item">
+                <span>Saldo ETH</span>
+                <strong id="profile-eth-balance">...</strong>
+            </div>
+            <div class="profile-stat-item">
+                <span>Saldo Faylotto</span>
+                <strong id="profile-faylotto-balance">...</strong>
+            </div>
+            <div class="profile-stat-item">
+                <span>Total Undangan</span>
+                <strong id="profile-referral-count">...</strong>
+            </div>
+            <div class="profile-stat-item">
+                <span>Total Spin Publik</span>
+                <strong id="profile-public-spins">...</strong>
+            </div>
+        </div>
+        
+        <div class="profile-details">
+            <strong>UID Referral:</strong> <span id="profile-uid">...</span><br>
+            <strong>Terdaftar Free Spin:</strong> <span id="profile-free-spin-date">...</span><br>
+            <strong>Spin Gratis Terpakai:</strong> <span id="profile-free-spin-used">...</span>
+        </div>
+    </div>
+    </div>
     
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
@@ -1620,8 +1723,12 @@ function renderBets(ul, bets, startIndex, count, isPublic = false) {
     const li = document.createElement("li");
     li.style.textAlign = "left";
 
-    const playerInfo = isPublic ? `(Player: ${String(bet.player || '').slice(0, 10)}...${String(bet.player || '').slice(-10)})` : "";
-
+    const playerInfo = isPublic ? 
+      `(Player: <span class="clickable-address" onclick="showUserProfile('${bet.player}')">
+          ${String(bet.player || '').slice(0, 10)}...${String(bet.player || '').slice(-10)}
+       </span>)` 
+      : "";
+    
     // Ambil data lain
     const result = bet.result || 'N/A';
     const amount = bet.amount ? ethers.formatEther(bet.amount) : 'N/A';
@@ -3015,6 +3122,105 @@ function highlightStars(prefix, globalBetId, hoverValue) {
         star.innerHTML = starValue > 0 && starValue <= currentRating ? '★' : '☆';
     });
   }
+
+  /**
+ * FUNGSI BARU: Menampilkan modal profil.
+ */
+function showUserProfile(address) {
+  if (!contract) return alert("⚠️ Connect wallet first!");
+  
+  const modal = document.getElementById('userProfileModal');
+  if (!modal) return;
+
+  // Tampilkan modal
+  modal.style.display = "flex";
+  setTimeout(() => modal.classList.add('show'), 10);
+
+  // Reset teks ke "Loading..."
+  document.getElementById('profile-address').textContent = address;
+  document.getElementById('profile-modal-pfp').src = "default-pfp.png"; // Reset ke default
+  document.getElementById('profile-eth-balance').textContent = "...";
+  document.getElementById('profile-faylotto-balance').textContent = "...";
+  document.getElementById('profile-referral-count').textContent = "...";
+  document.getElementById('profile-public-spins').textContent = "...";
+  document.getElementById('profile-uid').textContent = "...";
+  document.getElementById('profile-free-spin-date').textContent = "...";
+  document.getElementById('profile-free-spin-used').textContent = "...";
+
+  // Panggil fungsi untuk memuat data
+  loadProfileData(address);
+}
+
+/**
+ * FUNGSI BARU: Menutup modal profil.
+ */
+function closeProfileModal() {
+  const modal = document.getElementById('userProfileModal');
+  if (!modal) return;
+  
+  modal.classList.remove('show');
+  setTimeout(() => modal.style.display = "none", 300); // Tunggu animasi selesai
+}
+
+/**
+ * FUNGSI BARU (MODIFIKASI): Mengambil data DAN menghitung PFP.
+ */
+async function loadProfileData(address) {
+  try {
+    // === 1. LOGIKA PFP OTOMATIS (BARU) ===
+    const TOTAL_PFP_IMAGES = 10; // Jumlah gambar (pfp-0.png s/d pfp-9.png)
+    
+    // Ambil 1 karakter terakhir dari alamat
+    const lastChar = address.slice(-1); 
+    // Konversi karakter hex (0-f) menjadi angka (0-15)
+    const hash = parseInt(lastChar, 16); 
+    // Gunakan modulo untuk mendapatkan angka antara 0 dan 9
+    const imageIndex = hash % TOTAL_PFP_IMAGES; 
+    
+    // Atur URL gambar. GANTI 'path/to/images/' dengan path Anda
+    const imageUrl = `path/to/images/pfp-${imageIndex}.png`; 
+    
+    document.getElementById('profile-modal-pfp').src = imageUrl;
+    
+    // === 2. AMBIL DATA (Sama seperti sebelumnya) ===
+    
+    // Ambil data balance
+    const [ethBal, faylottoBal] = await Promise.all([
+      provider.getBalance(address),
+      contract.balanceOf(address)
+    ]);
+    document.getElementById('profile-eth-balance').textContent = `${parseFloat(ethers.formatEther(ethBal)).toFixed(6)} ETH`;
+    document.getElementById('profile-faylotto-balance').textContent = `${parseFloat(ethers.formatUnits(faylottoBal, 18)).toFixed(2)} FAY`;
+
+    // Ambil data referral
+    const [refInfo, refCount] = await Promise.all([
+      contract.referrals(address),
+      contract.getReferralCount(address)
+    ]);
+    document.getElementById('profile-referral-count').textContent = Number(refCount);
+    document.getElementById('profile-uid').textContent = refInfo.uid || "N/A";
+
+    // Ambil data free spin
+    const spinData = await contract.freeSpinData(address);
+    const quota = await contract.freeSpinQuota(); // Ambil kuota
+    const createdDate = Number(spinData.walletCreated) === 0 ? "Belum terdaftar" : new Date(Number(spinData.walletCreated) * 1000).toLocaleDateString();
+    document.getElementById('profile-free-spin-date').textContent = createdDate;
+    document.getElementById('profile-free-spin-used').textContent = `${Number(spinData.freeSpinsUsed)} / ${Number(quota)}`;
+    
+    // Hitung spin publik (dari data yang sudah ada)
+    if (allPublicBets.length > 0) {
+        const userPublicSpins = allPublicBets.filter(bet => bet.player.toLowerCase() === address.toLowerCase());
+        document.getElementById('profile-public-spins').textContent = userPublicSpins.length;
+    } else {
+         document.getElementById('profile-public-spins').textContent = "(N/A)";
+    }
+
+  } catch (err) {
+    console.error(`Gagal memuat profil untuk ${address}:`, err);
+    document.getElementById('profile-eth-balance').textContent = "Error";
+    document.getElementById('profile-faylotto-balance').textContent = "Error";
+  }
+}
 
 // tambahkan efek futuristik glow 5 detik
 walletInfo.classList.add("glow");
