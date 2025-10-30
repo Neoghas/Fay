@@ -1597,27 +1597,23 @@ function animateSpin(resultName) {
 
 // GANTI FUNGSI renderBets LAMA ANDA DENGAN YANG INI
 function renderBets(ul, bets, startIndex, count, isPublic = false) {
-  if (!ul || !Array.isArray(bets)) {
-    console.error("Invalid arguments for renderBets", { ul, bets });
-    return;
-  }
+  if (!ul || !Array.isArray(bets)) return;
+
+  // --- 1. TENTUKAN PREFIX ---
+  const prefix = isPublic ? 'public' : 'user';
 
   for (let i = startIndex; i < startIndex + count && i < bets.length; i++) {
     const bet = bets[i];
-    if (!bet || typeof bet !== 'object') {
-      console.warn(`Skipping invalid bet data at index ${i}:`, bet);
-      continue;
-    }
+    if (!bet || typeof bet !== 'object') continue;
 
-    // --- 1. AMBIL DATA & IKON ---
+    // --- 2. AMBIL DATA & IKON ---
     const displayName = prizeMap[bet.result] || "No Prize";
     const prize = prizes.find(p => p.name === displayName);
-    const iconUrl = prize ? prize.icon : "default_icon.png"; // Ganti 'default_icon.png'
+    const iconUrl = prize ? prize.icon : "default_icon.png";
 
     const li = document.createElement("li");
-    li.style.textAlign = "left"; // Set rata kiri
+    li.style.textAlign = "left";
 
-    // Info player (HANYA MUNCUL JIKA isPublic true)
     const playerInfo = isPublic ? `(Player: ${String(bet.player || '').slice(0, 10)}...${String(bet.player || '').slice(-10)})` : "";
 
     // Ambil data lain
@@ -1631,7 +1627,7 @@ function renderBets(ul, bets, startIndex, count, isPublic = false) {
     const playerBetCount = typeof bet.playerBetCount !== 'undefined' ? Number(bet.playerBetCount) + 1 : 'N/A';
     const globalBetId = typeof bet.globalBetId !== 'undefined' ? bet.globalBetId.toString() : (startIndex + i + 1);
 
-    // --- 2. BUAT HTML ---
+    // --- 3. BUAT HTML (DENGAN PREFIX) ---
     li.innerHTML = `
       Spin BetId: <span style="color:gold;">#${globalBetId}</span> ${playerInfo}<br>
       Hasil: <span style="color:gold;">${result}</span>
@@ -1645,44 +1641,48 @@ function renderBets(ul, bets, startIndex, count, isPublic = false) {
       Spin Player ke: <span style="color:gold;">${playerBetCount}</span><br>
 
       <div class="bet-interactions" style="margin-top: 10px; display: flex; align-items: center; gap: 15px;">
-          <button class="like-btn" id="like-btn-${globalBetId}" onclick="handleLikeToggle(${globalBetId})">
+          
+          <button class="like-btn" id="like-btn-${prefix}-${globalBetId}" onclick="handleLikeToggle('${prefix}', ${globalBetId})">
               <img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;">
-              Like (<span id="like-count-${globalBetId}">0</span>)
+              Like (<span id="like-count-${prefix}-${globalBetId}">0</span>)
           </button>
-          <div class="star-rating" id="stars-${globalBetId}" data-current-rating="0">
+          
+          <div class="star-rating" id="stars-${prefix}-${globalBetId}" data-current-rating="0">
               ${[1, 2, 3, 4, 5].map(starValue => `
                   <span data-value="${starValue}" 
-                        onclick="handleRating(${globalBetId}, ${starValue})" 
-                        onmouseover="highlightStars(${globalBetId}, ${starValue})" 
-                        onmouseleave="resetStarsHighlight(${globalBetId})">☆</span>
+                        onclick="handleRating('${prefix}', ${globalBetId}, ${starValue})" 
+                        onmouseover="highlightStars('${prefix}', ${globalBetId}, ${starValue})" 
+                        onmouseleave="resetStarsHighlight('${prefix}', ${globalBetId})">☆</span>
               `).join('')}
           </div>
-          <span class="avg-rating" id="avg-rating-${globalBetId}" style="font-size: 12px; color: #999;"></span>
+          <span class="avg-rating" id="avg-rating-${prefix}-${globalBetId}" style="font-size: 12px; color: #999;"></span>
+
       </div>
-
       <hr style="border-color: #444; margin: 10px 0;">
-
+      
       <button class="comment-toggle-btn" 
-              id="btn-toggle-${globalBetId}" 
-              onclick="toggleComments(${globalBetId})">
+              id="btn-toggle-${prefix}-${globalBetId}" 
+              onclick="toggleComments('${prefix}', ${globalBetId})">
           <img src="comment-icon.png" style="width:16px; height:16px; vertical-align:middle;"> Komentar (0)
       </button>
-      <div class="comments-section" id="comments-section-${globalBetId}" style="display:none;">
-        <div class="comments-list" id="comments-list-${globalBetId}"><p class="loader-comment">Memuat komentar...</p></div>
+
+      <div class="comments-section" id="comments-section-${prefix}-${globalBetId}" style="display:none;">
+        <div class="comments-list" id="comments-list-${prefix}-${globalBetId}"><p class="loader-comment">Memuat komentar...</p></div>
         <div class="comment-input-area">
-          <input type="text" id="comment-input-${globalBetId}" placeholder="Tulis komentar...">
-          <button class="comment-send-btn" onclick="handleSendComment(${globalBetId})">Kirim</button>
+          <input type="text" id="comment-input-${prefix}-${globalBetId}" placeholder="Tulis komentar...">
+          <button class="comment-send-btn" onclick="handleSendComment('${prefix}', ${globalBetId})">
+            Kirim
+          </button>
         </div>
       </div>
     `;
 
-    // --- 3. TAMBAHKAN KE HALAMAN ---
+    // --- 4. TAMBAHKAN KE HALAMAN ---
     ul.appendChild(li);
     
-    // --- 4. PANGGIL FUNGSI UNTUK MENGISI DATA INTERAKSI ---
-    // Fungsi-fungsi ini akan dipanggil untuk SETIAP item, baik publik maupun pribadi
-    loadCommentCount(globalBetId); 
-    loadLikeAndRatingData(globalBetId); 
+    // --- 5. PANGGIL FUNGSI (DENGAN PREFIX) ---
+    loadCommentCount(prefix, globalBetId); 
+    loadLikeAndRatingData(prefix, globalBetId); 
   }
 }
 
@@ -2362,441 +2362,653 @@ async function handleSpinClick() {
   }
 }
 
-/**
- * FUNGSI BARU: Memuat data Like & Rating dari kontrak dan UPDATE UI TOMBOL.
- * (Dengan perbaikan error handling)
- */
-async function loadLikeAndRatingData(globalBetId) {
-    // Pastikan userAddress sudah ada
-    if (!contract || !userAddress) return; 
+// ==========================================================
 
-    const likeBtn = document.getElementById(`like-btn-${globalBetId}`);
-    const likeCountSpanId = `like-count-${globalBetId}`; // Definisikan ID span
-    const starsDiv = document.getElementById(`stars-${globalBetId}`);
-    const avgRatingSpan = document.getElementById(`avg-rating-${globalBetId}`);
+// === GANTI SEMUA FUNGSI HELPER LAMA ANDA DENGAN INI ===
 
-    // PENTING: Periksa semua elemen target
-    if (!likeBtn || !starsDiv || !avgRatingSpan) {
-        console.error(`Missing elements for like/rating UI for bet ${globalBetId}`);
-        return; 
-    }
-
-    // --- Reset tampilan awal sebelum fetch ---
-    // (Penting jika fetch gagal, agar tidak menampilkan data lama/salah)
-    likeBtn.classList.remove('liked');
-    likeBtn.innerHTML = `
-        <img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;"> 
-        Like (<span id="${likeCountSpanId}">...</span>) 
-    `;
-    updateStarDisplay(starsDiv, 0); // Reset bintang
-    starsDiv.dataset.currentRating = 0;
-    avgRatingSpan.textContent = `(Loading...)`;
+// ==========================================================
 
 
-    try {
-        // Ambil data secara paralel
-        const [countResult, userLikeResult, userRatingResult, avgRatingResult, ratingCountResult] = await Promise.allSettled([ // Gunakan allSettled
-            contract.getLikeCount(globalBetId),
-            contract.getUserLike(globalBetId, userAddress),
-            contract.getUserRating(globalBetId, userAddress),
-            contract.getAverageRating(globalBetId),
-            contract.getRatingCount(globalBetId) // Ambil count juga
-        ]);
 
-        // --- Proses Hasil Like ---
-        let likeCount = 0;
-        let userLike = false;
-        if (countResult.status === 'fulfilled') {
-            likeCount = Number(countResult.value);
-        } else {
-             console.error(`Gagal ambil like count for bet ${globalBetId}:`, countResult.reason);
-             // Biarkan countSpan tetap "..." atau set ke "?"
-             const span = document.getElementById(likeCountSpanId);
-             if (span) span.textContent = "?";
-        }
-        if (userLikeResult.status === 'fulfilled') {
-            userLike = userLikeResult.value;
-        } else {
-             console.error(`Gagal ambil user like status for bet ${globalBetId}:`, userLikeResult.reason);
-             // Jika gagal cek userLike, biarkan tombol default (Like)
-        }
+// --- FUNGSI KOMENTAR (DENGAN PREFIX) ---
 
-        // --- Update Tombol Like/Unlike ---
-        if (userLike) {
-            likeBtn.classList.add('liked');
-            likeBtn.innerHTML = `
-                <img src="dislike.png" alt="Unlike" style="width: 16px; height: 16px; vertical-align: middle;"> 
-                Unlike (<span id="${likeCountSpanId}">${likeCount}</span>) 
-            `;
-        } else {
-             likeBtn.classList.remove('liked');
-             likeBtn.innerHTML = `
-                <img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;"> 
-                Like (<span id="${likeCountSpanId}">${likeCount}</span>)
-             `;
-        }
 
-        // --- Proses Hasil Rating ---
-        let currentRating = 0;
-        if (userRatingResult.status === 'fulfilled') {
-             currentRating = Number(userRatingResult.value);
-        } else {
-             console.error(`Gagal ambil user rating for bet ${globalBetId}:`, userRatingResult.reason);
-        }
-        starsDiv.dataset.currentRating = currentRating;
-        updateStarDisplay(starsDiv, currentRating);
 
-        // --- Proses Hasil Rata-rata Rating ---
-        if (ratingCountResult.status === 'fulfilled' && avgRatingResult.status === 'fulfilled') {
-            const avgRatingCount = Number(ratingCountResult.value);
-            if (avgRatingCount > 0) {
-                const avgRating = Number(avgRatingResult.value) / 100;
-                avgRatingSpan.textContent = `(${avgRating.toFixed(1)} avg)`;
-            } else {
-                avgRatingSpan.textContent = `(No ratings)`;
-            }
-        } else {
-             console.error(`Gagal ambil average/count rating for bet ${globalBetId}:`, avgRatingResult.reason || ratingCountResult.reason);
-             avgRatingSpan.textContent = `(Error avg)`;
-        }
+async function toggleComments(prefix, globalBetId) {
 
-    } catch (err) { // Catch error yang tidak terduga (seharusnya tidak terjadi dengan allSettled)
-        console.error(`Unexpected error in loadLikeAndRatingData for bet ${globalBetId}:`, err);
-        // Fallback UI jika error besar
-        const span = document.getElementById(likeCountSpanId);
-        if (span) span.textContent = "?";
-        avgRatingSpan.textContent = "(Error)";
-    }
-}
+  const section = document.getElementById(`comments-section-${prefix}-${globalBetId}`);
 
-/**
- * FUNGSI BARU: Menangani klik tombol Like/Unlike (Toggle).
- */
-async function handleLikeToggle(globalBetId) {
-    if (!contract || !userAddress) return alert("⚠️ Connect your wallet first!");
+  const button = document.getElementById(`btn-toggle-${prefix}-${globalBetId}`);
 
-    const likeBtn = document.getElementById(`like-btn-${globalBetId}`);
-    if (!likeBtn || likeBtn.disabled) return;
-
-    const originalHTML = likeBtn.innerHTML; 
-    likeBtn.disabled = true;
-    likeBtn.innerHTML = `<img src="loading.gif" alt="..." style="width: 16px; height: 16px;"> Processing...`; 
-
-    try {
-        const tx = await contract.likeSpin(globalBetId); 
-        await tx.wait();
-
-        // Sukses, muat ulang data like/rating untuk update UI
-        await loadLikeAndRatingData(globalBetId);
-
-    } catch (err) {
-        console.error("Gagal like/unlike:", err);
-        alert("Gagal memperbarui Like/Unlike: " + err.message);
-        likeBtn.innerHTML = originalHTML; // Kembalikan ke state awal jika error
-    } finally {
-        likeBtn.disabled = false; 
-    }
-}
-
-  /**
- * FUNGSI BARU: Helper untuk update visual bintang (terisi/kosong).
- */
-function updateStarDisplay(starsDiv, rating) {
-    if (!starsDiv) return;
-    const stars = starsDiv.querySelectorAll('span');
-    stars.forEach(star => {
-        // Pastikan star punya dataset value sebelum konversi
-        const starValue = star.dataset.value ? parseInt(star.dataset.value) : 0;
-        star.classList.toggle('filled', starValue > 0 && starValue <= rating);
-        star.innerHTML = starValue > 0 && starValue <= rating ? '★' : '☆'; // Ganti simbol
-    });
-}
-
-/**
- * FUNGSI BARU: Helper untuk highlight bintang saat hover.
- */
-function highlightStars(globalBetId, hoverValue) {
-    const starsDiv = document.getElementById(`stars-${globalBetId}`);
-    if (!starsDiv || starsDiv.dataset.processing === 'true') return; // Jangan highlight saat proses
-    const stars = starsDiv.querySelectorAll('span');
-    stars.forEach(star => {
-        const starValue = star.dataset.value ? parseInt(star.dataset.value) : 0;
-        star.classList.toggle('hover', starValue > 0 && starValue <= hoverValue);
-        // Ganti simbol saat hover juga
-        star.innerHTML = starValue > 0 && starValue <= hoverValue ? '★' : '☆';
-    });
-}
-
-/**
- * FUNGSI BARU: Helper untuk reset highlight bintang saat mouse leave.
- */
-function resetStarsHighlight(globalBetId) {
-    const starsDiv = document.getElementById(`stars-${globalBetId}`);
-    if (!starsDiv || starsDiv.dataset.processing === 'true') return;
-    const stars = starsDiv.querySelectorAll('span');
-    // Ambil rating yg tersimpan di dataset
-    const currentRating = starsDiv.dataset.currentRating ? parseInt(starsDiv.dataset.currentRating) : 0;
-    stars.forEach(star => {
-        star.classList.remove('hover');
-        // Kembalikan ke state rating asli
-        const starValue = star.dataset.value ? parseInt(star.dataset.value) : 0;
-        star.innerHTML = starValue > 0 && starValue <= currentRating ? '★' : '☆';
-    });
-}
-
-/**
- * FUNGSI 1: Menampilkan atau menyembunyikan area komentar.
- */
-async function toggleComments(globalBetId) {
-  const section = document.getElementById(`comments-section-${globalBetId}`);
-  const button = document.getElementById(`btn-toggle-${globalBetId}`);
   if (!section || !button) return;
 
+
+
   if (section.style.display === "none") {
-    // Jika tersembunyi -> Tampilkan
+
     section.style.display = "block";
-    // Panggil fungsi untuk memuat komentar HANYA saat dibuka
-    await loadComments(globalBetId);
+
+    await loadComments(prefix, globalBetId);
+
   } else {
-    // Jika terlihat -> Sembunyikan
+
     section.style.display = "none";
-    // Update count saat ditutup
-    loadCommentCount(globalBetId);
+
+    loadCommentCount(prefix, globalBetId);
+
   }
+
 }
 
-/**
- * FUNGSI 2: Hanya mengambil jumlah komentar untuk tombol.
- */
-async function loadCommentCount(globalBetId) {
-    const button = document.getElementById(`btn-toggle-${globalBetId}`);
-    // Pastikan contract sudah siap
+
+
+async function loadCommentCount(prefix, globalBetId) {
+
+    const button = document.getElementById(`btn-toggle-${prefix}-${globalBetId}`);
+
     if (!button || !contract) return;
 
-    // Hanya update jika section sedang tersembunyi
-    const section = document.getElementById(`comments-section-${globalBetId}`);
-    if (section && section.style.display === "block") {
-      return;
-    }
+    const section = document.getElementById(`comments-section-${prefix}-${globalBetId}`);
+
+    if (section && section.style.display === "block") return;
+
+
 
     try {
-        // Panggil getComments untuk mendapatkan panjang array
+
         const comments = await contract.getComments(globalBetId);
-        // Ganti 'comment-icon.png' dengan path ikon Anda
+
         button.innerHTML = `<img src="comment-icon.png" style="width:16px; height:16px; vertical-align:middle;"> Komentar (${comments.length})`;
+
     } catch(err) {
+
         console.error("Gagal load comment count:", err);
+
         button.innerHTML = `<img src="comment-icon.png" style="width:16px; height:16px; vertical-align:middle;"> Komentar (?)`;
+
     }
+
 }
 
 
-/**
- * FUNGSI 3: Mengambil data komentar dari kontrak dan menampilkannya.
- */
-async function loadComments(globalBetId) {
-  if (!contract) return; // Pastikan kontrak sudah ada
 
-  const listDiv = document.getElementById(`comments-list-${globalBetId}`);
+async function loadComments(prefix, globalBetId) {
+
+  if (!contract) return;
+
+  const listDiv = document.getElementById(`comments-list-${prefix}-${globalBetId}`);
+
   if (!listDiv) return;
 
-  listDiv.innerHTML = "<p class='loader-comment'>Memuat komentar...</p>"; // Tampilkan loader
+  listDiv.innerHTML = "<p class='loader-comment'>Memuat komentar...</p>";
+
+
 
   try {
+
     const comments = await contract.getComments(globalBetId);
 
-    // Update tombol toggle
-    const button = document.getElementById(`btn-toggle-${globalBetId}`);
+    const button = document.getElementById(`btn-toggle-${prefix}-${globalBetId}`);
+
     if (button) {
-      // Ganti 'comment-icon.png' dengan path ikon Anda
+
       button.innerHTML = `<img src="comment-icon.png" style="width:16px; height:16px; vertical-align:middle;"> Sembunyikan Komentar (${comments.length})`;
+
     }
 
     if (comments.length === 0) {
+
       listDiv.innerHTML = "<small>Belum ada komentar.</small>";
+
       return;
+
     }
 
-    listDiv.innerHTML = ""; // Kosongkan loader
+    listDiv.innerHTML = "";
 
-    // Render setiap komentar
-    comments.forEach((comment, i) => { // 'i' adalah commentIndex
+
+
+    comments.forEach((comment, i) => {
+
       const commentEl = document.createElement("div");
+
       commentEl.className = "comment-item";
-      commentEl.id = `comment-${globalBetId}-${i}`;
+
+      commentEl.id = `comment-${prefix}-${globalBetId}-${i}`;
 
       const userAddr = comment.user;
+
       const timestamp = new Date(Number(comment.timestamp) * 1000).toLocaleString();
 
       let editButtonHtml = "";
-      // Tampilkan tombol "Edit" HANYA jika alamat user cocok
-      // Pastikan userAddress sudah terdefinisi
+
       if (userAddress && userAddr.toLowerCase() === userAddress.toLowerCase()) {
-        editButtonHtml = `
-          <button class="edit-btn" id="edit-btn-${globalBetId}-${i}" onclick="toggleEditMode(${globalBetId}, ${i}, true)">
-            Edit
-          </button>
-        `;
+
+        editButtonHtml = `<button class="edit-btn" id="edit-btn-${prefix}-${globalBetId}-${i}" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, true)">Edit</button>`;
+
       }
 
+      
+
       commentEl.innerHTML = `
+
         <strong>${userAddr.slice(0, 6)}...${userAddr.slice(-4)}:</strong>
+
         <small>${timestamp}</small>
 
-        <div class="comment-view-mode" id="view-mode-${globalBetId}-${i}">
+        <div class="comment-view-mode" id="view-mode-${prefix}-${globalBetId}-${i}">
+
           <p style="margin: 2px 0; word-wrap: break-word;">${comment.text}</p>
+
           ${editButtonHtml}
+
         </div>
 
-        <div class="comment-edit-mode" id="edit-mode-${globalBetId}-${i}">
-          <textarea id="edit-input-${globalBetId}-${i}">${comment.text}</textarea>
-          <button onclick="handleSendEdit(${globalBetId}, ${i})">Save</button>
-          <button class="cancel-btn" onclick="toggleEditMode(${globalBetId}, ${i}, false)">Cancel</button>
+        <div class="comment-edit-mode" id="edit-mode-${prefix}-${globalBetId}-${i}">
+
+          <textarea id="edit-input-${prefix}-${globalBetId}-${i}">${comment.text}</textarea>
+
+          <button onclick="handleSendEdit('${prefix}', ${globalBetId}, ${i})">Save</button>
+
+          <button class="cancel-btn" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, false)">Cancel</button>
+
         </div>
+
       `;
+
       listDiv.appendChild(commentEl);
+
     });
 
   } catch (err) {
+
     console.error(`Gagal memuat komentar untuk bet ${globalBetId}:`, err);
+
     listDiv.innerHTML = "<small>Gagal memuat komentar.</small>";
+
   }
+
 }
 
-/**
- * FUNGSI 4: Mengirim komentar baru ke kontrak.
- */
-async function handleSendComment(globalBetId) {
+
+
+async function handleSendComment(prefix, globalBetId) {
+
   if (!contract) return alert("⚠️ Connect your wallet first!");
 
-  const input = document.getElementById(`comment-input-${globalBetId}`);
-  // Tombol kirim adalah elemen saudara berikutnya dari input
+  const input = document.getElementById(`comment-input-${prefix}-${globalBetId}`);
+
   const btn = input ? input.nextElementSibling : null;
+
   if (!input || !btn) return console.error("Elemen input/button komentar tidak ditemukan");
 
-  const text = input.value.trim(); // Ambil teks dan hapus spasi ekstra
+  const text = input.value.trim();
 
-  if (!text) {
-    return alert("Komentar tidak boleh kosong!");
-  }
-  // Batasi panjang komentar jika perlu (misal, sesuai batasan kontrak 256 bytes)
-  if (text.length > 250) {
-       return alert("Komentar terlalu panjang (maks 250 karakter).");
-  }
+  if (!text) return alert("Komentar tidak boleh kosong!");
 
-  btn.disabled = true;
-  input.disabled = true;
-  btn.textContent = "Mengirim...";
+  if (text.length > 250) return alert("Komentar terlalu panjang (maks 250 karakter).");
+
+
+
+  btn.disabled = true; input.disabled = true; btn.textContent = "Mengirim...";
 
   try {
+
     const tx = await contract.addComment(globalBetId, text);
+
     await tx.wait();
 
     alert("Komentar berhasil dikirim!");
-    input.value = ""; // Kosongkan input
 
-    // Muat ulang daftar komentar agar komentar baru muncul
-    await loadComments(globalBetId);
+    input.value = "";
+
+    await loadComments(prefix, globalBetId); // Muat ulang DENGAN PREFIX
 
   } catch (err) {
+
     console.error("Gagal mengirim komentar:", err);
+
     let userMessage = "Transaksi komentar gagal.";
-    // Coba dapatkan pesan error dari revert kontrak
+
     const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
-    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`; // Ambil 100 karakter pertama
+
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+
     alert(userMessage);
+
   } finally {
-    // Pastikan tombol diaktifkan kembali
+
     if (btn) btn.disabled = false;
+
     if (input) input.disabled = false;
+
     if (btn) btn.textContent = "Kirim";
+
   }
+
 }
 
-/**
- * FUNGSI 5: Beralih antara mode lihat dan mode edit untuk komentar.
- */
-function toggleEditMode(globalBetId, index, isEditing) {
-  const viewMode = document.getElementById(`view-mode-${globalBetId}-${index}`);
-  const editMode = document.getElementById(`edit-mode-${globalBetId}-${index}`);
-  const input = document.getElementById(`edit-input-${globalBetId}-${index}`);
+
+
+function toggleEditMode(prefix, globalBetId, index, isEditing) {
+
+  const viewMode = document.getElementById(`view-mode-${prefix}-${globalBetId}-${index}`);
+
+  const editMode = document.getElementById(`edit-mode-${prefix}-${globalBetId}-${index}`);
+
+  const input = document.getElementById(`edit-input-${prefix}-${globalBetId}-${index}`);
 
   if (!viewMode || !editMode || !input) return console.error("Elemen mode edit/view tidak ditemukan");
 
+
+
   if (isEditing) {
-    // Masuk mode edit
+
     viewMode.style.display = 'none';
+
     editMode.style.display = 'block';
-    input.focus(); // Fokus ke textarea
+
+    input.focus();
+
   } else {
-    // Kembali ke mode lihat (Cancel)
+
     viewMode.style.display = 'block';
+
     editMode.style.display = 'none';
 
-    // Reset teks di textarea ke teks asli dari elemen <p>
     const originalTextElement = viewMode.querySelector('p');
-    if (originalTextElement) {
-        input.value = originalTextElement.textContent;
-    }
+
+    if (originalTextElement) input.value = originalTextElement.textContent;
+
   }
+
 }
 
-/**
- * FUNGSI 6: Mengirim komentar yang sudah diedit ke kontrak.
- */
-async function handleSendEdit(globalBetId, index) {
+
+
+async function handleSendEdit(prefix, globalBetId, index) {
+
   if (!contract) return alert("⚠️ Connect your wallet first!");
 
-  const input = document.getElementById(`edit-input-${globalBetId}-${index}`);
+  const input = document.getElementById(`edit-input-${prefix}-${globalBetId}-${index}`);
+
   if (!input) return console.error("Elemen input edit tidak ditemukan");
 
   const newText = input.value.trim();
 
-  if (!newText) {
-    return alert("Komentar tidak boleh kosong!");
-  }
-   if (newText.length > 250) {
-       return alert("Komentar terlalu panjang (maks 250 karakter).");
-   }
+  if (!newText) return alert("Komentar tidak boleh kosong!");
 
-  // Tombol save adalah elemen saudara berikutnya dari textarea
+  if (newText.length > 250) return alert("Komentar terlalu panjang (maks 250 karakter).");
+
+
+
   const saveBtn = input.nextElementSibling;
-  // Tombol cancel adalah elemen setelah tombol save
+
   const cancelBtn = saveBtn ? saveBtn.nextElementSibling : null;
 
-  // Disable UI sementara
   if (saveBtn) saveBtn.disabled = true;
+
   if (cancelBtn) cancelBtn.disabled = true;
+
   input.disabled = true;
+
   if (saveBtn) saveBtn.textContent = "Saving...";
 
+
+
   try {
+
     const tx = await contract.editComment(globalBetId, index, newText);
+
     await tx.wait();
 
     alert("Komentar berhasil diperbarui!");
 
-    // 1. Perbarui teks di Mode Tampilan (<p>)
-    const viewParagraph = document.querySelector(`#view-mode-${globalBetId}-${index} p`);
+    const viewParagraph = document.querySelector(`#view-mode-${prefix}-${globalBetId}-${index} p`);
+
     if (viewParagraph) viewParagraph.textContent = newText;
 
-    // 2. Kembali ke Mode Tampilan
-    toggleEditMode(globalBetId, index, false);
+    toggleEditMode(prefix, globalBetId, index, false); // Panggil DENGAN PREFIX
 
   } catch (err) {
+
     console.error("Gagal edit komentar:", err);
+
     let userMessage = "Gagal mengedit komentar.";
+
     const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+
     if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+
     alert(userMessage);
+
   } finally {
-    // Aktifkan kembali UI
+
     if (saveBtn) saveBtn.disabled = false;
+
     if (cancelBtn) cancelBtn.disabled = false;
+
     input.disabled = false;
+
     if (saveBtn) saveBtn.textContent = "Save";
+
   }
+
+}
+
+
+
+// --- FUNGSI LIKE & RATING (DENGAN PREFIX) ---
+
+
+
+async function loadLikeAndRatingData(prefix, globalBetId) {
+
+  if (!contract || !userAddress) return;
+
+  const likeBtn = document.getElementById(`like-btn-${prefix}-${globalBetId}`);
+
+  const likeCountSpanId = `like-count-${prefix}-${globalBetId}`;
+
+  const starsDiv = document.getElementById(`stars-${prefix}-${globalBetId}`);
+
+  const avgRatingSpan = document.getElementById(`avg-rating-${prefix}-${globalBetId}`);
+
+  if (!likeBtn || !starsDiv || !avgRatingSpan) {
+
+    console.error(`Missing elements for like/rating UI for bet ${globalBetId}`);
+
+    return;
+
+  }
+
+
+
+  // Reset UI
+
+  likeBtn.classList.remove('liked');
+
+  likeBtn.innerHTML = `<img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;"> Like (<span id="${likeCountSpanId}">...</span>)`;
+
+  updateStarDisplay(starsDiv, 0);
+
+  starsDiv.dataset.currentRating = 0;
+
+  avgRatingSpan.textContent = `(Loading...)`;
+
+
+
+  try {
+
+    const [countResult, userLikeResult, userRatingResult, avgRatingResult, ratingCountResult] = await Promise.allSettled([
+
+      contract.getLikeCount(globalBetId),
+
+      contract.getUserLike(globalBetId, userAddress),
+
+      contract.getUserRating(globalBetId, userAddress),
+
+      contract.getAverageRating(globalBetId),
+
+      contract.getRatingCount(globalBetId)
+
+    ]);
+
+
+
+    // Proses Like
+
+    let likeCount = 0;
+
+    let userLike = false;
+
+    if (countResult.status === 'fulfilled') {
+
+      likeCount = Number(countResult.value);
+
+    } else {
+
+      console.error(`Gagal ambil like count for bet ${globalBetId}:`, countResult.reason);
+
+      const span = document.getElementById(likeCountSpanId);
+
+      if (span) span.textContent = "?";
+
+    }
+
+    if (userLikeResult.status === 'fulfilled') {
+
+      userLike = userLikeResult.value;
+
+    } else {
+
+      console.error(`Gagal ambil user like status for bet ${globalBetId}:`, userLikeResult.reason);
+
+    }
+
+    if (userLike) {
+
+      likeBtn.classList.add('liked');
+
+      likeBtn.innerHTML = `<img src="dislike.png" alt="Unlike" style="width: 16px; height: 16px; vertical-align: middle;"> Unlike (<span id="${likeCountSpanId}">${likeCount}</span>)`;
+
+    } else {
+
+      likeBtn.classList.remove('liked');
+
+      likeBtn.innerHTML = `<img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;"> Like (<span id="${likeCountSpanId}">${likeCount}</span>)`;
+
+    }
+
+
+
+    // Proses Rating
+
+    let currentRating = 0;
+
+    if (userRatingResult.status === 'fulfilled') {
+
+      currentRating = Number(userRatingResult.value);
+
+    } else {
+
+      console.error(`Gagal ambil user rating for bet ${globalBetId}:`, userRatingResult.reason);
+
+    }
+
+    starsDiv.dataset.currentRating = currentRating;
+
+    updateStarDisplay(starsDiv, currentRating);
+
+
+
+    // Proses Avg Rating
+
+    if (ratingCountResult.status === 'fulfilled' && avgRatingResult.status === 'fulfilled') {
+
+      const avgRatingCount = Number(ratingCountResult.value);
+
+      if (avgRatingCount > 0) {
+
+        const avgRating = Number(avgRatingResult.value) / 100;
+
+        avgRatingSpan.textContent = `(${avgRating.toFixed(1)} avg)`;
+
+      } else {
+
+        avgRatingSpan.textContent = `(No ratings)`;
+
       }
+
+    } else {
+
+      console.error(`Gagal ambil average/count rating for bet ${globalBetId}:`, avgRatingResult.reason || ratingCountResult.reason);
+
+      avgRatingSpan.textContent = `(Error avg)`;
+
+    }
+
+  } catch (err) {
+
+    console.error(`Unexpected error in loadLikeAndRatingData for bet ${globalBetId}:`, err);
+
+    const span = document.getElementById(likeCountSpanId);
+
+    if (span) span.textContent = "?";
+
+    avgRatingSpan.textContent = "(Error)";
+
+  }
+
+}
+
+
+
+async function handleLikeToggle(prefix, globalBetId) {
+
+  if (!contract || !userAddress) return alert("⚠️ Connect your wallet first!");
+
+  const likeBtn = document.getElementById(`like-btn-${prefix}-${globalBetId}`);
+
+  if (!likeBtn || likeBtn.disabled) return;
+
+
+
+  const originalHTML = likeBtn.innerHTML;
+
+  likeBtn.disabled = true;
+
+  likeBtn.innerHTML = `<img src="loading.gif" alt="..." style="width: 16px; height: 16px;"> Processing...`;
+
+  try {
+
+    const tx = await contract.likeSpin(globalBetId);
+
+    await tx.wait();
+
+    await loadLikeAndRatingData(prefix, globalBetId); // Panggil DENGAN PREFIX
+
+  } catch (err) {
+
+    console.error("Gagal like/unlike:", err);
+
+    alert("Gagal memperbarui Like/Unlike: " + err.message);
+
+    likeBtn.innerHTML = originalHTML;
+
+    likeBtn.disabled = false; // Enable manual jika error
+
+  }
+
+  // 'disabled = false' akan di-set oleh loadLikeAndRatingData jika sukses (implisit, karena innerHTML diganti)
+
+  // Tapi kita set manual saja di 'finally' untuk keamanan
+
+  finally {
+
+      if (likeBtn) likeBtn.disabled = false;
+
+  }
+
+}
+
+
+
+async function handleRating(prefix, globalBetId, ratingValue) {
+
+  if (!contract || !userAddress) return alert("⚠️ Connect your wallet first!");
+
+  const starsDiv = document.getElementById(`stars-${prefix}-${globalBetId}`);
+
+  if (!starsDiv || starsDiv.dataset.processing === 'true') return;
+
+
+
+  starsDiv.dataset.processing = 'true';
+
+  starsDiv.style.opacity = '0.5';
+
+  try {
+
+    const tx = await contract.rateBet(globalBetId, ratingValue);
+
+    await tx.wait();
+
+    alert("Rating berhasil disimpan!");
+
+    await loadLikeAndRatingData(prefix, globalBetId); // Panggil DENGAN PREFIX
+
+  } catch (err) {
+
+    console.error("Gagal rate bet:", err);
+
+    alert("Gagal menyimpan rating: " + err.message);
+
+    resetStarsHighlight(prefix, globalBetId); // Panggil DENGAN PREFIX
+
+  } finally {
+
+    delete starsDiv.dataset.processing;
+
+    starsDiv.style.opacity = '1';
+
+  }
+
+}
+
+
+
+function updateStarDisplay(starsDiv, rating) {
+
+    if (!starsDiv) return;
+
+    const stars = starsDiv.querySelectorAll('span');
+
+    stars.forEach(star => {
+
+        const starValue = star.dataset.value ? parseInt(star.dataset.value) : 0;
+
+        star.classList.toggle('filled', starValue > 0 && starValue <= rating);
+
+        star.innerHTML = starValue > 0 && starValue <= rating ? '★' : '☆';
+
+    });
+
+}
+
+
+
+function highlightStars(prefix, globalBetId, hoverValue) {
+
+    const starsDiv = document.getElementById(`stars-${prefix}-${globalBetId}`);
+
+    if (!starsDiv || starsDiv.dataset.processing === 'true') return;
+
+    const stars = starsDiv.querySelectorAll('span');
+
+    stars.forEach(star => {
+
+        const starValue = star.dataset.value ? parseInt(star.dataset.value) : 0;
+
+        star.classList.toggle('hover', starValue > 0 && starValue <= hoverValue);
+
+        star.innerHTML = starValue > 0 && starValue <= hoverValue ? '★' : '☆';
+
+    });
+
+  }
+
+  function resetStarsHighlight(prefix, globalBetId) {
+    const starsDiv = document.getElementById(`stars-${prefix}-${globalBetId}`);
+    if (!starsDiv || starsDiv.dataset.processing === 'true') return;
+    const stars = starsDiv.querySelectorAll('span');
+    const currentRating = starsDiv.dataset.currentRating ? parseInt(starsDiv.dataset.currentRating) : 0;
+    stars.forEach(star => {
+        star.classList.remove('hover');
+        const starValue = star.dataset.value ? parseInt(star.dataset.value) : 0;
+        star.innerHTML = starValue > 0 && starValue <= currentRating ? '★' : '☆';
+    });
+  }
 
 // tambahkan efek futuristik glow 5 detik
 walletInfo.classList.add("glow");
