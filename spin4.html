@@ -2365,13 +2365,14 @@ async function handleSpinClick() {
 
 /**
  * FUNGSI BARU: Memuat data Like & Rating dari kontrak dan UPDATE UI TOMBOL.
+ * (Dengan perbaikan error handling)
  */
 async function loadLikeAndRatingData(globalBetId) {
+    // Pastikan userAddress sudah ada
     if (!contract || !userAddress) return; 
 
     const likeBtn = document.getElementById(`like-btn-${globalBetId}`);
-    // Perbaiki ID span count agar konsisten
-    const likeCountSpanId = `like-count-${globalBetId}`; 
+    const likeCountSpanId = `like-count-${globalBetId}`; // Definisikan ID span
     const starsDiv = document.getElementById(`stars-${globalBetId}`);
     const avgRatingSpan = document.getElementById(`avg-rating-${globalBetId}`);
 
@@ -2381,51 +2382,90 @@ async function loadLikeAndRatingData(globalBetId) {
         return; 
     }
 
+    // --- Reset tampilan awal sebelum fetch ---
+    // (Penting jika fetch gagal, agar tidak menampilkan data lama/salah)
+    likeBtn.classList.remove('liked');
+    likeBtn.innerHTML = `
+        <img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;"> 
+        Like (<span id="${likeCountSpanId}">...</span>) 
+    `;
+    updateStarDisplay(starsDiv, 0); // Reset bintang
+    starsDiv.dataset.currentRating = 0;
+    avgRatingSpan.textContent = `(Loading...)`;
+
+
     try {
-        const [count, userLike, userRatingNum, avgRatingBigInt] = await Promise.all([
+        // Ambil data secara paralel
+        const [countResult, userLikeResult, userRatingResult, avgRatingResult, ratingCountResult] = await Promise.allSettled([ // Gunakan allSettled
             contract.getLikeCount(globalBetId),
             contract.getUserLike(globalBetId, userAddress),
             contract.getUserRating(globalBetId, userAddress),
-            contract.getAverageRating(globalBetId)
+            contract.getAverageRating(globalBetId),
+            contract.getRatingCount(globalBetId) // Ambil count juga
         ]);
-        
-        const likeCount = Number(count);
 
-        // --- Update Tampilan Tombol Like/Unlike ---
+        // --- Proses Hasil Like ---
+        let likeCount = 0;
+        let userLike = false;
+        if (countResult.status === 'fulfilled') {
+            likeCount = Number(countResult.value);
+        } else {
+             console.error(`Gagal ambil like count for bet ${globalBetId}:`, countResult.reason);
+             // Biarkan countSpan tetap "..." atau set ke "?"
+             const span = document.getElementById(likeCountSpanId);
+             if (span) span.textContent = "?";
+        }
+        if (userLikeResult.status === 'fulfilled') {
+            userLike = userLikeResult.value;
+        } else {
+             console.error(`Gagal ambil user like status for bet ${globalBetId}:`, userLikeResult.reason);
+             // Jika gagal cek userLike, biarkan tombol default (Like)
+        }
+
+        // --- Update Tombol Like/Unlike ---
         if (userLike) {
-            // Jika user SUDAH like -> tampilkan tombol UNLIKE
-            likeBtn.classList.add('liked'); // Tambah class 'liked' (untuk style)
+            likeBtn.classList.add('liked');
             likeBtn.innerHTML = `
                 <img src="dislike.png" alt="Unlike" style="width: 16px; height: 16px; vertical-align: middle;"> 
                 Unlike (<span id="${likeCountSpanId}">${likeCount}</span>) 
             `;
         } else {
-             // Jika user BELUM like -> tampilkan tombol LIKE
-             likeBtn.classList.remove('liked'); // Hapus class 'liked'
+             likeBtn.classList.remove('liked');
              likeBtn.innerHTML = `
                 <img src="like.png" alt="Like" style="width: 16px; height: 16px; vertical-align: middle;"> 
                 Like (<span id="${likeCountSpanId}">${likeCount}</span>)
              `;
         }
 
-        // --- Update Rating (Kode sama seperti sebelumnya) ---
-        const currentRating = Number(userRatingNum);
-        starsDiv.dataset.currentRating = currentRating; 
-        updateStarDisplay(starsDiv, currentRating); 
-
-        const avgRatingCount = await contract.getRatingCount(globalBetId); 
-        if (Number(avgRatingCount) > 0) {
-            const avgRating = Number(avgRatingBigInt) / 100; 
-            avgRatingSpan.textContent = `(${avgRating.toFixed(1)} avg)`;
+        // --- Proses Hasil Rating ---
+        let currentRating = 0;
+        if (userRatingResult.status === 'fulfilled') {
+             currentRating = Number(userRatingResult.value);
         } else {
-            avgRatingSpan.textContent = `(No ratings)`;
+             console.error(`Gagal ambil user rating for bet ${globalBetId}:`, userRatingResult.reason);
+        }
+        starsDiv.dataset.currentRating = currentRating;
+        updateStarDisplay(starsDiv, currentRating);
+
+        // --- Proses Hasil Rata-rata Rating ---
+        if (ratingCountResult.status === 'fulfilled' && avgRatingResult.status === 'fulfilled') {
+            const avgRatingCount = Number(ratingCountResult.value);
+            if (avgRatingCount > 0) {
+                const avgRating = Number(avgRatingResult.value) / 100;
+                avgRatingSpan.textContent = `(${avgRating.toFixed(1)} avg)`;
+            } else {
+                avgRatingSpan.textContent = `(No ratings)`;
+            }
+        } else {
+             console.error(`Gagal ambil average/count rating for bet ${globalBetId}:`, avgRatingResult.reason || ratingCountResult.reason);
+             avgRatingSpan.textContent = `(Error avg)`;
         }
 
-    } catch (err) {
-        console.error(`Gagal load like/rating data for bet ${globalBetId}:`, err);
-        // Tampilkan error di UI jika perlu
-        const countSpan = document.getElementById(likeCountSpanId);
-        if(countSpan) countSpan.textContent = "?";
+    } catch (err) { // Catch error yang tidak terduga (seharusnya tidak terjadi dengan allSettled)
+        console.error(`Unexpected error in loadLikeAndRatingData for bet ${globalBetId}:`, err);
+        // Fallback UI jika error besar
+        const span = document.getElementById(likeCountSpanId);
+        if (span) span.textContent = "?";
         avgRatingSpan.textContent = "(Error)";
     }
 }
