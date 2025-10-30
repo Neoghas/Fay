@@ -1163,6 +1163,42 @@ svg g {
   color: #ccc;
   line-height: 1.6;
 }
+
+  /* === STYLING PFP DI KOMENTAR === */
+
+/* Ubah .comment-item menjadi flex container */
+.comment-item {
+  /* ... (style lama Anda seperti background, padding, margin) ... */
+  background: #1a1a2e; 
+  border-radius: 6px;   
+  padding: 10px;        
+  margin-bottom: 8px;   
+  font-size: 13px;
+  line-height: 1.4;
+  
+  /* --- Tambahan Baru --- */
+  display: flex;         /* Aktifkan flexbox */
+  gap: 10px;             /* Jarak antara PFP dan Konten */
+  align-items: flex-start; /* Sejajarkan PFP di atas */
+}
+
+.comment-pfp-wrapper {
+  flex-shrink: 0; /* Mencegah PFP menyusut */
+}
+
+.comment-pfp {
+  width: 35px;  /* Ukuran PFP lebih kecil */
+  height: 35px;
+  border-radius: 50%; /* Bulat */
+  object-fit: cover;
+  cursor: pointer;
+  border: 1px solid #555;
+}
+
+.comment-content-wrapper {
+  flex-grow: 1; /* Konten mengambil sisa ruang */
+  min-width: 0; /* Mencegah teks overflow */
+}
 </style>
 </head>
 
@@ -2597,103 +2633,87 @@ async function loadCommentCount(prefix, globalBetId) {
 }
 
 
-
+/**
+ * FUNGSI 3 (MODIFIKASI): Mengambil data komentar DAN PFP komentator.
+ */
 async function loadComments(prefix, globalBetId) {
-
-  if (!contract) return;
+  if (!contract) return; 
 
   const listDiv = document.getElementById(`comments-list-${prefix}-${globalBetId}`);
-
   if (!listDiv) return;
 
-  listDiv.innerHTML = "<p class='loader-comment'>Memuat komentar...</p>";
-
-
+  listDiv.innerHTML = "<p class='loader-comment'>Memuat komentar...</p>"; // Tampilkan loader
 
   try {
-
     const comments = await contract.getComments(globalBetId);
-
+    
+    // Update tombol toggle
     const button = document.getElementById(`btn-toggle-${prefix}-${globalBetId}`);
-
     if (button) {
-
       button.innerHTML = `<img src="comment-icon.png" style="width:16px; height:16px; vertical-align:middle;"> Sembunyikan Komentar (${comments.length})`;
-
     }
 
     if (comments.length === 0) {
-
       listDiv.innerHTML = "<small>Belum ada komentar.</small>";
-
       return;
-
     }
 
-    listDiv.innerHTML = "";
+    listDiv.innerHTML = ""; // Kosongkan loader
 
-
-
-    comments.forEach((comment, i) => {
-
+    // Render setiap komentar
+    comments.forEach((comment, i) => { // 'i' adalah commentIndex
       const commentEl = document.createElement("div");
-
-      commentEl.className = "comment-item";
-
-      commentEl.id = `comment-${prefix}-${globalBetId}-${i}`;
-
+      commentEl.className = "comment-item"; // Ini akan jadi flex container
+      commentEl.id = `comment-${prefix}-${globalBetId}-${i}`; 
+      
       const userAddr = comment.user;
-
       const timestamp = new Date(Number(comment.timestamp) * 1000).toLocaleString();
+      
+      // --- PERUBAHAN DI SINI: AMBIL PFP UNTUK KOMENTAR ---
+      // Pastikan fungsi getDeterministicPfpUrl sudah ada!
+      const pfpUrl = getDeterministicPfpUrl(userAddr); 
+      // ------------------------------------------------
 
       let editButtonHtml = "";
-
       if (userAddress && userAddr.toLowerCase() === userAddress.toLowerCase()) {
-
-        editButtonHtml = `<button class="edit-btn" id="edit-btn-${prefix}-${globalBetId}-${i}" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, true)">Edit</button>`;
-
+        editButtonHtml = `
+          <button class="edit-btn" id="edit-btn-${prefix}-${globalBetId}-${i}" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, true)">
+            Edit
+          </button>
+        `;
       }
-
       
-
+      // --- PERUBAHAN DI SINI: STRUKTUR HTML BARU DENGAN PFP ---
       commentEl.innerHTML = `
-
-        <strong>${userAddr.slice(0, 6)}...${userAddr.slice(-4)}:</strong>
-
-        <small>${timestamp}</small><br><br>
-
-        <div class="comment-view-mode" id="view-mode-${prefix}-${globalBetId}-${i}">
-
-          <p style="margin: 2px 0; word-wrap: break-word;">${comment.text}</p><br>
-
-          ${editButtonHtml}
-
+        <div class="comment-pfp-wrapper">
+          <img src="${pfpUrl}" class="comment-pfp" alt="PFP" onclick="showUserProfile('${userAddr}')">
         </div>
-
-        <div class="comment-edit-mode" id="edit-mode-${prefix}-${globalBetId}-${i}">
-
-          <textarea id="edit-input-${prefix}-${globalBetId}-${i}">${comment.text}</textarea>
-
-          <button onclick="handleSendEdit('${prefix}', ${globalBetId}, ${i})">Save</button>
-
-          <button class="cancel-btn" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, false)">Cancel</button>
-
+        
+        <div class="comment-content-wrapper">
+          <strong>${userAddr.slice(0, 6)}...${userAddr.slice(-4)}:</strong>
+          <small>${timestamp}</small><br><br>
+          
+          <div class="comment-view-mode" id="view-mode-${prefix}-${globalBetId}-${i}">
+            <p style="margin: 2px 0; word-wrap: break-word;">${comment.text}</p><br>
+            ${editButtonHtml}
+          </div>
+          
+          <div class="comment-edit-mode" id="edit-mode-${prefix}-${globalBetId}-${i}">
+            <textarea id="edit-input-${prefix}-${globalBetId}-${i}">${comment.text}</textarea>
+            <button onclick="handleSendEdit('${prefix}', ${globalBetId}, ${i})">Save</button>
+            <button class="cancel-btn" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, false)">Cancel</button>
+          </div>
         </div>
-
       `;
-
+      // --- AKHIR PERUBAHAN HTML ---
+      
       listDiv.appendChild(commentEl);
-
     });
 
   } catch (err) {
-
     console.error(`Gagal memuat komentar untuk bet ${globalBetId}:`, err);
-
     listDiv.innerHTML = "<small>Gagal memuat komentar.</small>";
-
   }
-
 }
 
 
