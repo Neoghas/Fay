@@ -1182,14 +1182,58 @@ svg g {
   margin-bottom: 10px; /* Jarak ke detail di bawahnya */
 }
 
+/* 1. BUAT STYLE UNTUK WRAPPER BARU */
+.history-pfp-wrapper {
+  position: relative; /* <-- Ini Kunci untuk ::before */
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer; /* Pindahkan cursor ke wrapper */
+}
+
+/* 2. MODIFIKASI STYLE .history-pfp (GAMBARNYA) */
 .history-pfp {
-width: 40px;
-height: 40px;
-border-radius: 50%;
-border: 2px solid #007bff;
-object-fit: cover;
-flex-shrink: 0;
-cursor: pointer;
+  /* HAPUS 'position: relative' */
+  /* HAPUS 'flex-shrink: 0' (sudah di wrapper) */
+  /* HAPUS 'cursor: pointer' (sudah di wrapper) */
+  
+  width: 100%;  /* <-- Ubah 40px menjadi 100% agar mengisi wrapper */
+  height: 100%; /* <-- Ubah 40px menjadi 100% */
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 1; /* Pastikan gambar di bawah border */
+}
+
+/* 3. UBAH SELECTOR ::before (DARI img KE WRAPPER) */
+.history-pfp-wrapper::before { /* <-- Ganti dari .history-pfp::before */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  padding: 2px;
+  background: conic-gradient(
+    from 0deg,
+    #00f5ff,
+    #b026ff,
+    #ff00a8,
+    #00f5ff
+  );
+  -webkit-mask: 
+    linear-gradient(#000 0 0) content-box, 
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spinBorder 2.5s linear infinite;
+  
+  z-index: 2; /* <-- Pastikan border di ATAS gambar */
+  pointer-events: none; /* Agar klik bisa tembus ke wrapper */
+}
+
+/* Animasi (Sudah Benar) */
+@keyframes spinBorder {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
   
 .history-info-stack {
@@ -1868,7 +1912,9 @@ function renderBets(ul, bets, startIndex, count, isPublic = false) {
     // --- 3. BUAT HTML ---
     li.innerHTML = `
       <div class="bet-item-header">
-        <img src="${pfpUrl}" class="history-pfp" alt="PFP" onclick="showUserProfile('${bet.player}')">
+        <div class="history-pfp-wrapper" onclick="showUserProfile('${bet.player}')">
+            <img src="${pfpUrl}" class="history-pfp" alt="PFP">
+        </div>
         <div class="history-info-stack">
           <strong>BetId: <span style="color:gold;">#${globalBetId}</span><br>
           ${playerInfoClickable}</strong>
