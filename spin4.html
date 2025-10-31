@@ -1311,6 +1311,16 @@ svg g {
   padding: 1px 4px;
   border-radius: 4px;
 }
+
+  /* Style untuk link di dalam komentar */
+.comment-link {
+  color: #55aaff; /* Warna biru cerah untuk link */
+  text-decoration: underline;
+  font-weight: bold;
+}
+.comment-link:hover {
+  color: #88ccff;
+}
 </style>
 </head>
 
@@ -3039,23 +3049,46 @@ function handleReply(prefix, globalBetId, addressToReply) {
 }
 
 /**
- * FUNGSI BARU: Mem-format teks komentar untuk menampilkan @mention
- * sebagai link yang bisa diklik.
+ * FUNGSI (MODIFIKASI): Mem-format teks komentar.
+ * Sekarang aman dari XSS, mendukung @mention, DAN link http/https.
  */
 function formatCommentText(text) {
   if (!text) return "";
   
-  // RegEx untuk mencari: @[<alamat 0x... 40 karakter>]
-  const mentionRegex = /@\[(0x[a-fA-F0-9]{40})\]/g; 
+  // 1. Amankan teks dari HTML (mencegah XSS attack)
+  // Ini mengubah < dan > menjadi &lt; dan &gt;
+  let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-  return text.replace(mentionRegex, (match, fullAddress) => {
-    // Ganti match (misal "@[0x123...abc]") dengan span ini
-    const shortAddress = `${fullAddress.slice(0, 6)}...${fullAddress.slice(-4)}`;
-    return `
-      <span class="clickable-address mention-tag" onclick="showUserProfile('${fullAddress}')">
-        @${shortAddress}
-      </span>
-    `;
+  // 2. RegEx Gabungan:
+  // Grup 1: (@\[(0x[a-fA-F0-9]{40})\]) -> Mencari @mentions
+  // Grup 3: (https_?:\/\/[^\s<]+)    -> Mencari URLs (http atau https)
+  const regex = /(@\[(0x[a-fA-F0-9]{40})\])|(https_?:\/\/[^\s<]+)/g;
+
+  // 3. Cari dan Ganti
+  return safeText.replace(regex, (match, g1_mention, g2_fullAddress, g3_url) => {
+    
+    // Cek apakah ini @mention (Grup 1 & 2 terisi)
+    if (g1_mention && g2_fullAddress) {
+      const shortAddress = `${g2_fullAddress.slice(0, 6)}...${g2_fullAddress.slice(-4)}`;
+      return `
+        <span class="clickable-address mention-tag" onclick="showUserProfile('${g2_fullAddress}')">
+          @${shortAddress}
+        </span>
+      `;
+    }
+
+    // Cek apakah ini URL (Grup 3 terisi)
+    if (g3_url) {
+      // 'g3_url' adalah URL lengkapnya (misal, https://gemini.com)
+      // Buat link <a> yang membuka tab baru
+      return `
+        <a href="${g3_url}" target="_blank" rel="noopener noreferrer" class="comment-link">
+          ${g3_url}
+        </a>
+      `;
+    }
+    
+    return match; // Fallback (seharusnya tidak terjadi)
   });
 }
 
