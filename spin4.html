@@ -1318,94 +1318,104 @@ svg g {
   text-decoration: underline;
 }
 
-  /* ========== STYLING LEADERBOARD ========== */
-.leaderboard-container {
-  max-width: 600px;
-  width: 100%;
-  margin: 20px auto;
-  border: 1px solid #444;
+  /* === STYLING NOTIFIKASI STATUS (TOAST) === */
+#toast-container {
+  position: fixed; /* Tetap di layar saat di-scroll */
+  top: 90px; /* Di bawah navbar */
+  right: 20px;
+  z-index: 10000; /* Paling atas */
+  width: 300px;
+  max-width: 90%;
+}
+
+/* Style untuk setiap notifikasi */
+.toast-notification {
+  background: #333;
+  color: white;
+  padding: 15px 20px;
+  margin-bottom: 10px;
   border-radius: 8px;
-  overflow: hidden;
-  background: #1a1a2e;
-  padding: 15px;
-  box-sizing: border-box;
-}
-.leaderboard-container h2 {
-  background: #2c2c3a;
-  padding: 12px;
-  margin: -15px -15px 15px -15px; /* Penuhi header */
-  text-align: center;
-  color: #f39c12; /* Emas */
-}
-.leaderboard-controls {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-.leaderboard-controls .load-btn {
-  margin: 0;
-  width: 50%;
-  font-size: 14px; /* Sesuaikan ukuran font jika perlu */
-}
-/* Style untuk daftar ol (ordered list) */
-.leaderboard-list {
-  list-style: none; /* Hapus angka default */
-  padding: 0;
-  margin: 0;
-  counter-reset: leaderboard-counter; /* Mulai counter */
-}
-.leaderboard-list li {
-  background: #2c2c3a;
-  color: #eee;
-  margin: 8px 0;
-  padding: 12px 15px;
-  border-radius: 6px;
-  font-size: 14px;
-  line-height: 1.5;
-  
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-left: 4px solid #555;
-}
-/* Style untuk angka peringkat (1., 2., 3.) */
-.leaderboard-list li::before {
-  counter-increment: leaderboard-counter; /* Naikkan counter */
-  content: counter(leaderboard-counter) "."; /* Tampilkan angka + titik */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-family: Arial, sans-serif;
   font-weight: bold;
-  color: #f39c12;
-  font-size: 1.1em;
-  margin-right: 10px;
+  font-size: 14px;
+  border-left: 5px solid #555;
+  
+  /* Flexbox untuk ikon + teks */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  
+  /* Animasi fade-in dan fade-out */
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all 0.5s ease-in-out;
+}
+
+/* Animasi saat muncul */
+.toast-notification.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Animasi saat hilang */
+.toast-notification.hide {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+/* Ikon di dalam toast */
+.toast-notification img {
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
 }
-/* Peringkat 1, 2, 3 dapat border khusus */
-.leaderboard-list li:nth-child(1) { border-left-color: #FFD700; } /* Emas */
-.leaderboard-list li:nth-child(2) { border-left-color: #C0C0C0; } /* Perak */
-.leaderboard-list li:nth-child(3) { border-left-color: #CD7F32; } /* Perunggu */
+.toast-notification span {
+  flex-grow: 1;
+  word-wrap: break-word;
+}
 
-.leaderboard-list li strong {
-  font-size: 1.1em;
-  color: #00aaff; /* Biru untuk alamat/ID */
-  cursor: pointer;
-  word-break: break-all; 
+/* Warna berdasarkan tipe */
+.toast-notification.success {
+  background: #2c4a3b;
+  border-left-color: #28a745;
 }
-.leaderboard-list li .lb-score {
+.toast-notification.error {
+  background: #4a2c2c;
+  border-left-color: #dc3545;
+}
+.toast-notification.info {
+  background: #2c3a4a;
+  border-left-color: #007bff;
+}
+.toast-notification.load {
+  background: #3a3b3c; /* Abu-abu gelap */
+  border-left-color: #888;
+}
+
+/* === STYLE BARU UNTUK TOMBOL CLOSE TOAST === */
+.toast-close-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 24px;  /* Perbesar tombol 'x' */
   font-weight: bold;
-  color: #28a745; /* Hijau untuk skor */
-  font-size: 1.1em;
-  flex-shrink: 0; 
-  margin-left: 10px;
-  
-  /* Tambahan untuk skor multiline */
-  text-align: right; 
-  line-height: 1.4;
+  line-height: 1;
+  padding: 0 5px;
+  margin-left: 10px; /* Jarak dari teks */
+  cursor: pointer;
+  transition: color 0.2s;
 }
-.leaderboard-list li .lb-score small {
-  display: block; /* Tampilkan di baris baru */
-  color: #ccc; 
-  font-size: 0.9em;
-  font-weight: normal;
+
+/* Tombol close jadi merah saat di-hover */
+.toast-close-btn:hover {
+  color: #ff4d4d; 
+}
+
+/* Pastikan span-nya tidak menabrak tombol */
+.toast-notification span {
+  flex-grow: 1; /* Biarkan teks mengambil sisa ruang */
+  word-wrap: break-word;
 }
 </style>
 </head>
@@ -1547,14 +1557,7 @@ svg g {
     </div>
     </div>
 
-    <div class="leaderboard-controls">
-    <button id="btn-lb-spins" class="load-btn" onclick="loadLeaderboard('spins')">
-      Top Players (100 Spins)
-    </button>
-    <button id="btn-lb-likes" class="load-btn" onclick="loadLeaderboard('likes')">
-      Most Liked Spins
-    </button>
-    </div>
+    <div id="toast-container"></div>
     
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
@@ -3599,158 +3602,71 @@ function handleInputFocus(event) {
 }
 
 /**
- * FUNGSI UTAMA (VERSI BARU): Memuat leaderboard yang ringan.
+ * FUNGSI (MODIFIKASI LENGKAP): Toast dengan durasi 10 detik dan tombol close manual.
+ * @param {string} message - Teks yang ingin ditampilkan.
+ * @param {string} type - 'success', 'error', 'info', atau 'load'.
+ * @param {number} duration - Berapa lama (ms) sebelum hilang (default 10 detik).
  */
-async function loadLeaderboard(type) {
-  if (!contract) return alert("⚠️ Connect wallet first!");
-  
-  const list = document.getElementById('leaderboard-list');
-  const loading = document.getElementById('leaderboard-loading');
-  const btnSpins = document.getElementById('btn-lb-spins'); // Ganti nama ID jika perlu
-  const btnLikes = document.getElementById('btn-lb-likes'); // Ganti nama ID jika perlu
-  
-  if (!list || !loading || !btnSpins || !btnLikes) return;
-  
-  list.innerHTML = ''; 
-  loading.style.display = 'block';
-  btnSpins.disabled = true;
-  btnLikes.disabled = true;
+function showStatus(message, type = 'info', duration = 10000) { // <-- 1. Durasi diubah ke 10000
+  const container = document.getElementById('toast-container');
+  if (!container) return;
 
-  try {
-    // 1. Pastikan data 'allPublicBets' (100 spin) sudah dimuat
-    // Kita panggil loadPublicHistory(true) untuk memastikan datanya fresh
-    loading.textContent = "Memuat data 100 spin terakhir...";
-    
-    // Kita perlu memodifikasi loadPublicHistory agar mengembalikan data
-    // Untuk sekarang, kita panggil saja, lalu kita akses variabel global allPublicBets
-    
-    // Jika allPublicBets kosong, muat dulu
-    if(allPublicBets.length === 0){
-        await loadPublicHistory(true); 
-        // Beri jeda agar variabel global terisi
-        await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+  // 1. Tentukan ikon
+  let iconName = 'info-icon.png'; 
+  if (type === 'success') iconName = 'success-icon.png';
+  else if (type === 'error') iconName = 'error-icon.png';
+  else if (type === 'load') iconName = 'loading.gif'; 
 
-    if (allPublicBets.length === 0) {
-        throw new Error("Gagal memuat data riwayat publik.");
-    }
-
-    let data = [];
-    if (type === 'spins') {
-      loading.textContent = "Menghitung Top Players...";
-      data = calculateTopSpins(); // Panggil versi ringan
-    } else if (type === 'likes') {
-      loading.textContent = "Menghitung Most Liked Spins... (Ini perlu waktu)...";
-      data = await calculateMostLikedSpins(); // Panggil versi ringan
-    }
-    
-    renderLeaderboard(data, type);
-
-  } catch (err) {
-    console.error(`Gagal memuat leaderboard '${type}':`, err);
-    list.innerHTML = '<li>Gagal memuat data. Coba refresh.</li>';
-  } finally {
-    loading.style.display = 'none';
-    loading.textContent = "Memuat dan menghitung data...";
-    btnSpins.disabled = false;
-    btnLikes.disabled = false;
-  }
-}
-
-/**
- * FUNGSI KALKULASI 1 (VERSI BARU): Menghitung Top Players (dari 100 spin).
- * Ini SANGAT CEPAT.
- */
-function calculateTopSpins() {
-  console.log("Menghitung Top Players (by Spins)...");
-  const counts = {}; // { "0x123...": 5, "0x456...": 2 }
+  // 2. Buat elemen toast
+  const toast = document.createElement('div');
+  toast.className = `toast-notification ${type}`;
   
-  // Hitung HANYA dari allPublicBets (maks 100)
-  for (const bet of allPublicBets) {
-    const player = bet.player;
-    counts[player] = (counts[player] || 0) + 1;
-  }
-  
-  const sorted = Object.entries(counts)
-    .map(([address, spinCount]) => ({ address, spinCount }))
-    .sort((a, b) => b.spinCount - a.spinCount);
-    
-  return sorted.slice(0, 10); // Ambil 10 teratas
-}
+  // 3. Buat konten (IKON + TEKS)
+  // Ganti '' dengan 'images/' jika Anda menyimpannya di sub-folder
+  const icon = document.createElement('img');
+  icon.src = `${iconName}`; // Asumsi gambar ada di root
+  icon.alt = "status icon";
 
-/**
- * FUNGSI KALKULASI 2 (VERSI BARU): Menghitung Most Liked Spins (dari 100 spin).
- * Ini jauh lebih cepat (hanya 100 panggilan RPC).
- */
-async function calculateMostLikedSpins() {
-  console.log("Menghitung Most Liked Spins (Maks 100 panggilan)...");
-  
-  // Ambil ID dari allPublicBets
-  const betIdsToQuery = allPublicBets.map(bet => bet.globalBetId);
+  const text = document.createElement('span');
+  text.textContent = message;
 
-  const promises = betIdsToQuery.map(betId => 
-    contract.getLikeCount(betId)
-      .then(count => ({
-        betId: betId,
-        likeCount: Number(count)
-      }))
-      .catch(err => {
-        console.error(`Gagal ambil like count untuk bet ${betId}:`, err);
-        return { betId: betId, likeCount: 0 }; // Kembalikan 0 jika gagal
-      })
-  );
-  
-  const results = (await Promise.all(promises))
-    .filter(r => r.likeCount > 0); // Saring yg 0 like
-    
-  results.sort((a, b) => b.likeCount - a.likeCount);
-  
-  return results.slice(0, 10); // Ambil 10 teratas
-}
+  // 4. Buat Tombol Close (×) (BARU)
+  const closeButton = document.createElement('button');
+  closeButton.className = 'toast-close-btn';
+  closeButton.innerHTML = '&times;'; // Simbol '×'
 
-/**
- * FUNGSI RENDER (VERSI BARU): Menampilkan leaderboard ringan.
- */
-function renderLeaderboard(data, type) {
-  const list = document.getElementById('leaderboard-list');
-  list.innerHTML = '';
-  
-  if (data.length === 0) {
-    list.innerHTML = '<li>Tidak ada data untuk ditampilkan.</li>';
-    return;
+  // 5. Gabungkan semua elemen
+  toast.appendChild(icon);
+  toast.appendChild(text);
+  toast.appendChild(closeButton);
+
+  // 6. Buat fungsi remove (agar rapi)
+  function removeToast() {
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    toast.addEventListener('transitionend', () => {
+      if (toast.parentNode === container) {
+          container.removeChild(toast);
+      }
+    }, { once: true });
   }
 
-  if (type === 'spins') {
-    data.forEach(item => {
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <strong onclick="showUserProfile('${item.address}')">
-          ${item.address.slice(0, 10)}...${item.address.slice(-6)}
-        </strong>
-        <span class="lb-score">${item.spinCount} Spins</span>
-      `;
-      list.appendChild(li);
-    });
-  } 
-  else if (type === 'likes') {
-    data.forEach(item => {
-      // Ambil detail bet dari 'allPublicBets' (jika perlu)
-      const betDetail = allPublicBets.find(b => b.globalBetId.toString() === item.betId.toString());
-      const playerAddr = betDetail ? betDetail.player : 'Unknown';
-      
-      const li = document.createElement('li');
-      li.innerHTML = `
-        <strong style="cursor:default;">
-          Bet ID #${item.betId}
-          <small style="display:block; color: #ccc;" onclick="showUserProfile('${playerAddr}')">
-            (by ${playerAddr.slice(0,6)}...${playerAddr.slice(-4)})
-          </small>
-        </strong>
-        <span class="lb-score">${item.likeCount} Likes</span>
-      `;
-      list.appendChild(li);
-    });
-  }
+  // 7. Atur timer otomatis (10 detik)
+  const hideTimeout = setTimeout(removeToast, duration);
+
+  // 8. Atur onclick untuk tombol close (BARU)
+  closeButton.onclick = () => {
+    clearTimeout(hideTimeout); // <-- Penting: Batalkan timer otomatis
+    removeToast(); // <-- Panggil fungsi remove manual
+  };
+
+  // 9. Tambahkan ke container
+  container.appendChild(toast);
+
+  // 10. Tampilkan
+  setTimeout(() => {
+    toast.classList.add('show');
+  }, 10); 
 }
 
 // tambahkan efek futuristik glow 5 detik
