@@ -1017,7 +1017,8 @@ svg g {
   cursor: pointer;
 }
 .comment-input-area button:disabled {
-  background: #555;
+  background: #4da3ff;
+  border: 2px solid #0062cc;
 }
 
 .edit-btn {
@@ -1285,6 +1286,21 @@ svg g {
 .comment-content-wrapper {
   flex-grow: 1; /* Konten mengambil sisa ruang */
   min-width: 0; /* Mencegah teks overflow */
+}
+
+  /* Tombol "Balas" */
+.reply-btn {
+  background: none;
+  border: none;
+  color: #4dc4ff; /* Biru muda agar beda dari "Edit" */
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 10px; /* Samakan dengan .edit-btn */
+  font-weight: bold;
+}
+.reply-btn:hover {
+  text-decoration: underline;
 }
 </style>
 </head>
@@ -2744,7 +2760,7 @@ async function loadComments(prefix, globalBetId) {
 
     listDiv.innerHTML = ""; // Kosongkan loader
 
-    // Render setiap komentar
+    // Render setiap komentar (urutan lama ke baru)
     comments.forEach((comment, i) => {
       const commentEl = document.createElement("div");
       commentEl.className = "comment-item"; 
@@ -2756,14 +2772,28 @@ async function loadComments(prefix, globalBetId) {
       // Ambil PFP (sudah ada)
       const pfpUrl = getDeterministicPfpUrl(userAddr); 
 
-      let editButtonHtml = "";
-      if (userAddress && userAddr.toLowerCase() === userAddress.toLowerCase()) {
-        editButtonHtml = `
-          <button class="edit-btn" id="edit-btn-${prefix}-${globalBetId}-${i}" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, true)">
-            Edit
-          </button>
-        `;
+      // --- PERUBAHAN DI SINI: Logika Tombol Aksi ---
+      let actionButtonsHtml = ""; // Variabel baru
+      
+      // Hanya tampilkan tombol jika user login
+      if (userAddress) { 
+        if (userAddr.toLowerCase() === userAddress.toLowerCase()) {
+          // Ini komentar SAYA -> tampilkan tombol "Edit"
+          actionButtonsHtml = `
+            <button class="edit-btn" id="edit-btn-${prefix}-${globalBetId}-${i}" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, true)">
+              Edit
+            </button>
+          `;
+        } else {
+          // Ini komentar ORANG LAIN -> tampilkan tombol "Balas"
+          actionButtonsHtml = `
+            <button class="reply-btn" onclick="handleReply('${prefix}', ${globalBetId}, '${userAddr}')">
+              Balas
+            </button>
+          `;
+        }
       }
+      // --- AKHIR PERUBAHAN ---
       
       commentEl.innerHTML = `
         <div class="comment-pfp-wrapper">
@@ -2783,7 +2813,7 @@ async function loadComments(prefix, globalBetId) {
           
           <div class="comment-view-mode" id="view-mode-${prefix}-${globalBetId}-${i}">
             <p style="margin: 2px 0; word-wrap: break-word;">${comment.text}</p><br>
-            ${editButtonHtml}
+            ${actionButtonsHtml} {/* <-- Gunakan variabel baru di sini */}
           </div>
           
           <div class="comment-edit-mode" id="edit-mode-${prefix}-${globalBetId}-${i}">
@@ -2798,7 +2828,8 @@ async function loadComments(prefix, globalBetId) {
     });
 
   } catch (err) {
-    console.error(`Gagal memuat komentar untuk bet ${globalBetId}:`, err);
+    console.error(`Gagal memuat komentar untuk bet ${globalBetId}:`
+, err);
     listDiv.innerHTML = "<small>Gagal memuat komentar.</small>";
   }
 }
@@ -2967,7 +2998,36 @@ async function handleSendEdit(prefix, globalBetId, index) {
 
 }
 
+/**
+ * FUNGSI BARU: Menangani klik tombol "Balas".
+ * Ini akan menambahkan @mention ke kotak input komentar utama.
+ */
+function handleReply(prefix, globalBetId, addressToReply) {
+  // 1. Temukan kotak input komentar utama
+  const input = document.getElementById(`comment-input-${prefix}-${globalBetId}`);
+  if (!input) {
+    console.error("Kotak input komentar tidak ditemukan!");
+    return;
+  }
 
+  // 2. Buat tag @mention (kita gunakan 6...4 agar konsisten)
+  const shortAddress = `${addressToReply.slice(0, 6)}...${addressToReply.slice(-4)}`;
+  const mentionTag = `@${shortAddress} `; // Tambahkan spasi di akhir
+
+  // 3. Tambahkan mention ke kotak input
+  if (input.value.startsWith("@")) {
+    // Jika sudah me-mention orang lain, ganti mention-nya
+    const existingText = input.value.split(' ').slice(1).join(' ');
+    input.value = mentionTag + existingText;
+  } else {
+    // Jika kotak kosong atau berisi teks biasa, tambahkan di depan
+    input.value = mentionTag + input.value;
+  }
+
+  // 4. Fokus dan scroll ke kotak input
+  input.focus();
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
 // --- FUNGSI LIKE & RATING (DENGAN PREFIX) ---
 
