@@ -1303,23 +1303,36 @@ svg g {
   text-decoration: underline;
 }
 
-  /* Style untuk @mention yang sudah diposting */
-.mention-tag {
-  color: #4dc4ff; /* Biru muda (atau warna link Anda) */
-  font-weight: bold;
-  background: rgba(77, 196, 255, 0.1); /* Sedikit highlight */
-  padding: 1px 4px;
-  border-radius: 4px;
-}
-
-  /* Style untuk link di dalam komentar */
+  /* 1. GANTI STYLE .comment-link ANDA DENGAN INI */
 .comment-link {
   color: #55aaff; /* Warna biru cerah untuk link */
-  text-decoration: underline;
+  text-decoration: none; /* <-- HAPUS GARIS BAWAH */
   font-weight: bold;
 }
 .comment-link:hover {
   color: #88ccff;
+  text-decoration: underline; /* <-- Pindahkan garis bawah ke hover */
+}
+
+/* 2. TAMBAHKAN STYLE BARU INI (Untuk nama & @mention) */
+.clickable-address {
+  color: #00aaff; /* Warna biru (atau samakan dengan .comment-link) */
+  cursor: pointer;
+  text-decoration: none; /* <-- HAPUS GARIS BAWAH */
+  font-weight: bold; 
+}
+.clickable-address:hover {
+  color: #4dc4ff;
+  text-decoration: underline; /* <-- Pindahkan garis bawah ke hover */
+}
+
+/* 3. TAMBAHKAN STYLE INI (Untuk highlight @mention, opsional tapi disarankan) */
+.mention-tag {
+  color: #4dc4ff; /* Biru muda */
+  font-weight: bold;
+  background: rgba(77, 196, 255, 0.1); /* Highlight */
+  padding: 1px 4px;
+  border-radius: 4px;
 }
 </style>
 </head>
@@ -2753,7 +2766,7 @@ async function loadCommentCount(prefix, globalBetId) {
 }
 
 /**
- * FUNGSI 3 (MODIFIKASI): Teks alamat komentator sekarang bisa diklik.
+ * FUNGSI 3 (MODIFIKASI): Menghapus <br> yang tidak perlu.
  */
 async function loadComments(prefix, globalBetId) {
   if (!contract) return; 
@@ -2788,23 +2801,17 @@ async function loadComments(prefix, globalBetId) {
       const userAddr = comment.user;
       const timestamp = new Date(Number(comment.timestamp) * 1000).toLocaleString();
       
-      // Ambil PFP (sudah ada)
       const pfpUrl = getDeterministicPfpUrl(userAddr); 
 
-      // --- PERUBAHAN DI SINI: Logika Tombol Aksi ---
-      let actionButtonsHtml = ""; // Variabel baru
-      
-      // Hanya tampilkan tombol jika user login
+      let actionButtonsHtml = ""; 
       if (userAddress) { 
         if (userAddr.toLowerCase() === userAddress.toLowerCase()) {
-          // Ini komentar SAYA -> tampilkan tombol "Edit"
           actionButtonsHtml = `
             <button class="edit-btn" id="edit-btn-${prefix}-${globalBetId}-${i}" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, true)">
               Edit
             </button>
           `;
         } else {
-          // Ini komentar ORANG LAIN -> tampilkan tombol "Balas"
           actionButtonsHtml = `
             <button class="reply-btn" onclick="handleReply('${prefix}', ${globalBetId}, '${userAddr}')">
               Balas
@@ -2812,7 +2819,6 @@ async function loadComments(prefix, globalBetId) {
           `;
         }
       }
-      // --- AKHIR PERUBAHAN ---
       
       commentEl.innerHTML = `
         <div class="comment-pfp-wrapper">
@@ -2826,12 +2832,12 @@ async function loadComments(prefix, globalBetId) {
               ${userAddr.slice(0, 6)}...${userAddr.slice(-4)}
             </span>:
           </strong>
-
           
-          <small>${timestamp}</small><br><br>
+          <small>${timestamp}</small> {/* <-- <br><br> DIHAPUS DARI SINI */}
           
           <div class="comment-view-mode" id="view-mode-${prefix}-${globalBetId}-${i}">
-            <p style="margin: 2px 0; word-wrap: break-word;">${formatCommentText(comment.text)}</p><br>
+            {/* Pastikan panggil formatCommentText */}
+            <p style="margin: 2px 0; word-wrap: break-word;">${formatCommentText(comment.text)}</p> {/* <-- <br> DIHAPUS DARI SINI */}
             ${actionButtonsHtml}
           </div>
           
