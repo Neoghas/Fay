@@ -1302,6 +1302,15 @@ svg g {
 .reply-btn:hover {
   text-decoration: underline;
 }
+
+  /* Style untuk @mention yang sudah diposting */
+.mention-tag {
+  color: #4dc4ff; /* Biru muda (atau warna link Anda) */
+  font-weight: bold;
+  background: rgba(77, 196, 255, 0.1); /* Sedikit highlight */
+  padding: 1px 4px;
+  border-radius: 4px;
+}
 </style>
 </head>
 
@@ -2812,7 +2821,7 @@ async function loadComments(prefix, globalBetId) {
           <small>${timestamp}</small><br><br>
           
           <div class="comment-view-mode" id="view-mode-${prefix}-${globalBetId}-${i}">
-            <p style="margin: 2px 0; word-wrap: break-word;">${comment.text}</p><br>
+            <p style="margin: 2px 0; word-wrap: break-word;">${formatCommentText(comment.text)}</p><br>
             ${actionButtonsHtml}
           </div>
           
@@ -2999,8 +3008,8 @@ async function handleSendEdit(prefix, globalBetId, index) {
 }
 
 /**
- * FUNGSI BARU: Menangani klik tombol "Balas".
- * Ini akan menambahkan @mention ke kotak input komentar utama.
+ * FUNGSI (MODIFIKASI): Menangani klik tombol "Balas".
+ * Menyimpan alamat LENGKAP ke input.
  */
 function handleReply(prefix, globalBetId, addressToReply) {
   // 1. Temukan kotak input komentar utama
@@ -3010,23 +3019,44 @@ function handleReply(prefix, globalBetId, addressToReply) {
     return;
   }
 
-  // 2. Buat tag @mention (kita gunakan 6...4 agar konsisten)
-  const shortAddress = `${addressToReply.slice(0, 6)}...${addressToReply.slice(-4)}`;
-  const mentionTag = `@${shortAddress} `; // Tambahkan spasi di akhir
+  // 2. Buat tag @mention DENGAN ALAMAT LENGKAP
+  // Format: @[0x123...abc] 
+  const mentionTag = `@[${addressToReply}] `; 
 
   // 3. Tambahkan mention ke kotak input
-  if (input.value.startsWith("@")) {
-    // Jika sudah me-mention orang lain, ganti mention-nya
-    const existingText = input.value.split(' ').slice(1).join(' ');
-    input.value = mentionTag + existingText;
+  if (input.value.startsWith("@[")) {
+    // Jika sudah me-mention, ganti mention-nya
+    const existingText = input.value.substring(input.value.indexOf("]") + 1).trim();
+    input.value = `${mentionTag}${existingText}`;
   } else {
-    // Jika kotak kosong atau berisi teks biasa, tambahkan di depan
-    input.value = mentionTag + input.value;
+    // Jika kotak kosong, tambahkan di depan
+    input.value = `${mentionTag}${input.value}`;
   }
 
   // 4. Fokus dan scroll ke kotak input
   input.focus();
   input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/**
+ * FUNGSI BARU: Mem-format teks komentar untuk menampilkan @mention
+ * sebagai link yang bisa diklik.
+ */
+function formatCommentText(text) {
+  if (!text) return "";
+  
+  // RegEx untuk mencari: @[<alamat 0x... 40 karakter>]
+  const mentionRegex = /@\[(0x[a-fA-F0-9]{40})\]/g; 
+
+  return text.replace(mentionRegex, (match, fullAddress) => {
+    // Ganti match (misal "@[0x123...abc]") dengan span ini
+    const shortAddress = `${fullAddress.slice(0, 6)}...${fullAddress.slice(-4)}`;
+    return `
+      <span class="clickable-address mention-tag" onclick="showUserProfile('${fullAddress}')">
+        @${shortAddress}
+      </span>
+    `;
+  });
 }
 
 // --- FUNGSI LIKE & RATING (DENGAN PREFIX) ---
