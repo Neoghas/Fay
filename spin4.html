@@ -1317,6 +1317,96 @@ svg g {
 .reply-btn:hover {
   text-decoration: underline;
 }
+
+  /* ========== STYLING LEADERBOARD ========== */
+.leaderboard-container {
+  max-width: 600px;
+  width: 100%;
+  margin: 20px auto;
+  border: 1px solid #444;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1a1a2e;
+  padding: 15px;
+  box-sizing: border-box;
+}
+.leaderboard-container h2 {
+  background: #2c2c3a;
+  padding: 12px;
+  margin: -15px -15px 15px -15px; /* Penuhi header */
+  text-align: center;
+  color: #f39c12; /* Emas */
+}
+.leaderboard-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.leaderboard-controls .load-btn {
+  margin: 0;
+  width: 50%;
+  font-size: 14px; /* Sesuaikan ukuran font jika perlu */
+}
+/* Style untuk daftar ol (ordered list) */
+.leaderboard-list {
+  list-style: none; /* Hapus angka default */
+  padding: 0;
+  margin: 0;
+  counter-reset: leaderboard-counter; /* Mulai counter */
+}
+.leaderboard-list li {
+  background: #2c2c3a;
+  color: #eee;
+  margin: 8px 0;
+  padding: 12px 15px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #555;
+}
+/* Style untuk angka peringkat (1., 2., 3.) */
+.leaderboard-list li::before {
+  counter-increment: leaderboard-counter; /* Naikkan counter */
+  content: counter(leaderboard-counter) "."; /* Tampilkan angka + titik */
+  font-weight: bold;
+  color: #f39c12;
+  font-size: 1.1em;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+/* Peringkat 1, 2, 3 dapat border khusus */
+.leaderboard-list li:nth-child(1) { border-left-color: #FFD700; } /* Emas */
+.leaderboard-list li:nth-child(2) { border-left-color: #C0C0C0; } /* Perak */
+.leaderboard-list li:nth-child(3) { border-left-color: #CD7F32; } /* Perunggu */
+
+.leaderboard-list li strong {
+  font-size: 1.1em;
+  color: #00aaff; /* Biru untuk alamat/ID */
+  cursor: pointer;
+  word-break: break-all; 
+}
+.leaderboard-list li .lb-score {
+  font-weight: bold;
+  color: #28a745; /* Hijau untuk skor */
+  font-size: 1.1em;
+  flex-shrink: 0; 
+  margin-left: 10px;
+  
+  /* Tambahan untuk skor multiline */
+  text-align: right; 
+  line-height: 1.4;
+}
+.leaderboard-list li .lb-score small {
+  display: block; /* Tampilkan di baris baru */
+  color: #ccc; 
+  font-size: 0.9em;
+  font-weight: normal;
+}
 </style>
 </head>
 
@@ -1455,6 +1545,26 @@ svg g {
             <strong>Spin Gratis Terpakai:</strong> <span id="profile-free-spin-used">...</span>
         </div>
     </div>
+    </div>
+
+    <div class="leaderboard-container">
+  <h2>🏆 Leaderboard</h2>
+  
+  <div class="leaderboard-controls">
+    <button id="btn-lb-earnings" class="load-btn" onclick="loadLeaderboard('earnings')">
+      Top Earners (Hadiah ETH)
+    </button>
+    <button id="btn-lb-referrals" class="load-btn" onclick="loadLeaderboard('referrals')">
+      Top Referrers
+    </button>
+  </div>
+  
+  <div id="leaderboard-loading" style="text-align: center; color: #aaa; margin: 15px 0; display:none;">
+    Memuat dan menghitung data...
+  </div>
+  
+  <ol class="leaderboard-list" id="leaderboard-list">
+    </ol>
     </div>
     
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
@@ -3496,6 +3606,192 @@ function handleInputFocus(event) {
         block: 'center' // 'center' biasanya paling aman agar input tidak pas di bawah
       });
     }, 400); // Coba 400ms, Anda bisa sesuaikan (300-500)
+  }
+}
+
+/**
+ * FUNGSI UTAMA: Memulai pemuatan leaderboard berdasarkan tipe.
+ */
+async function loadLeaderboard(type) {
+  if (!contract) return alert("⚠️ Connect wallet first!");
+  
+  const list = document.getElementById('leaderboard-list');
+  const loading = document.getElementById('leaderboard-loading');
+  const btnEarnings = document.getElementById('btn-lb-earnings');
+  const btnReferrals = document.getElementById('btn-lb-referrals');
+  
+  if (!list || !loading || !btnEarnings || !btnReferrals) return;
+  
+  list.innerHTML = ''; // Kosongkan daftar lama
+  loading.style.display = 'block';
+  btnEarnings.disabled = true;
+  btnReferrals.disabled = true;
+
+  try {
+    let data = [];
+    if (type === 'earnings') {
+      loading.textContent = "Memuat... (Langkah 1/4: Mengambil event ETH... Ini SANGAT LAMA)...";
+      data = await calculateTopEarners(loading); // Kirim 'loading' untuk update progres
+    } else if (type === 'referrals') {
+      loading.textContent = "Memuat... (Langkah 1/3: Mengambil event Referral... Ini mungkin perlu waktu)...";
+      data = await calculateTopReferrers(loading); // Kirim 'loading'
+    }
+    
+    // Tampilkan hasilnya
+    renderLeaderboard(data, type);
+
+  } catch (err) {
+    console.error(`Gagal memuat leaderboard '${type}':`, err);
+    list.innerHTML = '<li>Gagal memuat data. Kemungkinan RPC timeout. Coba refresh.</li>';
+  } finally {
+    loading.style.display = 'none';
+    loading.textContent = "Memuat dan menghitung data..."; // Reset teks
+    btnEarnings.disabled = false;
+    btnReferrals.disabled = false;
+  }
+}
+
+/**
+ * FUNGSI KALKULASI 1: Menghitung Top Earners (ETH + FAY)
+ * PERINGATAN: SANGAT LAMBAT DAN BERAT.
+ */
+async function calculateTopEarners(loading) {
+  // 1. Ambil SEMUA event ETHAwarded
+  const ethFilter = contract.filters.ETHAwarded();
+  const ethLogs = await contract.queryFilter(ethFilter, 0, 'latest'); // 0 = blok awal
+  
+  loading.textContent = "Memuat... (Langkah 2/4: Menghitung ETH...)";
+  const earnings = {}; // { "0x123...": 1000n }
+  
+  // Akumulasi ETH (gunakan BigInt)
+  for (const log of ethLogs) {
+    const player = log.args.player;
+    const amount = BigInt(log.args.amount.toString());
+    earnings[player] = (earnings[player] || 0n) + amount;
+  }
+
+  // 2. Ambil SEMUA event FaylottoAwarded
+  loading.textContent = "Memuat... (Langkah 3/4: Mengambil event Faylotto...)";
+  const faylottoFilter = contract.filters.FaylottoAwarded();
+  const faylottoLogs = await contract.queryFilter(faylottoFilter, 0, 'latest');
+
+  const faylottoEarnings = {}; // { "0x123...": 500n }
+
+  // Akumulasi Faylotto
+  for (const log of faylottoLogs) {
+    const player = log.args.to; // 'to' di event FaylottoAwarded
+    const amount = BigInt(log.args.amount.toString());
+    faylottoEarnings[player] = (faylottoEarnings[player] || 0n) + amount;
+  }
+
+  // 3. Gabungkan data
+  loading.textContent = "Memuat... (Langkah 4/4: Menggabungkan & mengurutkan...)";
+  
+  const allAddresses = new Set([...Object.keys(earnings), ...Object.keys(faylottoEarnings)]);
+  
+  let combined = [];
+  allAddresses.forEach(addr => {
+    combined.push({
+      address: addr,
+      eth: earnings[addr] || 0n,
+      faylotto: faylottoEarnings[addr] || 0n
+    });
+  });
+    
+  // 4. Urutkan berdasarkan ETH terbanyak
+  combined.sort((a, b) => {
+      if (b.eth > a.eth) return 1;
+      if (b.eth < a.eth) return -1;
+      return 0; // Fallback jika ETH sama
+  });
+    
+  return combined.slice(0, 10); // Ambil 10 teratas
+}
+
+
+/**
+ * FUNGSI KALKULASI 2: Menghitung Top Referrers (Undangan + ETH Earned)
+ */
+async function calculateTopReferrers(loading) {
+  // 1. Ambil SEMUA event ReferralAdded
+  const refFilter = contract.filters.ReferralAdded();
+  const refLogs = await contract.queryFilter(refFilter, 0, 'latest');
+  
+  loading.textContent = "Memuat... (Langkah 2/3: Menghitung Undangan...)";
+  const referrers = {}; // { "0x123...": 5 (jumlah undangan) }
+  
+  // Hitung jumlah undangan (referees) untuk setiap inviter
+  for (const log of refLogs) {
+    const inviter = log.args.inviter;
+    referrers[inviter] = (referrers[inviter] || 0) + 1;
+  }
+  
+  // 2. Ambil data ETH yang didapat (rewardEarned)
+  loading.textContent = "Memuat... (Langkah 3/3: Mengambil reward & mengurutkan...)";
+  const addresses = Object.keys(referrers);
+  
+  const promises = addresses.map(addr => 
+      contract.referrals(addr) // Panggil fungsi view 'referrals'
+        .then(info => ({
+            address: addr,
+            count: referrers[addr], // Jumlah undangan dari event
+            ethEarned: BigInt(info.rewardEarned.toString()) // Total ETH didapat
+        }))
+        .catch(err => {
+            console.error(`Gagal ambil data referral untuk ${addr}:`, err);
+            return null;
+        })
+  );
+  
+  const results = (await Promise.all(promises)).filter(r => r !== null);
+  
+  // 3. Urutkan berdasarkan jumlah undangan (count) terbanyak
+  results.sort((a, b) => b.count - a.count);
+  
+  return results.slice(0, 10); // Ambil 10 teratas
+}
+
+/**
+ * FUNGSI RENDER: Menampilkan data leaderboard ke HTML.
+ */
+function renderLeaderboard(data, type) {
+  const list = document.getElementById('leaderboard-list');
+  list.innerHTML = ''; // Kosongkan
+  
+  if (data.length === 0) {
+    list.innerHTML = '<li>Tidak ada data untuk ditampilkan.</li>';
+    return;
+  }
+
+  if (type === 'earnings') {
+    data.forEach(item => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <strong onclick="showUserProfile('${item.address}')">
+          ${item.address.slice(0, 10)}...${item.address.slice(-6)}
+        </strong>
+        <span class="lb-score">
+          ${parseFloat(ethers.formatEther(item.eth)).toFixed(6)} ETH
+          <small>${parseFloat(ethers.formatUnits(item.faylotto, 18)).toFixed(2)} FAY</small>
+        </span>
+      `;
+      list.appendChild(li);
+    });
+  } 
+  else if (type === 'referrals') {
+    data.forEach(item => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <strong onclick="showUserProfile('${item.address}')">
+          ${item.address.slice(0, 10)}...${item.address.slice(-6)}
+        </strong>
+        <span class="lb-score">
+          ${item.count} Undangan
+          <small>${parseFloat(ethers.formatEther(item.ethEarned)).toFixed(6)} ETH Didapat</small>
+        </span>
+      `;
+      list.appendChild(li);
+    });
   }
 }
 
