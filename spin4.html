@@ -1182,24 +1182,23 @@ svg g {
   margin-bottom: 10px; /* Jarak ke detail di bawahnya */
 }
 
-.history-pfp {
+/* BARU: Buat container untuk PFP */
+.history-pfp-container {
   position: relative;
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  object-fit: cover;
   flex-shrink: 0;
   cursor: pointer;
-  z-index: 1;
 }
 
-/* Efek border listrik berputar */
-.history-pfp::before {
+/* Efek border listrik berputar (diterapkan ke container) */
+.history-pfp-container::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  padding: 2px;
+  padding: 2px; /* Tebal border */
   background: conic-gradient(
     from 0deg,
     #00f5ff,
@@ -1213,15 +1212,25 @@ svg g {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   animation: spinBorder 2.5s linear infinite;
-  z-index: 2;
+  z-index: 2; /* DI ATAS gambar */
 }
 
-/* Pastikan animasi dipakai bersama */
+/* DISESUAIKAN: Ini adalah gambar di dalamnya */
+.history-pfp {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  position: relative; /* Diperlukan agar z-index berfungsi */
+  z-index: 1; /* DI BAWAH border */
+}
+
+/* Animasi putar */
 @keyframes spinBorder {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-
+  
 .history-info-stack {
   display: flex;
   flex-direction: column; /* Tumpuk Spin ID dan Hasil */
@@ -1410,6 +1419,10 @@ svg g {
             <strong>Spin Gratis Terpakai:</strong> <span id="profile-free-spin-used">...</span>
         </div>
     </div>
+    </div>
+
+    <div class="history-pfp-container">
+  <img class="history-pfp" src="" />
     </div>
     
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
