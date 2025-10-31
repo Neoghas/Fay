@@ -1547,24 +1547,13 @@ svg g {
     </div>
     </div>
 
-    <div class="leaderboard-container">
-  <h2>🏆 Leaderboard</h2>
-  
-  <div class="leaderboard-controls">
-    <button id="btn-lb-earnings" class="load-btn" onclick="loadLeaderboard('earnings')">
-      Top Earners (Hadiah ETH)
+    <div class="leaderboard-controls">
+    <button id="btn-lb-spins" class="load-btn" onclick="loadLeaderboard('spins')">
+      Top Players (100 Spins)
     </button>
-    <button id="btn-lb-referrals" class="load-btn" onclick="loadLeaderboard('referrals')">
-      Top Referrers
+    <button id="btn-lb-likes" class="load-btn" onclick="loadLeaderboard('likes')">
+      Most Liked Spins
     </button>
-  </div>
-  
-  <div id="leaderboard-loading" style="text-align: center; color: #aaa; margin: 15px 0; display:none;">
-    Memuat dan menghitung data...
-  </div>
-  
-  <ol class="leaderboard-list" id="leaderboard-list">
-    </ol>
     </div>
     
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
@@ -3610,185 +3599,154 @@ function handleInputFocus(event) {
 }
 
 /**
- * FUNGSI UTAMA: Memulai pemuatan leaderboard berdasarkan tipe.
+ * FUNGSI UTAMA (VERSI BARU): Memuat leaderboard yang ringan.
  */
 async function loadLeaderboard(type) {
   if (!contract) return alert("⚠️ Connect wallet first!");
   
   const list = document.getElementById('leaderboard-list');
   const loading = document.getElementById('leaderboard-loading');
-  const btnEarnings = document.getElementById('btn-lb-earnings');
-  const btnReferrals = document.getElementById('btn-lb-referrals');
+  const btnSpins = document.getElementById('btn-lb-spins'); // Ganti nama ID jika perlu
+  const btnLikes = document.getElementById('btn-lb-likes'); // Ganti nama ID jika perlu
   
-  if (!list || !loading || !btnEarnings || !btnReferrals) return;
+  if (!list || !loading || !btnSpins || !btnLikes) return;
   
-  list.innerHTML = ''; // Kosongkan daftar lama
+  list.innerHTML = ''; 
   loading.style.display = 'block';
-  btnEarnings.disabled = true;
-  btnReferrals.disabled = true;
+  btnSpins.disabled = true;
+  btnLikes.disabled = true;
 
   try {
+    // 1. Pastikan data 'allPublicBets' (100 spin) sudah dimuat
+    // Kita panggil loadPublicHistory(true) untuk memastikan datanya fresh
+    loading.textContent = "Memuat data 100 spin terakhir...";
+    
+    // Kita perlu memodifikasi loadPublicHistory agar mengembalikan data
+    // Untuk sekarang, kita panggil saja, lalu kita akses variabel global allPublicBets
+    
+    // Jika allPublicBets kosong, muat dulu
+    if(allPublicBets.length === 0){
+        await loadPublicHistory(true); 
+        // Beri jeda agar variabel global terisi
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    if (allPublicBets.length === 0) {
+        throw new Error("Gagal memuat data riwayat publik.");
+    }
+
     let data = [];
-    if (type === 'earnings') {
-      loading.textContent = "Memuat... (Langkah 1/4: Mengambil event ETH... Ini SANGAT LAMA)...";
-      data = await calculateTopEarners(loading); // Kirim 'loading' untuk update progres
-    } else if (type === 'referrals') {
-      loading.textContent = "Memuat... (Langkah 1/3: Mengambil event Referral... Ini mungkin perlu waktu)...";
-      data = await calculateTopReferrers(loading); // Kirim 'loading'
+    if (type === 'spins') {
+      loading.textContent = "Menghitung Top Players...";
+      data = calculateTopSpins(); // Panggil versi ringan
+    } else if (type === 'likes') {
+      loading.textContent = "Menghitung Most Liked Spins... (Ini perlu waktu)...";
+      data = await calculateMostLikedSpins(); // Panggil versi ringan
     }
     
-    // Tampilkan hasilnya
     renderLeaderboard(data, type);
 
   } catch (err) {
     console.error(`Gagal memuat leaderboard '${type}':`, err);
-    list.innerHTML = '<li>Gagal memuat data. Kemungkinan RPC timeout. Coba refresh.</li>';
+    list.innerHTML = '<li>Gagal memuat data. Coba refresh.</li>';
   } finally {
     loading.style.display = 'none';
-    loading.textContent = "Memuat dan menghitung data..."; // Reset teks
-    btnEarnings.disabled = false;
-    btnReferrals.disabled = false;
+    loading.textContent = "Memuat dan menghitung data...";
+    btnSpins.disabled = false;
+    btnLikes.disabled = false;
   }
 }
 
 /**
- * FUNGSI KALKULASI 1: Menghitung Top Earners (ETH + FAY)
- * PERINGATAN: SANGAT LAMBAT DAN BERAT.
+ * FUNGSI KALKULASI 1 (VERSI BARU): Menghitung Top Players (dari 100 spin).
+ * Ini SANGAT CEPAT.
  */
-async function calculateTopEarners(loading) {
-  // 1. Ambil SEMUA event ETHAwarded
-  const ethFilter = contract.filters.ETHAwarded();
-  const ethLogs = await contract.queryFilter(ethFilter, 0, 'latest'); // 0 = blok awal
+function calculateTopSpins() {
+  console.log("Menghitung Top Players (by Spins)...");
+  const counts = {}; // { "0x123...": 5, "0x456...": 2 }
   
-  loading.textContent = "Memuat... (Langkah 2/4: Menghitung ETH...)";
-  const earnings = {}; // { "0x123...": 1000n }
-  
-  // Akumulasi ETH (gunakan BigInt)
-  for (const log of ethLogs) {
-    const player = log.args.player;
-    const amount = BigInt(log.args.amount.toString());
-    earnings[player] = (earnings[player] || 0n) + amount;
+  // Hitung HANYA dari allPublicBets (maks 100)
+  for (const bet of allPublicBets) {
+    const player = bet.player;
+    counts[player] = (counts[player] || 0) + 1;
   }
-
-  // 2. Ambil SEMUA event FaylottoAwarded
-  loading.textContent = "Memuat... (Langkah 3/4: Mengambil event Faylotto...)";
-  const faylottoFilter = contract.filters.FaylottoAwarded();
-  const faylottoLogs = await contract.queryFilter(faylottoFilter, 0, 'latest');
-
-  const faylottoEarnings = {}; // { "0x123...": 500n }
-
-  // Akumulasi Faylotto
-  for (const log of faylottoLogs) {
-    const player = log.args.to; // 'to' di event FaylottoAwarded
-    const amount = BigInt(log.args.amount.toString());
-    faylottoEarnings[player] = (faylottoEarnings[player] || 0n) + amount;
-  }
-
-  // 3. Gabungkan data
-  loading.textContent = "Memuat... (Langkah 4/4: Menggabungkan & mengurutkan...)";
   
-  const allAddresses = new Set([...Object.keys(earnings), ...Object.keys(faylottoEarnings)]);
-  
-  let combined = [];
-  allAddresses.forEach(addr => {
-    combined.push({
-      address: addr,
-      eth: earnings[addr] || 0n,
-      faylotto: faylottoEarnings[addr] || 0n
-    });
-  });
+  const sorted = Object.entries(counts)
+    .map(([address, spinCount]) => ({ address, spinCount }))
+    .sort((a, b) => b.spinCount - a.spinCount);
     
-  // 4. Urutkan berdasarkan ETH terbanyak
-  combined.sort((a, b) => {
-      if (b.eth > a.eth) return 1;
-      if (b.eth < a.eth) return -1;
-      return 0; // Fallback jika ETH sama
-  });
-    
-  return combined.slice(0, 10); // Ambil 10 teratas
+  return sorted.slice(0, 10); // Ambil 10 teratas
 }
 
-
 /**
- * FUNGSI KALKULASI 2: Menghitung Top Referrers (Undangan + ETH Earned)
+ * FUNGSI KALKULASI 2 (VERSI BARU): Menghitung Most Liked Spins (dari 100 spin).
+ * Ini jauh lebih cepat (hanya 100 panggilan RPC).
  */
-async function calculateTopReferrers(loading) {
-  // 1. Ambil SEMUA event ReferralAdded
-  const refFilter = contract.filters.ReferralAdded();
-  const refLogs = await contract.queryFilter(refFilter, 0, 'latest');
+async function calculateMostLikedSpins() {
+  console.log("Menghitung Most Liked Spins (Maks 100 panggilan)...");
   
-  loading.textContent = "Memuat... (Langkah 2/3: Menghitung Undangan...)";
-  const referrers = {}; // { "0x123...": 5 (jumlah undangan) }
-  
-  // Hitung jumlah undangan (referees) untuk setiap inviter
-  for (const log of refLogs) {
-    const inviter = log.args.inviter;
-    referrers[inviter] = (referrers[inviter] || 0) + 1;
-  }
-  
-  // 2. Ambil data ETH yang didapat (rewardEarned)
-  loading.textContent = "Memuat... (Langkah 3/3: Mengambil reward & mengurutkan...)";
-  const addresses = Object.keys(referrers);
-  
-  const promises = addresses.map(addr => 
-      contract.referrals(addr) // Panggil fungsi view 'referrals'
-        .then(info => ({
-            address: addr,
-            count: referrers[addr], // Jumlah undangan dari event
-            ethEarned: BigInt(info.rewardEarned.toString()) // Total ETH didapat
-        }))
-        .catch(err => {
-            console.error(`Gagal ambil data referral untuk ${addr}:`, err);
-            return null;
-        })
+  // Ambil ID dari allPublicBets
+  const betIdsToQuery = allPublicBets.map(bet => bet.globalBetId);
+
+  const promises = betIdsToQuery.map(betId => 
+    contract.getLikeCount(betId)
+      .then(count => ({
+        betId: betId,
+        likeCount: Number(count)
+      }))
+      .catch(err => {
+        console.error(`Gagal ambil like count untuk bet ${betId}:`, err);
+        return { betId: betId, likeCount: 0 }; // Kembalikan 0 jika gagal
+      })
   );
   
-  const results = (await Promise.all(promises)).filter(r => r !== null);
-  
-  // 3. Urutkan berdasarkan jumlah undangan (count) terbanyak
-  results.sort((a, b) => b.count - a.count);
+  const results = (await Promise.all(promises))
+    .filter(r => r.likeCount > 0); // Saring yg 0 like
+    
+  results.sort((a, b) => b.likeCount - a.likeCount);
   
   return results.slice(0, 10); // Ambil 10 teratas
 }
 
 /**
- * FUNGSI RENDER: Menampilkan data leaderboard ke HTML.
+ * FUNGSI RENDER (VERSI BARU): Menampilkan leaderboard ringan.
  */
 function renderLeaderboard(data, type) {
   const list = document.getElementById('leaderboard-list');
-  list.innerHTML = ''; // Kosongkan
+  list.innerHTML = '';
   
   if (data.length === 0) {
     list.innerHTML = '<li>Tidak ada data untuk ditampilkan.</li>';
     return;
   }
 
-  if (type === 'earnings') {
+  if (type === 'spins') {
     data.forEach(item => {
       const li = document.createElement('li');
       li.innerHTML = `
         <strong onclick="showUserProfile('${item.address}')">
           ${item.address.slice(0, 10)}...${item.address.slice(-6)}
         </strong>
-        <span class="lb-score">
-          ${parseFloat(ethers.formatEther(item.eth)).toFixed(6)} ETH
-          <small>${parseFloat(ethers.formatUnits(item.faylotto, 18)).toFixed(2)} FAY</small>
-        </span>
+        <span class="lb-score">${item.spinCount} Spins</span>
       `;
       list.appendChild(li);
     });
   } 
-  else if (type === 'referrals') {
+  else if (type === 'likes') {
     data.forEach(item => {
+      // Ambil detail bet dari 'allPublicBets' (jika perlu)
+      const betDetail = allPublicBets.find(b => b.globalBetId.toString() === item.betId.toString());
+      const playerAddr = betDetail ? betDetail.player : 'Unknown';
+      
       const li = document.createElement('li');
       li.innerHTML = `
-        <strong onclick="showUserProfile('${item.address}')">
-          ${item.address.slice(0, 10)}...${item.address.slice(-6)}
+        <strong style="cursor:default;">
+          Bet ID #${item.betId}
+          <small style="display:block; color: #ccc;" onclick="showUserProfile('${playerAddr}')">
+            (by ${playerAddr.slice(0,6)}...${playerAddr.slice(-4)})
+          </small>
         </strong>
-        <span class="lb-score">
-          ${item.count} Undangan
-          <small>${parseFloat(ethers.formatEther(item.ethEarned)).toFixed(6)} ETH Didapat</small>
-        </span>
+        <span class="lb-score">${item.likeCount} Likes</span>
       `;
       list.appendChild(li);
     });
