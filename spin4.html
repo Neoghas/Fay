@@ -1302,31 +1302,6 @@ svg g {
 .reply-btn:hover {
   text-decoration: underline;
 }
-
-  /* 1. GANTI STYLE .comment-link ANDA DENGAN INI */
-.comment-link {
-  color: #55aaff; /* Warna biru cerah untuk link */
-  font-weight: bold;
-}
-.comment-link:hover {
-  color: #88ccff;
-  
-}
-
-/* 2. TAMBAHKAN STYLE BARU INI (Untuk nama & @mention) */
-.clickable-address {
-  color: #00aaff; /* Warna biru (atau samakan dengan .comment-link) */
-  font-weight: bold; 
-}
-.clickable-address:hover {
-  color: #4dc4ff;
-}
-
-/* 3. TAMBAHKAN STYLE INI (Untuk highlight @mention, opsional tapi disarankan) */
-.mention-tag {
-  color: #4dc4ff; /* Biru muda */
-  font-weight: bold;
-}
 </style>
 </head>
 
@@ -2794,17 +2769,23 @@ async function loadComments(prefix, globalBetId) {
       const userAddr = comment.user;
       const timestamp = new Date(Number(comment.timestamp) * 1000).toLocaleString();
       
+      // Ambil PFP (sudah ada)
       const pfpUrl = getDeterministicPfpUrl(userAddr); 
 
-      let actionButtonsHtml = ""; 
+      // --- PERUBAHAN DI SINI: Logika Tombol Aksi ---
+      let actionButtonsHtml = ""; // Variabel baru
+      
+      // Hanya tampilkan tombol jika user login
       if (userAddress) { 
         if (userAddr.toLowerCase() === userAddress.toLowerCase()) {
+          // Ini komentar SAYA -> tampilkan tombol "Edit"
           actionButtonsHtml = `
             <button class="edit-btn" id="edit-btn-${prefix}-${globalBetId}-${i}" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, true)">
               Edit
             </button>
           `;
         } else {
+          // Ini komentar ORANG LAIN -> tampilkan tombol "Balas"
           actionButtonsHtml = `
             <button class="reply-btn" onclick="handleReply('${prefix}', ${globalBetId}, '${userAddr}')">
               Balas
@@ -2812,6 +2793,7 @@ async function loadComments(prefix, globalBetId) {
           `;
         }
       }
+      // --- AKHIR PERUBAHAN ---
       
       commentEl.innerHTML = `
         <div class="comment-pfp-wrapper">
@@ -2825,12 +2807,13 @@ async function loadComments(prefix, globalBetId) {
               ${userAddr.slice(0, 6)}...${userAddr.slice(-4)}
             </span>:
           </strong>
+
           
           <small>${timestamp}</small><br><br>
           
           <div class="comment-view-mode" id="view-mode-${prefix}-${globalBetId}-${i}">
-            <p style="margin: 2px 0; word-wrap: break-word;">${formatCommentText(comment.text)}</p><br>
-            ${actionButtonsHtml}
+            <p style="margin: 2px 0; word-wrap: break-word;">${comment.text}</p><br>
+            ${actionButtonsHtml} {/* <-- Gunakan variabel baru di sini */}
           </div>
           
           <div class="comment-edit-mode" id="edit-mode-${prefix}-${globalBetId}-${i}">
@@ -3015,80 +2998,7 @@ async function handleSendEdit(prefix, globalBetId, index) {
 
 }
 
-/**
- * FUNGSI (MODIFIKASI): Menangani klik tombol "Balas".
- * Menyimpan alamat LENGKAP ke input.
- */
-function handleReply(prefix, globalBetId, addressToReply) {
-  // 1. Temukan kotak input komentar utama
-  const input = document.getElementById(`comment-input-${prefix}-${globalBetId}`);
-  if (!input) {
-    console.error("Kotak input komentar tidak ditemukan!");
-    return;
-  }
 
-  // 2. Buat tag @mention DENGAN ALAMAT LENGKAP
-  // Format: @[0x123...abc] 
-  const mentionTag = `@[${addressToReply}] `; 
-
-  // 3. Tambahkan mention ke kotak input
-  if (input.value.startsWith("@[")) {
-    // Jika sudah me-mention, ganti mention-nya
-    const existingText = input.value.substring(input.value.indexOf("]") + 1).trim();
-    input.value = `${mentionTag}${existingText}`;
-  } else {
-    // Jika kotak kosong, tambahkan di depan
-    input.value = `${mentionTag}${input.value}`;
-  }
-
-  // 4. Fokus dan scroll ke kotak input
-  input.focus();
-  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-
-/**
- * FUNGSI (MODIFIKASI): Mem-format teks komentar.
- * Sekarang aman dari XSS, mendukung @mention, DAN link http/https.
- */
-function formatCommentText(text) {
-  if (!text) return "";
-  
-  // 1. Amankan teks dari HTML (mencegah XSS attack)
-  // Ini mengubah < dan > menjadi &lt; dan &gt;
-  let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-  // 2. RegEx Gabungan:
-  // Grup 1: (@\[(0x[a-fA-F0-9]{40})\]) -> Mencari @mentions
-  // Grup 3: (https_?:\/\/[^\s<]+)    -> Mencari URLs (http atau https)
-  const regex = /(@\[(0x[a-fA-F0-9]{40})\])|(https_?:\/\/[^\s<]+)/g;
-
-  // 3. Cari dan Ganti
-  return safeText.replace(regex, (match, g1_mention, g2_fullAddress, g3_url) => {
-    
-    // Cek apakah ini @mention (Grup 1 & 2 terisi)
-    if (g1_mention && g2_fullAddress) {
-      const shortAddress = `${g2_fullAddress.slice(0, 6)}...${g2_fullAddress.slice(-4)}`;
-      return `
-        <span class="clickable-address mention-tag" onclick="showUserProfile('${g2_fullAddress}')">
-          @${shortAddress}
-        </span>
-      `;
-    }
-
-    // Cek apakah ini URL (Grup 3 terisi)
-    if (g3_url) {
-      // 'g3_url' adalah URL lengkapnya (misal, https://gemini.com)
-      // Buat link <a> yang membuka tab baru
-      return `
-        <a href="${g3_url}" target="_blank" rel="noopener noreferrer" class="comment-link">
-          ${g3_url}
-        </a>
-      `;
-    }
-    
-    return match; // Fallback (seharusnya tidak terjadi)
-  });
-}
 
 // --- FUNGSI LIKE & RATING (DENGAN PREFIX) ---
 
@@ -3114,7 +3024,36 @@ async function loadLikeAndRatingData(prefix, globalBetId) {
 
   }
 
+/**
+ * FUNGSI BARU: Menangani klik tombol "Balas".
+ * Ini akan menambahkan @mention ke kotak input komentar utama.
+ */
+function handleReply(prefix, globalBetId, addressToReply) {
+  // 1. Temukan kotak input komentar utama
+  const input = document.getElementById(`comment-input-${prefix}-${globalBetId}`);
+  if (!input) {
+    console.error("Kotak input komentar tidak ditemukan!");
+    return;
+  }
 
+  // 2. Buat tag @mention (kita gunakan 6...4 agar konsisten)
+  const shortAddress = `${addressToReply.slice(0, 6)}...${addressToReply.slice(-4)}`;
+  const mentionTag = `@${shortAddress} `; // Tambahkan spasi di akhir
+
+  // 3. Tambahkan mention ke kotak input
+  if (input.value.startsWith("@")) {
+    // Jika sudah me-mention orang lain, ganti mention-nya
+    const existingText = input.value.split(' ').slice(1).join(' ');
+    input.value = mentionTag + existingText;
+  } else {
+    // Jika kotak kosong atau berisi teks biasa, tambahkan di depan
+    input.value = mentionTag + input.value;
+  }
+
+  // 4. Fokus dan scroll ke kotak input
+  input.focus();
+  input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
 
   // Reset UI
 
