@@ -1988,7 +1988,7 @@ function renderBets(ul, bets, startIndex, count, isPublic = false) {
       <div class="comments-section" id="comments-section-${prefix}-${globalBetId}" style="display:none;">
         <div class="comments-list" id="comments-list-${prefix}-${globalBetId}"><p class="loader-comment">Memuat komentar...</p></div>
         <div class="comment-input-area">
-          <textarea id="comment-input-${prefix}-${globalBetId}" placeholder="Tulis komentar..." rows="3" maxlength="1000"></textarea>
+          <textarea id="comment-input-${prefix}-${globalBetId}" placeholder="Tulis komentar..." rows="3" maxlength="1000" onfocus="handleInputFocus(event)"></textarea>
           <button class="comment-send-btn" onclick="handleSendComment('${prefix}', ${globalBetId})">Kirim</button>
         </div>
       </div>
@@ -2831,7 +2831,7 @@ async function loadComments(prefix, globalBetId) {
           </div>
           
           <div class="comment-edit-mode" id="edit-mode-${prefix}-${globalBetId}-${i}">
-            <textarea id="edit-input-${prefix}-${globalBetId}-${i}" maxlength="1000">${comment.text}</textarea>
+            <textarea id="edit-input-${prefix}-${globalBetId}-${i}" maxlength="1000" onfocus="handleInputFocus(event)">${comment.text}</textarea>
             <button onclick="handleSendEdit('${prefix}', ${globalBetId}, ${i})">Save</button>
             <button class="cancel-btn" onclick="toggleEditMode('${prefix}', ${globalBetId}, ${i}, false)">Cancel</button>
           </div>
@@ -3472,6 +3472,29 @@ function getDeterministicPfpUrl(address) {
   } catch (err) {
     console.error("Gagal generate PFP URL:", err);
     return `${PFP_IMAGE_PATH}default-pfp.png`; // Fallback ke default
+  }
+}
+
+/**
+ * FUNGSI BARU: Otomatis scroll ke input saat di-fokus (untuk Android).
+ */
+function handleInputFocus(event) {
+  const element = event.target;
+  
+  // Deteksi sederhana jika ini perangkat mobile (terutama Android)
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    // Kita butuh jeda 300-500ms
+    // Ini untuk memberi waktu keyboard virtual mulai muncul di layar.
+    // Tanpa jeda, kita scroll ke posisi yang salah (sebelum keyboard muncul).
+    setTimeout(() => {
+      // Minta browser untuk scroll elemen ini ke area yang terlihat
+      element.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' // 'center' biasanya paling aman agar input tidak pas di bawah
+      });
+    }, 400); // Coba 400ms, Anda bisa sesuaikan (300-500)
   }
 }
 
