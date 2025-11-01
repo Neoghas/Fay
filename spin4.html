@@ -1845,50 +1845,77 @@ function disconnectWallet() {
 }
 
 async function spinFromBlockchain() {
-if (!contract) return alert("⚠️ Please Connect Your Wallet First!");
-try {
-btn.disabled = true;
-clickSound.play();
+  // 1. Ganti alert() dengan showStatus()
+  if (!contract) {
+    showStatus("⚠️ Please Connect Your Wallet First!", "error");
+    return; 
+  }
 
-// 🕓 Saat baru klik tombol → tunggu transaksi muncul di MetaMask    
-resultText.textContent = "⏳ Waiting Transaction...";    
+  try {
+    btn.disabled = true;
+    clickSound.play();
 
-// 💰 Kirim transaksi ke kontrak    
-const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });    
+    // 2. Tambahkan toast "Waiting" (tipe 'load')
+    // Kita tetap update resultText sebagai status permanen
+    showStatus("Waiting for transaction in wallet...", "load");
+    resultText.textContent = "⏳ Waiting Transaction...";    
 
-// 🎡 Setelah transaksi dikonfirmasi di blockchain  
-resultText.textContent = "🎡 Spinning...";
-  
-spinSound.currentTime = 0;
-spinSound.play();
+    // 💰 Kirim transaksi ke kontrak    
+    const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });    
 
-// Tunggu konfirmasi blok    
-const receipt = await tx.wait();    
+    // 3. Tambahkan toast "Spinning" (tipe 'load')
+    showStatus("Transaction sent! Spinning...", "load");
+    resultText.textContent = "🎡 Spinning...";
+    
+    spinSound.currentTime = 0;
+    spinSound.play();
 
-// 🔍 Ambil event BetPlaced dari log    
-const event = receipt.logs    
-  .map(log => {    
-    try {    
-      return contract.interface.parseLog(log);    
-    } catch {    
-      return null;    
-    }    
-  })    
-  .filter(e => e && e.name === "BetPlaced")[0];    
+    // Tunggu konfirmasi blok    
+    const receipt = await tx.wait();    
+    
+    // 4. Tambahkan toast "Success" (Opsional, tapi bagus)
+    // Tampil singkat 3 detik
+    showStatus("Spin confirmed on blockchain!", "success", 3000);
 
-if (!event) throw new Error("No BetPlaced event found.");    
+    // 🔍 Ambil event BetPlaced dari log    
+    const event = receipt.logs    
+      .map(log => {    
+        try {    
+          return contract.interface.parseLog(log);    
+        } catch {    
+          return null;    
+        }    
+      })    
+      .filter(e => e && e.name === "BetPlaced")[0];    
 
-const { result } = event.args;    
-console.log("Raw result from contract:", result);    
+    if (!event) throw new Error("No BetPlaced event found.");    
 
-// Jalankan animasi spin berdasarkan hasil kontrak    
-animateSpin(result);
+    const { result } = event.args;    
+    console.log("Raw result from contract:", result);    
 
-} catch (err) {
-console.error(err);
-resultText.textContent = "❌ Transaction failed.";
-resetButton();
-}
+    // Jalankan animasi spin berdasarkan hasil kontrak    
+    animateSpin(result);
+
+  } catch (err) {
+    console.error(err);
+    spinSound.pause(); // Hentikan suara jika error
+
+    // 5. Tambahkan toast "Error"
+    let userMessage = "Transaction failed.";
+    // Coba dapatkan alasan error yang jelas
+    const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    
+    if (reason) {
+        // Potong pesan error yang terlalu panjang
+        userMessage = `Error: ${reason.substring(0, 100)}`; 
+    } else if (err.code === 'ACTION_REJECTED') {
+        userMessage = "Transaction rejected by user.";
+    }
+    
+    showStatus(userMessage, "error"); // Tampilkan toast error
+    resultText.textContent = `❌ ${userMessage}`; // Update resultText juga
+    resetButton();
+  }
 }
 
 function createParticles(popup) {
