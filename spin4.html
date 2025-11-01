@@ -2700,16 +2700,22 @@ async function processReferralRegistration() {
  * Mengirim transaksi generateUID
  */
 async function handleGenerateUID() {
+  // 1. Ganti alert() dengan showStatus()
   if (!contract) {
-    showStatus("Please Connect Your Wallet First!", "warning");
+    showStatus("Please Connect your wallet first!", "warning"); // Anda bisa ganti "warning" ke "error"
     return;
   }
+
   const btn = document.getElementById('generateUIDBtn');
   const status = document.getElementById('referralStatus');
+  if (!btn || !status) return; // Pengecekan elemen
 
   btn.disabled = true;
   btn.textContent = 'Memproses di wallet...';
   status.textContent = 'Menunggu konfirmasi transaksi...';
+
+  // 2. Tambahkan toast 'load'
+  showStatus("Memproses pembuatan UID...", "load");
 
   try {
     const tx = await contract.generateUID();
@@ -2717,16 +2723,38 @@ async function handleGenerateUID() {
     
     await tx.wait();
     
-    alert('UID berhasil dibuat!');
+    // 3. Ganti alert() dengan showStatus() 'success'
+    showStatus('UID berhasil dibuat!', "success");
     status.textContent = 'UID dibuat! Memuat ulang data...';
     await initializeReferralSection(); // Refresh UI untuk menampilkan UID baru
     
   } catch (err) {
     console.error("Gagal generate UID:", err);
-    alert(`Gagal membuat UID: ${err.message}`);
+    
+    // 4. Ganti alert() dengan showStatus() 'error' + parsing error
+    let userMessage = "Gagal membuat UID.";
+    const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    
+    if (reason) {
+        if (reason.includes("UID already generated")) {
+            userMessage = "Anda sudah memiliki UID.";
+            // Jika errornya karena sudah punya, paksa refresh UI
+            await initializeReferralSection(); 
+        } else {
+            userMessage = `Error: ${reason.substring(0, 100)}`;
+        }
+    } else if (err.code === 'ACTION_REJECTED') {
+        userMessage = "Transaksi dibatalkan.";
+    }
+
+    showStatus(userMessage, "error");
     status.textContent = 'Gagal membuat UID.';
-    btn.disabled = false;
-    btn.textContent = 'Buat UID Saya';
+    
+    // Hanya aktifkan tombol jika BUKAN karena "already generated"
+    if (!userMessage.includes("Anda sudah memiliki UID")) {
+        btn.disabled = false;
+        btn.textContent = 'Buat UID Saya';
+    }
   }
 }
 
@@ -3515,56 +3543,42 @@ function toggleEditMode(prefix, globalBetId, index, isEditing) {
 
 
 async function handleSendEdit(prefix, globalBetId, index) {
-  // 1. Ganti alert() dengan showStatus()
+  // 1. Pengecekan (Sudah Benar)
   if (!contract) {
     showStatus("Please Connect Your Wallet First!", "warning");
     return;
   }
-
   const input = document.getElementById(`edit-input-${prefix}-${globalBetId}-${index}`);
   if (!input) return console.error("Elemen input edit tidak ditemukan");
-
   const newText = input.value.trim();
-
-  // 2. Ganti alert() dengan showStatus()
   if (!newText) {
     showStatus("Komentar tidak boleh kosong!", "error");
     return;
   }
-  
-  // 3. Ganti alert() dengan showStatus()
-  // (Pastikan angka ini 5000 jika Anda mengubahnya di kontrak)
-  if (newText.length > 1000) { 
+  if (newText.length > 1000) { // Pastikan ini sesuai dengan kontrak Anda
     showStatus("Komentar terlalu panjang (maks 1000 karakter).", "error");
     return;
   }
 
+  // 2. Persiapan UI (Sudah Benar)
   const saveBtn = input.nextElementSibling;
   const cancelBtn = saveBtn ? saveBtn.nextElementSibling : null;
-  
-  // Disable UI
   if (saveBtn) saveBtn.disabled = true;
   if (cancelBtn) cancelBtn.disabled = true;
   input.disabled = true;
   if (saveBtn) saveBtn.textContent = "Saving...";
-
-  // 4. Tambah toast 'load'
   showStatus("Menyimpan perubahan...", "load");
 
   try {
+    // 3. Transaksi (Sudah Benar)
     const tx = await contract.editComment(globalBetId, index, newText);
     await tx.wait();
 
-    // 5. Ganti alert() dengan showStatus() 'success'
+    // 4. Toast Sukses (Sudah Benar)
     showStatus("Komentar berhasil diperbarui!", "success");
 
-    const viewParagraph = document.querySelector(`#view-mode-${prefix}-${globalBetId}-${index} p`);
-    if (viewParagraph) viewParagraph.textContent = newText; // Tetap update teks mentah
-    
-    // Panggil formatCommentText untuk memperbarui link/mention di tampilan
-    if (viewParagraph) viewParagraph.innerHTML = formatCommentText(newText); 
-    
-    toggleEditMode(prefix, globalBetId, index, false); // Kembali ke mode view
+    await loadComments(prefix, globalBetId); 
+    // --- AKHIR PERBAIKAN ---
 
   } catch (err) {
     console.error("Gagal edit komentar:", err);
@@ -3573,17 +3587,16 @@ async function handleSendEdit(prefix, globalBetId, index) {
     if (reason) userMessage = `Failed: ${reason.substring(0, 100)}`;
     else if (err.code === 'ACTION_REJECTED') userMessage = "Transaksi dibatalkan.";
     
-    // 6. Ganti alert() dengan showStatus() 'error'
     showStatus(userMessage, "error");
 
-  } finally {
-    // Aktifkan kembali UI
     if (saveBtn) saveBtn.disabled = false;
     if (cancelBtn) cancelBtn.disabled = false;
     input.disabled = false;
     if (saveBtn) saveBtn.textContent = "Save";
-  }
-      }
+    // -------------------------
+
+  } 
+}
 
 
 // --- FUNGSI LIKE & RATING (DENGAN PREFIX) ---
