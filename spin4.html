@@ -1447,6 +1447,57 @@ svg g {
   font-size: 16px;
   padding: 12px;
 }
+
+  /* === PERBAIKAN: Ubah Modal Konfirmasi Referral Menjadi Seperti Toast === */
+
+/* 1. Target backdrop modal referral SECARA SPESIFIK */
+#referralConfirmModal.profile-modal-backdrop {
+  /* Hapus latar belakang gelap & blur */
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  
+  /* Pindahkan dari tengah ke kanan atas */
+  align-items: flex-start;     /* Jangan pusatkan vertikal */
+  justify-content: flex-end;   /* Dorong ke kanan */
+  padding-top: 90px; /* Jarak dari atas (di bawah navbar) */
+  padding-right: 20px; /* Jarak dari kanan (seperti toast) */
+  
+  /* Penting: Biarkan klik menembus backdrop */
+  pointer-events: none;
+}
+
+/* 2. Target konten modalnya */
+#referralConfirmModal .profile-modal-content {
+  /* Kembalikan klik HANYA untuk modalnya */
+  pointer-events: auto;
+  
+  /* Atur lebar agar pas seperti toast */
+  width: 300px;
+  max-width: 90%;
+  
+  /* Ganti animasi (slide dari kanan, bukan zoom) */
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all 0.5s ease-in-out;
+}
+
+/* 3. Animasi 'show' yang baru */
+#referralConfirmModal.profile-modal-backdrop.show .profile-modal-content {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* 4. Animasi 'hide' (saat ditutup) */
+#referralConfirmModal.profile-modal-backdrop.show {
+  /* Pastikan transisi opacity tetap ada saat menutup */
+  transition: opacity 0.5s ease;
+}
+#referralConfirmModal.profile-modal-backdrop .profile-modal-content {
+   /* Saat 'show' dihapus, modal akan kembali ke state ini */
+   opacity: 0;
+   transform: translateX(100%);
+}
 </style>
 </head>
 
