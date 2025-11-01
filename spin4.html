@@ -1650,6 +1650,23 @@ svg g {
         </div>
     </div>
     </div>
+
+    <div id="freeSpinConfirmModal" class="profile-modal-backdrop" style="display:none;">
+    <div class="profile-modal-content" onclick="event.stopPropagation()">
+        
+        <img src="info-icon.png" alt="Info" style="width: 50px; height: 50px; display: block; margin: 0 auto 10px auto;">
+        
+        <h3 style="margin-top:0;">Pendaftaran Free Spin</h3>
+        
+        <p id="free-spin-modal-text" style="text-align: center; font-size: 16px; line-height: 1.5;">
+            Anda sepertinya belum terdaftar untuk free spin. Lakukan pendaftaran sekarang? (Tidak ada biaya gas)
+        </p>
+
+        <div class="referral-modal-buttons"> <button id="free-spin-btn-cancel" class="load-btn" style="background: #777;">Batal</button>
+            <button id="free-spin-btn-ok" class="load-btn" style="background: #28a745;">Oke</button>
+        </div>
+    </div>
+    </div>
     
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
@@ -3049,57 +3066,137 @@ function mapRewardToResultString(rewardAmount) {
 async function handleSpinClick() {
   const btn = document.getElementById("centerBtn");
   
-  // 1. Ganti alert() dengan showStatus()
   if (!contract || !userAddress) {
-    showStatus("Connect your wallet first!", "warning");
+    showStatus(" Please Connect your wallet first!", "warning");
     return;
   }
-  if (btn.disabled) return; // Jangan lakukan apa-apa jika tombol disabled
+  if (btn.disabled) return; 
 
   console.log("Tombol SPIN diklik. Mengecek kelayakan...");
-  btn.disabled = true; // Disable tombol sementara cek
+  btn.disabled = true; 
   
-  // 2. Tambahkan toast 'load'
   showStatus("Mengecek status free spin...", "load");
   resultText.textContent = "⏳ Mengecek status...";
 
   try {
-    // Panggil checkFreeSpinEligibility dan tunggu hasilnya (true/false)
     const isEligibleNow = await checkFreeSpinEligibility();
 
-    // Berdasarkan hasil cek TERBARU:
     if (isEligibleNow) {
       console.log("Kelayakan dikonfirmasi. Memanggil spinFreeFromBlockchain...");
-      // Tidak perlu toast di sini, spinFreeFromBlockchain sudah punya toast sendiri
-      await spinFreeFromBlockchain(); // Tunggu spin gratis selesai
+      await spinFreeFromBlockchain(); 
     } else {
       // Cek apakah walletCreated masih 0 (perlu registrasi)
-      const userData = await contract.freeSpinData(userAddress); // Baca lagi
+      const userData = await contract.freeSpinData(userAddress); 
       if (Number(userData.walletCreated) === 0 && Number(userData.freeSpinsUsed) < Number(await contract.freeSpinQuota())) {
         
-        // 3. Tetap gunakan confirm() untuk pertanyaan YA/TIDAK
-        if(confirm("Anda sepertinya belum terdaftar untuk free spin. Lakukan pendaftaran sekarang? (Tidak ada biaya gas)")){
-             // Panggil fungsi spin free untuk registrasi
-             await spinFreeFromBlockchain(); 
-        } else {
-             // 4. Tambahkan toast 'info' jika user batal
-             showStatus("Pendaftaran free spin dibatalkan.", "info");
-             resultText.textContent = "Pendaftaran dibatalkan.";
-             resetButton(); // Aktifkan tombol lagi
-        }
+        // --- PERBAIKAN DI SINI ---
+        // Panggil modal kustom, alih-alih confirm()
+        console.log("User belum registrasi & kuota ada. Menampilkan modal konfirmasi...");
+        showFreeSpinConfirm(); 
+        
       } else {
         // Jika tidak eligible karena alasan lain -> Lakukan spin berbayar
         console.log("Tidak eligible untuk free spin ATAU sudah registrasi. Memanggil spinFromBlockchain...");
-        await spinFromBlockchain(); // Tunggu spin berbayar selesai
+        await spinFromBlockchain(); 
       }
     }
   } catch (err) {
-    // 5. Tambahkan toast 'error' di blok catch
     console.error("Error pada handleSpinClick:", err);
-    const userMessage = `Failed: ${err.message.substring(0,100)}`;
+    const userMessage = `❌ Error: ${err.message.substring(0,100)}`;
     showStatus(userMessage, "error");
     resultText.textContent = userMessage;
-    resetButton(); // Pastikan tombol aktif lagi jika ada error
+    resetButton(); 
+  }
+  // 'finally' block tidak diperlukan lagi karena spinFree/spinFromBlockchain punya resetButton() sendiri
+}
+
+  /**
+ * FUNGSI BARU 1: Menampilkan modal konfirmasi free spin (dengan timeout).
+ */
+function showFreeSpinConfirm() {
+  const modal = document.getElementById('freeSpinConfirmModal');
+  const okBtn = document.getElementById('free-spin-btn-ok');
+  const cancelBtn = document.getElementById('free-spin-btn-cancel');
+
+  if (!modal || !okBtn || !cancelBtn) {
+    console.error("Elemen modal free spin tidak ditemukan!");
+    return;
+  }
+  
+  // Tampilkan modal (di posisi atas tengah)
+  modal.style.display = "flex";
+  setTimeout(() => modal.classList.add('show'), 10);
+  
+  // Atur tombol
+  cancelBtn.onclick = () => {
+    clearTimeout(referralModalTimeout); // Hapus timer (kita pakai ulang variabel timer)
+    referralModalTimeout = null;
+    showStatus("Pendaftaran dibatalkan.", "info");
+    resultText.textContent = "Pendaftaran dibatalkan.";
+    resetButton(); // Aktifkan tombol spin utama
+    closeFreeSpinConfirm(); 
+  };
+  
+  okBtn.onclick = () => {
+    clearTimeout(referralModalTimeout); 
+    referralModalTimeout = null;
+    processFreeSpinRegistration(); // Lanjutkan ke proses
+  };
+
+  // --- TIMER OTOMATIS 20 DETIK ---
+  if (referralModalTimeout) clearTimeout(referralModalTimeout);
+  
+  referralModalTimeout = setTimeout(() => {
+      console.log("Modal free spin ditutup otomatis (timeout 20 detik).");
+      showStatus("Pendaftaran dibatalkan (waktu habis).", "info");
+      resetButton(); // Aktifkan tombol spin utama
+      closeFreeSpinConfirm(); 
+  }, 20000); // 20 detik
+}
+
+/**
+ * FUNGSI BARU 2: Menutup modal konfirmasi free spin.
+ */
+function closeFreeSpinConfirm() {
+  const modal = document.getElementById('freeSpinConfirmModal');
+  if (!modal) return;
+  
+  if (referralModalTimeout) {
+      clearTimeout(referralModalTimeout);
+      referralModalTimeout = null;
+  }
+  
+  modal.classList.remove('show');
+  setTimeout(() => modal.style.display = "none", 300); // Tunggu animasi
+}
+
+/**
+ * FUNGSI BARU 3: Ini adalah logika yang dipanggil saat user klik "Oke".
+ * Isinya hanyalah memanggil spinFreeFromBlockchain.
+ */
+async function processFreeSpinRegistration() {
+  const okBtn = document.getElementById('free-spin-btn-ok');
+  const cancelBtn = document.getElementById('free-spin-btn-cancel');
+
+  // Disable tombol modal
+  okBtn.disabled = true;
+  cancelBtn.disabled = true;
+  
+  try {
+    // Panggil fungsi spin free untuk registrasi
+    // Fungsi spinFreeFromBlockchain sudah punya toast 'load' dan 'success'-nya sendiri
+    await spinFreeFromBlockchain();
+  } catch (err) {
+    // Error ini seharusnya sudah ditangani di dalam spinFreeFromBlockchain
+    // Tapi kita tangkap lagi di sini untuk jaga-jaga
+    console.error("Error saat processFreeSpinRegistration:", err);
+    showStatus("Gagal memproses pendaftaran.", "error");
+    resetButton(); // Pastikan tombol utama aktif
+  } finally {
+    // Apapun hasilnya, tutup modal dan aktifkan tombol modal lagi
+    closeFreeSpinConfirm();
+    okBtn.disabled = false;
+    cancelBtn.disabled = false;
   }
 }
 
