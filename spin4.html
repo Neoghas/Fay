@@ -4266,17 +4266,15 @@ function showStatus(message, type = 'info', duration = 10000) { // <-- 1. Durasi
 }
 
 /**
- * FUNGSI (MODIFIKASI): Membuat QR Code "Canggih"
+ * FUNGSI (TES SEDERHANA): Membuat QR Code "Polos"
+ * (Gunakan ini sementara untuk debugging)
  */
 function generateReferralQRCode() {
   const qrContainer = document.getElementById('qrcode-container');
   const qrDiv = document.getElementById('qrcode');
   const linkInput = document.getElementById('referralLink');
 
-  if (!qrContainer || !qrDiv || !linkInput) {
-    console.error("Elemen QR Code atau Link tidak ditemukan!");
-    return;
-  }
+  if (!qrContainer || !qrDiv || !linkInput) return;
   
   if (qrContainer.style.display === 'flex') {
       qrContainer.style.display = 'none';
@@ -4285,62 +4283,30 @@ function generateReferralQRCode() {
       return;
   }
 
-  // 1. Ambil data
   const referralLink = linkInput.value;
-  const logoUrl = 'logo.svg'; // Path logo Anda
-  const titleText = 'Scan untuk Bergabung!';
-  
-  // --- TAMBAHAN BARU ---
-  // Ganti 'qr-background.png' dengan nama file background Anda
-  const backgroundImageUrl = 'qr-background.png'; 
-  // Ambil 30 karakter pertama dari link untuk subtitle
-  const subTitleText = referralLink.length > 30 ? referralLink.substring(0, 30) + "..." : referralLink;
-  // --- AKHIR TAMBAHAN ---
-
   qrDiv.innerHTML = "";
   qrContainer.style.display = 'flex';
 
-  // 4. Buat Opsi untuk EasyQRCodeJS
+  // --- OPSI YANG SANGAT DISEDERHANAKAN (TANPA GAMBAR) ---
   const options = {
     text: referralLink,
     width: 240,
     height: 240,
     colorDark: "#000000",
     colorLight: "#ffffff",
-    correctLevel: EasyQRCodeJS.CorrectLevel.H, 
-
-    // --- Pengaturan Teks (Ajakan) ---
-    title: titleText, 
-    titleColor: "#000000",
-    titleFont: "bold 16px Ubuntu",
-    titleTop: 25, 
-
-    // --- TAMBAHAN: Subtitle (Link) ---
-    subTitle: subTitleText, // Menampilkan link di bawah
-    subTitleFont: "normal 10px Arial",
-    subTitleColor: "#555",
-    subTitleTop: 220, // Posisi di dekat bawah
-
-    // --- Pengaturan Logo (Canggih) ---
-    logo: logoUrl,
-    logoWidth: 70, 
-    logoHeight: 70,
-    logoBackgroundColor: '#ffffff',
-    logoBackgroundTransparent: false,
-
-    // --- TAMBAHAN: Latar Belakang (Watermark) ---
-    backgroundImage: backgroundImageUrl, // Gambar background Anda
-    backgroundImageAlpha: 0.15, // Kunci: Buat sangat transparan (0.15 = 15%)
-    
+    correctLevel: EasyQRCodeJS.CorrectLevel.H
   };
+  // --- AKHIR OPSI SEDERHANA ---
 
-  // 5. Buat QR Code DAN SIMPAN OBJEKNYA
   try {
+    // Buat QR Code dan simpan
     qrCodeObject = new EasyQRCodeJS(qrDiv, options); 
+    console.log("QR Code polos berhasil dibuat.");
   } catch(err) {
-     console.error("Gagal membuat QR Code:", err);
+     // Jika ini masih gagal, berarti library-nya sendiri yang bermasalah
+     console.error("Gagal membuat QR Code polos:", err);
      qrContainer.style.display = 'none'; 
-     showStatus("Gagal membuat QR Code.", "error");
+     showStatus("Gagal total membuat QR Code.", "error");
      qrCodeObject = null; 
   }
 }
