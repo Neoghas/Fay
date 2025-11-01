@@ -1987,7 +1987,7 @@ function animateSpin(resultName) {
 
   if (index === -1) {
     console.error(`Hadiah tidak ditemukan: ${displayName}`);
-    resultText.textContent = "Error: Hadiah tidak valid";
+    resultText.textContent = "Failed: Hadiah tidak valid";
     resetButton();
     return;
   }
@@ -2532,7 +2532,7 @@ async function handleClaimReward() {
         if (reason.includes("No reward to claim")) {
             userMessage = "Tidak ada reward yang bisa diklaim.";
         } else {
-            userMessage = `Error: ${reason.substring(0, 100)}`;
+            userMessage = `Failed: ${reason.substring(0, 100)}`;
         }
     } else if (err.code === 'ACTION_REJECTED') {
         userMessage = "Transaksi dibatalkan.";
@@ -2808,25 +2808,25 @@ async function spinFreeFromBlockchain() {
     spinSound.pause(); // Hentikan suara spin jika error
 
     // --- PENANGANAN ERROR YANG LEBIH BAIK ---
-    let userMessage = "❌ Free spin failed.";
+    let userMessage = "Free spin failed.";
     
     // Periksa pesan error dari kontrak (jika ada)
     const reason = err.reason || (err.data ? contract.interface.parseError(err.data)?.args[0] : null) || err.message;
 
     if (reason) {
         if (reason.includes("Wallet too new for free spin")) {
-            userMessage = "⏳ Akun terdaftar! Harap tunggu 1 menit lagi.";
+            userMessage = "Akun terdaftar! Harap tunggu 1 menit lagi.";
         } else if (reason.includes("Last active too recent")) {
-            userMessage = "⏳ Anda baru saja spin. Harap tunggu 1 menit lagi.";
+            userMessage = "Anda baru saja spin. Harap tunggu 1 menit lagi.";
         } else if (reason.includes("No free spins left")) {
-            userMessage = "❌ Kuota free spin Anda sudah habis.";
+            userMessage = "Kuota free spin Anda sudah habis.";
             // Jika habis, paksa update state & UI
             userFreeSpinState.eligible = false;
             userFreeSpinState.remaining = 0;
             updateSpinButtonUI(); 
         } else {
              // Error umum lainnya
-             userMessage = `❌ Error: ${reason.substring(0, 100)}`; // Potong pesan error panjang
+             userMessage = `Failed: ${reason.substring(0, 100)}`; // Potong pesan error panjang
         }
     } else if (err.code === 'ACTION_REJECTED') {
          userMessage = "Transaksi dibatalkan.";
@@ -2924,7 +2924,7 @@ async function handleSpinClick() {
   } catch (err) {
     // 5. Tambahkan toast 'error' di blok catch
     console.error("Error pada handleSpinClick:", err);
-    const userMessage = `❌ Error: ${err.message.substring(0,100)}`;
+    const userMessage = `Failed: ${err.message.substring(0,100)}`;
     showStatus(userMessage, "error");
     resultText.textContent = userMessage;
     resetButton(); // Pastikan tombol aktif lagi jika ada error
@@ -3144,7 +3144,7 @@ async function handleSendComment(prefix, globalBetId) {
     console.error("Gagal mengirim komentar:", err);
     let userMessage = "Transaksi komentar gagal.";
     const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
-    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    if (reason) userMessage = `Failed: ${reason.substring(0, 100)}`;
     else if (err.code === 'ACTION_REJECTED') userMessage = "Transaksi dibatalkan.";
     
     // 6. Ganti alert() dengan showStatus() 'error'
@@ -3251,7 +3251,7 @@ async function handleSendEdit(prefix, globalBetId, index) {
     console.error("Gagal edit komentar:", err);
     let userMessage = "Gagal mengedit komentar.";
     const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
-    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    if (reason) userMessage = `Failed: ${reason.substring(0, 100)}`;
     else if (err.code === 'ACTION_REJECTED') userMessage = "Transaksi dibatalkan.";
     
     // 6. Ganti alert() dengan showStatus() 'error'
@@ -3466,7 +3466,7 @@ function handleReply(prefix, globalBetId, addressToReply) {
 async function handleLikeToggle(prefix, globalBetId) {
   // 1. Ganti alert() dengan showStatus()
   if (!contract || !userAddress) {
-    showStatus("⚠️ Connect your wallet first!", "error");
+    showStatus("⚠️ Connect your wallet first!", "warning");
     return;
   }
   
@@ -3475,7 +3475,7 @@ async function handleLikeToggle(prefix, globalBetId) {
 
   const originalHTML = likeBtn.innerHTML; 
   likeBtn.disabled = true;
-  likeBtn.innerHTML = `<img src="loading.gif" alt="..." style="width: 16px; height: 16px;"> Processing...`; 
+  likeBtn.innerHTML = `<img src="load.svg" alt="..." style="width: 16px; height: 16px;"> Processing...`; 
   
   // 2. Tambahkan toast 'load'
   showStatus("Processing Like/Unlike...", "load");
@@ -3498,7 +3498,7 @@ async function handleLikeToggle(prefix, globalBetId) {
     const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
     
     if (reason) {
-        userMessage = `Error: ${reason.substring(0, 100)}`;
+        userMessage = `Failed: ${reason.substring(0, 100)}`;
     } else if (err.code === 'ACTION_REJECTED') {
         userMessage = "Transaksi dibatalkan.";
     }
