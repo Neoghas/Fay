@@ -1857,15 +1857,13 @@ async function spinFromBlockchain() {
 
     // 2. Tambahkan toast "Waiting" (tipe 'load')
     // Kita tetap update resultText sebagai status permanen
-    showStatus("Waiting for transaction in wallet...", "load");
-    resultText.textContent = "⏳ Waiting Transaction...";    
-
+    showStatus("Waiting transaction...", "load");
+    
     // 💰 Kirim transaksi ke kontrak    
     const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });    
 
     // 3. Tambahkan toast "Spinning" (tipe 'load')
-    showStatus("Transaction sent! Spinning...", "load");
-    resultText.textContent = "🎡 Spinning...";
+    showStatus("Spinning...", "spin");
     
     spinSound.currentTime = 0;
     spinSound.play();
@@ -1901,19 +1899,19 @@ async function spinFromBlockchain() {
     spinSound.pause(); // Hentikan suara jika error
 
     // 5. Tambahkan toast "Error"
-    let userMessage = "Transaction ailed. Insufficient Balance, or RPC problem.";
+    let userMessage = "Transaction failed. Insufficient Balance, or RPC problem.";
     // Coba dapatkan alasan error yang jelas
     const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
     
     if (reason) {
         // Potong pesan error yang terlalu panjang
-        userMessage = `Error: ${reason.substring(0, 100)}`; 
+        userMessage = `Failed: ${reason.substring(0, 100)}`; 
     } else if (err.code === 'ACTION_REJECTED') {
         userMessage = "Transaction rejected by user.";
     }
     
     showStatus(userMessage, "error"); // Tampilkan toast error
-    resultText.textContent = `❌ ${userMessage}`; // Update resultText juga
+    resultText.textContent = `${userMessage}`; // Update resultText juga
     resetButton();
   }
 }
