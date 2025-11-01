@@ -11,7 +11,6 @@
 />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/easy-qrcodejs/4.4.13/easy.qrcode.min.js"></script>
 <style>
   html, body {
   margin: 0;
@@ -1550,83 +1549,6 @@ svg g {
    transform: translateY(-100%);
 }
 
-  /* Container (latar belakang putih penting agar QR terbaca) */
-
-#qrcode-container {
-
-  display: none; /* Sembunyi awalnya */
-
-  padding: 20px;
-
-  background: #ffffff; /* Latar belakang WAJIB putih */
-
-  border-radius: 10px;
-
-  margin-top: 20px;
-
-  
-
-  display: flex;
-
-  flex-direction: column;
-
-  align-items: center;
-
-  gap: 10px;
-
-  
-
-  /* Beri bayangan agar menonjol */
-
-  box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-
-}
-
-
-
-/* Div tempat QR Code akan digambar */
-
-#qrcode {
-
-  /* Ukuran akan diatur oleh JavaScript, 
-
-     tapi kita bisa beri padding jika perlu */
-
-  padding: 10px;
-
-  box-sizing: border-box;
-
-}
-
-/* Teks ajakan di bawah QR */
-
-#qrcode-container p {
-
-  font-size: 14px;
-
-  color: #333; /* Warna gelap agar terbaca di L-B putih */
-
-  margin: 0;
-
-  font-weight: bold;
-
-}
-
-  .qrcode-footer {
-  display: flex;
-  flex-direction: column; /* Tumpuk teks dan tombol */
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
-.qrcode-footer p {
-  margin: 0;
-}
-.qrcode-footer .small-btn {
-  width: auto; /* Tombol tidak perlu 100% */
-  padding: 8px 15px;
-  background-color: #28a745; /* Warna hijau */
-}
 </style>
 </head>
 
@@ -1710,18 +1632,6 @@ svg g {
       </div>
     </div>
     
-    <button id="showQRBtn" class="ref-btn" style="margin-top:10px; background-color: #1e90ff;">
-      Tampilkan Kode QR Undangan
-    </button>
-    
-    <div id="qrcode-container" style="display:none;">
-        <div id="qrcode"></div> <div class="qrcode-footer">
-            <p>Arahkan kamera untuk bergabung!</p>
-            <button id="downloadQRBtn" class="ref-btn small-btn" onclick="downloadQRCode()">
-              Download (HD)
-            </button>
-        </div>
-    </div>
     <h3>Statistik Anda</h3>
     <div class="stats-grid">
       <div class="stat-item">
@@ -1851,7 +1761,6 @@ const TOTAL_PFP_IMAGES = 10; // Harus sama dengan jumlah gambar Anda (0-9)
 
 let referralModalTimeout = null;
 let refCodeFromURL = null;
-let qrCodeObject = null;
 let provider, signer, contract, userAddress;
 const btn = document.getElementById("centerBtn");
 const connectBtn = document.getElementById("connectBtn");
@@ -4263,109 +4172,6 @@ function showStatus(message, type = 'info', duration = 10000) { // <-- 1. Durasi
   setTimeout(() => {
     toast.classList.add('show');
   }, 10); 
-}
-
-function preloadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous'; // coba jika sumber gambar di domain lain
-    img.onload = () => resolve(img);
-    img.onerror = (e) => reject(e);
-    img.src = src;
-  });
-}
-
-async function generateReferralQRCode() {
-  const qrContainer = document.getElementById('qrcode-container');
-  const qrDiv = document.getElementById('qrcode');
-  const linkInput = document.getElementById('referralLink');
-
-  if (!qrContainer || !qrDiv || !linkInput) {
-    console.error("Elemen QR Code atau Link tidak ditemukan!");
-    return;
-  }
-
-  if (qrContainer.style.display === 'flex') {
-    qrContainer.style.display = 'none';
-    qrDiv.innerHTML = "";
-    qrCodeObject = null;
-    return;
-  }
-
-  const referralLink = linkInput.value || '';
-  const logoUrl = 'logo.svg';
-  const backgroundImageUrl = 'qr-background.png';
-  const titleText = 'Scan untuk Bergabung!';
-  const subTitleText = referralLink.length > 30 ? referralLink.substring(0, 30) + "..." : referralLink;
-
-  qrDiv.innerHTML = "";
-  qrContainer.style.display = 'flex';
-
-  try {
-    // preload images (jika gagal, tetap lanjut tanpa image)
-    let logoImg = null;
-    let bgImg = null;
-    try { logoImg = await preloadImage(logoUrl); } catch(e) { console.warn('Logo gagal dimuat:', e); }
-    try { bgImg = await preloadImage(backgroundImageUrl); } catch(e) { console.warn('Background gagal dimuat:', e); }
-
-    const options = {
-      text: referralLink,
-      width: 240,
-      height: 240,
-      colorDark: "#000000",
-      colorLight: "#ffffff",
-      correctLevel: EasyQRCodeJS.CorrectLevel.H,
-      title: titleText,
-      titleColor: "#000000",
-      titleFont: "bold 16px Ubuntu",
-      titleTop: 25,
-      subTitle: subTitleText,
-      subTitleFont: "normal 10px Arial",
-      subTitleColor: "#555",
-      subTitleTop: 220,
-      // jika logoImg ada, pasang sebagai Image object, kalau tidak gunakan URL string
-      logo: logoImg || logoUrl,
-      logoWidth: 70,
-      logoHeight: 70,
-      logoBackgroundColor: '#ffffff',
-      logoBackgroundTransparent: false,
-      // jika bgImg ada, pasang bgImg; beberapa versi library menerima URL string juga
-      backgroundImage: bgImg || backgroundImageUrl,
-      backgroundImageAlpha: 0.15,
-    };
-
-    qrCodeObject = new EasyQRCodeJS(qrDiv, options);
-  } catch(err) {
-    console.error("Gagal membuat QR Code:", err);
-    qrContainer.style.display = 'none';
-    qrDiv.innerHTML = "";
-    qrCodeObject = null;
-  }
-}
-  
-/**
- * FUNGSI BARU: Mengunduh QR Code yang sudah dibuat
- */
-function downloadQRCode() {
-  if (qrCodeObject) {
-    // Jika objeknya ada
-    try {
-      // Panggil fungsi download bawaan library
-      qrCodeObject.download({
-          title: "Faylotto_Referral_QR", // Nama file
-          type: "PNG",                  // Tipe file
-          size: 1024                   // Ukuran HD (1024x1024 px)
-      });
-      showStatus("Downloading QR Code (HD)...", "success");
-    } catch (err) {
-      console.error("Gagal download QR Code:", err);
-      showStatus("Gagal download QR Code.", "error");
-    }
-  } else {
-    // Jika objeknya tidak ada (seharusnya tidak terjadi jika tombol terlihat)
-    console.error("Objek QR Code belum dibuat.");
-    showStatus("Error: Buat QR code terlebih dahulu.", "error");
-  }
 }
   
 // tambahkan efek futuristik glow 5 detik
