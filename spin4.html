@@ -1434,6 +1434,19 @@ svg g {
   flex-grow: 1; /* Biarkan teks mengambil sisa ruang */
   word-wrap: break-word;
 }
+
+  .referral-modal-buttons {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  margin-top: 25px;
+}
+.referral-modal-buttons .load-btn {
+  width: 48%;
+  margin: 0;
+  font-size: 16px;
+  padding: 12px;
+}
 </style>
 </head>
 
@@ -1573,6 +1586,18 @@ svg g {
         </div>
     </div>
     </div>
+
+    <div id="referralConfirmModal" class="profile-modal-backdrop" style="display:none;">
+    <div class="profile-modal-content" onclick="event.stopPropagation()">
+        <img src="info-icon.png" alt="Info" style="width: 50px; height: 50px; display: block; margin: 0 auto 10px auto;">
+        <h3 style="margin-top:0;">Konfirmasi Referral</h3>
+        <p id="referral-modal-text" style="text-align: center; font-size: 16px; line-height: 1.5;">...</p>
+        <div class="referral-modal-buttons">
+            <button id="referral-btn-cancel" class="load-btn" style="background: #777;">Batal</button>
+            <button id="referral-btn-ok" class="load-btn" style="background: #28a745;">OK, Daftarkan</button>
+        </div>
+    </div>
+    </div>
     
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
@@ -1614,6 +1639,7 @@ const ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{
 const PFP_IMAGE_PATH = ''; 
 const TOTAL_PFP_IMAGES = 10; // Harus sama dengan jumlah gambar Anda (0-9)
 
+let referralModalTimeout = null;
 let refCodeFromURL = null;
 let provider, signer, contract, userAddress;
 const btn = document.getElementById("centerBtn");
@@ -2387,12 +2413,12 @@ async function initializeReferralSection() {
 }
 
 /**
- * Menangani pendaftaran kode (untuk si undangan/referee)
+ * FUNGSI (MODIFIKASI): Hanya mengecek dan MEMANGGIL MODAL KONFIRMASI.
  */
 async function handlePendingReferral() {
   const refCode = localStorage.getItem('pendingRefCode');
-  if (!refCode || !contract) {
-    return; // Tidak ada kode referral yang tertunda
+  if (!refCode || !contract || !userAddress) {
+    return; // Tidak ada kode, kontrak, atau userAddress
   }
 
   console.log(`Memproses kode referral tertunda: ${refCode}`);
@@ -2407,36 +2433,124 @@ async function handlePendingReferral() {
       return;
     }
     
-    // --- PERBAIKAN 1: Ganti alert() konfirmasi dengan confirm() ---
-    if (!confirm(`Kami mendeteksi Anda diundang oleh ${refCode}. Harap konfirmasi transaksi untuk mendaftarkan referral Anda.`)) {
-        // Jika user menekan "Cancel"
-        showStatus("Pendaftaran referral dibatalkan.", "info");
-        resultText.textContent = "Pendaftaran referral dibatalkan.";
-        return; // Hentikan fungsi
-    }
+    // --- INI PERUBAHAN UTAMA ---
+    // Panggil modal kustom, alih-alih confirm()
+    showReferralConfirm(refCode);
     
-    // Jika user menekan "OK":
-    showStatus("Memproses pendaftaran referral...", "load"); // Toast 'load'
-    resultText.textContent = "⏳ Memproses pendaftaran referral..."; 
-    
+  } catch (err) {
+    console.error("Gagal mengecek info referral:", err);
+    // Tampilkan error jika pengecekan awal gagal
+    showStatus(`Gagal mengecek referral: ${err.message}`, "error");
+  }
+}
+
+  /**
+ * FUNGSI (MODIFIKASI): Menampilkan modal konfirmasi DENGAN TIMEOUT 20 DETIK.
+ */
+function showReferralConfirm(refCode) {
+  const modal = document.getElementById('referralConfirmModal');
+  const messageEl = document.getElementById('referral-modal-text');
+  const okBtn = document.getElementById('referral-btn-ok');
+  const cancelBtn = document.getElementById('referral-btn-cancel');
+
+  if (!modal || !messageEl || !okBtn || !cancelBtn) {
+    console.error("Elemen modal referral tidak ditemukan!");
+    return;
+  }
+  
+  // Set pesan
+  messageEl.textContent = `Kami mendeteksi Anda diundang oleh ${refCode}. Apakah Anda ingin mendaftarkan kode ini?`;
+  
+  // Tampilkan modal
+  modal.style.display = "flex";
+  setTimeout(() => modal.classList.add('show'), 10);
+  
+  // --- Atur Tombol (DENGAN PEMBERSIH TIMER) ---
+  
+  // Tombol Batal
+  cancelBtn.onclick = () => {
+    clearTimeout(referralModalTimeout); // Hentikan timer otomatis
+    referralModalTimeout = null;
+    showStatus("Pendaftaran referral dibatalkan.", "info");
+    closeReferralConfirm(); 
+  };
+  
+  // Tombol OK
+  okBtn.dataset.refCode = refCode; 
+  okBtn.onclick = () => {
+    clearTimeout(referralModalTimeout); // Hentikan timer otomatis
+    referralModalTimeout = null;
+    processReferralRegistration(); // Lanjutkan ke proses
+  };
+
+  // --- TIMER OTOMATIS 20 DETIK (BARU) ---
+  // Hapus timer lama jika (karena alasan aneh) masih ada
+  if (referralModalTimeout) {
+      clearTimeout(referralModalTimeout);
+  }
+  
+  // Mulai timer baru
+  referralModalTimeout = setTimeout(() => {
+      console.log("Modal referral ditutup otomatis (timeout 20 detik).");
+      showStatus("Pendaftaran referral dibatalkan (waktu habis).", "info");
+      closeReferralConfirm(); // Tutup modal secara otomatis
+  }, 20000); // 20000 ms = 20 detik
+}
+
+/**
+ * FUNGSI (MODIFIKASI): Menutup modal konfirmasi DAN membersihkan timer.
+ */
+function closeReferralConfirm() {
+  const modal = document.getElementById('referralConfirmModal');
+  if (!modal) return;
+  
+  // Hapus timer saat modal ditutup (untuk jaga-jaga)
+  if (referralModalTimeout) {
+      clearTimeout(referralModalTimeout);
+      referralModalTimeout = null;
+  }
+  
+  modal.classList.remove('show');
+  setTimeout(() => modal.style.display = "none", 300); // Tunggu animasi
+}
+
+/**
+ * FUNGSI BARU 3: Ini adalah logika yang SEBELUMNYA ada di 'handlePendingReferral'.
+ * Dipanggil HANYA saat user mengklik "OK" di modal.
+ */
+async function processReferralRegistration() {
+  const okBtn = document.getElementById('referral-btn-ok');
+  const refCode = okBtn.dataset.refCode; // Ambil refCode dari tombol
+  
+  if (!refCode) {
+    showStatus("Error: Kode referral tidak ditemukan.", "error");
+    return;
+  }
+  
+  // Disable tombol modal
+  okBtn.disabled = true;
+  document.getElementById('referral-btn-cancel').disabled = true;
+  okBtn.textContent = "Memproses...";
+
+  showStatus("Memproses pendaftaran referral...", "load");
+  resultText.textContent = "⏳ Memproses pendaftaran referral...";
+  
+  try {
     const tx = await contract.addReferralByUID(refCode);
     await tx.wait();
     
-    // --- PERBAIKAN 2: Ganti alert() sukses dengan showStatus() ---
     showStatus('Sukses! Anda berhasil terdaftar sebagai referral.', "success");
-    resultText.textContent = "Pendaftaran referral sukses!"; 
-    localStorage.removeItem('pendingRefCode'); // Bersihkan setelah sukses
+    resultText.textContent = "Pendaftaran referral sukses!";
+    localStorage.removeItem('pendingRefCode');
     
   } catch (err) {
     console.error("Gagal mendaftar referral:", err);
     
-    // --- PERBAIKAN 3: Ganti alert() error dengan showStatus() ---
     let userMessage = "Gagal mendaftar referral.";
     const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
 
-    // Parsing error yang lebih baik
     if (reason) {
-        if (reason.includes("Already has an inviter")) { // Cek pesan error dari kontrak
+        if (reason.includes("Already has an inviter")) {
             userMessage = "Anda sudah memiliki inviter.";
             localStorage.removeItem('pendingRefCode');
         } else if (reason.includes("Invalid UID")) {
@@ -2446,7 +2560,7 @@ async function handlePendingReferral() {
              userMessage = "Anda tidak bisa menggunakan kode referral Anda sendiri.";
              localStorage.removeItem('pendingRefCode');
         } else {
-            userMessage = `Error: ${reason.substring(0, 100)}`;
+            userMessage = `Failed: ${reason.substring(0, 100)}`;
         }
     } else if (err.code === 'ACTION_REJECTED') {
         userMessage = "Transaksi dibatalkan.";
@@ -2454,6 +2568,12 @@ async function handlePendingReferral() {
 
     showStatus(userMessage, "error");
     resultText.textContent = `${userMessage}`;
+  } finally {
+    // Apapun hasilnya, tutup modal dan aktifkan tombol lagi
+    closeReferralConfirm();
+    okBtn.disabled = false;
+    document.getElementById('referral-btn-cancel').disabled = false;
+    okBtn.textContent = "OK, Daftarkan";
   }
 }
 
