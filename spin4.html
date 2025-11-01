@@ -1499,6 +1499,55 @@ svg g {
    opacity: 0;
    transform: translateY(-100%);
 }
+
+  #freeSpinConfirmModal.profile-modal-backdrop {
+  /* Hapus latar belakang gelap & blur */
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  
+  /* --- PERUBAHAN DI SINI --- */
+  /* Pindahkan ke T-engah Atas */
+  align-items: flex-start;     /* Tetap 'flex-start' (untuk menempel di atas) */
+  justify-content: center;   /* Ganti 'flex-end' menjadi 'center' (untuk rata tengah) */
+  padding-top: 90px;         /* Jarak dari atas (di bawah navbar) */
+  /* padding-right: 20px; */ /* HAPUS padding-right */
+  /* --- AKHIR PERUBAHAN --- */
+  
+  /* Penting: Biarkan klik menembus backdrop */
+  pointer-events: none;
+}
+
+/* 2. Target konten modalnya */
+#freeSpinConfirmModal .profile-modal-content {
+  /* Kembalikan klik HANYA untuk modalnya */
+  pointer-events: auto;
+  
+  /* Atur lebar agar pas seperti toast */
+  width: 300px;
+  max-width: 90%;
+  
+  /* --- PERUBAHAN ANIMASI (Slide dari atas) --- */
+  opacity: 0;
+  transform: translateY(-100%); /* Mulai dari atas layar */
+  transition: all 0.5s ease-in-out;
+}
+
+/* 3. Animasi 'show' yang baru */
+#freeSpinConfirmModal.profile-modal-backdrop.show .profile-modal-content {
+  opacity: 1;
+  transform: translateY(0); /* Turun ke posisi */
+}
+
+/* 4. Animasi 'hide' (saat ditutup) */
+#freeSpinConfirmModal.profile-modal-backdrop.show {
+  transition: opacity 0.5s ease;
+}
+#freeSpinConfirmModal.profile-modal-backdrop .profile-modal-content {
+   /* Saat 'show' dihapus, modal akan kembali ke atas */
+   opacity: 0;
+   transform: translateY(-100%);
+}
 </style>
 </head>
 
@@ -1651,7 +1700,7 @@ svg g {
     </div>
     </div>
 
-    <div id="referralConfirmModal" class="profile-modal-backdrop" style="display:none;">
+    <div id="freeSpinConfirmModal" class="profile-modal-backdrop" style="display:none;">
     <div class="profile-modal-content" onclick="event.stopPropagation()">
         
         <img src="win.png" alt="Info" style="width: 50px; height: 50px; display: block; margin: 0 auto 10px auto;">
@@ -1662,8 +1711,9 @@ svg g {
             Anda sepertinya belum terdaftar untuk free spin. Lakukan pendaftaran sekarang? (Tidak ada biaya gas)
         </p>
 
-        <div class="referral-modal-buttons"> <button id="free-spin-btn-cancel" class="load-btn" style="background: #777;">Batal</button>
+        <div class="referral-modal-buttons"> 
             <button id="free-spin-btn-ok" class="load-btn" style="background: #28a745;">Oke</button>
+            <button id="free-spin-btn-cancel" class="load-btn" style="background: #777;">Batal</button>
         </div>
     </div>
     </div>
