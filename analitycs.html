@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faylotto - Dashboard Analitik</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.umd.min.js"></script>
+    <link rel="stylesheet" href="dashboard.css">
+    <script src="dashboard.js" defer></script>
+  <style>
+    /* === STYLING DASAR DASHBOARD === */
+body {
+  font-family: 'Ubuntu', sans-serif;
+  background-color: #000;
+  color: #fff;
+  margin: 0;
+  padding: 20px;
+}
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+h1 {
+  text-align: center;
+  color: #f39c12; /* Emas */
+  border-bottom: 2px solid #555;
+  padding-bottom: 20px;
+  margin-top: 0;
+}
+h2 {
+  font-size: 1.5rem;
+  border-bottom: 1px solid #333;
+  padding-bottom: 10px;
+  text-align: left;
+  color: #eee;
+  margin-top: 0; 
+}
+.dashboard-section {
+  background: #1a1a2e;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 20px 25px; 
+  margin-bottom: 25px;
+}
+
+/* === STYLING GRID STATISTIK (Bagian 1 & 2) === */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
+  gap: 20px; 
+}
+.stat-item {
+  background: #2c2c3a;
+  padding: 15px 20px;
+  border-radius: 8px;
+  border-left: 5px solid #f39c12;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+.stat-item span {
+  display: block;
+  font-size: 0.9em;
+  color: #aaa;
+  margin-bottom: 8px;
+  text-transform: uppercase; 
+}
+.stat-item strong {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+  word-wrap: break-word; 
+}
+.stat-item .eth-color { color: #8884d8; }
+.stat-item .fay-color { color: #ff80c8; }
+.stat-item .error-color { color: #dc3545; }
+.stat-item .success-color { color: #28a745; }
+.stat-item .info-color { color: #00aaff; font-size: 1.1rem; }
+.stat-item .time-color { color: #00e0ff; font-size: 1.3rem; }
+
+/* === STYLING ALAT INSPEKSI (Bagian 3) === */
+.inspector-tool {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap; /* Wrap di HP */
+}
+.inspector-tool input {
+  flex-grow: 1;
+  background: #1a1a2e;
+  border: 1px solid #555;
+  color: white;
+  padding: 12px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.load-btn { /* Style tombol umum */
+  background: linear-gradient(135deg, #0077ff, #a855f7);
+  color: #fff;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.load-btn:hover:not(:disabled) {
+  opacity: 0.8;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+}
+.load-btn:disabled {
+  background: #555;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.lookup-results {
+  background: #2c2c3a;
+  border-radius: 5px;
+  padding: 15px;
+  margin-top: 10px;
+  width: 100%;
+  font-family: 'Courier New', Courier, monospace;
+  line-height: 1.6;
+  white-space: pre-wrap; /* Jaga format JSON */
+  word-wrap: break-word;
+  display: none; /* Sembunyi awalnya */
+}
+
+/* === STYLING LEADERBOARD (Bagian 4) === */
+.warning-text {
+  background: #4a442c;
+  border: 1px solid #ffc107;
+  color: #fff;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 14px;
+}
+.leaderboard-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 15px 0;
+}
+.leaderboard-list {
+  list-style: none; padding: 0; margin: 0;
+  counter-reset: leaderboard-counter; 
+}
+.leaderboard-list li {
+  background: #2c2c3a; color: #eee;
+  margin: 8px 0; padding: 12px 15px;
+  border-radius: 6px; font-size: 14px;
+  display: flex; justify-content: space-between;
+  align-items: center; border-left: 4px solid #555;
+}
+.leaderboard-list li::before {
+  counter-increment: leaderboard-counter; 
+  content: counter(leaderboard-counter) "."; 
+  font-weight: bold; color: #f39c12;
+  font-size: 1.1em; margin-right: 10px;
+  flex-shrink: 0;
+}
+.leaderboard-list li:nth-child(1) { border-left-color: #FFD700; } /* Emas */
+.leaderboard-list li:nth-child(2) { border-left-color: #C0C0C0; } /* Perak */
+.leaderboard-list li:nth-child(3) { border-left-color: #CD7F32; } /* Perunggu */
+.leaderboard-list li strong {
+  font-size: 1.1em; color: #00aaff;
+  cursor: pointer; word-break: break-all; 
+}
+.leaderboard-list li .lb-score {
+  font-weight: bold; color: #28a745;
+  font-size: 1.1em; flex-shrink: 0; 
+  margin-left: 10px; text-align: right; 
+  line-height: 1.4;
+}
+.leaderboard-list li .lb-score small {
+  display: block; color: #ccc; 
+  font-size: 0.9em; font-weight: normal;
+}
+
+/* === STYLING LIVE FEED (Bagian 5) === */
+.live-feed-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 400px; /* Batasi tinggi */
+  overflow-y: auto; /* Bisa di-scroll */
+  border: 1px solid #333;
+  padding: 10px;
+  border-radius: 5px;
+}
+.live-feed-list li {
+  background: #2c2c3a;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  border-left: 3px solid #00e0ff; /* Aksen Cyan */
+  animation: feedFadeIn 0.5s ease; /* Animasi masuk */
+}
+.live-feed-list li.error {
+  border-left-color: #dc3545; /* Merah untuk error */
+}
+@keyframes feedFadeIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+  }
+  </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Dashboard Analitik Faylotto</h1>
+
+        <section class="dashboard-section">
+            <h2>📈 Statistik Global Kontrak</h2>
+            <div id="global-stats-content">
+                </div>
+        </section>
+
+        <section class="dashboard-section">
+            <h2>🎁 Status Hadiah Real-time</h2>
+            <div id="prize-stats-content">
+                </div>
+        </section>
+
+        <section class="dashboard-section">
+            <h2>🛠️ Alat Inspeksi</h2>
+            
+            <div class="inspector-tool">
+                <input type="text" id="wallet-address-input" placeholder="Tempel alamat wallet (0x...)">
+                <button id="btn-wallet-lookup" class="load-btn">Cek Wallet</button>
+                <div id="wallet-lookup-results" class="lookup-results"></div>
+            </div>
+
+            <div class="inspector-tool">
+                <input type="number" id="bet-id-input" placeholder="Masukkan Global Bet ID (misal: 123)">
+                <button id="btn-betid-lookup" class="load-btn">Cek Bet ID</button>
+                <div id="betid-lookup-results" class="lookup-results"></div>
+            </div>
+        </section>
+
+        <section class="dashboard-section">
+            <h2>📊 Leaderboard (Data Lambat)</h2>
+            <p class="warning-text">
+                Peringatan: Memuat leaderboard ini akan mengunduh ribuan event dari blockchain.
+                Proses ini SANGAT LAMBAT (bisa 1-2 menit) dan mungkin gagal (timeout) di RPC publik.
+            </p>
+            <div class="leaderboard-controls">
+                <button id="btn-lb-earnings" class="load-btn">Top 10 Earners (ETH)</button>
+                <button id="btn-lb-referrals" class="load-btn">Top 10 Referrers</button>
+            </div>
+            <div id="leaderboard-loading" style="display:none;"></div>
+            <ol class="leaderboard-list" id="leaderboard-list"></ol>
+        </section>
+
+        <section class="dashboard-section">
+            <h2>📡 Feed Aktivitas Langsung (Live)</h2>
+            <ul class="live-feed-list" id="live-feed-list">
+                <li>Menghubungkan ke event blockchain...</li>
+            </ul>
+        </section>
+
+    </div>
+  <script>
+    // === KONFIGURASI KONTRAK ===
+// GANTI DENGAN ALAMAT KONTRAK ANDA YANG SUDAH DI-DEPLOY
+const CONTRACT_ADDRESS = "0xC2e09B1d6BC68F88383f16b1CE382411717cc731"; 
+
+// GANTI DENGAN RPC URL ANDA (contoh: "https://sepolia.base.org")
+const RPC_URL = "https://sepolia.base.org"; 
+
+// PASTE SELURUH ABI KONTRAK ANDA DI SINI
+const ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner_","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"result","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"randomNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"contractBalance","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"string","name":"highestAvailablePrize","type":"string"},{"indexed":false,"internalType":"bool","name":"prizeAvailable","type":"bool"},{"indexed":false,"internalType":"uint256","name":"winChance","type":"uint256"}],"name":"BetPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"BetUnliked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentIndex","type":"uint256"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"string","name":"prizeName","type":"string"}],"name":"ETHAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoAwarded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FaylottoMinted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"freeSpinNumber","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"random","type":"uint256"}],"name":"FreeSpinPlayed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"OwnerDepositFaylotto","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"rating","type":"uint8"}],"name":"RatingAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"uint256","name":"globalBetId","type":"uint256"},{"indexed":false,"internalType":"uint8","name":"oldRating","type":"uint8"},{"indexed":false,"internalType":"uint8","name":"newRating","type":"uint8"}],"name":"RatingEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"}],"name":"ReferralAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"inviter","type":"address"},{"indexed":true,"internalType":"address","name":"referee","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"}],"name":"ReferralRewardEarned","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"uid","type":"string"}],"name":"UIDGenerated","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersPaused","type":"event"},{"anonymous":false,"inputs":[],"name":"UserTransfersUnpaused","type":"event"},{"stateMutability":"payable","type":"fallback"},{"inputs":[],"name":"INITIAL_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_SUPPLY","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"inviterUID","type":"string"}],"name":"addReferralByUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner_","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"a","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"claimReferralReward","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"claimedReferralRewards","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dailyUsedQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint256","name":"commentIndex","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"freeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeSpinData","outputs":[{"internalType":"uint256","name":"freeSpinsUsed","type":"uint256"},{"internalType":"uint256","name":"lastActive","type":"uint256"},{"internalType":"uint256","name":"walletCreated","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"freeSpinQuota","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"generateUID","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getAverageRating","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getComments","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getPublicBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"getRatingCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralReward","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getUserBets","outputs":[{"components":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"string","name":"result","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"uint256","name":"randomNumber","type":"uint256"},{"internalType":"uint256","name":"contractBalance","type":"uint256"},{"internalType":"uint256","name":"playerBetCount","type":"uint256"},{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"string","name":"highestAvailablePrize","type":"string"},{"internalType":"bool","name":"prizeAvailable","type":"bool"},{"internalType":"uint256","name":"winChance","type":"uint256"}],"internalType":"struct FaylottoSpinBet.Bet[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserLike","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"address","name":"user","type":"address"}],"name":"getUserRating","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"prize","type":"string"}],"name":"isPrizeAvailable","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"lastPrizeTimestamps","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"lastResetTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"}],"name":"likeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"minInactiveTime","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"minWalletAge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ownerDepositFaylotto","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"pauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBet","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"prizeWindowStart","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"publicHistoryLimit","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"globalBetId","type":"uint256"},{"internalType":"uint8","name":"rating","type":"uint8"}],"name":"rateBet","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrals","outputs":[{"internalType":"address","name":"inviter","type":"address"},{"internalType":"uint256","name":"rewardEarned","type":"uint256"},{"internalType":"string","name":"uid","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalBetsEver","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"uidToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"unpause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpauseUserTransfers","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"userTransfersPaused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdrawFaylottoFromContract","outputs":[],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}];
+
+// === DEFINISI NAMA HADIAH (PENTING!) ===
+// Nama ini harus SAMA PERSIS dengan string di 'determinePrize' kontrak Anda
+const PRIZE_DEFINITIONS = [
+    { name: "1 ETH Jackpot", interval: 365 * 86400, max: 2 },
+    { name: "0.7 ETH Big Win", interval: 330 * 86400, max: 2 },
+    { name: "MacBook", interval: 300 * 86400, max: 3 },
+    { name: "iPhone or Worth ETH", interval: 300 * 86400, max: 3 },
+    { name: "0.1 ETH Monthly Prize", interval: 30 * 86400, max: 10 },
+    { name: "0.05 ETH Fifteen-day", interval: 15 * 86400, max: 20 },
+    { name: "0.005 ETH Weekly", interval: 7 * 86400, max: 100 },
+    { name: "0.0005 ETH Three-day", interval: 3 * 86400, max: 1000 },
+    { name: "0.0001 ETH Daily Prize", interval: 1 * 86400, max: 2000 }
+];
+
+
+/**
+ * Fungsi utama yang dipanggil saat halaman dimuat
+ */
+window.addEventListener('load', async () => {
+    let provider;
+    let contract;
+    try {
+        provider = new ethers.JsonRpcProvider(RPC_URL);
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
+        console.log("Koneksi dashboard berhasil dibuat.");
+    } catch (err) {
+        console.error("Gagal membuat koneksi:", err);
+        document.body.innerHTML = "<h1>Error: Gagal terhubung ke RPC Node.</h1>";
+        return;
+    }
+
+    // Panggil semua fungsi pemuat data
+    await loadGlobalStats(provider, contract);
+    await loadPrizeStats(contract);
+    setupInspectionTools(contract, provider);
+    setupLeaderboardButtons(contract, provider);
+    listenToEvents(contract);
+});
+
+
+// =======================================
+// === FUNGSI-FUNGSI HELPER FORMATTING ===
+// =======================================
+
+function formatTimestamp(timestampBigInt) {
+    const timestamp = Number(timestampBigInt);
+    if (timestamp === 0) return "N/A";
+    return new Date(timestamp * 1000).toLocaleString("id-ID");
+}
+function formatDuration(secondsBigInt) {
+    const seconds = Number(secondsBigInt);
+    if (seconds < 3600) return `${seconds / 60} menit`;
+    if (seconds < 86400) return `${seconds / 3600} jam`;
+    return `${seconds / 86400} hari`;
+}
+function formatToken(value, decimals = 18, precision = 6) {
+    return parseFloat(ethers.formatUnits(value, decimals)).toFixed(precision);
+}
+function formatNumber(value) {
+    return Number(value).toLocaleString("id-ID");
+}
+function updateStat(elementId, value, className = '') {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.textContent = value;
+        el.className = ''; 
+        if (className) el.classList.add(className);
+    }
+}
+function updateStatHTML(elementId, html, className = '') {
+    const el = document.getElementById(elementId);
+    if (el) {
+        el.innerHTML = html;
+        el.className = ''; 
+        if (className) el.classList.add(className);
+    }
+}
+// Fungsi untuk mem-format JSON dengan rapi
+function syntaxHighlight(json) {
+    if (typeof json != 'string') {
+         json = JSON.stringify(json, undefined, 2);
+    }
+    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+            if (/:$/.test(match)) cls = 'json-key';
+            else cls = 'json-string';
+        } else if (/true|false/.test(match)) cls = 'json-boolean';
+        else if (/null/.test(match)) cls = 'json-null';
+        return '<span class="' + cls + '">' + match + '</span>';
+    });
+}
+
+
+// =======================================
+// === BAGIAN 1: STATISTIK GLOBAL ===
+// =======================================
+async function loadGlobalStats(provider, contract) {
+    console.log("Memuat Statistik Global...");
+    const container = document.getElementById('global-stats-content');
+    container.innerHTML = '<div class="stats-grid"></div>'; // Siapkan grid
+    const grid = container.querySelector('.stats-grid');
+    
+    // Fungsi untuk menambah item ke grid
+    const addStat = (label, id, value = "Memuat...", cssClass = '') => {
+        const item = document.createElement('div');
+        item.className = 'stat-item';
+        item.innerHTML = `
+            <span>${label}</span>
+            <strong id="${id}" class="${cssClass}">${value}</strong>
+        `;
+        grid.appendChild(item);
+    };
+
+    // Tambahkan semua placeholder
+    addStat("Total ETH di Kontrak", "stat-eth-balance", "Memuat...", "eth-color");
+    addStat("Token FAY di Kontrak", "stat-fay-balance", "Memuat...", "fay-color");
+    addStat("Total Spin (Sepanjang Masa)", "stat-total-spins", "Memuat...");
+    addStat("Harga Spin", "stat-spin-price", "Memuat...", "eth-color");
+    addStat("Status Transfer Token", "stat-pause-status", "Memuat...");
+    addStat("Alamat Owner", "stat-owner", "Memuat...", "info-color");
+    addStat("Total Pasokan FAY", "stat-total-supply", "Memuat...", "fay-color");
+    addStat("Pasokan Maksimum FAY", "stat-max-supply", "Memuat...", "fay-color");
+    addStat("Batas Riwayat Publik", "stat-history-limit", "Memuat...");
+    addStat("Kuota Harian Terpakai", "stat-daily-used", "Memuat...", "eth-color");
+    addStat("Reset Kuota Berikutnya", "stat-quota-reset", "Memuat...", "time-color");
+    addStat("Kuota Free Spin", "stat-freespin-quota", "Memuat...");
+    addStat("Min. Umur Wallet (Free Spin)", "stat-min-age", "Memuat...", "time-color");
+    addStat("Min. Waktu Inaktif (Free Spin)", "stat-min-inactive", "Memuat...", "time-color");
+
+    try {
+        const results = await Promise.allSettled([
+            provider.getBalance(CONTRACT_ADDRESS),  // 0
+            contract.balanceOf(CONTRACT_ADDRESS),   // 1
+            contract.totalBetsEver(),               // 2
+            contract.spinPrice(),                   // 3
+            contract.userTransfersPaused(),         // 4
+            contract.owner(),                       // 5
+            contract.totalSupply(),                 // 6
+            contract.MAX_SUPPLY(),                  // 7
+            contract.publicHistoryLimit(),          // 8
+            contract.dailyUsedQuota(),              // 9
+            contract.lastResetTime(),               // 10
+            contract.freeSpinQuota(),               // 11
+            contract.minWalletAge(),                // 12
+            contract.minInactiveTime()              // 13
+        ]);
+
+        // Helper untuk memproses hasil
+        const processResult = (index, elementId, formatter, cssClass = '') => {
+            if (results[index].status === 'fulfilled') {
+                updateStat(elementId, formatter(results[index].value), cssClass);
+            } else {
+                console.error(`Gagal memuat ${elementId}:`, results[index].reason);
+                updateStat(elementId, "Error", "error-color");
+            }
+        };
+        
+        // Update UI
+        processResult(0, "stat-eth-balance", (v) => `${formatToken(v, 18, 6)} ETH`, "eth-color");
+        processResult(1, "stat-fay-balance", (v) => `${formatToken(v, 18, 2)} FAY`, "fay-color");
+        processResult(2, "stat-total-spins", formatNumber);
+        processResult(3, "stat-spin-price", (v) => `${formatToken(v, 18, 8)} ETH`, "eth-color");
+        processResult(4, "stat-pause-status", (v) => v ? "DIPAUSE" : "AKTIF", (results[4].status === 'fulfilled' && results[4].value) ? "error-color" : "success-color");
+        processResult(5, "stat-owner", (v) => `${v.slice(0, 6)}...${v.slice(-4)}`, "info-color");
+        processResult(6, "stat-total-supply", (v) => `${formatToken(v, 18, 0)} FAY`, "fay-color");
+        processResult(7, "stat-max-supply", (v) => `${formatToken(v, 18, 0)} FAY`, "fay-color");
+        processResult(8, "stat-history-limit", formatNumber);
+        processResult(9, "stat-daily-used", (v) => `${formatToken(v, 18, 6)} ETH`, "eth-color");
+        processResult(10, "stat-quota-reset", (v) => formatTimestamp(Number(v) + 86400), "time-color"); // Tambah 1 hari
+        processResult(11, "stat-freespin-quota", formatNumber);
+        processResult(12, "stat-min-age", formatDuration, "time-color");
+        processResult(13, "stat-min-inactive", formatDuration, "time-color");
+        
+    } catch (err) {
+        console.error("Gagal memuat Statistik Global:", err);
+    }
+}
+
+// =======================================
+// === BAGIAN 2: STATUS HADIAH ===
+// =======================================
+async function loadPrizeStats(contract) {
+    console.log("Memuat Status Hadiah...");
+    const container = document.getElementById('prize-stats-content');
+    container.innerHTML = '<div class="stats-grid"></div>'; // Siapkan grid
+    const grid = container.querySelector('.stats-grid');
+    const now = Math.floor(Date.now() / 1000); // Waktu saat ini (detik)
+
+    for (const prize of PRIZE_DEFINITIONS) {
+        // Buat placeholder
+        const statId = `prize-${prize.name.replace(/\s+/g, '-')}`;
+        const item = document.createElement('div');
+        item.className = 'stat-item';
+        item.innerHTML = `
+            <span>HADIAH: ${prize.name}</span>
+            <strong id="${statId}">Memuat...</strong>
+        `;
+        grid.appendChild(item);
+
+        try {
+            // 1. Kalkulasi key di JavaScript
+            const prizeKey = ethers.keccak256(ethers.toUtf8Bytes(prize.name));
+            
+            // 2. Ambil data dari mapping
+            const [windowStart, windowCount, lastClaimed] = await Promise.all([
+                contract.prizeWindowStart(prizeKey),
+                contract.prizeWindowCount(prizeKey),
+                contract.lastPrizeTimestamps(prizeKey)
+            ]);
+            
+            // 3. Proses data
+            const count = Number(windowCount);
+            const start = Number(windowStart);
+            const resetTime = start + prize.interval;
+            
+            let statusText = `Terklaim: ${count} / ${prize.max}<br>`;
+            if (now >= resetTime) {
+                statusText += `<span class="success-color">SIAP RESET</span>`;
+            } else {
+                statusText += `Reset pada: ${formatTimestamp(resetTime)}`;
+            }
+            if(Number(lastClaimed) > 0) {
+                 statusText += `<br><small style="color:#aaa;">Terakhir diklaim: ${formatTimestamp(lastClaimed)}</small>`;
+            }
+
+            updateStatHTML(statId, statusText, "time-color");
+
+        } catch (err) {
+            console.error(`Gagal memuat status hadiah ${prize.name}:`, err);
+            updateStat(statId, "Error", "error-color");
+        }
+    }
+}
+
+// =======================================
+// === BAGIAN 3: ALAT INSPEKSI ===
+// =======================================
+function setupInspectionTools(contract, provider) {
+    document.getElementById('btn-wallet-lookup').addEventListener('click', async () => {
+        const address = document.getElementById('wallet-address-input').value;
+        const resultsEl = document.getElementById('wallet-lookup-results');
+        if (!ethers.isAddress(address)) {
+            resultsEl.innerHTML = '<span class="error-color">Alamat tidak valid.</span>';
+            resultsEl.style.display = 'block';
+            return;
+        }
+        resultsEl.innerHTML = "Memuat data wallet...";
+        resultsEl.style.display = 'block';
+        
+        try {
+            const [ethBal, fayBal, refCount, refReward, spinData] = await Promise.all([
+                provider.getBalance(address),
+                contract.balanceOf(address),
+                contract.getReferralCount(address),
+                contract.getReferralReward(address),
+                contract.freeSpinData(address)
+            ]);
+            
+            const data = {
+                "Saldo ETH": `${formatToken(ethBal)} ETH`,
+                "Saldo FAY": `${formatToken(fayBal, 18, 2)} FAY`,
+                "Jumlah Undangan": formatNumber(refCount),
+                "Reward Referral Tertunda": `${formatToken(refReward)} ETH`,
+                "Data Free Spin": {
+                    "Wallet Dibuat": formatTimestamp(spinData.walletCreated),
+                    "Spin Terpakai": formatNumber(spinData.freeSpinsUsed),
+                    "Terakhir Aktif": formatTimestamp(spinData.lastActive)
+                }
+            };
+            resultsEl.innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+
+        } catch(err) {
+            resultsEl.innerHTML = `<span class="error-color">Gagal mengambil data: ${err.message}</span>`;
+        }
+    });
+
+    document.getElementById('btn-betid-lookup').addEventListener('click', async () => {
+        const betId = document.getElementById('bet-id-input').value;
+        const resultsEl = document.getElementById('betid-lookup-results');
+        if (!betId || isNaN(betId)) {
+            resultsEl.innerHTML = '<span class="error-color">Bet ID tidak valid.</span>';
+            resultsEl.style.display = 'block';
+            return;
+        }
+        resultsEl.innerHTML = "Memuat data Bet ID...";
+        resultsEl.style.display = 'block';
+        
+         try {
+            const [likeCount, ratingCount, avgRating, comments] = await Promise.all([
+                contract.getLikeCount(betId),
+                contract.getRatingCount(betId),
+                contract.getAverageRating(betId),
+                contract.getComments(betId)
+            ]);
+            
+            const data = {
+                "Total Likes": formatNumber(likeCount),
+                "Total Rating": formatNumber(ratingCount),
+                "Rata-rata Rating": `${Number(avgRating) / 100} / 5.0`,
+                "Total Komentar": comments.length,
+                "Komentar": comments.map(c => ({
+                    user: c.user,
+                    text: c.text,
+                    time: formatTimestamp(c.timestamp)
+                }))
+            };
+            resultsEl.innerHTML = syntaxHighlight(JSON.stringify(data, null, 2));
+         } catch(err) {
+            resultsEl.innerHTML = `<span class="error-color">Gagal mengambil data: ${err.message}</span>`;
+         }
+    });
+}
+
+// =======================================
+// === BAGIAN 4: LEADERBOARD (LAMBAT) ===
+// =======================================
+function setupLeaderboardButtons(contract, provider) {
+    document.getElementById('btn-lb-earnings').addEventListener('click', () => {
+        loadLeaderboard('earnings', contract, provider);
+    });
+    document.getElementById('btn-lb-referrals').addEventListener('click', () => {
+        loadLeaderboard('referrals', contract, provider);
+    });
+}
+
+async function loadLeaderboard(type, contract, provider) {
+  const list = document.getElementById('leaderboard-list');
+  const loading = document.getElementById('leaderboard-loading');
+  const btnEarnings = document.getElementById('btn-lb-earnings');
+  const btnReferrals = document.getElementById('btn-lb-referrals');
+  
+  list.innerHTML = '';
+  loading.style.display = 'block';
+  btnEarnings.disabled = true;
+  btnReferrals.disabled = true;
+  
+  try {
+    let data = [];
+    if (type === 'earnings') {
+      loading.textContent = "Memuat... (Langkah 1/4: Mengambil event ETH... Ini SANGAT LAMA)...";
+      data = await calculateTopEarners(contract, loading);
+    } else if (type === 'referrals') {
+      loading.textContent = "Memuat... (Langkah 1/3: Mengambil event Referral... Ini mungkin perlu waktu)...";
+      data = await calculateTopReferrers(contract, loading);
+    }
+    renderLeaderboard(data, type);
+  } catch (err) {
+    console.error(`Gagal memuat leaderboard '${type}':`, err);
+    list.innerHTML = '<li>Gagal memuat data. Kemungkinan RPC timeout. Coba refresh.</li>';
+  } finally {
+    loading.style.display = 'none';
+    btnEarnings.disabled = false;
+    btnReferrals.disabled = false;
+  }
+}
+
+async function calculateTopEarners(contract, loading) {
+  const ethFilter = contract.filters.ETHAwarded();
+  const ethLogs = await contract.queryFilter(ethFilter, 0, 'latest');
+  loading.textContent = "Memuat... (Langkah 2/4: Menghitung ETH...)";
+  const earnings = {};
+  for (const log of ethLogs) {
+    const player = log.args.player;
+    const amount = BigInt(log.args.amount.toString());
+    earnings[player] = (earnings[player] || 0n) + amount;
+  }
+  loading.textContent = "Memuat... (Langkah 3/4: Mengambil event Faylotto...)";
+  const faylottoFilter = contract.filters.FaylottoAwarded();
+  const faylottoLogs = await contract.queryFilter(faylottoFilter, 0, 'latest');
+  const faylottoEarnings = {};
+  for (const log of faylottoLogs) {
+    const player = log.args.to;
+    const amount = BigInt(log.args.amount.toString());
+    faylottoEarnings[player] = (faylottoEarnings[player] || 0n) + amount;
+  }
+  loading.textContent = "Memuat... (Langkah 4/4: Menggabungkan & mengurutkan...)";
+  const allAddresses = new Set([...Object.keys(earnings), ...Object.keys(faylottoEarnings)]);
+  let combined = [];
+  allAddresses.forEach(addr => {
+    combined.push({
+      address: addr,
+      eth: earnings[addr] || 0n,
+      faylotto: faylottoEarnings[addr] || 0n
+    });
+  });
+  combined.sort((a, b) => {
+      if (b.eth > a.eth) return 1;
+      if (b.eth < a.eth) return -1;
+      return 0;
+  });
+  return combined.slice(0, 10);
+}
+
+async function calculateTopReferrers(contract, loading) {
+  const refFilter = contract.filters.ReferralAdded();
+  const refLogs = await contract.queryFilter(refFilter, 0, 'latest');
+  loading.textContent = "Memuat... (Langkah 2/3: Menghitung Undangan...)";
+  const referrers = {};
+  for (const log of refLogs) {
+    const inviter = log.args.inviter;
+    referrers[inviter] = (referrers[inviter] || 0) + 1;
+  }
+  loading.textContent = "Memuat... (Langkah 3/3: Mengambil reward & mengurutkan...)";
+  const addresses = Object.keys(referrers);
+  const promises = addresses.map(addr => 
+      contract.referrals(addr)
+        .then(info => ({
+            address: addr,
+            count: referrers[addr],
+            ethEarned: BigInt(info.rewardEarned.toString())
+        }))
+        .catch(() => null)
+  );
+  const results = (await Promise.all(promises)).filter(r => r !== null);
+  results.sort((a, b) => b.count - a.count);
+  return results.slice(0, 10);
+}
+
+function renderLeaderboard(data, type) {
+  const list = document.getElementById('leaderboard-list');
+  list.innerHTML = '';
+  if (data.length === 0) {
+    list.innerHTML = '<li>Tidak ada data untuk ditampilkan.</li>';
+    return;
+  }
+  if (type === 'earnings') {
+    data.forEach(item => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <strong onclick="showUserProfileDashboard('${item.address}')">
+          ${item.address.slice(0, 10)}...${item.address.slice(-6)}
+        </strong>
+        <span class="lb-score">
+          ${formatToken(item.eth, 18, 6)} ETH
+          <small>${formatToken(item.faylotto, 18, 2)} FAY</small>
+        </span>
+      `;
+      list.appendChild(li);
+    });
+  } else if (type === 'referrals') {
+    data.forEach(item => {
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <strong onclick="showUserProfileDashboard('${item.address}')">
+          ${item.address.slice(0, 10)}...${item.address.slice(-6)}
+        </strong>
+        <span class="lb-score">
+          ${item.count} Undangan
+          <small>${formatToken(item.ethEarned, 18, 6)} ETH Didapat</small>
+        </span>
+      `;
+      list.appendChild(li);
+    });
+  }
+}
+
+// Helper untuk tombol strong di leaderboard (agar tidak bentrok dengan DApp utama)
+function showUserProfileDashboard(address) {
+     const input = document.getElementById('wallet-address-input');
+     const btn = document.getElementById('btn-wallet-lookup');
+     if(input && btn) {
+         input.value = address;
+         btn.click(); // Klik tombol inspeksi
+         input.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll ke atas
+     }
+}
+
+// =======================================
+// === BAGIAN 5: FEED AKTIVITAS LANGSUNG ===
+// =======================================
+function listenToEvents(contract) {
+    const list = document.getElementById('live-feed-list');
+    if (!list) return;
+    
+    list.innerHTML = ''; // Hapus "Menghubungkan..."
+
+    const addFeedItem = (text, type = 'info') => {
+        const li = document.createElement('li');
+        li.textContent = text;
+        if(type === 'error') li.classList.add('error');
+        list.prepend(li); // Tambahkan ke atas
+        // Batasi hanya 15 item
+        if (list.children.length > 15) {
+            list.removeChild(list.lastChild);
+        }
+    };
+    
+    console.log("Mendengarkan event blockchain...");
+
+    contract.on("BetPlaced", (player, amount, result, ts, rand, cb, pc, id) => {
+        addFeedItem(`Spin Baru (#${id}): ${player.slice(0,6)}... memenangkan ${result}`);
+    });
+    
+    contract.on("ETHAwarded", (player, amount, prizeName) => {
+         addFeedItem(`🎉 HADIAH BESAR: ${player.slice(0,6)}... memenangkan ${prizeName} (${formatToken(amount)} ETH)!`);
+    });
+    
+    contract.on("CommentAdded", (user, globalBetId, text) => {
+         addFeedItem(`Komentar Baru: ${user.slice(0,6)}... di Bet #${globalBetId}: "${text.substring(0, 20)}..."`);
+    });
+
+    contract.on("BetLiked", (user, globalBetId) => {
+         addFeedItem(`Like: ${user.slice(0,6)}... me-like Bet #${globalBetId}`);
+    });
+
+    contract.on("RatingAdded", (user, globalBetId, rating) => {
+         addFeedItem(`Rating: ${user.slice(0,6)}... memberi ${rating} bintang ke Bet #${globalBetId}`);
+    });
+    
+    contract.on("ReferralAdded", (inviter, referee) => {
+         addFeedItem(`Referral: ${inviter.slice(0,6)}... mengundang ${referee.slice(0,6)}...`);
+    });
+      }
+  </script>
+</body>
+</html>
