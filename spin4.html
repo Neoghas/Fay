@@ -4265,49 +4265,81 @@ function showStatus(message, type = 'info', duration = 10000) { // <-- 1. Durasi
   }, 10); 
 }
 
-/**
- * FUNGSI (TES SEDERHANA): Membuat QR Code "Polos"
- * (Gunakan ini sementara untuk debugging)
- */
-function generateReferralQRCode() {
+function preloadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous'; // coba jika sumber gambar di domain lain
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+    img.src = src;
+  });
+}
+
+async function generateReferralQRCode() {
   const qrContainer = document.getElementById('qrcode-container');
   const qrDiv = document.getElementById('qrcode');
   const linkInput = document.getElementById('referralLink');
 
-  if (!qrContainer || !qrDiv || !linkInput) return;
-  
-  if (qrContainer.style.display === 'flex') {
-      qrContainer.style.display = 'none';
-      qrDiv.innerHTML = ""; 
-      qrCodeObject = null;  
-      return;
+  if (!qrContainer || !qrDiv || !linkInput) {
+    console.error("Elemen QR Code atau Link tidak ditemukan!");
+    return;
   }
 
-  const referralLink = linkInput.value;
+  if (qrContainer.style.display === 'flex') {
+    qrContainer.style.display = 'none';
+    qrDiv.innerHTML = "";
+    qrCodeObject = null;
+    return;
+  }
+
+  const referralLink = linkInput.value || '';
+  const logoUrl = 'logo.svg';
+  const backgroundImageUrl = 'qr-background.png';
+  const titleText = 'Scan untuk Bergabung!';
+  const subTitleText = referralLink.length > 30 ? referralLink.substring(0, 30) + "..." : referralLink;
+
   qrDiv.innerHTML = "";
   qrContainer.style.display = 'flex';
 
-  // --- OPSI YANG SANGAT DISEDERHANAKAN (TANPA GAMBAR) ---
-  const options = {
-    text: referralLink,
-    width: 240,
-    height: 240,
-    colorDark: "#000000",
-    colorLight: "#ffffff",
-    correctLevel: EasyQRCodeJS.CorrectLevel.H
-  };
-  // --- AKHIR OPSI SEDERHANA ---
-
   try {
-    // Buat QR Code dan simpan
-    qrCodeObject = new EasyQRCodeJS(qrDiv, options); 
-    console.log("QR Code polos berhasil dibuat.");
+    // preload images (jika gagal, tetap lanjut tanpa image)
+    let logoImg = null;
+    let bgImg = null;
+    try { logoImg = await preloadImage(logoUrl); } catch(e) { console.warn('Logo gagal dimuat:', e); }
+    try { bgImg = await preloadImage(backgroundImageUrl); } catch(e) { console.warn('Background gagal dimuat:', e); }
+
+    const options = {
+      text: referralLink,
+      width: 240,
+      height: 240,
+      colorDark: "#000000",
+      colorLight: "#ffffff",
+      correctLevel: EasyQRCodeJS.CorrectLevel.H,
+      title: titleText,
+      titleColor: "#000000",
+      titleFont: "bold 16px Ubuntu",
+      titleTop: 25,
+      subTitle: subTitleText,
+      subTitleFont: "normal 10px Arial",
+      subTitleColor: "#555",
+      subTitleTop: 220,
+      // jika logoImg ada, pasang sebagai Image object, kalau tidak gunakan URL string
+      logo: logoImg || logoUrl,
+      logoWidth: 70,
+      logoHeight: 70,
+      logoBackgroundColor: '#ffffff',
+      logoBackgroundTransparent: false,
+      // jika bgImg ada, pasang bgImg; beberapa versi library menerima URL string juga
+      backgroundImage: bgImg || backgroundImageUrl,
+      backgroundImageAlpha: 0.15,
+    };
+
+    qrCodeObject = new EasyQRCodeJS(qrDiv, options);
   } catch(err) {
-     // Jika ini masih gagal, berarti library-nya sendiri yang bermasalah
-     console.error("Gagal membuat QR Code polos:", err);
-     qrContainer.style.display = 'none'; 
-     showStatus("Gagal total membuat QR Code.", "error");
-     qrCodeObject = null; 
+    console.error("Gagal membuat QR Code:", err);
+    qrContainer.style.display = 'none';
+    qrDiv.innerHTML = "";
+    qrCodeObject = null;
   }
 }
   
