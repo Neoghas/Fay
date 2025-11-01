@@ -2135,7 +2135,10 @@ function renderBets(ul, bets, startIndex, count, isPublic = false) {
 
 // Fungsi untuk memuat riwayat user pribadi dengan infinite scroll
 async function loadUserHistory(refresh = false) {
-  if (!contract) return alert("⚠️ Connect your wallet first!");
+  if (!contract) {
+    showStatus("⚠️ Please Connect Your Wallet First!", "warning");
+    return;
+  }
 
   const historyDiv = document.getElementById("userHistory");
   if (refresh || allUserBets.length === 0) {
@@ -2206,7 +2209,10 @@ function userScrollHandler() {
 
 // Fungsi untuk memuat riwayat public dengan infinite scroll (mirip user)
 async function loadPublicHistory(refresh = false) {
-  if (!contract) return alert("⚠️ Connect your wallet first!");
+  if (!contract) {
+    showStatus("⚠️ Please Connect Your Wallet First!", "warning");
+    return;
+  }
 
   const historyDiv = document.getElementById("publicHistory");
   if (refresh || allPublicBets.length === 0) {
@@ -2438,8 +2444,10 @@ async function handlePendingReferral() {
  * Mengirim transaksi generateUID
  */
 async function handleGenerateUID() {
-  if (!contract) return alert("⚠️ Connect your wallet first!");
-
+  if (!contract) {
+    showStatus("⚠️ Please Connect Your Wallet First!", "warning");
+    return;
+  }
   const btn = document.getElementById('generateUIDBtn');
   const status = document.getElementById('referralStatus');
 
@@ -2472,7 +2480,7 @@ async function handleGenerateUID() {
 async function handleClaimReward() {
   // Ganti alert() dengan showStatus() dan perbaiki typo "yourral"
   if (!contract) {
-    showStatus("⚠️ Please Connect Your Wallet First!", "error");
+    showStatus("⚠️ Please Connect Your Wallet First!", "warning");
     return;
   }
 
@@ -2703,7 +2711,7 @@ function updateSpinButtonUI() {
 async function spinFreeFromBlockchain() {
   // 1. Ganti alert() dengan showStatus()
   if (!contract) {
-    showStatus("⚠️ Connect your wallet first!", "error");
+    showStatus("⚠️ Please Connect Your Wallet First!", "warning");
     return;
   }
   
@@ -2854,7 +2862,7 @@ async function handleSpinClick() {
   
   // 1. Ganti alert() dengan showStatus()
   if (!contract || !userAddress) {
-    showStatus("⚠️ Connect your wallet first!", "error");
+    showStatus("⚠️ Connect your wallet first!", "warning");
     return;
   }
   if (btn.disabled) return; // Jangan lakukan apa-apa jika tombol disabled
@@ -3078,7 +3086,7 @@ async function loadComments(prefix, globalBetId) {
 async function handleSendComment(prefix, globalBetId) {
   // 1. Ganti alert() dengan showStatus()
   if (!contract) {
-    showStatus("⚠️ Connect your wallet first!", "error");
+    showStatus("⚠️ Please Connect Your Wallet First!", "warning");
     return;
   }
 
@@ -3173,7 +3181,7 @@ function toggleEditMode(prefix, globalBetId, index, isEditing) {
 async function handleSendEdit(prefix, globalBetId, index) {
   // 1. Ganti alert() dengan showStatus()
   if (!contract) {
-    showStatus("⚠️ Connect your wallet first!", "error");
+    showStatus("⚠️ Please Connect Your Wallet First!", "warning");
     return;
   }
 
@@ -3437,70 +3445,63 @@ function handleReply(prefix, globalBetId, addressToReply) {
 
 
 
+
 async function handleLikeToggle(prefix, globalBetId) {
-
-  if (!contract || !userAddress) return alert("⚠️ Connect your wallet first!");
-
+  // 1. Ganti alert() dengan showStatus()
+  if (!contract || !userAddress) {
+    showStatus("⚠️ Connect your wallet first!", "error");
+    return;
+  }
+  
   const likeBtn = document.getElementById(`like-btn-${prefix}-${globalBetId}`);
-
   if (!likeBtn || likeBtn.disabled) return;
 
-
-
-  const originalHTML = likeBtn.innerHTML;
-
+  const originalHTML = likeBtn.innerHTML; 
   likeBtn.disabled = true;
-
-  likeBtn.innerHTML = `<img src="load.svg" alt="..." style="width: 25px; height: 25px;"> Processing...`;
+  likeBtn.innerHTML = `<img src="loading.gif" alt="..." style="width: 16px; height: 16px;"> Processing...`; 
+  
+  // 2. Tambahkan toast 'load'
+  showStatus("Processing Like/Unlike...", "load");
 
   try {
-
-    const tx = await contract.likeSpin(globalBetId);
-
+    const tx = await contract.likeSpin(globalBetId); 
     await tx.wait();
+    
+    // 3. Tambahkan toast 'success' (Opsional)
+    // showStatus("Like/Unlike updated!", "success", 3000); // 3 detik
 
-    await loadLikeAndRatingData(prefix, globalBetId); // Panggil DENGAN PREFIX
+    // Muat ulang data (ini akan menampilkan tombol baru)
+    await loadLikeAndRatingData(prefix, globalBetId); 
 
   } catch (err) {
     console.error("Gagal like/unlike:", err);
-
-    // --- PERBAIKAN DI SINI ---
+    
+    // 4. Ganti alert() dengan showStatus() 'error'
     let userMessage = "Gagal memperbarui Like/Unlike.";
-    // Coba dapatkan alasan error yang jelas dari kontrak
     const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
     
     if (reason) {
-        userMessage = `Error: ${reason.substring(0, 100)}`; // Potong pesan error panjang
+        userMessage = `Error: ${reason.substring(0, 100)}`;
     } else if (err.code === 'ACTION_REJECTED') {
         userMessage = "Transaksi dibatalkan.";
     }
     
-    // Ganti alert() dengan showStatus() 'error'
     showStatus(userMessage, "error");
     // --- AKHIR PERBAIKAN ---
 
     likeBtn.innerHTML = originalHTML; // Kembalikan ke state awal jika error
-    likeBtn.disabled = false; // Enable manual jika error
-  }
-
-  // 'disabled = false' akan di-set oleh loadLikeAndRatingData jika sukses (implisit, karena innerHTML diganti)
-
-  // Tapi kita set manual saja di 'finally' untuk keamanan
-
+  } 
+  // 'finally' block Anda sudah benar, tidak perlu diubah
   finally {
-
       if (likeBtn) likeBtn.disabled = false;
-
   }
-
 }
-
 
 
 async function handleRating(prefix, globalBetId, ratingValue) {
   // 1. Ganti alert() dengan showStatus()
   if (!contract || !userAddress) {
-    showStatus("⚠️ Connect your wallet first!", "error");
+    showStatus("⚠️ Connect your wallet first!", "warning");
     return;
   }
 
@@ -3604,7 +3605,11 @@ function highlightStars(prefix, globalBetId, hoverValue) {
  * FUNGSI BARU: Menampilkan modal profil.
  */
 function showUserProfile(address) {
-  if (!contract) return alert("⚠️ Connect wallet first!");
+  // --- PERBAIKAN DI SINI ---
+  if (!contract) {
+    showStatus("⚠️ Connect wallet first!", "warning");
+    return;
+  }
   
   const modal = document.getElementById('userProfileModal');
   if (!modal) return;
