@@ -1,347 +1,183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic SVG Wheel</title>
-    <link rel="stylesheet" href="style.css">
-   <style>
-     body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f2f5;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faylotto Spin Battle</title>
+
+<!-- Font & GSAP -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    background: radial-gradient(circle at center, #0a0a0f 0%, #000 100%);
+    font-family: "Orbitron", sans-serif;
+    color: #fff;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    height: 100vh;
-    margin: 0;
-}
+    justify-content: center;
+    overflow: hidden;
+  }
 
-h1 {
-    color: #333;
-}
-
-.wheel-container {
+  .wheel-container {
     position: relative;
-    width: 300px;
-    height: 300px;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: conic-gradient(
+      #6200ff 0deg 45deg,
+      #00b3ff 45deg 90deg,
+      #ff00e6 90deg 135deg,
+      #6200ff 135deg 180deg,
+      #00b3ff 180deg 225deg,
+      #ff00e6 225deg 270deg,
+      #6200ff 270deg 315deg,
+      #00b3ff 315deg 360deg
+    );
+    box-shadow: 0 0 40px #6c00ff, inset 0 0 30px #00ffff;
     display: flex;
-    justify-content: center;
     align-items: center;
-    margin-bottom: 20px;
-}
+    justify-content: center;
+  }
 
-.wheel-pointer {
+  .wheel-hole {
     position: absolute;
-    width: 0;
-    height: 0;
-    border-left: 15px solid transparent;
-    border-right: 15px solid transparent;
-    border-top: 30px solid #c0392b; /* Warna penunjuk */
-    top: -5px; /* Posisikan di atas roda */
-    z-index: 10;
-    filter: drop-shadow(0 -2px 1px rgba(0,0,0,0.3));
-}
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #000 60%, #111 100%);
+    box-shadow: inset 0 0 25px #6c00ff;
+  }
 
-.wheel {
-    width: 100%;
-    height: 100%;
-    filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
-    transform-origin: center center;
-}
-
-.slice {
-    transition: filter 0.2s;
-    cursor: pointer;
-}
-.slice:hover {
-    filter: brightness(1.1);
-}
-
-/* Kontrol untuk simulasi */
-.controls {
+  .controls {
+    margin-top: 40px;
     display: flex;
-    gap: 10px;
-}
-.controls select, .controls input, .controls button {
-    padding: 8px;
-    font-size: 1rem;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-}
-.controls button {
-    background-color: #2ecc71;
-    color: white;
-    cursor: pointer;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  button {
+    background: linear-gradient(90deg, #6200ff, #00b3ff);
     border: none;
-}
-.controls button:hover {
-    opacity: 0.9;
-}
+    border-radius: 12px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px 28px;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 0 15px #00b3ff;
+    transition: all 0.3s ease;
+  }
 
-/* Style untuk tombol finalize sudah dihapus */
+  button:hover {
+    box-shadow: 0 0 25px #ff00e6;
+    transform: scale(1.05);
+  }
 
-/* Style saat tombol nonaktif */
-button:disabled {
-    background-color: #95a5a6;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-   </style>
+  .status {
+    font-size: 14px;
+    margin-top: 10px;
+    color: #00b3ff;
+  }
+
+  .glow {
+    position: absolute;
+    width: 140%;
+    height: 140%;
+    top: -20%;
+    left: -20%;
+    background: radial-gradient(circle, rgba(98,0,255,0.2) 0%, transparent 70%);
+    filter: blur(40px);
+    z-index: -1;
+  }
+</style>
 </head>
+
 <body>
+  <div class="wheel-container" id="wheel">
+    <div class="wheel-hole"></div>
+    <div class="glow"></div>
+  </div>
 
-    <h1>Faylotto Dynamic Wheel</h1>
+  <div class="controls">
+    <button id="connectBtn">Connect Wallet</button>
+    <button id="placeBetBtn">Place Bet</button>
+    <button id="disconnectBtn">Disconnect</button>
+    <div class="status" id="statusText">Wallet not connected</div>
+  </div>
 
-    <div class="wheel-container">
-        <div class="wheel-pointer"></div>
-        
-        <svg class="wheel" id="wheel" viewBox="0 0 100 100">
-            <g transform="rotate(-90, 50, 50)" id="slices-group"></g>
-            <circle cx="50" cy="50" r="20" fill="#fff" />
-        </svg>
+<script>
+let provider, signer, userAddress;
 
-        <template id="slice-template">
-             <path class="slice" stroke="#fff" stroke-width="1">
-                <title></title>
-             </path>
-        </template>
-    </div>
-
-    <div class="controls">
-        <select id="player-select">
-            <option value="player1">Player 1</option>
-            <option value="player2">Player 2</option>
-            <option value="player3">Player 3</option>
-            <option value="player4">Player 4</option>
-            <option value="player5">Player 5</option>
-        </select>
-        <input type="number" id="bet-amount" value="100">
-        
-        <button id="bet-button">Tempatkan Taruhan!</button>
-    </div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
-    <script src="script.js"></script>
-  <script>
-    // --- SETUP ELEMEN ---
-const wheel = document.getElementById("wheel");
-const slicesGroup = document.getElementById("slices-group");
-const sliceTemplate = document.getElementById("slice-template");
-const betButton = document.getElementById("bet-button");
-// const finalizeButton = document.getElementById("finalize-button"); // DIHAPUS
-const playerSelect = document.getElementById("player-select");
-const betAmountInput = document.getElementById("bet-amount");
-
-// --- DATA STATE APLIKASI ---
-let totalPot = 0;
-let players = {};
-let isSpinning = false;
-let roundTimer = null;
-
-// DURASI RONDE: Ubah ini ke 5 * 60 * 1000 untuk 5 menit
-// Kita gunakan 10 detik (10000 ms) untuk demo
-const ROUND_DURATION = 10000; 
-
-// --- FUNGSI WARNA ACAK ---
-function getRandomColor() {
-    const hue = Math.floor(Math.random() * 360);
-    return `hsl(${hue}, 90%, 60%)`;
+// === Connect Wallet ===
+async function connectWallet() {
+  if (window.ethereum) {
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = provider.getSigner();
+    userAddress = await signer.getAddress();
+    document.getElementById("statusText").innerText = "Connected: " + userAddress.slice(0,6) + "..." + userAddress.slice(-4);
+  } else {
+    alert("MetaMask not found!");
+  }
 }
 
-// --- EVENT LISTENERS ---
-betButton.addEventListener("click", () => {
-    const playerId = playerSelect.value;
-    const amount = parseInt(betAmountInput.value, 10);
-    
-    if (amount > 0) {
-        addBet(playerId, amount);
+// === Disconnect (UI reset only) ===
+function disconnectWallet() {
+  provider = null;
+  signer = null;
+  userAddress = null;
+  document.getElementById("statusText").innerText = "Wallet not connected";
+}
+
+// === Wheel Spin Animation ===
+function spinWheel() {
+  const wheel = document.getElementById("wheel");
+  const angle = 360 * 5 + Math.floor(Math.random() * 360);
+  gsap.to(wheel, {
+    rotation: angle,
+    duration: 5,
+    ease: "power4.inOut",
+    onComplete: () => {
+      gsap.to(wheel, {rotation: angle % 360, duration: 0.5});
+      alert("🎉 Spin complete!");
     }
-});
-
-// Event listener untuk finalizeButton DIHAPUS
-// finalizeButton.addEventListener("click", triggerFinalize);
-
-// --- FUNGSI INTI ---
-
-/**
- * Fungsi inti untuk menambah taruhan dan memperbarui roda
- */
-function addBet(playerId, amount) {
-    const isFirstBet = totalPot === 0;
-
-    if (!players[playerId]) {
-        if (Object.keys(players).length >= 10) {
-            alert("Maksimal 10 pemain per ronde.");
-            return;
-        }
-        
-        const newSliceFragment = sliceTemplate.content.cloneNode(true);
-        const newSlice = newSliceFragment.querySelector("path");
-        const newTitle = newSliceFragment.querySelector("title");
-        const newColor = getRandomColor();
-        newSlice.setAttribute("fill", newColor);
-        newTitle.textContent = `${playerId}: 0`;
-        
-        players[playerId] = {
-            id: playerId,
-            amount: 0,
-            color: newColor,
-            sliceElement: newSlice,
-            titleElement: newTitle,
-            data: { startAngle: 0, endAngle: 0 }
-        };
-        
-        slicesGroup.appendChild(newSliceFragment);
-    }
-    
-    players[playerId].amount += amount;
-    totalPot += amount;
-    
-    updateWheelVisuals();
-
-    if (isFirstBet && !isSpinning) {
-        startRoundTimer();
-    }
+  });
 }
 
-/**
- * Memulai timer ronde
- */
-function startRoundTimer() {
-    console.log(`Timer ronde dimulai (${ROUND_DURATION / 1000} detik)...`);
-    
-    if (roundTimer) {
-        clearTimeout(roundTimer);
-    }
-    
-    roundTimer = setTimeout(() => {
-        console.log("Waktu ronde habis! Memutar roda...");
-        triggerFinalize(); // Panggil fungsi finalize
-    }, ROUND_DURATION);
+// === Place Bet ===
+async function placeBet() {
+  if (!signer) {
+    alert("Connect wallet first!");
+    return;
+  }
+
+  // nanti ganti address sesuai kontrak kamu
+  const contractAddress = "0xYourContractAddressHere";
+  const abi = [ "function placeBet() payable" ]; // minimal ABI
+  
+  const contract = new ethers.Contract(contractAddress, abi, signer);
+  try {
+    const tx = await contract.placeBet({ value: ethers.utils.parseEther("0.001") });
+    document.getElementById("statusText").innerText = "Betting... " + tx.hash.slice(0,10);
+    await tx.wait();
+    spinWheel();
+  } catch (err) {
+    console.error(err);
+    alert("Transaction failed!");
+  }
 }
 
-/**
- * Fungsi terpisah untuk memicu finalisasi (hanya dipanggil oleh timer)
- */
-function triggerFinalize() {
-    if (isSpinning || totalPot === 0) return;
-
-    console.log("Memulai finalisasi ronde...");
-    isSpinning = true;
-    betButton.disabled = true; // Nonaktifkan tombol bet saat berputar
-
-    if (roundTimer) {
-        clearTimeout(roundTimer);
-        roundTimer = null;
-    }
-
-    const winnerId = pickWeightedWinner();
-    console.log(`Pemenang yang dipilih: ${winnerId}`);
-    
-    spinToWinner(winnerId);
-}
-
-/**
- * Fungsi untuk mereset roda setelah ronde selesai
- */
-function resetRound() {
-    console.log("Mereset ronde baru...");
-    
-    totalPot = 0;
-    players = {};
-    isSpinning = false;
-    
-    slicesGroup.innerHTML = ''; // Hapus semua irisan
-    gsap.set(wheel, { rotation: 0 }); // Reset rotasi roda
-    
-    betButton.disabled = false; // Aktifkan kembali tombol bet
-}
-
-// --- FUNGSI LAINNYA (Sama seperti sebelumnya) ---
-
-function updateWheelVisuals() {
-    let currentAngle = 0;
-    for (const playerId in players) {
-        const player = players[playerId];
-        const percentage = player.amount / totalPot;
-        const angle = percentage * 360;
-        const startAngle = currentAngle;
-        const endAngle = currentAngle + angle;
-        player.titleElement.textContent = `${player.id}: ${player.amount} (${(percentage * 100).toFixed(1)}%)`;
-        gsap.to(player.data, {
-            startAngle: startAngle,
-            endAngle: endAngle,
-            duration: 0.7,
-            ease: "power2.out",
-            onUpdate: () => {
-                const d = describeArc(50, 50, 45, player.data.startAngle, player.data.endAngle);
-                player.sliceElement.setAttribute("d", d);
-            }
-        });
-        currentAngle = endAngle;
-    }
-}
-
-function pickWeightedWinner() {
-    const rand = Math.random() * totalPot;
-    let cumulative = 0;
-    for (const playerId in players) {
-        cumulative += players[playerId].amount;
-        if (rand < cumulative) {
-            return playerId;
-        }
-    }
-    return Object.keys(players)[0];
-}
-
-function spinToWinner(winnerId) {
-    const winner = players[winnerId];
-    if (!winner) return;
-
-    const startAngle = winner.data.startAngle;
-    const endAngle = winner.data.endAngle;
-    const sliceWidth = endAngle - startAngle;
-    const targetMiddleAngle = startAngle + sliceWidth / 2;
-    const randomOffset = (Math.random() * 0.8 + 0.1) * sliceWidth - (sliceWidth / 2);
-    const finalTargetAngle = targetMiddleAngle + randomOffset;
-    
-    let currentRotation = gsap.getProperty(wheel, "rotation");
-    let currentPosition = currentRotation % 360;
-    const fullSpins = 5 * 360;
-    let distanceToTarget = -finalTargetAngle - currentPosition;
-    if (distanceToTarget > 0) distanceToTarget -= 360;
-    const totalSpinAmount = fullSpins + Math.abs(distanceToTarget);
-
-    gsap.to(wheel, {
-        duration: 6,
-        rotation: `-=${totalSpinAmount}`,
-        ease: "power3.out",
-        onComplete: () => {
-            console.log(`Berhenti di ${winnerId}!`);
-            alert(`Pemenangnya adalah ${winnerId}!`);
-            resetRound();
-        }
-    });
-}
-
-// --- FUNGSI HELPER SVG (Tidak berubah) ---
-function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
-    var angleInRadians = (angleInDegrees) * Math.PI / 180.0;
-    return {
-        x: centerX + (radius * Math.cos(angleInRadians)),
-        y: centerY + (radius * Math.sin(angleInRadians))
-    };
-}
-function describeArc(x, y, radius, startAngle, endAngle) {
-    if (endAngle - startAngle >= 360) endAngle = startAngle + 359.99;
-    if (endAngle <= startAngle) endAngle = startAngle + 0.01;
-    var start = polarToCartesian(x, y, radius, endAngle);
-    var end = polarToCartesian(x, y, radius, startAngle);
-    var largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-    var d = ["M", x, y, "L", start.x, start.y, "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y, "Z"].join(" ");
-    return d;
-      }
-  </script>
+document.getElementById("connectBtn").addEventListener("click", connectWallet);
+document.getElementById("disconnectBtn").addEventListener("click", disconnectWallet);
+document.getElementById("placeBetBtn").addEventListener("click", placeBet);
+</script>
 </body>
 </html>
