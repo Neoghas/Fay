@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Faylotto Spin Battle</title>
 
-<!-- Font & GSAP -->
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet" />
+<!-- Font: Ubuntu -->
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap" rel="stylesheet" />
+
+<!-- GSAP & Ethers -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
@@ -14,8 +16,8 @@
   body {
     margin: 0;
     height: 100vh;
-    background: radial-gradient(circle at center, #0a0a0f 0%, #000 100%);
-    font-family: "Orbitron", sans-serif;
+    background: radial-gradient(circle at center, #0b0b12 0%, #000 100%);
+    font-family: "Ubuntu", sans-serif;
     color: #fff;
     display: flex;
     flex-direction: column;
@@ -24,22 +26,38 @@
     overflow: hidden;
   }
 
+  /* === Wallet Button Top Right === */
+  .wallet-btn {
+    position: fixed;
+    top: 20px;
+    right: 25px;
+    background: linear-gradient(90deg, #6200ff, #00b3ff);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 10px 20px;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 0 15px #00b3ff;
+    transition: all 0.3s ease;
+    z-index: 10;
+  }
+
+  .wallet-btn:hover {
+    box-shadow: 0 0 25px #ff00e6;
+    transform: scale(1.05);
+  }
+
+  /* === Wheel Donut === */
   .wheel-container {
     position: relative;
     width: 320px;
     height: 320px;
     border-radius: 50%;
-    background: conic-gradient(
-      #6200ff 0deg 45deg,
-      #00b3ff 45deg 90deg,
-      #ff00e6 90deg 135deg,
-      #6200ff 135deg 180deg,
-      #00b3ff 180deg 225deg,
-      #ff00e6 225deg 270deg,
-      #6200ff 270deg 315deg,
-      #00b3ff 315deg 360deg
-    );
-    box-shadow: 0 0 40px #6c00ff, inset 0 0 30px #00ffff;
+    background: radial-gradient(circle at center, #101020 30%, #1a0040 100%);
+    box-shadow: 0 0 40px rgba(98,0,255,0.5), inset 0 0 25px rgba(0,255,255,0.2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -54,6 +72,18 @@
     box-shadow: inset 0 0 25px #6c00ff;
   }
 
+  .glow {
+    position: absolute;
+    width: 140%;
+    height: 140%;
+    top: -20%;
+    left: -20%;
+    background: radial-gradient(circle, rgba(98,0,255,0.25) 0%, transparent 70%);
+    filter: blur(45px);
+    z-index: -1;
+  }
+
+  /* === Controls === */
   .controls {
     margin-top: 40px;
     display: flex;
@@ -62,82 +92,71 @@
     gap: 12px;
   }
 
-  button {
-    background: linear-gradient(90deg, #6200ff, #00b3ff);
+  #placeBetBtn {
+    background: linear-gradient(90deg, #00b3ff, #ff00e6);
     border: none;
     border-radius: 12px;
     color: white;
     font-size: 16px;
     font-weight: bold;
-    padding: 12px 28px;
+    padding: 12px 30px;
     cursor: pointer;
     text-transform: uppercase;
-    box-shadow: 0 0 15px #00b3ff;
+    box-shadow: 0 0 20px #00b3ff;
     transition: all 0.3s ease;
   }
 
-  button:hover {
+  #placeBetBtn:hover {
     box-shadow: 0 0 25px #ff00e6;
     transform: scale(1.05);
   }
 
   .status {
-    font-size: 14px;
-    margin-top: 10px;
+    font-size: 13px;
+    margin-top: 8px;
     color: #00b3ff;
-  }
-
-  .glow {
-    position: absolute;
-    width: 140%;
-    height: 140%;
-    top: -20%;
-    left: -20%;
-    background: radial-gradient(circle, rgba(98,0,255,0.2) 0%, transparent 70%);
-    filter: blur(40px);
-    z-index: -1;
   }
 </style>
 </head>
 
 <body>
+  <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+
   <div class="wheel-container" id="wheel">
     <div class="wheel-hole"></div>
     <div class="glow"></div>
   </div>
 
   <div class="controls">
-    <button id="connectBtn">Connect Wallet</button>
     <button id="placeBetBtn">Place Bet</button>
-    <button id="disconnectBtn">Disconnect</button>
     <div class="status" id="statusText">Wallet not connected</div>
   </div>
 
 <script>
 let provider, signer, userAddress;
+const walletBtn = document.getElementById("walletBtn");
+const statusText = document.getElementById("statusText");
 
-// === Connect Wallet ===
-async function connectWallet() {
-  if (window.ethereum) {
+// === Toggle Connect / Disconnect ===
+async function toggleWallet() {
+  if (!userAddress) {
+    if (!window.ethereum) return alert("Please install MetaMask.");
     provider = new ethers.providers.Web3Provider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     signer = provider.getSigner();
     userAddress = await signer.getAddress();
-    document.getElementById("statusText").innerText = "Connected: " + userAddress.slice(0,6) + "..." + userAddress.slice(-4);
+    walletBtn.innerText = "Disconnect";
+    statusText.innerText = "Connected: " + userAddress.slice(0,6) + "..." + userAddress.slice(-4);
   } else {
-    alert("MetaMask not found!");
+    provider = null;
+    signer = null;
+    userAddress = null;
+    walletBtn.innerText = "Connect Wallet";
+    statusText.innerText = "Wallet not connected";
   }
 }
 
-// === Disconnect (UI reset only) ===
-function disconnectWallet() {
-  provider = null;
-  signer = null;
-  userAddress = null;
-  document.getElementById("statusText").innerText = "Wallet not connected";
-}
-
-// === Wheel Spin Animation ===
+// === Wheel Spin Animation (placeholder) ===
 function spinWheel() {
   const wheel = document.getElementById("wheel");
   const angle = 360 * 5 + Math.floor(Math.random() * 360);
@@ -147,26 +166,22 @@ function spinWheel() {
     ease: "power4.inOut",
     onComplete: () => {
       gsap.to(wheel, {rotation: angle % 360, duration: 0.5});
-      alert("🎉 Spin complete!");
+      alert("🎯 Spin complete!");
     }
   });
 }
 
 // === Place Bet ===
 async function placeBet() {
-  if (!signer) {
-    alert("Connect wallet first!");
-    return;
-  }
+  if (!signer) return alert("Connect wallet first!");
 
-  // nanti ganti address sesuai kontrak kamu
-  const contractAddress = "0xYourContractAddressHere";
-  const abi = [ "function placeBet() payable" ]; // minimal ABI
-  
+  const contractAddress = "0xYourContractAddressHere"; // ganti nanti
+  const abi = [ "function placeBet() payable" ];
+
   const contract = new ethers.Contract(contractAddress, abi, signer);
   try {
     const tx = await contract.placeBet({ value: ethers.utils.parseEther("0.001") });
-    document.getElementById("statusText").innerText = "Betting... " + tx.hash.slice(0,10);
+    statusText.innerText = "Bet placed... " + tx.hash.slice(0,10);
     await tx.wait();
     spinWheel();
   } catch (err) {
@@ -175,8 +190,7 @@ async function placeBet() {
   }
 }
 
-document.getElementById("connectBtn").addEventListener("click", connectWallet);
-document.getElementById("disconnectBtn").addEventListener("click", disconnectWallet);
+walletBtn.addEventListener("click", toggleWallet);
 document.getElementById("placeBetBtn").addEventListener("click", placeBet);
 </script>
 </body>
