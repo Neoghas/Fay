@@ -69,29 +69,6 @@
       </div>
     </div>
 
-    <div class="row" style="margin-top:18px;">
-      <div class="col card">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <strong>Contract Loader</strong>
-            <div class="muted small">Isi address kontrak (token sudah di-setting di JS)</div>
-          </div>
-          <div class="small-muted">Sepolia / testnet</div>
-        </div>
-
-        <div class="row" style="margin-top:12px;">
-          <div class="col">
-            <label class="small-muted">Contract Address</label>
-            <input id="inputContract" type="text" placeholder="0x... (FaylottoSpinBattle contract)" />
-          </div>
-        </div>
-
-        <div class="row" style="margin-top:12px;">
-          <button id="btnLoad">Load Contract</button>
-          <button id="btnRefresh" class="ghost">Refresh Balances & Round</button>
-        </div>
-      </div>
-
 
       <div class="col card">
         <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -227,9 +204,8 @@
     // ======= ABI UNTUK KONTRAK 2 (TOKEN ERC20) =======
     const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
       
-    // ======= Alamat Token Ditanam Di Sini =======
-    // Ganti alamat ini dengan alamat token ERC20 Anda
-    const TOKEN_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2"; // Alamat dari contoh Anda (Base Sepolia)
+    const USDT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2"; 
+    const FAYLOTTO_ADDRESS = "0x7CD731477dbD9655A605E1B788F5A064415471D3"; 
     
     // ======= App State =======
     let provider, signer;
@@ -324,14 +300,14 @@
     // ======= Wallet connect =======
     btnConnect.addEventListener('click', connectWallet);
     btnDisconnect.addEventListener('click', disconnectWallet);
-    btnLoad.addEventListener('click', loadContract);
     btnRefresh.addEventListener('click', refreshAll);
     btnClearLog.addEventListener('click', () => { consoleLog.textContent = "Ready."; });
 
-    async function connectWallet() {
+        async function connectWallet() {
       if (!window.ethereum) { alert('No Ethereum provider found. Install MetaMask.'); return; }
       try {
-        provider = new ethers.providers.Web3Provider(window.ethereum);
+        // [FIX] Ini adalah perbaikan untuk error 'Web3Provider' Anda
+        provider = new ethers.providers.Web3Provider(window.ethereum); 
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         userAddress = await signer.getAddress();
@@ -343,17 +319,18 @@
         btnDisconnect.style.display = 'inline-block';
         log('Connected', userAddress, 'network', net);
         
-        if (inputContract.value) {
-          await loadContract();
-        }
+        // [DIUBAH] Otomatis panggil loadContract()
+        await loadContract(); 
+        
         window.ethereum.on('accountsChanged', handleAccountsChanged);
         window.ethereum.on('chainChanged', handleChainChanged);
-        await refreshAll();
+        await refreshAll(); // Muat ulang saldo, dll.
       } catch (err) {
         console.error(err);
         alert('Wallet connection failed: ' + (err && err.message ? err.message : err));
       }
     }
+
     async function disconnectWallet() {
       signer = null; userAddress = null; provider = null;
       setAddr(null);
@@ -384,39 +361,40 @@
     function validateAddr(a) { return a && ethers.utils.isAddress(a); }
     function simpleError(msg) { alert(msg); log('ERR', msg); }
 
-    async function loadContract() {
-      const caddr = inputContract.value.trim();
-      const taddr = TOKEN_ADDRESS; // Mengambil dari konstanta
+        async function loadContract() {
+      // [DIUBAH] Baca dari konstanta JS, bukan HTML
+      const caddr = FAYLOTTO_ADDRESS;
+      const taddr = USDT_ADDRESS;
       
-      if (!validateAddr(caddr)) { simpleError('Invalid contract address'); return; }
-      if (!validateAddr(taddr)) { simpleError('Invalid token address in JS constant (TOKEN_ADDRESS)'); return; } 
+      if (!validateAddr(caddr)) { simpleError('Invalid contract address in JS file'); return; }
+      if (!validateAddr(taddr)) { simpleError('Invalid token address in JS file'); return; }
       
       if (!provider) {
+        // Ini seharusnya sudah di-set oleh connectWallet, tapi untuk keamanan
         provider = new ethers.providers.Web3Provider(window.ethereum || window.web3);
         signer = provider.getSigner ? provider.getSigner() : null;
       }
       
-      // === INI KONTRAK 1 (GAME ANDA) ===
-      // Menggunakan alamat dari input (caddr) dan CONTRACT_ABI
       contract = new ethers.Contract(caddr, CONTRACT_ABI, provider);
-      
-      // === INI KONTRAK 2 (TOKEN USDT) ===
-      // Menggunakan alamat dari konstanta (taddr) dan ERC20_ABI
       tokenContract = new ethers.Contract(taddr, ERC20_ABI, provider);
       
       if (signer) { 
-        // Hubungkan kedua kontrak ke signer agar bisa mengirim transaksi
         contract = contract.connect(signer); 
         tokenContract = tokenContract.connect(signer); 
       }
       
-      try { tokenDecimals = await tokenContract.decimals(); } catch(e){ log('Token decimals read failed, default 18', e); tokenDecimals = 18; }
+      try { 
+        tokenDecimals = await tokenContract.decimals(); 
+      } catch(e) { 
+        log('Token decimals read failed, default 18', e); 
+        tokenDecimals = 18; 
+      }
       
-      log('Loaded contract 1 (Game):', caddr);
-      log('Loaded contract 2 (Token):', taddr, 'decimals', tokenDecimals);
+      log('Loaded contract', caddr, 'token', taddr, 'decimals', tokenDecimals);
       await refreshAll();
-      startIdleTimer(); 
+      startIdleTimer(); // start idle countdown when contract loaded
     }
+
 
     // ======= Refresh =======
     async function refreshAll() {
