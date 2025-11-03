@@ -1,394 +1,374 @@
-<!doctype html>
-<html lang="id">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FaylottoSpinBattle - Frontend Demo (Donut Wheel)</title>
-  <style>
-:root {
-  --bg: #050810;
-  --surface: #0a0f1e;
-  --accent: #00eaff;
-  --accent-glow: #00eaffaa;
-  --muted: #7b89a4;
-  --text: #dce7f7;
-  --danger: #ff4262;
-  --success: #00ff99;
-  --border: rgba(255, 255, 255, 0.05);
-  --glass: rgba(255, 255, 255, 0.03);
-  font-family: 'Inter', 'Orbitron', 'Rajdhani', system-ui, sans-serif;
-}
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faylotto Spin Battle</title>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --purple-main: #6200ff;
+    --purple-light: #6c00ff;
+    --purple-dark: #1a0040;
+    --blue-main: #00b3ff;
+    --pink-main: #ff00e6;
+    --cyan-main: #00ffff;
+    --red-main: #c0392b; /* [BARU] Warna untuk tombol finalize */
+    --bg-dark-1: #0b0b12;
+    --bg-dark-2: #000;
+    --bg-modal: #0d0d1a;
+    --border-color: rgba(120, 0, 255, 0.4);
+  }
+  body {
+    margin: 0;
+    height: 100vh;
+    background: radial-gradient(circle at center, var(--bg-dark-1) 0%, var(--bg-dark-2) 100%);
+    font-family: "Ubuntu", sans-serif;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align: center;
+    justify-content: center;
+    overflow-y: auto; /* Izinkan scroll jika konten meluap */
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  /* === Wallet Button & Info === */
+  .wallet-btn {
+    position: fixed; top: 20px; right: 25px;
+    background: linear-gradient(90deg, var(--purple-main), var(--blue-main));
+    border: none; border-radius: 12px; color: white;
+    font-size: 14px; font-weight: bold; padding: 10px 20px;
+    cursor: pointer; text-transform: uppercase;
+    box-shadow: 0 0 15px var(--blue-main);
+    transition: all 0.3s ease; z-index: 1001;
+  }
+  .wallet-btn:hover { box-shadow: 0 0 25px var(--pink-main); transform: scale(1.05); }
+  .wallet-info {
+    position: fixed; top: 65px; right: 25px;
+    background: rgba(20, 20, 40, 0.9);
+    border: 2px solid var(--border-color);
+    border-radius: 12px; padding: 12px 16px;
+    font-size: 13px; line-height: 1.5;
+    min-width: 240px; display: none;
+    box-shadow: 0 0 20px rgba(180, 0, 255, 0.3); z-index: 1001;
+  }
+  .wallet-info span { color: var(--cyan-main); font-weight: bold; }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  background: radial-gradient(circle at 20% 20%, #071020, var(--bg));
-  color: var(--text);
-  overflow-x: hidden;
-}
+  /* === Wheel Container & SVG (DIUBAH UNTUK CANVAS) === */
+  .wheel-container {
+    position: relative; width: 320px; height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, #101020 30%, var(--purple-dark) 100%);
+    box-shadow: 0 0 40px rgba(98,0,255,0.5), inset 0 0 25px rgba(0,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    /* [DIHAPUS] padding-top: 30px; */
+    box-sizing: border-box;
+    margin-top: 60px; /* Beri ruang untuk tombol wallet */
+  }
+  .wheel-pointer {
+    position: absolute; width: 0; height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-top: 30px solid var(--blue-main);
+    top: -15px; /* Disesuaikan untuk canvas */
+    left: 50%;
+    transform: translateX(-50%); z-index: 10;
+    filter: drop-shadow(0 -2px 2px rgba(0,0,0,0.15));
+  }
+  #donutCanvas {
+    width: 100%;
+    height: 100%;
+    transform-origin: center center;
+  }
 
-/* Container */
-.container {
-  max-width: 1080px;
-  margin: 30px auto;
-  padding: 20px;
-}
+  /* === Controls (DIUBAH) === */
+  .controls {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 250px; 
+  }
+  
+  .main-btn {
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    padding: 12px 30px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    width: 100%;
+  }
+  
+  #placeBetBtn {
+    background: linear-gradient(90deg, var(--blue-main), var(--pink-main));
+    box-shadow: 0 0 20px var(--blue-main);
+  }
+  #placeBetBtn:hover { box-shadow: 0 0 25px var(--pink-main); transform: scale(1.05); }
 
-/* Header */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}
+  #finalizeBtn {
+    background: linear-gradient(90deg, var(--pink-main), var(--red-main));
+    box-shadow: 0 0 20px var(--pink-main);
+    display: none; /* Sembunyi by default */
+  }
+  #finalizeBtn:hover { box-shadow: 0 0 25px var(--red-main); transform: scale(1.05); }
+  
+  .main-btn:disabled {
+    background: #555;
+    box-shadow: none;
+    transform: none;
+    cursor: not-allowed;
+  }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
+  .status {
+    font-size: 13px;
+    margin-top: 8px;
+    color: var(--blue-main);
+    min-height: 1.2em;
+    text-align: center;
+    max-width: 320px;
+  }
+  /* [DIUBAH] ID timerText diubah ke idleCountdown */
+  .timer {
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--cyan-main);
+      margin-top: 10px;
+      height: 20px;
+  }
 
-.logo {
-  width: 52px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  font-size: 18px;
-  color: #001018;
-  background: radial-gradient(circle at top left, var(--accent), #0ff1b1);
-  border-radius: 12px;
-  box-shadow: 0 0 25px var(--accent-glow);
-}
+  /* === Bet List === */
+  #bet-list-container {
+    margin-top: 20px;
+    width: 90%;
+    max-width: 400px;
+    height: 150px;
+    background: rgba(10, 10, 20, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    box-sizing: border-box;
+    overflow-y: auto;
+  }
+  #bet-list-container h3 {
+    margin: 0 0 10px 0; font-size: 14px;
+    color: var(--blue-main); text-align: center;
+    text-transform: uppercase;
+  }
+  /* Gaya ini akan diterapkan oleh JS */
+  .bet-list-item {
+    background: rgba(20, 20, 40, 0.7);
+    border-radius: 4px; padding: 8px 10px;
+    margin-bottom: 6px; font-size: 12px;
+    display: flex; justify-content: space-between;
+    align-items: center;
+  }
+  .bet-list-item .player-id { font-weight: bold; color: var(--cyan-main); }
+  .bet-list-item .player-bets { text-align: right; color: #eee; }
+  #bet-list-placeholder {
+    text-align: center; font-size: 13px;
+    color: #888; padding-top: 20px;
+  }
 
-h1 {
-  font-size: 20px;
-  margin: 0;
-}
+  /* === MODAL POPUP === */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 999; display: none; opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .bet-modal {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    width: 90%; max-width: 380px;
+    background: var(--bg-modal);
+    border: 2px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 0 40px rgba(180, 0, 255, 0.3);
+    z-index: 1000; display: none; opacity: 0;
+    transition: all 0.3s ease;
+  }
+  .modal-overlay.show, .bet-modal.show { display: block; opacity: 1; }
+  .bet-modal.show { transform: translate(-50%, -50%) scale(1); }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(120, 0, 255, 0.2);
+  }
+  .modal-header h2 { margin: 0; font-size: 20px; color: var(--blue-main); }
+  .modal-close-btn {
+    font-size: 28px; font-weight: bold; color: #fff;
+    cursor: pointer; line-height: 1; background: none; border: none;
+  }
+  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  .balance-display, .min-display { font-size: 13px; color: #999; line-height: 1.5; }
+  .balance-display span, .min-display span { font-weight: bold; color: var(--cyan-main); }
+  .input-group { display: flex; gap: 10px; }
+  .input-group input, .input-group select {
+    background: #06060c;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: #fff;
+    font-family: "Ubuntu", sans-serif;
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+  .input-group input { flex-grow: 1; width: 65%; }
+  .input-group select { width: 35%; }
+  .percent-buttons { display: flex; justify-content: space-between; gap: 8px; }
+  .percent-btn {
+    flex: 1; background: rgba(120, 0, 255, 0.2);
+    border: 1px solid var(--border-color);
+    border-radius: 8px; color: #fff;
+    padding: 8px 10px; font-size: 13px;
+    cursor: pointer; transition: background 0.2s ease;
+  }
+  .percent-btn:hover { background: rgba(120, 0, 255, 0.4); }
+  .modal-footer { padding: 20px; border-top: 1px solid rgba(120, 0, 255, 0.2); }
+  #confirmBetBtn {
+    width: 100%;
+    background: linear-gradient(90deg, var(--blue-main), var(--pink-main));
+    border: none; border-radius: 12px; color: white;
+    font-size: 16px; font-weight: bold; padding: 12px 30px;
+    cursor: pointer; text-transform: uppercase;
+    box-shadow: 0 0 20px var(--blue-main);
+    transition: all 0.3s ease;
+  }
+  #confirmBetBtn:hover { box-shadow: 0 0 25px var(--pink-main); transform: scale(1.02); }
+  #confirmBetBtn:disabled {
+    background: #555; color: #999;
+    box-shadow: none; transform: none; cursor: not-allowed;
+  }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 0 20px rgba(0,255,255,0.05);
-  backdrop-filter: blur(6px);
-}
+  /* [BARU] Gaya untuk Console Log */
+  .console-container {
+    margin-top: 30px;
+    width: 90%;
+    max-width: 400px;
+    background: rgba(10, 10, 20, 0.5);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    box-sizing: border-box;
+    font-size: 14px;
+  }
+  .console-container strong { color: var(--blue-main); }
+  .console-container .muted { font-size: 12px; color: #888; }
+  .console-container pre {
+    background: #000;
+    border-radius: 4px;
+    padding: 10px;
+    height: 150px;
+    overflow-y: auto;
+    font-size: 11px;
+    line-height: 1.4;
+    color: #ccc;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .console-container .ghost {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--cyan-main);
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .console-container .ghost:hover { background: rgba(0, 255, 255, 0.1); }
 
-/* Buttons */
-button {
-  background: linear-gradient(90deg, var(--accent), #00b4ff);
-  border: none;
-  color: #001018;
-  font-weight: 700;
-  border-radius: 8px;
-  cursor: pointer;
-  padding: 8px 14px;
-  transition: all 0.15s ease;
-}
-button:hover {
-  box-shadow: 0 0 10px var(--accent-glow);
-  transform: translateY(-1px);
-}
-button.ghost {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-button.ghost:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* Inputs */
-input[type=text], input[type=number] {
-  width: 100%;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  padding: 8px 10px;
-  font-size: 14px;
-}
-input:focus {
-  border-color: var(--accent);
-  outline: none;
-  box-shadow: 0 0 8px var(--accent-glow);
-}
-
-/* Layouts */
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-top: 16px;
-}
-.col {
-  flex: 1;
-  min-width: 260px;
-}
-.muted { color: var(--muted); }
-.small { font-size: 13px; }
-
-/* Balances */
-.badge {
-  background: rgba(255,255,255,0.05);
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-/* Donut */
-.donut-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-top: 14px;
-}
-#donutCanvas {
-  border-radius: 50%;
-  background: radial-gradient(circle at center, rgba(255,255,255,0.03), transparent 60%);
-  box-shadow: 0 0 25px rgba(0,255,255,0.1);
-}
-.donut-legend {
-  text-align: left;
-  background: rgba(255,255,255,0.02);
-  padding: 12px;
-  border-radius: 12px;
-}
-.legend-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-  background: rgba(255,255,255,0.02);
-  margin-bottom: 6px;
-  padding: 6px 8px;
-  border-radius: 8px;
-}
-
-/* Countdown */
-.countdown {
-  font-family: 'Orbitron', monospace;
-  font-size: 18px;
-  color: var(--accent);
-  text-shadow: 0 0 8px var(--accent-glow);
-}
-
-/* Players */
-.players-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-}
-.player-item {
-  background: rgba(255,255,255,0.02);
-  padding: 8px;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-}
-
-/* Console */
-pre {
-  background: #020b14;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
-  color: var(--muted);
-  overflow-y: auto;
-  max-height: 240px;
-  font-size: 12px;
-}
-
-/* Footer */
-.footer {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--muted);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* Responsive */
-@media (max-width: 720px) {
-  .header { flex-direction: column; align-items: flex-start; }
-  .donut-wrap { flex-direction: column; }
-  .container { padding: 14px; }
-}
 </style>
-
 </head>
+
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="brand">
-        <div class="logo">FY</div>
-        <div>
-          <h1>Faylotto Spin Battle — Demo UI</h1>
-          <div class="muted small">Connect wallet, place bets (ETH / ERC20), referral & visual donut wheel</div>
-        </div>
-      </div>
+  <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+  <div class="wallet-info" id="walletInfo">
+    <p>Address: <span id="walletAddress">-</span></p>
+    <p>Balance (ETH): <span id="ethBalance">0</span></p>
+    <p>Balance (USDT): <span id="usdtBalance">0</span></p>
+  </div>
 
-      <div class="card" style="display:flex;align-items:center;gap:12px;">
-        <div id="networkBadge" class="badge small-muted">Network: -</div>
-        <div id="addrBadge" class="badge small-muted">Not connected</div>
-        <button id="btnConnect">Connect Wallet</button>
-        <button id="btnDisconnect" class="ghost" style="display:none">Disconnect</button>
-      </div>
+  <div class="wheel-container">
+    <div class="wheel-pointer"></div>
+    <canvas id="donutCanvas" width="320" height="320"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="placeBetBtn" class="main-btn" disabled>Place Bet</button>
+    <button id="finalizeBtn" class="main-btn" disabled>Finalize Round</button> 
+    <div class="status" id="statusText">Wallet not connected</div>
+    <div class="timer" id="idleCountdownContainer">
+      Auto-spin in: <span id="idleCountdown">30</span>s
     </div>
-
-    <div class="row" style="margin-top:18px;">
-      <div class="col card">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <strong>Contract & Token</strong>
-            <div class="muted small">Isi address kontrak & token (USDT) di sini</div>
-          </div>
-          <div class="small-muted">Sepolia / testnet</div>
-        </div>
-
-      <div class="col card">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <div>
-            <strong>Wallet Balances</strong>
-            <div class="muted small">ETH & USDT (ERC20)</div>
-          </div>
-          <div class="small-muted">Realtime when connected</div>
-        </div>
-
-        <div class="row" style="margin-top:12px;align-items:center;">
-          <div class="balances col">
-            <div>
-              <div class="small-muted">ETH</div>
-              <div id="balEth" style="font-weight:700">-</div>
-            </div>
-            <div>
-              <div class="small-muted">USDT</div>
-              <div id="balToken" style="font-weight:700">-</div>
-            </div>
-          </div>
-
-          <div style="min-width:220px;">
-            <div class="small-muted">Gas info / allowance</div>
-            <div id="allowInfo" class="small-muted">Allowance: -</div>
-          </div>
-        </div>
+  </div>
+  
+  <div id="bet-list-container">
+      <h3>Current Round Bets (Donut Legend)</h3>
+      <div id="bet-list">
+          <p id="bet-list-placeholder">No bets placed yet in this round.</p>
       </div>
-    </div>
+  </div>
 
-    <!-- Main actions -->
-    <div class="row" style="margin-top:18px;">
-      <div class="col card">
-        <strong>Current Round</strong>
-        <div class="muted small">Informasi dasar round aktif</div>
-
-        <div style="margin-top:12px;">
-          <div id="roundSummary" class="small-muted">Tidak ada kontrak dimuat.</div>
-
-          <div class="donut-wrap">
-            <canvas id="donutCanvas" width="360" height="360"></canvas>
-            <div class="donut-legend">
-              <div>Countdown: <span id="idleCountdown" class="countdown">30</span>s</div>
-              <div style="margin-top:8px;"><strong>Players</strong></div>
-              <div id="playersList" class="players-list small-muted">-</div>
-            </div>
-          </div>
-
-          <div class="row" style="margin-top:12px;">
-            <div class="col">
-              <label class="small-muted">Bet ETH (wei auto convert)</label>
-              <input id="inputBetEth" type="number" placeholder="ETH amount (e.g., 0.01)" />
-              <div style="margin-top:8px;">
-                <button id="btnBetEth">Place Bet (ETH)</button>
-              </div>
-            </div>
-
-            <div class="col">
-              <label class="small-muted">Bet ERC20 (USDT) amount</label>
-              <input id="inputBetToken" type="number" placeholder="Token amount (e.g., 10)" />
-              <div style="margin-top:8px;" class="grid-2">
-                <button id="btnApprove">Approve Token</button>
-                <button id="btnBetToken">Place Bet (USDT)</button>
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top:12px;">
-            <div class="inline">
-              <button id="btnFinalize" class="ghost">Finalize Round (anyone)</button>
-              <div class="small-muted" style="margin-left:8px;">(call finalizeRound after round end)</div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <div class="col card">
-        <strong>Referral & Nickname</strong>
-        <div class="muted small">Buat nickname, set ref, klaim reward</div>
-
-        <div style="margin-top:12px;" class="grid-2">
-          <div>
-            <label class="small-muted">Create Nickname</label>
-            <input id="inputNick" type="text" placeholder="username (min 3 chars)" />
-            <div style="margin-top:8px;">
-              <button id="btnCreateNick">Create Nickname</button>
-            </div>
-          </div>
-          <div>
-            <label class="small-muted">Set Referral by Nickname</label>
-            <input id="inputRefNick" type="text" placeholder="refNickname" />
-            <div style="margin-top:8px;">
-              <button id="btnSetRef">Set Referral</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:12px;">
-          <button id="btnClaimRef" class="">Claim Referral Rewards</button>
-          <div id="refRewards" class="small-muted" style="margin-top:8px;">Rewards: -</div>
-        </div>
-
-        <div style="margin-top:12px;">
-          <strong>Recent Winners</strong>
-          <div id="winnersFeed" class="winners small-muted">-</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="row" style="margin-top:18px;">
-      <div class="col card">
-        <strong>Raw Console</strong>
-        <div class="muted small">Log aktivitas (klik Clear untuk membersihkan)</div>
-        <pre id="consoleLog">Ready.</pre>
-        <div style="margin-top:8px;">
-          <button id="btnClearLog" class="ghost">Clear</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer">
-      <div>Built for Faylotto — demo UI</div>
-      <div class="muted small">Pastikan contract & token address diisi. Handle with care on mainnet.</div>
+  <div class="console-container">
+    <strong>Raw Console</strong>
+    <div class="muted small">Log aktivitas (klik Clear untuk membersihkan)</div>
+    <pre id="consoleLog">Ready.</pre>
+    <div style="margin-top:8px;">
+      <button id="btnClearLog" class="ghost">Clear</button>
     </div>
   </div>
 
-  <!-- Ethers.js v5 -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script>
-    // ======= Minimal ABIs needed =======
-    const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_erc20Token","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetERC20","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetETH","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"erc20Token","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"erc20Reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalERC20","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getWinnerCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getWinners","outputs":[{"components":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.WinnerInfo[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsERC20","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
-    const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
+
+  <div class="modal-overlay" id="modal-overlay"></div>
+  <div class="bet-modal" id="bet-modal">
+    <div class="modal-header">
+      <h2>Place Your Bet</h2>
+      <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="balance-display">
+        <p>Your Balance:<br/>
+          <span id="modalEthBalance">0</span> ETH<br/>
+          <span id="modalUsdtBalance">0</span> USDT
+        </p>
+      </div>
+      <div class="min-display">
+        Mins: <span id="minEth">...</span> ETH / <span id="minUsdt">...</span> USDT
+      </div>
+      <div class="input-group">
+        <input type="number" id="betAmountInput" placeholder="Custom Amount">
+        <select id="betCurrencySelect">
+          <option value="ETH">ETH</option>
+          <option value="USDT">USDT</option>
+        </select>
+      </div>
+      <div class="percent-buttons">
+        <button class="percent-btn" data-percent="0.10">10%</button>
+        <button class="percent-btn" data-percent="0.25">25%</button>
+        <button class="percent-btn" data-percent="0.50">50%</button>
+        <button class="percent-btn" data-percent="1.0">MAX</button> </div>
+    </div>
+    <div class="modal-footer">
+      <button id="confirmBetBtn">Confirm Bet</button>
+    </div>
+  </div>
+
+<script>
+// =================================================================
+// ======= JAVASCRIPT TELAH DIREFAKTOR UNTUK UI BARU =======
+// =================================================================
+
+// Harap isi ABI Anda di sini
+const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_erc20Token","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetERC20","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetETH","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"erc20Token","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"erc20Reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalERC20","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getWinnerCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getWinners","outputs":[{"components":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.WinnerInfo[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsERC20","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
+
+const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
 
     const CONTRACT_ADDRESS = "0x7CD731477dbD9655A605E1B788F5A064415471D3";  // FaylottoSpinBattle
     const USDT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2";      // USDT ERC20
@@ -401,8 +381,12 @@ pre {
     let network = null;
     let contract = null;
     let usdt = null;
-    let tokenDecimals = 18;
-    
+    let tokenDecimals = 18; // Akan di-fetch
+    let minBetEth = 0n;
+    let minBetUsdt = 0n;
+    let userEthBalance = 0n;
+    let userUsdtBalance = 0n;
+
     // idle spin timeout (in seconds)
     const IDLE_SECONDS = 30;
     let idleTimer = IDLE_SECONDS;
@@ -412,40 +396,40 @@ pre {
     // donut data
     let playersArray = []; // { addr, weight: BigInt, eth: BigInt, erc20: BigInt, color, startAngle, endAngle }
 
-    // DOM
-    const btnConnect = document.getElementById('btnConnect');
-    const btnDisconnect = document.getElementById('btnDisconnect');
-    const addrBadge = document.getElementById('addrBadge');
-    const networkBadge = document.getElementById('networkBadge');
-    const btnLoad = document.getElementById('btnLoad');
-    const btnRefresh = document.getElementById('btnRefresh');
-    const inputContract = document.getElementById('inputContract');
-    const inputERC20 = document.getElementById('inputERC20');
-    const balEth = document.getElementById('balEth');
-    const balToken = document.getElementById('balToken');
-    const allowInfo = document.getElementById('allowInfo');
-    const btnBetEth = document.getElementById('btnBetEth');
-    const btnBetToken = document.getElementById('btnBetToken');
-    const btnApprove = document.getElementById('btnApprove');
-    const inputBetEth = document.getElementById('inputBetEth');
-    const inputBetToken = document.getElementById('inputBetToken');
-    const roundSummary = document.getElementById('roundSummary');
-    const playersListEl = document.getElementById('playersList');
-    const btnFinalize = document.getElementById('btnFinalize');
-    const inputNick = document.getElementById('inputNick');
-    const btnCreateNick = document.getElementById('btnCreateNick');
-    const inputRefNick = document.getElementById('inputRefNick');
-    const btnSetRef = document.getElementById('btnSetRef');
-    const btnClaimRef = document.getElementById('btnClaimRef');
-    const refRewards = document.getElementById('refRewards');
-    const winnersFeed = document.getElementById('winnersFeed');
+    // ======= DOM (Disesuaikan dengan UI baru) =======
+    const walletBtn = document.getElementById('walletBtn');
+    const walletInfo = document.getElementById('walletInfo');
+    const walletAddress = document.getElementById('walletAddress');
+    const ethBalance = document.getElementById('ethBalance');
+    const usdtBalance = document.getElementById('usdtBalance');
+
+    const placeBetBtn = document.getElementById('placeBetBtn');
+    const finalizeBtn = document.getElementById('finalizeBtn');
+    const statusText = document.getElementById('statusText');
+    const playersListEl = document.getElementById('bet-list'); // Diarahkan ke #bet-list
+    const betListPlaceholder = document.getElementById('bet-list-placeholder');
+
     const consoleLog = document.getElementById('consoleLog');
     const btnClearLog = document.getElementById('btnClearLog');
     const donutCanvas = document.getElementById('donutCanvas');
     const idleCountdownEl = document.getElementById('idleCountdown');
 
+    // Modal DOM
+    const modalOverlay = document.getElementById('modal-overlay');
+    const betModal = document.getElementById('bet-modal');
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const modalEthBalance = document.getElementById('modalEthBalance');
+    const modalUsdtBalance = document.getElementById('modalUsdtBalance');
+    const minEthEl = document.getElementById('minEth');
+    const minUsdtEl = document.getElementById('minUsdt');
+    const betAmountInput = document.getElementById('betAmountInput');
+    const betCurrencySelect = document.getElementById('betCurrencySelect');
+    const confirmBetBtn = document.getElementById('confirmBetBtn');
+    const percentButtons = document.querySelectorAll('.percent-btn');
+
     // canvas context
     const ctx = donutCanvas.getContext('2d');
+    // [DIUBAH] Ukuran canvas disesuaikan dengan container (320x320)
     const cw = donutCanvas.width;
     const ch = donutCanvas.height;
     const cx = cw / 2;
@@ -464,69 +448,89 @@ pre {
       consoleLog.textContent += `\n[${t}] ` + args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
       consoleLog.scrollTop = consoleLog.scrollHeight;
     }
-    function setAddr(addr) { addrBadge.textContent = addr ? (addr.slice(0,6) + '...' + addr.slice(-4)) : 'Not connected'; }
-    function setNetwork(name, id) { networkBadge.textContent = `Network: ${name} (${id})`; if (id !== CHAIN_ID_EXPECTED) { networkBadge.style.border = '1px solid rgba(255,255,255,0.04)'; networkBadge.style.background = 'transparent'; } }
+    
+    // [DIUBAH] Helper untuk update UI wallet
+    function updateWalletUI(connected) {
+      if (connected) {
+        walletBtn.textContent = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+        walletAddress.textContent = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+        walletInfo.style.display = 'block';
+        statusText.textContent = 'Ready to bet!';
+        placeBetBtn.disabled = false;
+        finalizeBtn.disabled = false; // Asumsi admin bisa finalize
+      } else {
+        walletBtn.textContent = 'Connect Wallet';
+        walletAddress.textContent = '-';
+        ethBalance.textContent = '0';
+        usdtBalance.textContent = '0';
+        walletInfo.style.display = 'none';
+        statusText.textContent = 'Wallet not connected';
+        placeBetBtn.disabled = true;
+        finalizeBtn.disabled = true;
+      }
+    }
+    
     function weiToEth(wei) { try { return ethers.utils.formatEther(wei); } catch(e) { return '0'; } }
     function toFixedTrim(numStr, digits=6) { return (+numStr).toFixed(digits).replace(/\.?0+$/, ''); }
-
-    // convert ethers BigNumber -> BigInt
     function bnToBigInt(bn) { if (!bn) return 0n; try { return BigInt(bn.toString()); } catch(e){ return 0n; } }
 
-    // random color generator hybrid: base cyan + hue shift
     function playerColor(i) {
-      // base hue around 195 (cyan), add spread
       const base = 195;
       const hue = (base + (i * 37)) % 360;
       return `hsl(${hue},72%,58%)`;
     }
 
     // ======= Wallet connect =======
-    btnConnect.addEventListener('click', connectWallet);
-    btnDisconnect.addEventListener('click', disconnectWallet);
-    btnLoad.addEventListener('click', loadContract);
-    btnRefresh.addEventListener('click', refreshAll);
+    walletBtn.addEventListener('click', connectWallet);
     btnClearLog.addEventListener('click', () => { consoleLog.textContent = "Ready."; });
 
     async function connectWallet() {
-  if (!window.ethereum) { 
-    alert('No Ethereum provider found. Install MetaMask.'); 
-    return; 
-  }
-  try {
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    userAddress = await signer.getAddress();
-    const net = await provider.getNetwork();
-    network = net;
+      if (!window.ethereum) { 
+        alert('No Ethereum provider found. Install MetaMask.'); 
+        return; 
+      }
+      try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        const net = await provider.getNetwork();
+        network = net;
 
-    // 🔹 Inisialisasi kontrak setelah konek wallet
-    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-    usdt = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, provider);
+        if (net.chainId !== CHAIN_ID_EXPECTED) {
+            alert(`Wrong network. Please switch to Base Sepolia (ID: ${CHAIN_ID_EXPECTED})`);
+            log(`Wrong network: ${net.name} (${net.chainId})`);
+            return;
+        }
 
-    setAddr(userAddress);
-    setNetwork(net.name || net.chainId, net.chainId);
-    btnConnect.style.display = 'none';
-    btnDisconnect.style.display = 'inline-block';
-    log('Connected', userAddress, 'network', net);
+        // Inisialisasi kontrak setelah konek wallet
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        usdt = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, signer); // Pakai signer untuk approve
+        try {
+          tokenDecimals = await usdt.decimals();
+        } catch(e) {
+          log('Gagal fetch token decimals, default ke 18', e);
+          tokenDecimals = 18;
+        }
 
-    window.ethereum.on('accountsChanged', handleAccountsChanged);
-    window.ethereum.on('chainChanged', handleChainChanged);
+        updateWalletUI(true);
+        log('Connected', userAddress, 'network', net.name);
 
-    await refreshAll();
+        window.ethereum.on('accountsChanged', handleAccountsChanged);
+        window.ethereum.on('chainChanged', handleChainChanged);
 
-  } catch (err) {
-    console.error(err);
-    alert('Wallet connection failed: ' + (err && err.message ? err.message : err));
-  }
-}
+        await refreshAll();
+        startIdleTimer(); // Mulai timer setelah konek
+
+      } catch (err) {
+        console.error(err);
+        log('Wallet connection failed: ' + (err && err.message ? err.message : err));
+      }
+    }
 
     async function disconnectWallet() {
       signer = null; userAddress = null; provider = null;
-      setAddr(null);
-      btnConnect.style.display = 'inline-block';
-      btnDisconnect.style.display = 'none';
-      balEth.textContent = '-'; balToken.textContent = '-'; allowInfo.textContent = 'Allowance: -';
+      updateWalletUI(false);
       log('Disconnected (UI reset)');
       try {
         if (window.ethereum && window.ethereum.removeListener) {
@@ -535,70 +539,63 @@ pre {
         }
       } catch(e){}
     }
+    
     function handleAccountsChanged(accounts) {
       if (!accounts || accounts.length === 0) disconnectWallet();
-      else { userAddress = accounts[0]; setAddr(userAddress); refreshAll(); log('Account changed'); }
+      else { userAddress = accounts[0]; log('Account changed'); connectWallet(); } // Re-connect
     }
     function handleChainChanged(chainIdHex) {
-      const id = parseInt(chainIdHex, 16);
-      network = { chainId: id, name: id === CHAIN_ID_EXPECTED ? 'expected' : 'unknown' };
-      setNetwork(network.name, id);
-      log('Chain changed to', id);
-      refreshAll();
+      log('Chain changed to', chainIdHex);
+      connectWallet(); // Re-connect & check network
     }
 
-    // ======= Contract loading =======
-    function validateAddr(a) { return a && ethers.utils.isAddress(a); }
-    function simpleError(msg) { alert(msg); log('ERR', msg); }
-
-    async function loadContract() {
-      const caddr = inputContract.value.trim();
-      const taddr = inputERC20.value.trim();
-      if (!validateAddr(caddr)) { simpleError('Invalid contract address'); return; }
-      if (!validateAddr(taddr)) { simpleError('Invalid token address'); return; }
-      if (!provider) {
-        provider = new ethers.providers.Web3Provider(window.ethereum || window.web3);
-        signer = provider.getSigner ? provider.getSigner() : null;
-      }
-      contract = new ethers.Contract(caddr, CONTRACT_ABI, provider);
-      tokenContract = new ethers.Contract(taddr, ERC20_ABI, provider);
-      if (signer) { contract = contract.connect(signer); tokenContract = tokenContract.connect(signer); }
-      try { tokenDecimals = await tokenContract.decimals(); } catch(e){ log('Token decimals read failed, default 18', e); tokenDecimals = 18; }
-      log('Loaded contract', caddr, 'token', taddr, 'decimals', tokenDecimals);
-      await refreshAll();
-      startIdleTimer(); // start idle countdown when contract loaded
-    }
+    // ======= Fungsionalitas Lama (Dinonaktifkan) =======
+    // btnLoad.addEventListener('click', loadContract);
+    // btnRefresh.addEventListener('click', refreshAll);
+    // async function loadContract() { ... } // Tidak diperlukan, kontrak di-load saat konek
 
     // ======= Refresh =======
     async function refreshAll() {
-      if (!provider || !userAddress) return;
+      if (!provider || !userAddress || !contract) return;
       await updateBalances();
-      if (contract) {
-        await updateRoundInfo();
-        await updateReferralRewards().catch(()=>{});
-        await loadWinners().catch(()=>{});
-      }
+      await updateRoundInfo();
+      await fetchMinBets();
+      // await updateReferralRewards().catch(()=>{}); // Fungsionalitas tidak ada di UI
+      // await loadWinners().catch(()=>{}); // Fungsionalitas tidak ada di UI
     }
 
     async function updateBalances() {
       try {
         const ethBal = await provider.getBalance(userAddress);
-        balEth.textContent = toFixedTrim(weiToEth(ethBal), 6) + ' ETH';
-        if (tokenContract) {
-          const tBal = await tokenContract.balanceOf(userAddress);
-          const human = ethers.utils.formatUnits(tBal, tokenDecimals);
-          balToken.textContent = toFixedTrim(human, 6) + ' USDT';
-          const caddr = inputContract.value.trim();
-          if (validateAddr(caddr)) {
-            const allowance = await tokenContract.allowance(userAddress, caddr);
-            const humanAllow = ethers.utils.formatUnits(allowance, tokenDecimals);
-            allowInfo.textContent = 'Allowance: ' + toFixedTrim(humanAllow,6) + ' USDT';
-          }
-        } else balToken.textContent = '-';
+        userEthBalance = bnToBigInt(ethBal);
+        ethBalance.textContent = toFixedTrim(weiToEth(ethBal), 6);
+        
+        const tBal = await usdt.balanceOf(userAddress);
+        userUsdtBalance = bnToBigInt(tBal);
+        const human = ethers.utils.formatUnits(tBal, tokenDecimals);
+        usdtBalance.textContent = toFixedTrim(human, 6);
+          
+        // Update modal balances juga
+        modalEthBalance.textContent = toFixedTrim(weiToEth(ethBal), 6);
+        modalUsdtBalance.textContent = toFixedTrim(human, 6);
+
       } catch (e) { log('updateBalances error', e); }
     }
 
-    // ======= Read round + players + bets and compute weights =======
+    async function fetchMinBets() {
+        try {
+            minBetEth = bnToBigInt(await contract.MIN_BET_ETH());
+            minBetUsdt = bnToBigInt(await contract.MIN_BET_ERC20());
+            minEthEl.textContent = toFixedTrim(ethers.utils.formatEther(minBetEth), 6);
+            minUsdtEl.textContent = toFixedTrim(ethers.utils.formatUnits(minBetUsdt, tokenDecimals), 2);
+        } catch (e) {
+            log('Gagal fetch min bets', e);
+            minEthEl.textContent = '...';
+            minUsdtEl.textContent = '...';
+        }
+    }
+
+    // ======= Read round + players + bets dan compute weights =======
     async function updateRoundInfo() {
       if (!contract) return;
       try {
@@ -606,57 +603,38 @@ pre {
         const round = await contract.getRoundBasic(rid);
         const players = await contract.getRoundPlayers(rid);
         const start = new Date(Number(round[1].toString()) * 1000);
-        const end = new Date(Number(round[2].toString()) * 1000);
-        roundSummary.innerHTML = `
-          <div class="small-muted">Round #${round[0].toString()} | ${round[3] ? '<span class="danger">Finalized</span>' : '<span class="success">Open</span>'}</div>
-          <div class="small-muted">Start: ${start.toLocaleTimeString()} | End: ${end.toLocaleTimeString()}</div>
-        `;
-        // fetch bets and build playersArray
+        
+        // [DIUBAH] Tampilkan status di #statusText
+        const statusMsg = `Round #${round[0].toString()} | ${round[3] ? '<span style="color:var(--red-main)">Finalized</span>' : '<span style="color:var(--cyan-main)">Open</span>'} | Starts: ${start.toLocaleTimeString()}`;
+        statusText.innerHTML = statusMsg;
+
         playersArray = [];
         let totalWeight = 0n;
         for (let i=0;i<players.length;i++){
           const addr = players[i];
-          // try getPlayerBet (single combined weight)
-          let weightBn = null;
-          try {
-            weightBn = await contract.getPlayerBet(rid, addr);
-            // if success and not zero, assume it is weight in wei-scale
-          } catch(e) {
-            // fallback to getPlayerDeposits
-            try {
-              const deposits = await contract.getPlayerDeposits(rid, addr);
-              const ethBn = deposits.ethAmount;
-              const ercBn = deposits.erc20Amount;
-              // compute like contract: erc20 * 1e12 to scale to wei (if token has 6 decimals)
-              // We'll compute factor = 10^(18 - tokenDecimals)
-              const factor = BigInt(10) ** BigInt(18 - (tokenDecimals || 18));
-              weightBn = ethBn.add(ercBn.mul(ethers.BigNumber.from(factor.toString())));
-            } catch(err2){
-              // as last resort, set zero
-              weightBn = ethers.BigNumber.from("0");
-            }
-          }
+          let weightBn = await contract.getPlayerBet(rid, addr);
           const weightBigInt = bnToBigInt(weightBn);
           totalWeight += weightBigInt;
           playersArray.push({
             addr,
-            eth: null,
-            erc20: null,
             weight: weightBigInt,
             color: playerColor(i),
             startAngle: 0,
             endAngle: 0
           });
         }
-        // compute angles
+
         if (totalWeight === 0n) {
-          playersListEl.innerHTML = '<div class="small-muted">No bets yet this round.</div>';
+          playersListEl.innerHTML = ''; // Kosongkan
+          playersListEl.appendChild(betListPlaceholder); // Tampilkan placeholder
+          betListPlaceholder.style.display = 'block';
           drawDonut(); // empty donut
           return;
         }
-        // sort players stable by weight desc (optional) -> bigger slices near start
+
+        betListPlaceholder.style.display = 'none'; // Sembunyikan placeholder
         playersArray.sort((a,b)=> (b.weight > a.weight ? 1 : (b.weight < a.weight ? -1 : 0)));
-        // compute start/end angles in radians
+
         let cur = 0n;
         for (let i=0;i<playersArray.length;i++){
           const w = playersArray[i].weight;
@@ -666,7 +644,7 @@ pre {
           playersArray[i].startAngle = startAngle;
           playersArray[i].endAngle = endAngle;
         }
-        // update players list UI
+        
         updatePlayersListUI();
         drawDonut();
       } catch (err) {
@@ -675,20 +653,31 @@ pre {
       }
     }
 
+    // [DIUBAH] Render UI list agar sesuai CSS baru
     function updatePlayersListUI() {
       playersListEl.innerHTML = '';
       for (const p of playersArray) {
         const el = document.createElement('div');
-        el.className = 'player-item';
+        el.className = 'bet-list-item';
+        
         const short = p.addr.slice(0,6) + '...' + p.addr.slice(-4);
         const weightDisplay = humanizeWeight(p.weight);
-        el.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><span style="width:12px;height:12px;border-radius:4px;background:${p.color};display:inline-block"></span>${short}</div><div>${weightDisplay}</div>`;
+        
+        const left = document.createElement('div');
+        left.className = 'player-id';
+        left.innerHTML = `<span style="width:10px;height:10px;border-radius:3px;background:${p.color};display:inline-block;margin-right: 8px;"></span>${short}`;
+        
+        const right = document.createElement('div');
+        right.className = 'player-bets';
+        right.textContent = `${weightDisplay} (Weight)`;
+
+        el.appendChild(left);
+        el.appendChild(right);
         playersListEl.appendChild(el);
       }
     }
 
     function humanizeWeight(w) {
-      // try to present in ETH-equivalent (divide by 1e18)
       try {
         const asEther = Number(w) / 1e18;
         if (asEther >= 0.000001) return asEther.toFixed(6) + ' ETH-eq';
@@ -699,24 +688,18 @@ pre {
     // ======= Draw donut on canvas =======
     function drawDonut(rotationDeg = currentRotation) {
       ctx.clearRect(0,0,cw,ch);
-      // apply rotation by translating and rotating context
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(rotationDeg * Math.PI / 180);
       ctx.translate(-cx, -cy);
 
-      // background circle
-      ctx.beginPath();
-      ctx.arc(cx, cy, outerR + 6, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(255,255,255,0.01)';
-      ctx.fill();
-
       if (!playersArray || playersArray.length === 0) {
         // draw empty donut
         ctx.beginPath();
         ctx.arc(cx, cy, outerR, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(255,255,255,0.02)';
-        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
         // inner hole
         ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
@@ -726,7 +709,7 @@ pre {
         ctx.restore();
         // center label
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.font = '14px Inter';
+        ctx.font = '14px Ubuntu';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('No bets yet', cx, cy);
@@ -736,11 +719,9 @@ pre {
       // draw sectors
       for (let i=0;i<playersArray.length;i++){
         const p = playersArray[i];
-        const sa = p.startAngle;
-        const ea = p.endAngle;
         ctx.beginPath();
         ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, outerR, sa, ea, false);
+        ctx.arc(cx, cy, outerR, p.startAngle, p.endAngle, false);
         ctx.closePath();
         ctx.fillStyle = p.color;
         ctx.fill();
@@ -753,63 +734,17 @@ pre {
       ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
 
-      // draw separators (thin lines)
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-      ctx.lineWidth = 1;
+      // draw separators
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+      ctx.lineWidth = 1.5;
       for (let i=0;i<playersArray.length;i++){
         const p = playersArray[i];
-        const angle = (p.startAngle + p.endAngle) / 2;
-        // draw radial line at startAngle
         ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(p.startAngle) * (innerR+2), cy + Math.sin(p.startAngle) * (innerR+2));
+        ctx.moveTo(cx + Math.cos(p.startAngle) * innerR, cy + Math.sin(p.startAngle) * innerR);
         ctx.lineTo(cx + Math.cos(p.startAngle) * outerR, cy + Math.sin(p.startAngle) * outerR);
         ctx.stroke();
       }
-
-      // labels (address short) along middle of sector
-      ctx.fillStyle = '#fff';
-      ctx.font = '12px Inter';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      for (let i=0;i<playersArray.length;i++){
-        const p = playersArray[i];
-        const mid = (p.startAngle + p.endAngle) / 2;
-        const rlabel = (outerR + innerR) / 2;
-        const lx = cx + Math.cos(mid) * rlabel;
-        const ly = cy + Math.sin(mid) * rlabel;
-        const short = p.addr.slice(0,6);
-        ctx.fillStyle = 'rgba(0,12,20,0.85)';
-        // draw small pill background for readability
-        ctx.beginPath();
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.roundRect = ctx.roundRect || function(x,y,w,h,r){ if (w<2*r) r=w/2; if (h<2*r) r=h/2; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); };
-        // approximate pill
-        const text = short;
-        ctx.font = '12px Inter';
-        const tw = ctx.measureText(text).width + 8;
-        // draw pill in two colors (hybrid effect)
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.roundRect(lx - tw/2, ly - 12/2, tw, 16, 8);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(text, lx, ly);
-      }
-
       ctx.restore();
-    }
-
-    // polyfill for roundRect if needed
-    if (!CanvasRenderingContext2D.prototype.roundRect) {
-      CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
-        if (w<2*r) r=w/2; if (h<2*r) r=h/2;
-        this.beginPath();
-        this.moveTo(x+r,y);
-        this.arcTo(x+w,y,x+w,y+h,r);
-        this.arcTo(x+w,y+h,x,y+h,r);
-        this.arcTo(x,y+h,x,y,r);
-        this.arcTo(x,y,x+w,y,r);
-        this.closePath();
-        this.fill();
-      };
     }
 
     // ======= Weighted random selection (client-side) =======
@@ -817,7 +752,6 @@ pre {
       if (!playersArray || playersArray.length === 0) return null;
       const total = playersArray.reduce((acc,p)=> acc + p.weight, 0n);
       if (total === 0n) return null;
-      // random BigInt in range [0, total-1]
       const rand = randBigInt(total);
       let cum = 0n;
       for (let i=0;i<playersArray.length;i++){
@@ -828,9 +762,7 @@ pre {
     }
 
     function randBigInt(max) {
-      // use crypto.getRandomValues to build randomness
-      // build a random BigInt less than max
-      const bytes = Math.ceil((max.toString(2).length)/8);
+      const bytes = Math.ceil((max.toString(2).length)/8) || 1;
       let rand;
       do {
         const arr = new Uint8Array(bytes);
@@ -846,38 +778,56 @@ pre {
       if (!targetPlayer) return;
       if (isSpinning) return;
       isSpinning = true;
-      // compute mid angle of target in degrees (canvas current angles in radians)
-      const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
-      const midDeg = midRad * 180 / Math.PI;
-      // We want to rotate wheel so that midDeg lines up with pointer at -90deg (top)
-      // currentRotation is degrees applied (canvas rotated by currentRotation)
-      // compute needed rotation to bring midDeg to -90 deg
-      // targetRotation = -90 - midDeg + k*360 (choose k big so spins several times)
-      const spins = 5; // number of full spins
-      const targetRotation = -90 - midDeg + spins * 360;
-      const start = currentRotation % 360;
-      const end = start + targetRotation;
-      const duration = 4000; // ms
-      const startTime = performance.now();
+      finalizeBtn.disabled = true;
+      placeBetBtn.disabled = true;
 
-      function animate(now) {
-        const t = Math.min(1, (now - startTime) / duration);
-        // easeOutCubic
-        const eased = 1 - Math.pow(1 - t, 3);
-        currentRotation = start + (end - start) * eased;
-        drawDonut(currentRotation);
-        if (t < 1) {
-          requestAnimationFrame(animate);
-        } else {
+      const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
+      const midDeg = (midRad * 180 / Math.PI);
+      
+      const spins = 5;
+      // [DIUBAH] Logika rotasi disesuaikan. Pointer ada di -90deg.
+      // Kita ingin (midDeg + currentRotation) berakhir di -90.
+      // targetRotation = -midDeg - 90 + 360 * spins
+      const targetRotation = 360 * spins - midDeg - 90;
+      
+      const duration = 4.0; // Durasi spin 4 detik
+
+      gsap.to(donutCanvas, {
+        rotation: targetRotation,
+        duration: duration,
+        ease: "power3.out",
+        onUpdate: function() {
+            // Update currentRotation untuk drawDonut jika diperlukan
+            // Tapi GSAP memutar elemen canvas, bukan menggambar ulang
+            // Kita harus memutar *konteks*
+        },
+        onComplete: () => {
           isSpinning = false;
-          // show winner
+          finalizeBtn.disabled = false;
+          placeBetBtn.disabled = false;
           log('Spin result (client-side):', targetPlayer.addr);
-          alert(`Visual winner (client-side): ${targetPlayer.addr}`);
-          // after spin complete, refresh on-chain (in case contract finalized)
+          // Simpan rotasi akhir
+          currentRotation = targetRotation % 360;
+          // Perbarui data on-chain
           updateRoundInfo().catch(()=>{});
         }
-      }
-      requestAnimationFrame(animate);
+      });
+
+      // [DIUBAH] Gunakan GSAP untuk memutar elemen canvas
+      gsap.to(donutCanvas, {
+        rotation: `+=${targetRotation - (currentRotation % 360)}`, // Putar ke target absolut
+        duration: duration,
+        ease: "power3.out",
+        onComplete: () => {
+          isSpinning = false;
+          finalizeBtn.disabled = false;
+          placeBetBtn.disabled = false;
+          currentRotation = targetRotation; // Simpan rotasi akhir
+          log('Spin result (client-side):', targetPlayer.addr);
+          // alert(`Visual winner (client-side): ${targetPlayer.addr}`);
+          updateRoundInfo().catch(()=>{});
+        }
+      });
     }
 
     // ======= Idle timer logic =======
@@ -886,6 +836,7 @@ pre {
       idleTimer = IDLE_SECONDS;
       idleCountdownEl.textContent = String(IDLE_SECONDS);
     }
+    
     function startIdleTimer() {
       if (idleInterval) clearInterval(idleInterval);
       resetIdleTimer();
@@ -894,160 +845,180 @@ pre {
         const left = Math.max(0, IDLE_SECONDS - elapsed);
         idleCountdownEl.textContent = String(left);
         if (left <= 0) {
-          // idle expired -> auto spin if players exist
           clearInterval(idleInterval);
           idleInterval = null;
           idleCountdownEl.textContent = '0';
-          if (playersArray.length > 0) {
+          if (playersArray.length > 0 && !isSpinning) {
+            log('Idle timer expired. Spinning client-side...');
             const pick = pickWinnerClientSide();
             if (pick) spinToPlayer(pick);
           }
-          // restart timer after auto spin
-          setTimeout(() => { startIdleTimer(); }, 2000);
+          setTimeout(() => { startIdleTimer(); }, 5000); // Restart setelah 5d
         }
       }, 500);
     }
 
-    // ======= Place bet handlers: call contract, then refresh + spin visual =======
-    document.getElementById('btnBetEth').addEventListener('click', async () => {
-      try {
-        if (!contract || !signer) return simpleError('Connect wallet and load contract first.');
-        const amt = inputBetEth.value;
-        if (!amt || Number(amt) <= 0) return alert('Enter ETH amount');
-        const value = ethers.utils.parseEther(String(amt));
-        const tx = await contract.placeBetETH({ value });
-        log('placeBetETH tx sent', tx.hash);
-        resetIdleTimer();
-        await tx.wait();
-        log('placeBetETH confirmed');
-        await updateBalances();
-        await updateRoundInfo();
-        // spin visual toward local pick
-        const pick = pickWinnerClientSide();
-        if (pick) spinToPlayer(pick);
-      } catch (err) {
-        console.error(err); alert(err && err.message ? err.message : 'Bet failed');
-      }
+    // ======= Modal Handlers =======
+    function showModal() {
+        updateBalances(); // Refresh balance saat modal dibuka
+        betModal.style.display = 'block';
+        modalOverlay.style.display = 'block';
+        setTimeout(() => {
+            betModal.classList.add('show');
+            modalOverlay.classList.add('show');
+        }, 10);
+    }
+
+    function closeModal() {
+        betModal.classList.remove('show');
+        modalOverlay.classList.remove('show');
+        setTimeout(() => {
+            betModal.style.display = 'none';
+            modalOverlay.style.display = 'none';
+        }, 300);
+    }
+
+    placeBetBtn.addEventListener('click', showModal);
+    modalCloseBtn.addEventListener('click', closeModal);
+    modalOverlay.addEventListener('click', closeModal);
+
+    // Modal: Tombol Persentase
+    percentButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const percent = parseFloat(btn.dataset.percent);
+            const currency = betCurrencySelect.value;
+            let balance = 0n;
+
+            if (currency === 'ETH') {
+                balance = userEthBalance;
+                const amount = (balance * BigInt(Math.floor(percent * 100))) / 100n;
+                betAmountInput.value = ethers.utils.formatEther(amount);
+            } else if (currency === 'USDT') {
+                balance = userUsdtBalance;
+                const amount = (balance * BigInt(Math.floor(percent * 100))) / 100n;
+                betAmountInput.value = ethers.utils.formatUnits(amount, tokenDecimals);
+            }
+        });
     });
 
-    document.getElementById('btnApprove').addEventListener('click', async () => {
+    // ======= Place bet handlers: [DIUBAH] Sekarang dari Modal =======
+    
+    confirmBetBtn.addEventListener('click', async () => {
       try {
-        if (!tokenContract || !signer) return simpleError('Connect wallet & load token first.');
-        const caddr = inputContract.value.trim();
-        const max = ethers.constants.MaxUint256;
-        const tx = await tokenContract.approve(caddr, max);
-        log('approve sent', tx.hash);
-        await tx.wait();
-        log('approve confirmed');
-        await updateBalances();
-      } catch(e){ console.error(e); alert('Approve failed'); }
-    });
+        if (!contract || !signer) return simpleError('Connect wallet first.');
+        
+        const amtStr = betAmountInput.value;
+        const currency = betCurrencySelect.value;
+        if (!amtStr || Number(amtStr) <= 0) return alert('Enter valid amount');
 
-    document.getElementById('btnBetToken').addEventListener('click', async () => {
-      try {
-        if (!contract || !signer) return simpleError('Connect wallet and load contract first.');
-        const amt = inputBetToken.value;
-        if (!amt || Number(amt) <= 0) return alert('Enter token amount');
-        const decimals = tokenDecimals || 18;
-        const value = ethers.utils.parseUnits(String(amt), decimals);
-        const tx = await contract.placeBetERC20(value);
-        log('placeBetERC20 tx sent', tx.hash);
-        resetIdleTimer();
-        await tx.wait();
-        log('placeBetERC20 confirmed');
+        confirmBetBtn.disabled = true;
+        confirmBetBtn.textContent = 'Processing...';
+
+        if (currency === 'ETH') {
+            const value = ethers.utils.parseEther(String(amtStr));
+            if (value < minBetEth) {
+                throw new Error(`Minimum bet is ${ethers.utils.formatEther(minBetEth)} ETH`);
+            }
+            const tx = await contract.placeBetETH({ value });
+            log('placeBetETH tx sent', tx.hash);
+            resetIdleTimer();
+            await tx.wait();
+            log('placeBetETH confirmed');
+        } 
+        else if (currency === 'USDT') {
+            const value = ethers.utils.parseUnits(String(amtStr), tokenDecimals);
+            if (value < minBetUsdt) {
+                throw new Error(`Minimum bet is ${ethers.utils.formatUnits(minBetUsdt, tokenDecimals)} USDT`);
+            }
+
+            // Cek allowance
+            const allowance = await usdt.allowance(userAddress, CONTRACT_ADDRESS);
+            if (allowance.lt(value)) {
+                log('Allowance too low. Requesting approval...');
+                confirmBetBtn.textContent = 'Approving...';
+                const approveTx = await usdt.approve(CONTRACT_ADDRESS, ethers.constants.MaxUint256);
+                await approveTx.wait();
+                log('Approve confirmed. Now placing bet...');
+                confirmBetBtn.textContent = 'Placing Bet...';
+            }
+
+            const tx = await contract.placeBetERC20(value);
+            log('placeBetERC20 tx sent', tx.hash);
+            resetIdleTimer();
+            await tx.wait();
+            log('placeBetERC20 confirmed');
+        }
+
+        closeModal();
         await updateBalances();
         await updateRoundInfo();
         const pick = pickWinnerClientSide();
         if (pick) spinToPlayer(pick);
+
       } catch (err) {
-        console.error(err); alert(err && err.message ? err.message : 'Bet failed');
+        console.error(err); 
+        alert(err.reason || (err.data ? err.data.message : err.message) || 'Bet failed');
+      } finally {
+        confirmBetBtn.disabled = false;
+        confirmBetBtn.textContent = 'Confirm Bet';
       }
     });
 
     // finalize button (user can call)
-    btnFinalize.addEventListener('click', async () => {
+    finalizeBtn.addEventListener('click', async () => {
       try {
-        if (!contract || !signer) return simpleError('Connect wallet & load contract first.');
+        if (!contract || !signer) return simpleError('Connect wallet first.');
+        finalizeBtn.disabled = true;
+        finalizeBtn.textContent = 'Finalizing...';
+        
         const rid = await contract.currentRoundId();
         const tx = await contract.finalizeRound(rid);
         log('finalize tx sent', tx.hash);
         await tx.wait();
         log('finalize confirmed');
         await updateRoundInfo();
-      } catch (err) { console.error(err); alert(err && err.message ? err.message : 'Finalize failed'); }
+
+      } catch (err) { 
+        console.error(err); 
+        alert(err.reason || (err.data ? err.data.message : err.message) || 'Finalize failed');
+      } finally {
+        finalizeBtn.disabled = false;
+        finalizeBtn.textContent = 'Finalize Round';
+      }
     });
 
-    // referral related buttons (basic calls)
-    btnCreateNick.addEventListener('click', async () => {
-      try {
-        const nick = inputNick.value;
-        if (!nick || nick.length < 3) return alert('Nickname min 3 chars');
-        const tx = await contract.createNickname(nick);
-        await tx.wait();
-        alert('Nickname created');
-      } catch(e){ console.error(e); alert('createNickname failed'); }
-    });
-    btnSetRef.addEventListener('click', async () => {
-      try {
-        const rn = inputRefNick.value;
-        if (!rn) return alert('Enter ref nickname');
-        const tx = await contract.setReferralByNickname(rn);
-        await tx.wait();
-        alert('Referrer set');
-      } catch(e){ console.error(e); alert('setReferralByNickname failed'); }
-    });
-    btnClaimRef.addEventListener('click', async () => {
-      try {
-        const tx = await contract.claimReferralRewards();
-        await tx.wait();
-        alert('Rewards claimed');
-        await updateBalances();
-        updateReferralRewards();
-      } catch(e){ console.error(e); alert('claimReferralRewards failed'); }
-    });
+    // ======= Fungsionalitas LAMA (Dinonaktifkan karena tidak ada UI) =======
+    // btnCreateNick.addEventListener('click', ...);
+    // btnSetRef.addEventListener('click', ...);
+    // btnClaimRef.addEventListener('click', ...);
+    // async function loadWinners() { ... }
+    // async function updateReferralRewards() { ... }
 
-    // load winners (simple)
-    async function loadWinners() {
-      try {
-        if (!contract) return;
-        const arr = await contract.getWinners(10);
-        winnersFeed.innerHTML = '';
-        if (!arr || arr.length === 0) { winnersFeed.textContent = '-'; return; }
-        for (let i=0;i<arr.length;i++){
-          const w = arr[i];
-          const card = document.createElement('div');
-          card.className = 'winner-card';
-          const short = w.winner.slice(0,6) + '...' + w.winner.slice(-4);
-          card.innerHTML = `<div><strong>${short}</strong><div class="small-muted">Round ${w.roundId.toString()}</div></div><div style="margin-top:6px;">${ethers.utils.formatEther(w.rewardETH)} ETH</div>`;
-          winnersFeed.appendChild(card);
-        }
-      } catch(e){ console.error(e); winnersFeed.textContent = '-'; }
-    }
-
-    async function updateReferralRewards() {
-      try {
-        if (!contract || !userAddress) return;
-        const r = await contract.getReferralRewards(userAddress);
-        refRewards.textContent = `${ethers.utils.formatEther(r[0])} ETH / ${ethers.utils.formatUnits(r[1], tokenDecimals)} USDT`;
-      } catch(e){ console.error(e); }
-    }
-
-    // start idle timer when page loaded if contract present
-    function ensureIdle() {
-      if (!idleInterval) startIdleTimer();
-    }
+    // ======= Auto-refresh dan Inisialisasi =======
 
     // start initial draw
     drawDonut();
 
-    // small: refresh round every 10s to update live bets
+    // small: refresh round setiap 15s
     setInterval(() => {
-      if (contract && userAddress) updateRoundInfo().catch(()=>{});
-    }, 10000);
+      if (contract && userAddress && !isSpinning) {
+        updateRoundInfo().catch(()=>{});
+      }
+    }, 15000);
+
+    // refresh balance setiap 30s
+    setInterval(() => {
+      if (contract && userAddress) {
+        updateBalances().catch(()=>{});
+      }
+    }, 30000);
 
     // ensure idle timer restarts when user interacts
-    document.addEventListener('click', () => { resetIdleTimer(); });
+    document.addEventListener('click', () => { 
+        if (idleInterval) resetIdleTimer(); 
+    });
 
-  </script>
+</script>
+
 </body>
 </html>
