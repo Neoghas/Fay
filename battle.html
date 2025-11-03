@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FaylottoSpinBattle - Frontend Demo</title>
+  <style>
+    :root {
+      --bg: #0f1724;
+      --card: #0b1220;
+      --accent: #3b82f6;
+      --muted: #9aa4b2;
+      --glass: rgba(255,255,255,0.03);
+      --success: #16a34a;
+      --danger: #ef4444;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    html,body { height:100%; margin:0; background: radial-gradient(circle at 10% 10%, #071023 0%, var(--bg) 60%); color:#e6eef6; }
+    .container { max-width:1100px; margin:28px auto; padding:20px; }
+    .header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .brand { display:flex; gap:12px; align-items:center; }
+    .logo { width:48px; height:48px; border-radius:10px; display:grid; place-items:center; background:linear-gradient(135deg,var(--accent),#6ee7b7); color:#04203a; font-weight:700; }
+    h1 { margin:0; font-size:18px; }
+    .card { background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:16px; box-shadow: 0 6px 22px rgba(2,6,23,0.7); border:1px solid rgba(255,255,255,0.03); }
+    .row { display:flex; gap:12px; margin-top:12px; flex-wrap:wrap; }
+    .col { flex:1; min-width:240px; }
+    .muted { color:var(--muted); font-size:13px; }
+    button { background:var(--accent); color:#041023; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
+    button.ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted); }
+    input[type=text], input[type=number] { width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit; }
+    .small { font-size:13px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .balances { display:flex; gap:12px; align-items:center; }
+    .badge { background:var(--glass); padding:8px 10px; border-radius:10px; font-weight:600; }
+    .danger { color:var(--danger); }
+    .success { color:var(--success); }
+    .players-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+    .player-item { background:rgba(255,255,255,0.02); padding:8px; border-radius:8px; display:flex; justify-content:space-between; font-size:13px; }
+    .footer { margin-top:18px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:13px; }
+    pre { background:#00111a; padding:12px; border-radius:8px; overflow:auto; max-height:220px; }
+    .winners { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+    .winner-card { background:linear-gradient(180deg, rgba(59,130,246,0.06), rgba(255,255,255,0.02)); padding:10px; border-radius:8px; min-width:220px; }
+    .inline { display:flex; gap:8px; align-items:center; }
+    .small-muted { color:var(--muted); font-size:12px; }
+    @media (max-width:720px) { .grid-2 { grid-template-columns: 1fr; } .header { flex-direction:column; align-items:flex-start; gap:10px; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="logo">FY</div>
+        <div>
+          <h1>Faylotto Spin Battle — Demo UI</h1>
+          <div class="muted small">Connect wallet, place bets (ETH / ERC20), referral & social winner feed</div>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex;align-items:center;gap:12px;">
+        <div id="networkBadge" class="badge small-muted">Network: -</div>
+        <div id="addrBadge" class="badge small-muted">Not connected</div>
+        <button id="btnConnect">Connect Wallet</button>
+        <button id="btnDisconnect" class="ghost" style="display:none">Disconnect</button>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:18px;">
+      <div class="col card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <strong>Contract & Token</strong>
+            <div class="muted small">Isi address kontrak & token (USDT) di sini</div>
+          </div>
+          <div class="small-muted">Sepolia / testnet</div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <div class="col">
+            <label class="small-muted">Contract Address</label>
+            <input id="inputContract" type="text" placeholder="0x... (FaylottoSpinBattle contract)" />
+          </div>
+          <div class="col">
+            <label class="small-muted">ERC20 Token Address (USDT)</label>
+            <input id="inputERC20" type="text" placeholder="0x... (USDT token address)" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <button id="btnLoad" class="">Load Contract</button>
+          <button id="btnRefresh" class="ghost">Refresh Balances & Round</button>
+        </div>
+      </div>
+
+      <div class="col card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <strong>Wallet Balances</strong>
+            <div class="muted small">ETH & USDT (ERC20)</div>
+          </div>
+          <div class="small-muted">Realtime when connected</div>
+        </div>
+
+        <div class="row" style="margin-top:12px;align-items:center;">
+          <div class="balances col">
+            <div>
+              <div class="small-muted">ETH</div>
+              <div id="balEth" style="font-weight:700">-</div>
+            </div>
+            <div>
+              <div class="small-muted">USDT</div>
+              <div id="balToken" style="font-weight:700">-</div>
+            </div>
+          </div>
+
+          <div style="min-width:220px;">
+            <div class="small-muted">Gas info / allowance</div>
+            <div id="allowInfo" class="small-muted">Allowance: -</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main actions -->
+    <div class="row" style="margin-top:18px;">
+      <div class="col card">
+        <strong>Current Round</strong>
+        <div class="muted small">Informasi dasar round aktif</div>
+
+        <div style="margin-top:12px;">
+          <div id="roundSummary" class="small-muted">Tidak ada kontrak dimuat.</div>
+
+          <div class="row" style="margin-top:12px;">
+            <div class="col">
+              <label class="small-muted">Bet ETH (wei auto convert)</label>
+              <input id="inputBetEth" type="number" placeholder="ETH amount (e.g., 0.01)" />
+              <div style="margin-top:8px;">
+                <button id="btnBetEth">Place Bet (ETH)</button>
+              </div>
+            </div>
+
+            <div class="col">
+              <label class="small-muted">Bet ERC20 (USDT) amount</label>
+              <input id="inputBetToken" type="number" placeholder="Token amount (e.g., 10)" />
+              <div style="margin-top:8px;" class="grid-2">
+                <button id="btnApprove">Approve Token</button>
+                <button id="btnBetToken">Place Bet (USDT)</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <div class="inline">
+              <button id="btnFinalize" class="ghost">Finalize Round (anyone)</button>
+              <div class="small-muted" style="margin-left:8px;">(call finalizeRound after round end)</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;">
+            <strong>Players</strong>
+            <div id="playersList" class="players-list small-muted">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col card">
+        <strong>Referral & Nickname</strong>
+        <div class="muted small">Buat nickname, set ref, klaim reward</div>
+
+        <div style="margin-top:12px;" class="grid-2">
+          <div>
+            <label class="small-muted">Create Nickname</label>
+            <input id="inputNick" type="text" placeholder="username (min 3 chars)" />
+            <div style="margin-top:8px;">
+              <button id="btnCreateNick">Create Nickname</button>
+            </div>
+          </div>
+          <div>
+            <label class="small-muted">Set Referral by Nickname</label>
+            <input id="inputRefNick" type="text" placeholder="refNickname" />
+            <div style="margin-top:8px;">
+              <button id="btnSetRef">Set Referral</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <button id="btnClaimRef" class="">Claim Referral Rewards</button>
+          <div id="refRewards" class="small-muted" style="margin-top:8px;">Rewards: -</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <strong>Recent Winners</strong>
+          <div id="winnersFeed" class="winners small-muted">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:18px;">
+      <div class="col card">
+        <strong>Raw Console</strong>
+        <div class="muted small">Log aktivitas (klik Clear untuk membersihkan)</div>
+        <pre id="consoleLog">Ready.</pre>
+        <div style="margin-top:8px;">
+          <button id="btnClearLog" class="ghost">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Built for Faylotto — demo UI</div>
+      <div class="muted small">Pastikan contract & token address diisi. Handle with care on mainnet.</div>
+    </div>
+  </div>
+
+  <!-- Ethers.js v5 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script>
+    // ======= Minimal ABIs needed =======
+    const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_erc20Token","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetERC20","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetETH","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"erc20Token","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"erc20Reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalERC20","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getWinnerCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getWinners","outputs":[{"components":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.WinnerInfo[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsERC20","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
+
+    const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
+
+    // ======= App State =======
+    let provider, signer;
+    let userAddress = null;
+    let network = null;
+    let contract = null;
+    let tokenContract = null;
+    let tokenDecimals = 18;
+    const CHAIN_ID_EXPECTED = 11155111; // Sepolia chainId; change if needed
+
+    // DOM
+    const btnConnect = document.getElementById('btnConnect');
+    const btnDisconnect = document.getElementById('btnDisconnect');
+    const addrBadge = document.getElementById('addrBadge');
+    const networkBadge = document.getElementById('networkBadge');
+    const btnLoad = document.getElementById('btnLoad');
+    const btnRefresh = document.getElementById('btnRefresh');
+    const inputContract = document.getElementById('inputContract');
+    const inputERC20 = document.getElementById('inputERC20');
+    const balEth = document.getElementById('balEth');
+    const balToken = document.getElementById('balToken');
+    const allowInfo = document.getElementById('allowInfo');
+    const btnBetEth = document.getElementById('btnBetEth');
+    const btnBetToken = document.getElementById('btnBetToken');
+    const btnApprove = document.getElementById('btnApprove');
+    const inputBetEth = document.getElementById('inputBetEth');
+    const inputBetToken = document.getElementById('inputBetToken');
+    const roundSummary = document.getElementById('roundSummary');
+    const playersList = document.getElementById('playersList');
+    const btnFinalize = document.getElementById('btnFinalize');
+    const inputNick = document.getElementById('inputNick');
+    const btnCreateNick = document.getElementById('btnCreateNick');
+    const inputRefNick = document.getElementById('inputRefNick');
+    const btnSetRef = document.getElementById('btnSetRef');
+    const btnClaimRef = document.getElementById('btnClaimRef');
+    const refRewards = document.getElementById('refRewards');
+    const winnersFeed = document.getElementById('winnersFeed');
+    const consoleLog = document.getElementById('consoleLog');
+    const btnClearLog = document.getElementById('btnClearLog');
+
+    // ======= Helpers =======
+    function log(...args) {
+      console.log(...args);
+      const t = (new Date()).toLocaleTimeString();
+      consoleLog.textContent += `\n[${t}] ` + args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+    function setAddr(addr) {
+      addrBadge.textContent = addr ? (addr.slice(0,6) + '...' + addr.slice(-4)) : 'Not connected';
+    }
+    function setNetwork(name, id) {
+      networkBadge.textContent = `Network: ${name} (${id})`;
+      if (id !== CHAIN_ID_EXPECTED) {
+        networkBadge.style.border = '1px solid rgba(255,255,255,0.04)';
+        networkBadge.style.background = 'transparent';
+      }
+    }
+    function weiToEth(wei) {
+      try { return ethers.utils.formatEther(wei); } catch(e){ return '0'; }
+    }
+    function toFixedTrim(numStr, digits=6) { return (+numStr).toFixed(digits).replace(/\.?0+$/, ''); }
+
+    // ======= Wallet connect =======
+    async function connectWallet() {
+      if (!window.ethereum) {
+        alert('No Ethereum provider found. Install MetaMask or compatible wallet.');
+        return;
+      }
+      try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        network = await provider.getNetwork();
+        setAddr(userAddress);
+        setNetwork(network.name || network.chainId, network.chainId);
+        btnConnect.style.display = 'none';
+        btnDisconnect.style.display = 'inline-block';
+        log('Connected', userAddress, 'network', network);
+        // auto-load contracts if addresses present
+        if (inputContract.value && inputERC20.value) {
+          loadContract();
+        }
+        // subscribe to accounts & chain changes
+        window.ethereum.on('accountsChanged', handleAccountsChanged);
+        window.ethereum.on('chainChanged', handleChainChanged);
+        await refreshAll();
+      } catch (err) {
+        console.error(err);
+        alert('Wallet connection failed: ' + (err && err.message ? err.message : err));
+      }
+    }
+    async function disconnectWallet() {
+      // you can't programmatically disconnect MetaMask, but reset UI
+      signer = null;
+      userAddress = null;
+      provider = null;
+      setAddr(null);
+      btnConnect.style.display = 'inline-block';
+      btnDisconnect.style.display = 'none';
+      balEth.textContent = '-';
+      balToken.textContent = '-';
+      allowInfo.textContent = 'Allowance: -';
+      log('Disconnected wallet (UI reset)');
+      // remove listeners
+      if (window.ethereum && window.ethereum.removeListener) {
+        try {
+          window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+          window.ethereum.removeListener('chainChanged', handleChainChanged);
+        } catch(e){}
+      }
+    }
+    function handleAccountsChanged(accounts) {
+      if (!accounts || accounts.length === 0) { disconnectWallet(); }
+      else {
+        userAddress = accounts[0];
+        setAddr(userAddress);
+        log('Account changed to', userAddress);
+        refreshAll();
+      }
+    }
+    function handleChainChanged(chainIdHex) {
+      // reload page recommended, but we update network info
+      const id = parseInt(chainIdHex, 16);
+      network = { chainId: id, name: id === CHAIN_ID_EXPECTED ? 'expected' : 'unknown' };
+      setNetwork(network.name, id);
+      log('Chain changed to', id);
+      refreshAll();
+    }
+
+    // ======= Contract loading =======
+    function validateAddr(a) { return a && ethers.utils.isAddress(a); }
+
+    function simpleError(msg) { alert(msg); log('ERR', msg); }
+
+    async function loadContract() {
+      const caddr = inputContract.value.trim();
+      const taddr = inputERC20.value.trim();
+      if (!validateAddr(caddr)) { simpleError('Invalid contract address'); return; }
+      if (!validateAddr(taddr)) { simpleError('Invalid token address'); return; }
+      if (!provider) {
+        provider = new ethers.providers.Web3Provider(window.ethereum || window.web3);
+        signer = provider.getSigner ? provider.getSigner() : null;
+      }
+      contract = new ethers.Contract(caddr, CONTRACT_ABI, provider);
+      tokenContract = new ethers.Contract(taddr, ERC20_ABI, provider);
+      // create connected instances if signer available
+      if (signer) {
+        contract = contract.connect(signer);
+        tokenContract = tokenContract.connect(signer);
+      }
+      // read token decimals
+      try {
+        tokenDecimals = await tokenContract.decimals();
+      } catch(e) {
+        log('Token decimals read failed, default to 18', e);
+        tokenDecimals = 18;
+      }
+      log('Loaded contract', caddr, 'token', taddr, 'decimals', tokenDecimals);
+      await refreshAll();
+    }
+
+    // ======= Refresh Balances & Round =======
+    async function refreshAll() {
+      if (!provider || !userAddress) return;
+      await updateBalances();
+      if (contract) {
+        await updateRoundInfo();
+        await updateReferralRewards();
+        await loadWinners();
+      }
+    }
+
+    async function updateBalances() {
+      try {
+        const ethBal = await provider.getBalance(userAddress);
+        balEth.textContent = toFixedTrim(weiToEth(ethBal), 6) + ' ETH';
+        if (tokenContract) {
+          const tBal = await tokenContract.balanceOf(userAddress);
+          const human = ethers.utils.formatUnits(tBal, tokenDecimals);
+          balToken.textContent = toFixedTrim(human, 6) + ' USDT';
+          // check allowance
+          const caddr = inputContract.value.trim();
+          if (validateAddr(caddr)) {
+            const allowance = await tokenContract.allowance(userAddress, caddr);
+            const humanAllow = ethers.utils.formatUnits(allowance, tokenDecimals);
+            allowInfo.textContent = 'Allowance: ' + toFixedTrim(humanAllow,6) + ' USDT';
+          }
+        } else {
+          balToken.textContent = '-';
+        }
+      } catch (e) {
+        log('updateBalances error', e);
+      }
+    }
+
+    async function updateRoundInfo() {
+      try {
+        const rid = await contract.currentRoundId();
+        // get round basic
+        const round = await contract.getRoundBasic(rid);
+        // round: id, startTime, endTime, finalized, winner, totalETH, totalERC20, playersCount
+        const players = await contract.getRoundPlayers(rid);
+        const start = new Date(round[1].toNumber() * 1000);
+        const end = new Date(round[2].toNumber() * 1000);
+        const now = new Date();
+        roundSummary.innerHTML = `
+          <div class="small-muted">Round #${round[0].toString()} | ${round[3] ? '<span class="danger">Finalized</span>' : '<span class="success">Open</span>'}</div>
+          <div class="small-muted">Start: ${start.toLocaleTimeString()} | End: ${end.toLocaleTimeString()}</div>
+          <div class="small-muted">Total ETH: ${weiToEth(round[5])} | Total ERC20: ${ethers.utils.formatUnits(round[6], tokenDecimals)}</div>
+        `;
+        // players
+        playersList.innerHTML = '';
+        if (players.length === 0) playersList.textContent = '-';
+        else {
+          for (let p of players) {
+            const d = await contract.getPlayerDeposits(rid, p);
+            const eth = weiToEth(d[0]);
+            const erc = ethers.utils.formatUnits(d[1], tokenDecimals);
+            const div = document.createElement('div');
+            div.className = 'player-item';
+            div.innerHTML = `<div>${p.slice(0,6)}...${p.slice(-4)}</div><div class="small-muted">${toFixedTrim(eth,6)} ETH / ${toFixedTrim(erc,6)} USDT</div>`;
+            playersList.appendChild(div);
+          }
+        }
+        log('Loaded round', rid.toString(), 'players', players.length);
+      } catch (err) {
+        log('updateRoundInfo failed', err);
+        roundSummary.textContent = 'Failed to fetch round info. Make sure contract address is correct and provider connected.';
+      }
+    }
+
+    // ======= Bets =======
+    async function placeEthBet() {
+      if (!contract || !signer) return simpleError('Connect wallet and load contract first');
+      const amt = inputBetEth.value;
+      if (!amt || Number(amt) <= 0) return simpleError('Invalid ETH amount');
+      const value = ethers.utils.parseEther(String(amt));
+      try {
+        const tx = await contract.placeBetETH({ value });
+        log('placeBetETH tx sent', tx.hash);
+        await tx.wait();
+        log('ETH bet confirmed', tx.hash);
+        await refreshAll();
+      } catch (e) {
+        log('placeEthBet error', e);
+        alert('Bet failed: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    async function approveToken(amount) {
+      if (!tokenContract || !signer) return simpleError('Connect wallet & load token');
+      if (!amount || Number(amount) <= 0) return simpleError('Invalid amount');
+      const caddr = inputContract.value.trim();
+      if (!validateAddr(caddr)) return simpleError('Invalid contract address');
+      const amt = ethers.utils.parseUnits(String(amount), tokenDecimals);
+      try {
+        const tx = await tokenContract.approve(caddr, amt);
+        log('Approve tx sent', tx.hash);
+        await tx.wait();
+        log('Approve confirmed', tx.hash);
+        await updateBalances();
+      } catch (e) {
+        log('approveToken error', e);
+        alert('Approve failed: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    async function placeTokenBet() {
+      if (!contract || !signer) return simpleError('Connect wallet and load contract first');
+      const amt = inputBetToken.value;
+      if (!amt || Number(amt) <= 0) return simpleError('Invalid token amount');
+      const parsed = ethers.utils.parseUnits(String(amt), tokenDecimals);
+      try {
+        // ensure allowance
+        const caddr = inputContract.value.trim();
+        const allowance = await tokenContract.allowance(userAddress, caddr);
+        if (allowance.lt(parsed)) {
+          if (!confirm('Allowance is lower than amount. Approve now?')) return;
+          await approveToken(amt);
+        }
+        const tx = await contract.placeBetERC20(parsed);
+        log('placeBetERC20 tx sent', tx.hash);
+        await tx.wait();
+        log('Token bet confirmed', tx.hash);
+        await refreshAll();
+      } catch (e) {
+        log('placeTokenBet error', e);
+        alert('Token bet failed: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    // ======= Finalize Round =======
+    async function finalizeRound() {
+      if (!contract || !signer) return simpleError('Connect wallet and load contract first');
+      try {
+        const rid = await contract.currentRoundId();
+        const tx = await contract.finalizeRound(rid);
+        log('finalizeRound tx sent', tx.hash);
+        await tx.wait();
+        log('Round finalized', tx.hash);
+        await refreshAll();
+      } catch (e) {
+        log('finalizeRound error', e);
+        alert('Finalize failed: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    // ======= Nickname & Referral =======
+    async function createNickname() {
+      const nick = inputNick.value.trim();
+      if (!nick || nick.length < 3) return simpleError('Nickname too short');
+      try {
+        const tx = await contract.createNickname(nick);
+        log('createNickname tx sent', tx.hash);
+        await tx.wait();
+        log('Nickname created', nick);
+      } catch (e) {
+        log('createNickname error', e);
+        alert('Create nickname failed: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    async function setReferral() {
+      const r = inputRefNick.value.trim();
+      if (!r) return simpleError('Provide referral nickname');
+      try {
+        const tx = await contract.setReferralByNickname(r);
+        log('setReferral tx sent', tx.hash);
+        await tx.wait();
+        log('Referral set to', r);
+      } catch (e) {
+        log('setReferral error', e);
+        alert('Set referral failed: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    async function updateReferralRewards() {
+      try {
+        const rewards = await contract.getReferralRewards(userAddress);
+        const eth = weiToEth(rewards[0]);
+        const erc = ethers.utils.formatUnits(rewards[1], tokenDecimals);
+        refRewards.textContent = `ETH: ${toFixedTrim(eth,6)} | USDT: ${toFixedTrim(erc,6)}`;
+      } catch (e) {
+        refRewards.textContent = '-';
+      }
+    }
+
+    async function claimReferralRewards() {
+      try {
+        const tx = await contract.claimReferralRewards();
+        log('claimReferralRewards tx sent', tx.hash);
+        await tx.wait();
+        log('Referral rewards claimed', tx.hash);
+        await refreshAll();
+      } catch (e) {
+        log('claimReferralRewards error', e);
+        alert('Claim failed: ' + (e && e.message ? e.message : e));
+      }
+    }
+
+    // ======= Winners feed =======
+    async function loadWinners(limit = 6) {
+      try {
+        const count = await contract.getWinnerCount();
+        const n = count.toNumber ? count.toNumber() : Number(count);
+        const fetchLimit = Math.min(limit, n);
+        if (fetchLimit === 0) { winnersFeed.innerHTML = '-'; return; }
+        const winners = await contract.getWinners(fetchLimit);
+        winnersFeed.innerHTML = '';
+        for (let w of winners) {
+          // w: winnerId, roundId, winner, rewardETH, rewardERC20, timestamp
+          const div = document.createElement('div');
+          div.className = 'winner-card';
+          const ts = new Date(w.timestamp.toNumber ? w.timestamp.toNumber()*1000 : Number(w.timestamp)*1000);
+          div.innerHTML = `
+            <div style="font-weight:700">${w.winner.slice(0,6)}...${w.winner.slice(-4)}</div>
+            <div class="small-muted">Round #${w.roundId.toString()} — ${toFixedTrim(weiToEth(w.rewardETH),6)} ETH / ${toFixedTrim(ethers.utils.formatUnits(w.rewardERC20, tokenDecimals),6)} USDT</div>
+            <div class="small-muted">${ts.toLocaleString()}</div>
+          `;
+          winnersFeed.appendChild(div);
+        }
+      } catch (e) {
+        winnersFeed.innerHTML = 'Failed to load winners';
+      }
+    }
+
+    // ======= UI wiring =======
+    btnConnect.addEventListener('click', connectWallet);
+    btnDisconnect.addEventListener('click', disconnectWallet);
+    btnLoad.addEventListener('click', loadContract);
+    btnRefresh.addEventListener('click', refreshAll);
+    btnBetEth.addEventListener('click', placeEthBet);
+    btnApprove.addEventListener('click', () => approveToken(inputBetToken.value));
+    btnBetToken.addEventListener('click', placeTokenBet);
+    btnFinalize.addEventListener('click', finalizeRound);
+    btnCreateNick.addEventListener('click', createNickname);
+    btnSetRef.addEventListener('click', setReferral);
+    btnClaimRef.addEventListener('click', claimReferralRewards);
+    btnClearLog.addEventListener('click', ()=> consoleLog.textContent = '');
+
+    // auto-load if metamask and addresses present
+    (async function init(){
+      if (window.ethereum && window.ethereum.selectedAddress) {
+        await connectWallet();
+      }
+    })();
+
+    // end script
+  </script>
+</body>
+            </html>
