@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FaylottoSpinBattle - Frontend Demo</title>
+  <title>FaylottoSpinBattle - Frontend Demo (Donut Wheel)</title>
   <style>
     :root {
       --bg: #0f1724;
@@ -42,7 +42,12 @@
     .winner-card { background:linear-gradient(180deg, rgba(59,130,246,0.06), rgba(255,255,255,0.02)); padding:10px; border-radius:8px; min-width:220px; }
     .inline { display:flex; gap:8px; align-items:center; }
     .small-muted { color:var(--muted); font-size:12px; }
-    @media (max-width:720px) { .grid-2 { grid-template-columns: 1fr; } .header { flex-direction:column; align-items:flex-start; gap:10px; } }
+    .donut-wrap { display:flex; gap:16px; align-items:center; justify-content:center; margin-top:12px; flex-wrap:wrap; }
+    #donutCanvas { background: radial-gradient(circle at center, rgba(255,255,255,0.02), transparent 40%); border-radius:50%; box-shadow: 0 8px 30px rgba(0,0,0,0.6); }
+    .donut-legend { max-width:300px; text-align:left; }
+    .legend-item { display:flex; justify-content:space-between; padding:6px 8px; border-radius:8px; margin-bottom:6px; background:rgba(255,255,255,0.01); font-size:13px; }
+    .countdown { font-weight:700; color:#fff; background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:8px; display:inline-block; }
+    @media (max-width:720px) { .grid-2 { grid-template-columns: 1fr; } .header { flex-direction:column; align-items:flex-start; gap:10px; } .donut-wrap { flex-direction:column; } }
   </style>
 </head>
 <body>
@@ -52,7 +57,7 @@
         <div class="logo">FY</div>
         <div>
           <h1>Faylotto Spin Battle — Demo UI</h1>
-          <div class="muted small">Connect wallet, place bets (ETH / ERC20), referral & social winner feed</div>
+          <div class="muted small">Connect wallet, place bets (ETH / ERC20), referral & visual donut wheel</div>
         </div>
       </div>
 
@@ -86,7 +91,7 @@
         </div>
 
         <div class="row" style="margin-top:12px;">
-          <button id="btnLoad" class="">Load Contract</button>
+          <button id="btnLoad">Load Contract</button>
           <button id="btnRefresh" class="ghost">Refresh Balances & Round</button>
         </div>
       </div>
@@ -129,6 +134,15 @@
         <div style="margin-top:12px;">
           <div id="roundSummary" class="small-muted">Tidak ada kontrak dimuat.</div>
 
+          <div class="donut-wrap">
+            <canvas id="donutCanvas" width="360" height="360"></canvas>
+            <div class="donut-legend">
+              <div>Countdown: <span id="idleCountdown" class="countdown">30</span>s</div>
+              <div style="margin-top:8px;"><strong>Players</strong></div>
+              <div id="playersList" class="players-list small-muted">-</div>
+            </div>
+          </div>
+
           <div class="row" style="margin-top:12px;">
             <div class="col">
               <label class="small-muted">Bet ETH (wei auto convert)</label>
@@ -155,10 +169,6 @@
             </div>
           </div>
 
-          <div style="margin-top:12px;">
-            <strong>Players</strong>
-            <div id="playersList" class="players-list small-muted">-</div>
-          </div>
         </div>
       </div>
 
@@ -213,7 +223,7 @@
   </div>
 
   <!-- Ethers.js v5 -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script>
     // ======= Minimal ABIs needed =======
     const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_erc20Token","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetERC20","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetETH","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"erc20Token","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"erc20Reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalERC20","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getWinnerCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getWinners","outputs":[{"components":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.WinnerInfo[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsERC20","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
@@ -228,6 +238,15 @@
     let tokenContract = null;
     let tokenDecimals = 18;
     const CHAIN_ID_EXPECTED = 11155111; // Sepolia chainId; change if needed
+
+    // idle spin timeout (in seconds)
+    const IDLE_SECONDS = 30;
+    let idleTimer = IDLE_SECONDS;
+    let idleInterval = null;
+    let lastActivityAt = Date.now();
+
+    // donut data
+    let playersArray = []; // { addr, weight: BigInt, eth: BigInt, erc20: BigInt, color, startAngle, endAngle }
 
     // DOM
     const btnConnect = document.getElementById('btnConnect');
@@ -247,7 +266,7 @@
     const inputBetEth = document.getElementById('inputBetEth');
     const inputBetToken = document.getElementById('inputBetToken');
     const roundSummary = document.getElementById('roundSummary');
-    const playersList = document.getElementById('playersList');
+    const playersListEl = document.getElementById('playersList');
     const btnFinalize = document.getElementById('btnFinalize');
     const inputNick = document.getElementById('inputNick');
     const btnCreateNick = document.getElementById('btnCreateNick');
@@ -258,6 +277,21 @@
     const winnersFeed = document.getElementById('winnersFeed');
     const consoleLog = document.getElementById('consoleLog');
     const btnClearLog = document.getElementById('btnClearLog');
+    const donutCanvas = document.getElementById('donutCanvas');
+    const idleCountdownEl = document.getElementById('idleCountdown');
+
+    // canvas context
+    const ctx = donutCanvas.getContext('2d');
+    const cw = donutCanvas.width;
+    const ch = donutCanvas.height;
+    const cx = cw / 2;
+    const cy = ch / 2;
+    const outerR = Math.min(cw, ch) * 0.45;
+    const innerR = outerR * 0.45;
+
+    // spinning state
+    let isSpinning = false;
+    let currentRotation = 0; // degrees
 
     // ======= Helpers =======
     function log(...args) {
@@ -266,43 +300,47 @@
       consoleLog.textContent += `\n[${t}] ` + args.map(a => (typeof a === 'object' ? JSON.stringify(a) : a)).join(' ');
       consoleLog.scrollTop = consoleLog.scrollHeight;
     }
-    function setAddr(addr) {
-      addrBadge.textContent = addr ? (addr.slice(0,6) + '...' + addr.slice(-4)) : 'Not connected';
-    }
-    function setNetwork(name, id) {
-      networkBadge.textContent = `Network: ${name} (${id})`;
-      if (id !== CHAIN_ID_EXPECTED) {
-        networkBadge.style.border = '1px solid rgba(255,255,255,0.04)';
-        networkBadge.style.background = 'transparent';
-      }
-    }
-    function weiToEth(wei) {
-      try { return ethers.utils.formatEther(wei); } catch(e){ return '0'; }
-    }
+    function setAddr(addr) { addrBadge.textContent = addr ? (addr.slice(0,6) + '...' + addr.slice(-4)) : 'Not connected'; }
+    function setNetwork(name, id) { networkBadge.textContent = `Network: ${name} (${id})`; if (id !== CHAIN_ID_EXPECTED) { networkBadge.style.border = '1px solid rgba(255,255,255,0.04)'; networkBadge.style.background = 'transparent'; } }
+    function weiToEth(wei) { try { return ethers.utils.formatEther(wei); } catch(e) { return '0'; } }
     function toFixedTrim(numStr, digits=6) { return (+numStr).toFixed(digits).replace(/\.?0+$/, ''); }
 
+    // convert ethers BigNumber -> BigInt
+    function bnToBigInt(bn) { if (!bn) return 0n; try { return BigInt(bn.toString()); } catch(e){ return 0n; } }
+
+    // random color generator hybrid: base cyan + hue shift
+    function playerColor(i) {
+      // base hue around 195 (cyan), add spread
+      const base = 195;
+      const hue = (base + (i * 37)) % 360;
+      return `hsl(${hue},72%,58%)`;
+    }
+
     // ======= Wallet connect =======
+    btnConnect.addEventListener('click', connectWallet);
+    btnDisconnect.addEventListener('click', disconnectWallet);
+    btnLoad.addEventListener('click', loadContract);
+    btnRefresh.addEventListener('click', refreshAll);
+    btnClearLog.addEventListener('click', () => { consoleLog.textContent = "Ready."; });
+
     async function connectWallet() {
-      if (!window.ethereum) {
-        alert('No Ethereum provider found. Install MetaMask or compatible wallet.');
-        return;
-      }
+      if (!window.ethereum) { alert('No Ethereum provider found. Install MetaMask.'); return; }
       try {
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         userAddress = await signer.getAddress();
-        network = await provider.getNetwork();
+        const net = await provider.getNetwork();
+        network = net;
         setAddr(userAddress);
-        setNetwork(network.name || network.chainId, network.chainId);
+        setNetwork(net.name || net.chainId, net.chainId);
         btnConnect.style.display = 'none';
         btnDisconnect.style.display = 'inline-block';
-        log('Connected', userAddress, 'network', network);
-        // auto-load contracts if addresses present
+        log('Connected', userAddress, 'network', net);
+        // auto-load contract if fields set
         if (inputContract.value && inputERC20.value) {
-          loadContract();
+          await loadContract();
         }
-        // subscribe to accounts & chain changes
         window.ethereum.on('accountsChanged', handleAccountsChanged);
         window.ethereum.on('chainChanged', handleChainChanged);
         await refreshAll();
@@ -312,36 +350,24 @@
       }
     }
     async function disconnectWallet() {
-      // you can't programmatically disconnect MetaMask, but reset UI
-      signer = null;
-      userAddress = null;
-      provider = null;
+      signer = null; userAddress = null; provider = null;
       setAddr(null);
       btnConnect.style.display = 'inline-block';
       btnDisconnect.style.display = 'none';
-      balEth.textContent = '-';
-      balToken.textContent = '-';
-      allowInfo.textContent = 'Allowance: -';
-      log('Disconnected wallet (UI reset)');
-      // remove listeners
-      if (window.ethereum && window.ethereum.removeListener) {
-        try {
+      balEth.textContent = '-'; balToken.textContent = '-'; allowInfo.textContent = 'Allowance: -';
+      log('Disconnected (UI reset)');
+      try {
+        if (window.ethereum && window.ethereum.removeListener) {
           window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
           window.ethereum.removeListener('chainChanged', handleChainChanged);
-        } catch(e){}
-      }
+        }
+      } catch(e){}
     }
     function handleAccountsChanged(accounts) {
-      if (!accounts || accounts.length === 0) { disconnectWallet(); }
-      else {
-        userAddress = accounts[0];
-        setAddr(userAddress);
-        log('Account changed to', userAddress);
-        refreshAll();
-      }
+      if (!accounts || accounts.length === 0) disconnectWallet();
+      else { userAddress = accounts[0]; setAddr(userAddress); refreshAll(); log('Account changed'); }
     }
     function handleChainChanged(chainIdHex) {
-      // reload page recommended, but we update network info
       const id = parseInt(chainIdHex, 16);
       network = { chainId: id, name: id === CHAIN_ID_EXPECTED ? 'expected' : 'unknown' };
       setNetwork(network.name, id);
@@ -351,7 +377,6 @@
 
     // ======= Contract loading =======
     function validateAddr(a) { return a && ethers.utils.isAddress(a); }
-
     function simpleError(msg) { alert(msg); log('ERR', msg); }
 
     async function loadContract() {
@@ -365,30 +390,21 @@
       }
       contract = new ethers.Contract(caddr, CONTRACT_ABI, provider);
       tokenContract = new ethers.Contract(taddr, ERC20_ABI, provider);
-      // create connected instances if signer available
-      if (signer) {
-        contract = contract.connect(signer);
-        tokenContract = tokenContract.connect(signer);
-      }
-      // read token decimals
-      try {
-        tokenDecimals = await tokenContract.decimals();
-      } catch(e) {
-        log('Token decimals read failed, default to 18', e);
-        tokenDecimals = 18;
-      }
+      if (signer) { contract = contract.connect(signer); tokenContract = tokenContract.connect(signer); }
+      try { tokenDecimals = await tokenContract.decimals(); } catch(e){ log('Token decimals read failed, default 18', e); tokenDecimals = 18; }
       log('Loaded contract', caddr, 'token', taddr, 'decimals', tokenDecimals);
       await refreshAll();
+      startIdleTimer(); // start idle countdown when contract loaded
     }
 
-    // ======= Refresh Balances & Round =======
+    // ======= Refresh =======
     async function refreshAll() {
       if (!provider || !userAddress) return;
       await updateBalances();
       if (contract) {
         await updateRoundInfo();
-        await updateReferralRewards();
-        await loadWinners();
+        await updateReferralRewards().catch(()=>{});
+        await loadWinners().catch(()=>{});
       }
     }
 
@@ -400,234 +416,466 @@
           const tBal = await tokenContract.balanceOf(userAddress);
           const human = ethers.utils.formatUnits(tBal, tokenDecimals);
           balToken.textContent = toFixedTrim(human, 6) + ' USDT';
-          // check allowance
           const caddr = inputContract.value.trim();
           if (validateAddr(caddr)) {
             const allowance = await tokenContract.allowance(userAddress, caddr);
             const humanAllow = ethers.utils.formatUnits(allowance, tokenDecimals);
             allowInfo.textContent = 'Allowance: ' + toFixedTrim(humanAllow,6) + ' USDT';
           }
-        } else {
-          balToken.textContent = '-';
-        }
-      } catch (e) {
-        log('updateBalances error', e);
-      }
+        } else balToken.textContent = '-';
+      } catch (e) { log('updateBalances error', e); }
     }
 
+    // ======= Read round + players + bets and compute weights =======
     async function updateRoundInfo() {
+      if (!contract) return;
       try {
         const rid = await contract.currentRoundId();
-        // get round basic
         const round = await contract.getRoundBasic(rid);
-        // round: id, startTime, endTime, finalized, winner, totalETH, totalERC20, playersCount
         const players = await contract.getRoundPlayers(rid);
-        const start = new Date(round[1].toNumber() * 1000);
-        const end = new Date(round[2].toNumber() * 1000);
-        const now = new Date();
+        const start = new Date(Number(round[1].toString()) * 1000);
+        const end = new Date(Number(round[2].toString()) * 1000);
         roundSummary.innerHTML = `
           <div class="small-muted">Round #${round[0].toString()} | ${round[3] ? '<span class="danger">Finalized</span>' : '<span class="success">Open</span>'}</div>
           <div class="small-muted">Start: ${start.toLocaleTimeString()} | End: ${end.toLocaleTimeString()}</div>
-          <div class="small-muted">Total ETH: ${weiToEth(round[5])} | Total ERC20: ${ethers.utils.formatUnits(round[6], tokenDecimals)}</div>
         `;
-        // players
-        playersList.innerHTML = '';
-        if (players.length === 0) playersList.textContent = '-';
-        else {
-          for (let p of players) {
-            const d = await contract.getPlayerDeposits(rid, p);
-            const eth = weiToEth(d[0]);
-            const erc = ethers.utils.formatUnits(d[1], tokenDecimals);
-            const div = document.createElement('div');
-            div.className = 'player-item';
-            div.innerHTML = `<div>${p.slice(0,6)}...${p.slice(-4)}</div><div class="small-muted">${toFixedTrim(eth,6)} ETH / ${toFixedTrim(erc,6)} USDT</div>`;
-            playersList.appendChild(div);
+        // fetch bets and build playersArray
+        playersArray = [];
+        let totalWeight = 0n;
+        for (let i=0;i<players.length;i++){
+          const addr = players[i];
+          // try getPlayerBet (single combined weight)
+          let weightBn = null;
+          try {
+            weightBn = await contract.getPlayerBet(rid, addr);
+            // if success and not zero, assume it is weight in wei-scale
+          } catch(e) {
+            // fallback to getPlayerDeposits
+            try {
+              const deposits = await contract.getPlayerDeposits(rid, addr);
+              const ethBn = deposits.ethAmount;
+              const ercBn = deposits.erc20Amount;
+              // compute like contract: erc20 * 1e12 to scale to wei (if token has 6 decimals)
+              // We'll compute factor = 10^(18 - tokenDecimals)
+              const factor = BigInt(10) ** BigInt(18 - (tokenDecimals || 18));
+              weightBn = ethBn.add(ercBn.mul(ethers.BigNumber.from(factor.toString())));
+            } catch(err2){
+              // as last resort, set zero
+              weightBn = ethers.BigNumber.from("0");
+            }
           }
+          const weightBigInt = bnToBigInt(weightBn);
+          totalWeight += weightBigInt;
+          playersArray.push({
+            addr,
+            eth: null,
+            erc20: null,
+            weight: weightBigInt,
+            color: playerColor(i),
+            startAngle: 0,
+            endAngle: 0
+          });
         }
-        log('Loaded round', rid.toString(), 'players', players.length);
+        // compute angles
+        if (totalWeight === 0n) {
+          playersListEl.innerHTML = '<div class="small-muted">No bets yet this round.</div>';
+          drawDonut(); // empty donut
+          return;
+        }
+        // sort players stable by weight desc (optional) -> bigger slices near start
+        playersArray.sort((a,b)=> (b.weight > a.weight ? 1 : (b.weight < a.weight ? -1 : 0)));
+        // compute start/end angles in radians
+        let cur = 0n;
+        for (let i=0;i<playersArray.length;i++){
+          const w = playersArray[i].weight;
+          const startAngle = Number((cur * 360n) / totalWeight) * Math.PI/180;
+          cur += w;
+          const endAngle = Number((cur * 360n) / totalWeight) * Math.PI/180;
+          playersArray[i].startAngle = startAngle;
+          playersArray[i].endAngle = endAngle;
+        }
+        // update players list UI
+        updatePlayersListUI();
+        drawDonut();
       } catch (err) {
-        log('updateRoundInfo failed', err);
-        roundSummary.textContent = 'Failed to fetch round info. Make sure contract address is correct and provider connected.';
+        console.error('updateRoundInfo err', err);
+        log('updateRoundInfo error', err && err.message ? err.message : err);
       }
     }
 
-    // ======= Bets =======
-    async function placeEthBet() {
-      if (!contract || !signer) return simpleError('Connect wallet and load contract first');
-      const amt = inputBetEth.value;
-      if (!amt || Number(amt) <= 0) return simpleError('Invalid ETH amount');
-      const value = ethers.utils.parseEther(String(amt));
+    function updatePlayersListUI() {
+      playersListEl.innerHTML = '';
+      for (const p of playersArray) {
+        const el = document.createElement('div');
+        el.className = 'player-item';
+        const short = p.addr.slice(0,6) + '...' + p.addr.slice(-4);
+        const weightDisplay = humanizeWeight(p.weight);
+        el.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><span style="width:12px;height:12px;border-radius:4px;background:${p.color};display:inline-block"></span>${short}</div><div>${weightDisplay}</div>`;
+        playersListEl.appendChild(el);
+      }
+    }
+
+    function humanizeWeight(w) {
+      // try to present in ETH-equivalent (divide by 1e18)
       try {
+        const asEther = Number(w) / 1e18;
+        if (asEther >= 0.000001) return asEther.toFixed(6) + ' ETH-eq';
+        return w.toString();
+      } catch(e){ return w.toString(); }
+    }
+
+    // ======= Draw donut on canvas =======
+    function drawDonut(rotationDeg = currentRotation) {
+      ctx.clearRect(0,0,cw,ch);
+      // apply rotation by translating and rotating context
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rotationDeg * Math.PI / 180);
+      ctx.translate(-cx, -cy);
+
+      // background circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR + 6, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.01)';
+      ctx.fill();
+
+      if (!playersArray || playersArray.length === 0) {
+        // draw empty donut
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,0.02)';
+        ctx.fill();
+        // inner hole
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(cx, cy, innerR, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.restore();
+        // center label
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('No bets yet', cx, cy);
+        return;
+      }
+
+      // draw sectors
+      for (let i=0;i<playersArray.length;i++){
+        const p = playersArray[i];
+        const sa = p.startAngle;
+        const ea = p.endAngle;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, outerR, sa, ea, false);
+        ctx.closePath();
+        ctx.fillStyle = p.color;
+        ctx.fill();
+      }
+
+      // inner circle to make donut
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(cx, cy, innerR, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+
+      // draw separators (thin lines)
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = 1;
+      for (let i=0;i<playersArray.length;i++){
+        const p = playersArray[i];
+        const angle = (p.startAngle + p.endAngle) / 2;
+        // draw radial line at startAngle
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(p.startAngle) * (innerR+2), cy + Math.sin(p.startAngle) * (innerR+2));
+        ctx.lineTo(cx + Math.cos(p.startAngle) * outerR, cy + Math.sin(p.startAngle) * outerR);
+        ctx.stroke();
+      }
+
+      // labels (address short) along middle of sector
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px Inter';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i=0;i<playersArray.length;i++){
+        const p = playersArray[i];
+        const mid = (p.startAngle + p.endAngle) / 2;
+        const rlabel = (outerR + innerR) / 2;
+        const lx = cx + Math.cos(mid) * rlabel;
+        const ly = cy + Math.sin(mid) * rlabel;
+        const short = p.addr.slice(0,6);
+        ctx.fillStyle = 'rgba(0,12,20,0.85)';
+        // draw small pill background for readability
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.roundRect = ctx.roundRect || function(x,y,w,h,r){ if (w<2*r) r=w/2; if (h<2*r) r=h/2; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); };
+        // approximate pill
+        const text = short;
+        ctx.font = '12px Inter';
+        const tw = ctx.measureText(text).width + 8;
+        // draw pill in two colors (hybrid effect)
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.roundRect(lx - tw/2, ly - 12/2, tw, 16, 8);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(text, lx, ly);
+      }
+
+      ctx.restore();
+    }
+
+    // polyfill for roundRect if needed
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+        if (w<2*r) r=w/2; if (h<2*r) r=h/2;
+        this.beginPath();
+        this.moveTo(x+r,y);
+        this.arcTo(x+w,y,x+w,y+h,r);
+        this.arcTo(x+w,y+h,x,y+h,r);
+        this.arcTo(x,y+h,x,y,r);
+        this.arcTo(x,y,x+w,y,r);
+        this.closePath();
+        this.fill();
+      };
+    }
+
+    // ======= Weighted random selection (client-side) =======
+    function pickWinnerClientSide() {
+      if (!playersArray || playersArray.length === 0) return null;
+      const total = playersArray.reduce((acc,p)=> acc + p.weight, 0n);
+      if (total === 0n) return null;
+      // random BigInt in range [0, total-1]
+      const rand = randBigInt(total);
+      let cum = 0n;
+      for (let i=0;i<playersArray.length;i++){
+        cum += playersArray[i].weight;
+        if (rand < cum) return playersArray[i];
+      }
+      return playersArray[playersArray.length-1];
+    }
+
+    function randBigInt(max) {
+      // use crypto.getRandomValues to build randomness
+      // build a random BigInt less than max
+      const bytes = Math.ceil((max.toString(2).length)/8);
+      let rand;
+      do {
+        const arr = new Uint8Array(bytes);
+        window.crypto.getRandomValues(arr);
+        rand = 0n;
+        for (let i=0;i<arr.length;i++) rand = (rand << 8n) + BigInt(arr[i]);
+      } while (rand >= max);
+      return rand;
+    }
+
+    // ======= Spin animation =======
+    function spinToPlayer(targetPlayer) {
+      if (!targetPlayer) return;
+      if (isSpinning) return;
+      isSpinning = true;
+      // compute mid angle of target in degrees (canvas current angles in radians)
+      const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
+      const midDeg = midRad * 180 / Math.PI;
+      // We want to rotate wheel so that midDeg lines up with pointer at -90deg (top)
+      // currentRotation is degrees applied (canvas rotated by currentRotation)
+      // compute needed rotation to bring midDeg to -90 deg
+      // targetRotation = -90 - midDeg + k*360 (choose k big so spins several times)
+      const spins = 5; // number of full spins
+      const targetRotation = -90 - midDeg + spins * 360;
+      const start = currentRotation % 360;
+      const end = start + targetRotation;
+      const duration = 4000; // ms
+      const startTime = performance.now();
+
+      function animate(now) {
+        const t = Math.min(1, (now - startTime) / duration);
+        // easeOutCubic
+        const eased = 1 - Math.pow(1 - t, 3);
+        currentRotation = start + (end - start) * eased;
+        drawDonut(currentRotation);
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          isSpinning = false;
+          // show winner
+          log('Spin result (client-side):', targetPlayer.addr);
+          alert(`Visual winner (client-side): ${targetPlayer.addr}`);
+          // after spin complete, refresh on-chain (in case contract finalized)
+          updateRoundInfo().catch(()=>{});
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    // ======= Idle timer logic =======
+    function resetIdleTimer() {
+      lastActivityAt = Date.now();
+      idleTimer = IDLE_SECONDS;
+      idleCountdownEl.textContent = String(IDLE_SECONDS);
+    }
+    function startIdleTimer() {
+      if (idleInterval) clearInterval(idleInterval);
+      resetIdleTimer();
+      idleInterval = setInterval(async () => {
+        const elapsed = Math.floor((Date.now() - lastActivityAt)/1000);
+        const left = Math.max(0, IDLE_SECONDS - elapsed);
+        idleCountdownEl.textContent = String(left);
+        if (left <= 0) {
+          // idle expired -> auto spin if players exist
+          clearInterval(idleInterval);
+          idleInterval = null;
+          idleCountdownEl.textContent = '0';
+          if (playersArray.length > 0) {
+            const pick = pickWinnerClientSide();
+            if (pick) spinToPlayer(pick);
+          }
+          // restart timer after auto spin
+          setTimeout(() => { startIdleTimer(); }, 2000);
+        }
+      }, 500);
+    }
+
+    // ======= Place bet handlers: call contract, then refresh + spin visual =======
+    document.getElementById('btnBetEth').addEventListener('click', async () => {
+      try {
+        if (!contract || !signer) return simpleError('Connect wallet and load contract first.');
+        const amt = inputBetEth.value;
+        if (!amt || Number(amt) <= 0) return alert('Enter ETH amount');
+        const value = ethers.utils.parseEther(String(amt));
         const tx = await contract.placeBetETH({ value });
         log('placeBetETH tx sent', tx.hash);
+        resetIdleTimer();
         await tx.wait();
-        log('ETH bet confirmed', tx.hash);
-        await refreshAll();
-      } catch (e) {
-        log('placeEthBet error', e);
-        alert('Bet failed: ' + (e && e.message ? e.message : e));
-      }
-    }
-
-    async function approveToken(amount) {
-      if (!tokenContract || !signer) return simpleError('Connect wallet & load token');
-      if (!amount || Number(amount) <= 0) return simpleError('Invalid amount');
-      const caddr = inputContract.value.trim();
-      if (!validateAddr(caddr)) return simpleError('Invalid contract address');
-      const amt = ethers.utils.parseUnits(String(amount), tokenDecimals);
-      try {
-        const tx = await tokenContract.approve(caddr, amt);
-        log('Approve tx sent', tx.hash);
-        await tx.wait();
-        log('Approve confirmed', tx.hash);
+        log('placeBetETH confirmed');
         await updateBalances();
-      } catch (e) {
-        log('approveToken error', e);
-        alert('Approve failed: ' + (e && e.message ? e.message : e));
+        await updateRoundInfo();
+        // spin visual toward local pick
+        const pick = pickWinnerClientSide();
+        if (pick) spinToPlayer(pick);
+      } catch (err) {
+        console.error(err); alert(err && err.message ? err.message : 'Bet failed');
       }
-    }
+    });
 
-    async function placeTokenBet() {
-      if (!contract || !signer) return simpleError('Connect wallet and load contract first');
-      const amt = inputBetToken.value;
-      if (!amt || Number(amt) <= 0) return simpleError('Invalid token amount');
-      const parsed = ethers.utils.parseUnits(String(amt), tokenDecimals);
+    document.getElementById('btnApprove').addEventListener('click', async () => {
       try {
-        // ensure allowance
+        if (!tokenContract || !signer) return simpleError('Connect wallet & load token first.');
         const caddr = inputContract.value.trim();
-        const allowance = await tokenContract.allowance(userAddress, caddr);
-        if (allowance.lt(parsed)) {
-          if (!confirm('Allowance is lower than amount. Approve now?')) return;
-          await approveToken(amt);
-        }
-        const tx = await contract.placeBetERC20(parsed);
-        log('placeBetERC20 tx sent', tx.hash);
+        const max = ethers.constants.MaxUint256;
+        const tx = await tokenContract.approve(caddr, max);
+        log('approve sent', tx.hash);
         await tx.wait();
-        log('Token bet confirmed', tx.hash);
-        await refreshAll();
-      } catch (e) {
-        log('placeTokenBet error', e);
-        alert('Token bet failed: ' + (e && e.message ? e.message : e));
-      }
-    }
+        log('approve confirmed');
+        await updateBalances();
+      } catch(e){ console.error(e); alert('Approve failed'); }
+    });
 
-    // ======= Finalize Round =======
-    async function finalizeRound() {
-      if (!contract || !signer) return simpleError('Connect wallet and load contract first');
+    document.getElementById('btnBetToken').addEventListener('click', async () => {
       try {
+        if (!contract || !signer) return simpleError('Connect wallet and load contract first.');
+        const amt = inputBetToken.value;
+        if (!amt || Number(amt) <= 0) return alert('Enter token amount');
+        const decimals = tokenDecimals || 18;
+        const value = ethers.utils.parseUnits(String(amt), decimals);
+        const tx = await contract.placeBetERC20(value);
+        log('placeBetERC20 tx sent', tx.hash);
+        resetIdleTimer();
+        await tx.wait();
+        log('placeBetERC20 confirmed');
+        await updateBalances();
+        await updateRoundInfo();
+        const pick = pickWinnerClientSide();
+        if (pick) spinToPlayer(pick);
+      } catch (err) {
+        console.error(err); alert(err && err.message ? err.message : 'Bet failed');
+      }
+    });
+
+    // finalize button (user can call)
+    btnFinalize.addEventListener('click', async () => {
+      try {
+        if (!contract || !signer) return simpleError('Connect wallet & load contract first.');
         const rid = await contract.currentRoundId();
         const tx = await contract.finalizeRound(rid);
-        log('finalizeRound tx sent', tx.hash);
+        log('finalize tx sent', tx.hash);
         await tx.wait();
-        log('Round finalized', tx.hash);
-        await refreshAll();
-      } catch (e) {
-        log('finalizeRound error', e);
-        alert('Finalize failed: ' + (e && e.message ? e.message : e));
-      }
-    }
+        log('finalize confirmed');
+        await updateRoundInfo();
+      } catch (err) { console.error(err); alert(err && err.message ? err.message : 'Finalize failed'); }
+    });
 
-    // ======= Nickname & Referral =======
-    async function createNickname() {
-      const nick = inputNick.value.trim();
-      if (!nick || nick.length < 3) return simpleError('Nickname too short');
+    // referral related buttons (basic calls)
+    btnCreateNick.addEventListener('click', async () => {
       try {
+        const nick = inputNick.value;
+        if (!nick || nick.length < 3) return alert('Nickname min 3 chars');
         const tx = await contract.createNickname(nick);
-        log('createNickname tx sent', tx.hash);
         await tx.wait();
-        log('Nickname created', nick);
-      } catch (e) {
-        log('createNickname error', e);
-        alert('Create nickname failed: ' + (e && e.message ? e.message : e));
-      }
-    }
-
-    async function setReferral() {
-      const r = inputRefNick.value.trim();
-      if (!r) return simpleError('Provide referral nickname');
+        alert('Nickname created');
+      } catch(e){ console.error(e); alert('createNickname failed'); }
+    });
+    btnSetRef.addEventListener('click', async () => {
       try {
-        const tx = await contract.setReferralByNickname(r);
-        log('setReferral tx sent', tx.hash);
+        const rn = inputRefNick.value;
+        if (!rn) return alert('Enter ref nickname');
+        const tx = await contract.setReferralByNickname(rn);
         await tx.wait();
-        log('Referral set to', r);
-      } catch (e) {
-        log('setReferral error', e);
-        alert('Set referral failed: ' + (e && e.message ? e.message : e));
-      }
+        alert('Referrer set');
+      } catch(e){ console.error(e); alert('setReferralByNickname failed'); }
+    });
+    btnClaimRef.addEventListener('click', async () => {
+      try {
+        const tx = await contract.claimReferralRewards();
+        await tx.wait();
+        alert('Rewards claimed');
+        await updateBalances();
+        updateReferralRewards();
+      } catch(e){ console.error(e); alert('claimReferralRewards failed'); }
+    });
+
+    // load winners (simple)
+    async function loadWinners() {
+      try {
+        if (!contract) return;
+        const arr = await contract.getWinners(10);
+        winnersFeed.innerHTML = '';
+        if (!arr || arr.length === 0) { winnersFeed.textContent = '-'; return; }
+        for (let i=0;i<arr.length;i++){
+          const w = arr[i];
+          const card = document.createElement('div');
+          card.className = 'winner-card';
+          const short = w.winner.slice(0,6) + '...' + w.winner.slice(-4);
+          card.innerHTML = `<div><strong>${short}</strong><div class="small-muted">Round ${w.roundId.toString()}</div></div><div style="margin-top:6px;">${ethers.utils.formatEther(w.rewardETH)} ETH</div>`;
+          winnersFeed.appendChild(card);
+        }
+      } catch(e){ console.error(e); winnersFeed.textContent = '-'; }
     }
 
     async function updateReferralRewards() {
       try {
-        const rewards = await contract.getReferralRewards(userAddress);
-        const eth = weiToEth(rewards[0]);
-        const erc = ethers.utils.formatUnits(rewards[1], tokenDecimals);
-        refRewards.textContent = `ETH: ${toFixedTrim(eth,6)} | USDT: ${toFixedTrim(erc,6)}`;
-      } catch (e) {
-        refRewards.textContent = '-';
-      }
+        if (!contract || !userAddress) return;
+        const r = await contract.getReferralRewards(userAddress);
+        refRewards.textContent = `${ethers.utils.formatEther(r[0])} ETH / ${ethers.utils.formatUnits(r[1], tokenDecimals)} USDT`;
+      } catch(e){ console.error(e); }
     }
 
-    async function claimReferralRewards() {
-      try {
-        const tx = await contract.claimReferralRewards();
-        log('claimReferralRewards tx sent', tx.hash);
-        await tx.wait();
-        log('Referral rewards claimed', tx.hash);
-        await refreshAll();
-      } catch (e) {
-        log('claimReferralRewards error', e);
-        alert('Claim failed: ' + (e && e.message ? e.message : e));
-      }
+    // start idle timer when page loaded if contract present
+    function ensureIdle() {
+      if (!idleInterval) startIdleTimer();
     }
 
-    // ======= Winners feed =======
-    async function loadWinners(limit = 6) {
-      try {
-        const count = await contract.getWinnerCount();
-        const n = count.toNumber ? count.toNumber() : Number(count);
-        const fetchLimit = Math.min(limit, n);
-        if (fetchLimit === 0) { winnersFeed.innerHTML = '-'; return; }
-        const winners = await contract.getWinners(fetchLimit);
-        winnersFeed.innerHTML = '';
-        for (let w of winners) {
-          // w: winnerId, roundId, winner, rewardETH, rewardERC20, timestamp
-          const div = document.createElement('div');
-          div.className = 'winner-card';
-          const ts = new Date(w.timestamp.toNumber ? w.timestamp.toNumber()*1000 : Number(w.timestamp)*1000);
-          div.innerHTML = `
-            <div style="font-weight:700">${w.winner.slice(0,6)}...${w.winner.slice(-4)}</div>
-            <div class="small-muted">Round #${w.roundId.toString()} — ${toFixedTrim(weiToEth(w.rewardETH),6)} ETH / ${toFixedTrim(ethers.utils.formatUnits(w.rewardERC20, tokenDecimals),6)} USDT</div>
-            <div class="small-muted">${ts.toLocaleString()}</div>
-          `;
-          winnersFeed.appendChild(div);
-        }
-      } catch (e) {
-        winnersFeed.innerHTML = 'Failed to load winners';
-      }
-    }
+    // start initial draw
+    drawDonut();
 
-    // ======= UI wiring =======
-    btnConnect.addEventListener('click', connectWallet);
-    btnDisconnect.addEventListener('click', disconnectWallet);
-    btnLoad.addEventListener('click', loadContract);
-    btnRefresh.addEventListener('click', refreshAll);
-    btnBetEth.addEventListener('click', placeEthBet);
-    btnApprove.addEventListener('click', () => approveToken(inputBetToken.value));
-    btnBetToken.addEventListener('click', placeTokenBet);
-    btnFinalize.addEventListener('click', finalizeRound);
-    btnCreateNick.addEventListener('click', createNickname);
-    btnSetRef.addEventListener('click', setReferral);
-    btnClaimRef.addEventListener('click', claimReferralRewards);
-    btnClearLog.addEventListener('click', ()=> consoleLog.textContent = '');
+    // small: refresh round every 10s to update live bets
+    setInterval(() => {
+      if (contract && userAddress) updateRoundInfo().catch(()=>{});
+    }, 10000);
 
-    // auto-load if metamask and addresses present
-    (async function init(){
-      if (window.ethereum && window.ethereum.selectedAddress) {
-        await connectWallet();
-      }
-    })();
+    // ensure idle timer restarts when user interacts
+    document.addEventListener('click', () => { resetIdleTimer(); });
 
-    // end script
   </script>
 </body>
-            </html>
+</html>
