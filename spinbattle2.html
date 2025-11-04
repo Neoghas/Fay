@@ -557,59 +557,79 @@ async function toggleWallet() {
   if (!userAddress) {
     // --- Logika CONNECT ---
     if (!window.ethereum) return alert("Please install MetaMask.");
+
+    // === BLOK 1: KONEKSI & VALIDASI ===
     try {
         provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         userAddress = await signer.getAddress();
         
-        // --- [PERBAIKAN DIMULAI] ---
-        // 1. Cek Jaringan (Network Check)
         const network = await provider.getNetwork();
         if (network.chainId !== CHAIN_ID_EXPECTED) {
             alert(`Jaringan Salah! Harap ganti ke ${CHAIN_NAME_EXPECTED} (Chain ID: ${CHAIN_ID_EXPECTED}).`);
-            // Lempar error agar ditangkap oleh catch block dan me-reset state
             throw new Error(`Wrong network. Expected ${CHAIN_ID_EXPECTED}, got ${network.chainId}`);
         }
-        // --- [PERBAIKAN SELESAI] ---
 
         // Inisialisasi kontrak HANYA SETELAH jaringan dipastikan benar
         usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
         faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-        walletBtn.innerText = "Disconnect";
-        referralBtn.style.display = "block";
-        walletInfo.style.display = "block";
-        walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
+    } catch (err) {
+        // Jika koneksi, network check, atau init kontrak gagal, reset semua.
+        console.error("Gagal menghubungkan wallet (Blok 1):", err);
+        statusText.innerText = `Error: ${err.message}`;
         
-        // Baru fetch data setelah semua siap
+        provider = null; signer = null; userAddress = null; // Reset
+        walletBtn.innerText = "Connect Wallet"; // Pastikan tombol kembali ke state 'Connect'
+        referralBtn.style.display = "none";
+        walletInfo.style.display = "none";
+        return; // Hentikan fungsi di sini
+    }
+
+    // --- JIKA KONEKSI BERHASIL, LANJUT KE SINI ---
+        
+    // === BLOK 2: UPDATE UI & EVENT LISTENERS ===
+    walletBtn.innerText = "Disconnect";
+    referralBtn.style.display = "block";
+    walletInfo.style.display = "block";
+    walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
+    statusText.innerText = "Connected! Fetching game data..."; // Status baru
+
+    // === BLOK 3: FETCH DATA (dengan try...catch sendiri) ===
+    try {
         await updateUserBalances();
         await fetchAndDisplayWinners();
         await fetchReferralData(); 
         await fetchAndDisplayRoundData(); // Panggil ini terakhir untuk memulai timer
         setupEventListeners();
-
-        // [BARU] Tambahkan listener untuk perubahan akun atau jaringan
-        window.ethereum.removeAllListeners(); // Hapus listener lama dulu
-        window.ethereum.on('accountsChanged', (accounts) => {
-            console.log('Akun diganti, menghubungkan ulang...');
-            toggleWallet(); // Panggil disconnect/reconnect logic
-        });
-        window.ethereum.on('chainChanged', (chainId) => {
-            console.log('Jaringan diganti, menghubungkan ulang...');
-            toggleWallet(); // Panggil disconnect/reconnect logic
-        });
-
-    } catch (err) {
-        console.error("Gagal menghubungkan wallet:", err);
-        statusText.innerText = `Error: ${err.message}`; // Tampilkan pesan error
         
-        // Reset state jika koneksi gagal di tengah jalan
-        provider = null; signer = null; userAddress = null;
-        walletBtn.innerText = "Connect Wallet"; // Pastikan tombol kembali ke state 'Connect'
-        referralBtn.style.display = "none";
-        walletInfo.style.display = "none";
+        // Status sukses HANYA jika data juga berhasil dimuat
+        const playerCount = Object.keys(players).length;
+        if (playerCount === 0) {
+            statusText.innerText = `Connected! Round ${currentRoundId}. Waiting for players...`;
+        } else {
+            statusText.innerText = `Connected! Round ${currentRoundId} is live!`;
+        }
+        
+    } catch (fetchErr) {
+        // Jika fetch data GAGAL, koneksi tetap jalan, tapi tampilkan error.
+        console.error("Gagal mengambil data kontrak (Blok 3):", fetchErr);
+        statusText.innerText = "Connected, but failed to load game data. Check console.";
+        // Koneksi TIDAK di-reset, userAddress tetap ada.
     }
+
+    // === BLOK 4: METAMASK LISTENERS ===
+    window.ethereum.removeAllListeners(); // Hapus listener lama dulu
+    window.ethereum.on('accountsChanged', (accounts) => {
+        console.log('Akun diganti, menghubungkan ulang...');
+        toggleWallet(); // Panggil disconnect/reconnect logic
+    });
+    window.ethereum.on('chainChanged', (chainId) => {
+        console.log('Jaringan diganti, menghubungkan ulang...');
+        toggleWallet(); // Panggil disconnect/reconnect logic
+    });
+    
   } else {
     // --- Logika DISCONNECT ---
     userAddress = null; provider = null; signer = null;
@@ -633,6 +653,7 @@ async function toggleWallet() {
     winnerList.appendChild(winnerListPlaceholder);
   }
 }
+
 
 
 // === FUNGSI UTAMA: Ambil Data Ronde & Mulai Timer ===
