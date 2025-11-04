@@ -839,38 +839,27 @@ async function callFinalizeRound() {
 
     try {
         const tx = await faylottoContract.finalizeRound(currentRoundId);
-        statusText.innerText = "Finalizing... awaiting confirmation."; // <-- Teks "Stuk" Anda
+        statusText.innerText = "Finalizing... awaiting confirmation.";
         
-        // [PERBAIKAN DIMULAI]
-        // Kita tunggu receipt (tanda terima) transaksi
         const receipt = await tx.wait(); 
         console.log("Finalize transaction confirmed.", receipt);
 
-        // Daripada menunggu listener, kita cari event 'RoundFinalized' di dalam receipt
         const event = receipt.events?.find(e => e.event === 'RoundFinalized');
         
         if (event) {
-            // Kita temukan event-nya!
-            // Ambil data pemenang dari event
             const [roundId, winner] = event.args; 
-            console.log(`Event RoundFinalized DITEMUKAN dari receipt: Round ${roundId}, Winner ${winner}`);
+            console.log(`Event RoundFinalized found: Round ${roundId}, Winner ${winner}`);
             
-            // Panggil handleRoundFinalized SECARA MANUAL
-            // Pengecekan 'isSpinning' akan mencegah putaran ganda (jika listener .on() juga terpicu)
             if (!isSpinning) {
                 handleRoundFinalized(roundId, winner);
             }
         } else {
-            // Ini SANGAT aneh, tx sukses tapi event tidak ada.
-            console.error("Tx sukses, tapi event RoundFinalized tidak ditemukan di receipt!");
+            console.error("Tx success, but RoundFinalized event not found!");
             alert("Finalization success, but event not found. Resetting...");
-            // Paksa reset
             if (!isSpinning) {
                 resetAndFetchNewRound();
             }
         }
-        // [PERBAIKAN SELESAI]
-        
     } catch (err) {
         console.error("Finalize call failed:", err.message);
         alert(err.reason || "Failed to finalize. (Perhaps it's not time yet, or someone else just called it)");
@@ -878,7 +867,7 @@ async function callFinalizeRound() {
         finalizeBtn.disabled = false;
     }
 }
-
+    
 // === FUNGSI MODAL TARUHAN (Bet Modal) ===
 function showBetModal() {
   if (!signer) return alert("Connect wallet first!");
@@ -1470,45 +1459,30 @@ function rebuildPlayersArrayAndDraw() {
 function spinToPlayer(targetPlayer) {
   if (!targetPlayer) {
       console.error("Target spin tidak ditemukan!");
-      // Jika target tidak ada, langsung reset
       resetAndFetchNewRound();
       return;
   }
 
-  // === [PERBAIKAN BUG] ===
-  // Kita hapus 'if (isSpinning) return;' dan 'isSpinning = true;' dari sini.
-  // Fungsi 'handleRoundFinalized' sudah menangani penguncian 'isSpinning'.
-  // === [AKHIR PERBAIKAN] ===
+  statusText.innerText = "Spinning..."; // [BARU] Tampilkan status spin
 
-  // hitung sudut tengah slice (dalam radian)
   const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
-  // Ubah ke derajat. (270 deg = jam 12/atas)
   const midDeg = (midRad * 180 / Math.PI);
-
-  // Kita ingin 'midDeg' berakhir di ATAS (yaitu 270 derajat)
   const targetRotationDeg = 270 - midDeg;
   
-  // === [LOGIKA DURASI ACAK ANDA] ===
-  // Durasi acak antara 30.000ms (30 detik) dan 40.000ms (40 detik)
-  const duration = Math.floor(Math.random() * (40000 - 30000 + 1)) + 30000;
-  // Buat jumlah putaran dinamis
-  const spins = Math.floor(duration / 1200); 
-  // === [AKHIR LOGIKA DURASI] ===
+  // [PERBAIKAN] Durasi lebih pendek: 5-8 detik
+  const duration = Math.floor(Math.random() * (8000 - 5000 + 1)) + 5000;
+  // Jumlah putaran 4-7
+  const spins = Math.floor(Math.random() * (7 - 4 + 1)) + 4; 
 
-  // Rotasi akhir = putaran penuh + rotasi target
   const finalRotation = (spins * 360) + targetRotationDeg;
-  
-  const startRotation = currentRotation; // Rotasi awal
+  const startRotation = currentRotation;
   const startTime = performance.now();
 
   function animate(now) {
     const t = Math.min(1, (now - startTime) / duration);
-    // easing (easeOutQuart)
     const eased = 1 - Math.pow(1 - t, 4);
     
-    // Hitung total jarak rotasi yang harus ditempuh
     let totalSpinDistance = finalRotation - (startRotation % 360);
-    // Pastikan berputar ke arah yang benar dan selalu positif
     while(totalSpinDistance <= 0) totalSpinDistance += 360; 
 
     currentRotation = startRotation + (totalSpinDistance * eased);
@@ -1517,8 +1491,7 @@ function spinToPlayer(targetPlayer) {
     if (t < 1) {
       requestAnimationFrame(animate);
     } else {
-      // === Logika Reset Game ===
-      isSpinning = false; // Buka kunci HANYA setelah animasi selesai
+      isSpinning = false;
       
       const winnerId = targetPlayer.addr;
       const isWinner = (winnerId.toLowerCase() === userAddress.toLowerCase());
@@ -1526,7 +1499,6 @@ function spinToPlayer(targetPlayer) {
       statusText.innerText = `Winner is ${winnerName}!`;
       alert(`Pemenangnya adalah ${winnerName}!`);
       
-      // Panggil fungsi reset utama Anda untuk memulai ronde baru
       resetAndFetchNewRound(); 
     }
   }
