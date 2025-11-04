@@ -1118,33 +1118,51 @@ async function updateUserBalances() {
   
 function showFinalizeButton() {
     if (isFinalizing) return;
-    statusText.innerText = "Round Ended! Click 'Finalize' to pick a winner.";
+    isFinalizing = true; // Kunci status
+
+    // === [PERUBAHAN LOGIKA DIMULAI DI SINI] ===
+    // Cek jumlah pemain dari variabel global 'players'
+    const playerCount = Object.keys(players).length;
+
+    if (playerCount > 0) {
+        // ADA PEMAIN: Tampilkan teks asli
+        statusText.innerText = "Round Ended! Click 'Finalize' to pick a winner.";
+        finalizeBtn.innerText = "FINALIZE ROUND"; // Teks untuk "Putar Roda"
+    } else {
+        // TIDAK ADA PEMAIN: Tampilkan teks baru Anda
+        statusText.innerText = "Round Ended! Click 'Start Now' to begin a new round.";
+        finalizeBtn.innerText = "MULAI SEKARANG"; // Teks untuk "Mulai Ulang"
+    }
+    // === [AKHIR PERUBAHAN] ===
+
+    // Sisa fungsi tetap sama
     placeBetBtn.disabled = true;
     placeBetBtn.style.display = "none";
     finalizeBtn.style.display = "block";
     finalizeBtn.disabled = false;
-    isFinalizing = true;
 }
-function resetRoundUI() {
+
+  function resetRoundUI() {
     players = {};
     totalWeight = ethers.BigNumber.from(0);
-    playersArray = []; // [BARU] Bersihkan array
-    
-    // HAPUS: slicesGroup.innerHTML = ''; 
-    // HAPUS: gsap.set(wheelSVG, { rotation: 0 }); 
+    playersArray = []; // Bersihkan array
     
     if (ctx) {
         currentRotation = 0;
-        drawDonut(); // [BARU] Gambar ulang donut kosong
+        drawDonut(); // Gambar ulang donut kosong
     }
     
     updateBetList();
     placeBetBtn.style.display = "block";
     placeBetBtn.disabled = true;
+
+    // Ini adalah perubahan yang Anda inginkan (dan sudah benar)
     finalizeBtn.style.display = "none";
+    finalizeBtn.innerText = "FINALIZE ROUND"; // Reset teks tombol ke default
+    
     myEthDeposit.innerText = "0";
     myUsdtDeposit.innerText = "0";
-}
+  }
 
 function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
   const playerKey = playerId.toLowerCase(); 
