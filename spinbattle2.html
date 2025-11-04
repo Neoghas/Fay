@@ -306,6 +306,7 @@
   justify-content: center;
   margin-top: 12px;
   flex-wrap: wrap;
+  position: relative;
 }
 
 #donutCanvas {
@@ -320,7 +321,21 @@
   max-width: 300px;
   text-align: left;
 }
-/* ...dan sisa CSS lainnya dari kode baru Anda... */
+
+.donut-pointer {
+  position: absolute;
+  top: 15px; /* Sesuaikan sedikit agar pas di atas donut */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 30px solid var(--blue-main); 
+  z-index: 10;
+  filter: drop-shadow(0 -2px 5px rgba(0, 179, 255, 0.7)); 
+}
+
 </style>
 </head>
 
@@ -338,8 +353,9 @@
     <p>My Deposits (USDT): <span id="myUsdtDeposit">0</span></p>
   </div>
 
-  <div class="app-body">
+<div class="app-body">
     <div class="donut-wrap">
+        <div class="donut-pointer"></div>
         <canvas id="donutCanvas" width="360" height="360"></canvas>
     </div>
 
@@ -1377,7 +1393,7 @@ function rebuildPlayersArrayAndDraw() {
       return rand;
     }
 
-  // ======= Spin animation =======
+// ======= Spin animation =======
 function spinToPlayer(targetPlayer) {
   if (!targetPlayer) {
       console.error("Target spin tidak ditemukan!");
@@ -1390,19 +1406,29 @@ function spinToPlayer(targetPlayer) {
 
   // hitung sudut tengah slice (dalam radian)
   const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
-  // Ubah ke derajat. (0 rad = jam 3, -90 deg atau 270 deg = jam 12/atas)
+  // Ubah ke derajat. (0 rad = jam 3, 270 deg = jam 12/atas)
   const midDeg = (midRad * 180 / Math.PI);
 
-  // Kita ingin 'midDeg' berakhir di ATAS (yaitu 270 derajat, atau -90)
-  // Pointer-nya statis di 270 deg.
+  // Kita ingin 'midDeg' berakhir di ATAS (yaitu 270 derajat)
   const targetRotationDeg = 270 - midDeg;
   
-  const spins = 5; // 5 putaran penuh
+
+  // === [INI ADALAH PERUBAHAN ANDA] ===
+  
+  // [BARU] Durasi acak antara 30.000ms (30 detik) dan 40.000ms (40 detik)
+  const duration = Math.floor(Math.random() * (40000 - 30000 + 1)) + 30000;
+  
+  // [BARU] Buat jumlah putaran dinamis, agar tidak terlalu lambat
+  // (Sekitar 1.2 detik per putaran)
+  const spins = Math.floor(duration / 1200); 
+  
+  // === [AKHIR PERUBAHAN] ===
+  
+
   // Rotasi akhir = putaran penuh + rotasi target
   const finalRotation = (spins * 360) + targetRotationDeg;
   
   const startRotation = currentRotation; // Rotasi awal
-  const duration = 6000; // 6 detik
   const startTime = performance.now();
 
   function animate(now) {
