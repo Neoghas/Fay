@@ -15,7 +15,7 @@
     --blue-main: #00b3ff;
     --pink-main: #ff00e6;
     --cyan-main: #00ffff;
-    --red-main: #c0392b; /* [BARU] Warna untuk tombol finalize */
+    --red-main: #c0392b;
     --bg-dark-1: #0b0b12;
     --bg-dark-2: #000;
     --bg-modal: #0d0d1a;
@@ -33,17 +33,49 @@
     justify-content: center;
     overflow: hidden;
   }
-  /* === Wallet Button & Info (Tidak Berubah) === */
-  .wallet-btn {
-    position: fixed; top: 20px; right: 25px;
+  .app-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  .lists-wrapper {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      margin-top: 20px;
+      width: 90%;
+      max-width: 820px;
+  }
+
+  /* === [DIUBAH] Wallet Buttons Container === */
+  .wallet-container {
+    position: fixed;
+    top: 20px;
+    right: 25px;
+    display: flex;
+    gap: 10px;
+    z-index: 1001;
+  }
+  .wallet-btn, .referral-btn {
     background: linear-gradient(90deg, var(--purple-main), var(--blue-main));
     border: none; border-radius: 12px; color: white;
     font-size: 14px; font-weight: bold; padding: 10px 20px;
     cursor: pointer; text-transform: uppercase;
     box-shadow: 0 0 15px var(--blue-main);
-    transition: all 0.3s ease; z-index: 1001;
+    transition: all 0.3s ease;
   }
-  .wallet-btn:hover { box-shadow: 0 0 25px var(--pink-main); transform: scale(1.05); }
+  .wallet-btn:hover, .referral-btn:hover { 
+      box-shadow: 0 0 25px var(--pink-main); 
+      transform: scale(1.05); 
+  }
+  
+  /* [BARU] Tombol Referral */
+  .referral-btn {
+      background: linear-gradient(90deg, var(--pink-main), var(--blue-main));
+      display: none; /* Sembunyi sampai connect */
+  }
+
   .wallet-info {
     position: fixed; top: 65px; right: 25px;
     background: rgba(20, 20, 40, 0.9);
@@ -54,8 +86,14 @@
     box-shadow: 0 0 20px rgba(180, 0, 255, 0.3); z-index: 1001;
   }
   .wallet-info span { color: var(--cyan-main); font-weight: bold; }
+  .wallet-info hr {
+      border: none;
+      height: 1px;
+      background-color: var(--border-color);
+      margin: 8px 0;
+  }
 
-  /* === Wheel Container & SVG (Tidak Berubah) === */
+  /* === Wheel (Tidak Berubah) === */
   .wheel-container {
     position: relative; width: 320px; height: 320px;
     border-radius: 50%;
@@ -90,18 +128,15 @@
   }
   .slice:hover { filter: brightness(1.2); }
 
-  /* === Controls (DIUBAH) === */
+  /* === Controls (Tidak Berubah) === */
   .controls {
     margin-top: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 12px;
-    /* [BARU] Pastikan tombol pas */
     width: 250px; 
   }
-  
-  /* [DIUBAH] Tombol sekarang punya style dasar */
   .main-btn {
     border: none;
     border-radius: 12px;
@@ -112,30 +147,25 @@
     cursor: pointer;
     text-transform: uppercase;
     transition: all 0.3s ease;
-    width: 100%; /* Tombol sekarang full-width */
+    width: 100%;
   }
-  
   #placeBetBtn {
     background: linear-gradient(90deg, var(--blue-main), var(--pink-main));
     box-shadow: 0 0 20px var(--blue-main);
   }
   #placeBetBtn:hover { box-shadow: 0 0 25px var(--pink-main); transform: scale(1.05); }
-
-  /* [BARU] Tombol Finalize */
   #finalizeBtn {
     background: linear-gradient(90deg, var(--pink-main), var(--red-main));
     box-shadow: 0 0 20px var(--pink-main);
-    display: none; /* Sembunyi by default */
+    display: none;
   }
   #finalizeBtn:hover { box-shadow: 0 0 25px var(--red-main); transform: scale(1.05); }
-  
   .main-btn:disabled {
     background: #555;
     box-shadow: none;
     transform: none;
     cursor: not-allowed;
   }
-
   .status {
     font-size: 13px;
     margin-top: 8px;
@@ -152,10 +182,9 @@
       height: 20px;
   }
 
-  /* === Bet List (Tidak Berubah) === */
-  #bet-list-container {
-    margin-top: 20px;
-    width: 90%;
+  /* === Bet & Winner Lists (Tidak Berubah) === */
+  .list-container {
+    width: 100%;
     max-width: 400px;
     height: 150px;
     background: rgba(10, 10, 20, 0.5);
@@ -164,27 +193,45 @@
     padding: 12px;
     box-sizing: border-box;
     overflow-y: auto;
+    flex: 1;
   }
-  #bet-list-container h3 {
+  .list-container h3 {
     margin: 0 0 10px 0; font-size: 14px;
     color: var(--blue-main); text-align: center;
     text-transform: uppercase;
   }
-  .bet-list-item {
+  .bet-list-item, .winner-list-item {
     background: rgba(20, 20, 40, 0.7);
     border-radius: 4px; padding: 8px 10px;
     margin-bottom: 6px; font-size: 12px;
+  }
+  .bet-list-item {
     display: flex; justify-content: space-between;
     align-items: center;
   }
   .bet-list-item .player-id { font-weight: bold; color: var(--cyan-main); }
   .bet-list-item .player-bets { text-align: right; color: #eee; }
-  #bet-list-placeholder {
+  .winner-list-item .winner-id {
+    font-weight: bold;
+    color: var(--cyan-main);
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .winner-list-item .winner-id span {
+      font-weight: normal;
+      color: #aaa;
+  }
+  .winner-list-item .prize-line {
+      font-size: 11px;
+      color: #eee;
+  }
+  #bet-list-placeholder, #winner-list-placeholder {
     text-align: center; font-size: 13px;
     color: #888; padding-top: 20px;
   }
 
-  /* === MODAL POPUP (Tidak Berubah) === */
+  /* === Modal Base (Digunakan oleh Bet & Referral) === */
   .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.7);
@@ -192,7 +239,7 @@
     z-index: 999; display: none; opacity: 0;
     transition: opacity 0.3s ease;
   }
-  .bet-modal {
+  .modal { /* [DIUBAH] Nama kelas generik */
     position: fixed; top: 50%; left: 50%;
     transform: translate(-50%, -50%) scale(0.9);
     width: 90%; max-width: 380px;
@@ -203,8 +250,8 @@
     z-index: 1000; display: none; opacity: 0;
     transition: all 0.3s ease;
   }
-  .modal-overlay.show, .bet-modal.show { display: block; opacity: 1; }
-  .bet-modal.show { transform: translate(-50%, -50%) scale(1); }
+  .modal-overlay.show, .modal.show { display: block; opacity: 1; }
+  .modal.show { transform: translate(-50%, -50%) scale(1); }
   .modal-header {
     display: flex; justify-content: space-between; align-items: center;
     padding: 16px 20px;
@@ -240,7 +287,9 @@
   }
   .percent-btn:hover { background: rgba(120, 0, 255, 0.4); }
   .modal-footer { padding: 20px; border-top: 1px solid rgba(120, 0, 255, 0.2); }
-  #confirmBetBtn {
+  
+  /* Tombol di footer modal */
+  .modal-btn {
     width: 100%;
     background: linear-gradient(90deg, var(--blue-main), var(--pink-main));
     border: none; border-radius: 12px; color: white;
@@ -249,54 +298,101 @@
     box-shadow: 0 0 20px var(--blue-main);
     transition: all 0.3s ease;
   }
-  #confirmBetBtn:hover { box-shadow: 0 0 25px var(--pink-main); transform: scale(1.02); }
-  #confirmBetBtn:disabled {
+  .modal-btn:hover { box-shadow: 0 0 25px var(--pink-main); transform: scale(1.02); }
+  .modal-btn:disabled {
     background: #555; color: #999;
     box-shadow: none; transform: none; cursor: not-allowed;
+  }
+  
+  /* [BARU] Style khusus untuk Referral Modal */
+  .ref-section {
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(120, 0, 255, 0.1);
+  }
+  .ref-section:last-child { border-bottom: none; }
+  .ref-section h3 {
+      font-size: 16px;
+      color: var(--cyan-main);
+      margin: 0 0 10px 0;
+  }
+  .ref-info {
+      font-size: 14px;
+      color: #ccc;
+      line-height: 1.6;
+  }
+  .ref-info span {
+      color: #fff;
+      font-weight: bold;
+  }
+  .ref-section .input-group {
+      margin-bottom: 10px;
+  }
+  
+  @media (max-width: 840px) {
+    .lists-wrapper {
+        flex-direction: column;
+    }
   }
 </style>
 </head>
 
 <body>
-  <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+  <div class="wallet-container">
+    <button class="referral-btn" id="referralBtn">Referral</button> <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+  </div>
 
   <div class="wallet-info" id="walletInfo">
     <p>Address: <span id="walletAddress">-</span></p>
     <p>Balance (ETH): <span id="ethBalance">0</span></p>
     <p>Balance (USDT): <span id="usdtBalance">0</span></p>
+    <hr/>
+    <p>My Deposits (ETH): <span id="myEthDeposit">0</span></p>
+    <p>My Deposits (USDT): <span id="myUsdtDeposit">0</span></p>
   </div>
 
-  <div class="wheel-container">
-    <div class="wheel-pointer"></div>
-    <svg id="wheel-svg" viewBox="0 0 100 100">
-        <g transform="rotate(-90, 50, 50)" id="slices-group"></g>
-        <circle class="wheel-center" cx="50" cy="50" r="25" />
-    </svg>
-    <template id="slice-template">
-         <path class="slice" stroke-width="1.5">
-            <title></title>
-         </path>
-    </template>
-  </div>
+  <div class="app-body">
+    <div class="wheel-container">
+      <div class="wheel-pointer"></div>
+      <svg id="wheel-svg" viewBox="0 0 100 100">
+          <g transform="rotate(-90, 50, 50)" id="slices-group"></g>
+          <circle class="wheel-center" cx="50" cy="50" r="25" />
+      </svg>
+      <template id="slice-template">
+          <path class="slice" stroke-width="1.5">
+              <title></title>
+          </path>
+      </template>
+    </div>
 
-  <div class="controls">
-    <button id="placeBetBtn" class="main-btn">Place Bet</button>
-    <button id="finalizeBtn" class="main-btn">Finalize Round</button> <div class="status" id="statusText">Wallet not connected</div>
-    <div class="timer" id="timerText"></div>
-  </div>
-  
-  <div id="bet-list-container">
-      <h3>Current Round Bets</h3>
-      <div id="bet-list">
-          <p id="bet-list-placeholder">No bets placed yet in this round.</p>
+    <div class="controls">
+      <button id="placeBetBtn" class="main-btn">Place Bet</button>
+      <button id="finalizeBtn" class="main-btn">Finalize Round</button>
+      <div class="status" id="statusText">Wallet not connected</div>
+      <div class="timer" id="timerText"></div>
+    </div>
+    
+    <div class="lists-wrapper">
+      <div id="bet-list-container" class="list-container">
+          <h3>Current Round Bets</h3>
+          <div id="bet-list">
+              <p id="bet-list-placeholder">No bets placed yet in this round.</p>
+          </div>
       </div>
+      
+      <div id="winner-list-container" class="list-container">
+          <h3>Recent Winners</h3>
+          <div id="winner-list">
+              <p id="winner-list-placeholder">No winners yet.</p>
+          </div>
+      </div>
+    </div>
   </div>
 
-  <div class="modal-overlay" id="modal-overlay"></div>
-  <div class="bet-modal" id="bet-modal">
+  <div class="modal-overlay" id="bet-modal-overlay"></div>
+  <div class="modal" id="bet-modal">
     <div class="modal-header">
       <h2>Place Your Bet</h2>
-      <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      <button class="modal-close-btn" id="bet-modal-close-btn">&times;</button>
     </div>
     <div class="modal-body">
       <div class="balance-display">
@@ -323,7 +419,54 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button id="confirmBetBtn">Confirm Bet</button>
+      <button id="confirmBetBtn" class="modal-btn">Confirm Bet</button>
+    </div>
+  </div>
+  
+  <div class="modal-overlay" id="referral-modal-overlay"></div>
+  <div class="modal" id="referral-modal">
+    <div class="modal-header">
+      <h2>Referral System</h2>
+      <button class="modal-close-btn" id="referral-modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+        
+      <div class="ref-section">
+          <h3>My Info</h3>
+          <div class="ref-info">
+              My Nickname: <span id="myNickname">-</span><br/>
+              My Referrer: <span id="myReferrer">-</span>
+          </div>
+      </div>
+      
+      <div class="ref-section">
+          <h3>Create/Update Nickname</h3>
+          <div class="input-group">
+              <input type="text" id="nicknameInput" placeholder="Enter your nickname">
+          </div>
+          <button id="createNicknameBtn" class="modal-btn">Create</button>
+      </div>
+
+      <div class="ref-section" id="setReferrerSection">
+          <h3>Set Your Referrer (One Time)</h3>
+          <div class="input-group">
+              <input type="text" id="referrerNicknameInput" placeholder="Referrer's nickname">
+          </div>
+          <button id="setReferrerBtn" class="modal-btn">Set Referrer</button>
+      </div>
+      
+      <div class="ref-section">
+          <h3>My Rewards</h3>
+          <div class="ref-info">
+              ETH Rewards: <span id="ethRewards">0</span><br/>
+              USDT Rewards: <span id="usdtRewards">0</span><br/>
+              Total Referrals: <span id="referralCount">0</span>
+          </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button id="claimRewardsBtn" class="modal-btn">Claim Rewards</button>
     </div>
   </div>
 
@@ -332,90 +475,17 @@
 // === 1. KONFIGURASI KONTRAK ===
 // ===========================================
 // ⚠️ GANTI INI DENGAN ALAMAT KONTRAK ANDA DI SEPOLIA
-const USDT_ADDRESS = "0x...AlamatTokenUSDT_DiSepolia"; 
-const FAYLOTTO_ADDRESS = "0x...AlamatFaylotto_DiSepolia"; 
+const USDT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2"; 
+const FAYLOTTO_ADDRESS = "0x7CD731477dbD9655A605E1B788F5A064415471D3"; 
 // ===========================================
 
 // === 2. ABI LENGKAP ===
-// (Salin-tempel ABI lengkap Anda di sini, SAMA SEPERTI SEBELUMNYA)
-// ===========================================
-const USDT_ABI = [
-  "function balanceOf(address) view returns (uint256)",
-  "function decimals() view returns (uint8)",
-  "function allowance(address owner, address spender) view returns (uint256)",
-  "function approve(address spender, uint256 amount) returns (bool)"
-];
-const FAYLOTTO_ABI = [
-  "constructor(address _erc20Token, address _feeCollector)",
-  "event BetETH(uint256 indexed roundId, address indexed player, uint256 amount)",
-  "event BetERC20(uint256 indexed roundId, address indexed player, uint256 amount)",
-  "event CommentAdded(uint256 indexed winnerId, uint256 commentId, address indexed user, string text)",
-  "event CommentEdited(uint256 indexed winnerId, uint256 commentId, address indexed user, string newText)",
-  "event NicknameCreated(address indexed user, string nickname)",
-  "event Rated(uint256 indexed winnerId, address indexed user, uint8 stars)",
-  "event ReferralRewardClaimed(address indexed user, uint256 ethAmount, uint256 erc20Amount)",
-  "event ReferralSet(address indexed user, address indexed referrer)",
-  "event RoundCreated(uint256 indexed roundId, uint256 startTime, uint256 endTime)",
-  "event RoundFinalized(uint256 indexed roundId, address indexed winner, uint256 rewardETH, uint256 rewardERC20)",
-  "event WinnerLiked(uint256 indexed winnerId, address indexed user, bool liked)",
-  "event WinnerRecorded(uint256 indexed winnerId, uint256 roundId, address indexed winner, uint256 rewardETH, uint256 rewardERC20, uint256 timestamp)",
-  "function REF_BP() view returns (uint256)",
-  "function MAX_PLAYERS() view returns (uint256)",
-  "function addCommentToWinner(uint256 winnerId, string text)",
-  "function adminWithdrawETH(address to, uint256 amount)",
-  "function adminWithdrawERC20(address to, uint256 amount)",
-  "function claimReferRewards()",
-  "function createNickname(string nickname)",
-  "function currentRoundId() view returns (uint256)",
-  "function editCommentOnWinner(uint256 winnerId, uint256 commentId, string newText)",
-  "function erc20Token() view returns (address)",
-  "function feeBP() view returns (uint256)",
-  "function feeCollector() view returns (address)",
-  "function finalizeRound(uint256 rid)",
-  "function getAllCommentsForWinner(uint256 winnerId) view returns ((address user, string text, uint256 timestamp)[] memory)",
-  "function getAllLikes(uint256 winnerId) view returns (address[] memory)",
-  "function getAverageRatingForWinner(uint256 winnerId) view returns (uint256 avgTimes1e18)",
-  "function getCommentCountForWinner(uint256 winnerId) view returns (uint256)",
-  "function getLikeCount(uint256 winnerId) view returns (uint256)",
-  "function getPlayerDeposits(uint256 rid, address player) view returns (uint256 ethAmount, uint256 erc20Amount)",
-  "function getRatingCountForWinner(uint256 winnerId) view returns (uint256)",
-  "function getReferralCount(address user) view returns (uint256)",
-  "function getReferralList(address user) view returns (address[] memory)",
-  "function getReferralRewards(address user) view returns (uint256 ethReward, uint256 erc20Reward)",
-  "function getRoundBasic(uint256 rid) view returns (uint256 id, uint256 startTime, uint256 endTime, bool finalized, address winner, uint256 totalETH, uint256 totalERC20, uint256 playersCount)",
-  "function getRoundPlayers(uint256 rid) view returns (address[] memory)",
-  "function getWinnerCount() view returns (uint256)",
-  "function getWinners(uint256 limit) view returns ((uint256 winnerId, uint256 roundId, address winner, uint256 rewardETH, uint256 rewardERC20, uint256 timestamp)[] memory)",
-  "function likeCount(uint256) view returns (uint256)",
-  "function liked(uint256, address) view returns (bool)",
-  "function likedBy(uint256, uint256) view returns (address)",
-  "function nextRoundId() view returns (uint256)",
-  "function nicknameOwner(string) view returns (address)",
-  "function nicknames(address) view returns (string)",
-  "function owner() view returns (address)",
-  "function placeBetERC20(uint256 amount)",
-  "function placeBetETH() payable",
-  "function rateWinner(uint256 winnerId, uint8 stars)",
-  "function ratingCountByWinner(uint256) view returns (uint256)",
-  "function ratingTotalStars(uint256) view returns (uint256)",
-"function ratings(uint256, address) view returns (uint8)",
-  "function referralRewardsETH(address) view returns (uint256)",
-  "function referralRewardsERC20(address) view returns (uint256)",
-  "function referrals(address, uint256) view returns (address)",
-  "function referrerOf(address) view returns (address)",
-  "function roundLength() view returns (uint256)",
-  "function setERC20(address token)",
-  "function setFeeBP(uint256 newFeeBP)",
-  "function setFeeCollector(address newCollector)",
-  "function setReferralByNickname(string refNickname)",
-  "function setRoundLength(uint256 secs)",
-  "function toggleLikeWinner(uint256 winnerId)",
-  "function winners(uint256) view returns (uint256 winnerId, uint256 roundId, address winner, uint256 rewardETH, uint256 rewardERC20, uint256 timestamp)",
-  "function winnerList(uint256) view returns (uint256 winnerId, uint256 roundId, address winner, uint256 rewardETH, uint256 rewardERC20, uint256 timestamp)"
-];
+const USDT_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
+
+const FAYLOTTO_ABI = [{"inputs":[{"internalType":"address","name":"_erc20Token","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetERC20","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetETH","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"erc20Token","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"erc20Reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalERC20","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getWinnerCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getWinners","outputs":[{"components":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.WinnerInfo[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsERC20","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
 
 // ===========================================
-// === 3. LOGIKA APLIKASI (DISEMPURNAKAN) ===
+// === 3. LOGIKA APLIKASI ===
 // ===========================================
 
 // --- Variabel Global ---
@@ -427,8 +497,6 @@ let currentRoundEndTime = 0;
 let visualTimer = null;
 let isSpinning = false;
 let isFinalizing = false;
-
-// --- State Roda Dinamis ---
 let players = {};
 let totalWeight = ethers.BigNumber.from(0);
 
@@ -438,14 +506,18 @@ const walletInfo = document.getElementById("walletInfo");
 const walletAddress = document.getElementById("walletAddress");
 const ethBalance = document.getElementById("ethBalance");
 const usdtBalance = document.getElementById("usdtBalance");
+const myEthDeposit = document.getElementById("myEthDeposit");
+const myUsdtDeposit = document.getElementById("myUsdtDeposit");
 const statusText = document.getElementById("statusText");
 const timerText = document.getElementById("timerText");
 const placeBetBtn = document.getElementById("placeBetBtn");
-const finalizeBtn = document.getElementById("finalizeBtn"); // [BARU]
-// Modal
-const modalOverlay = document.getElementById("modal-overlay");
+const finalizeBtn = document.getElementById("finalizeBtn");
+const winnerList = document.getElementById("winner-list");
+const winnerListPlaceholder = document.getElementById("winner-list-placeholder");
+// Modal Bet
+const betModalOverlay = document.getElementById("bet-modal-overlay");
 const betModal = document.getElementById("bet-modal");
-const modalCloseBtn = document.getElementById("modal-close-btn");
+const betModalCloseBtn = document.getElementById("bet-modal-close-btn");
 const modalEthBalance = document.getElementById("modalEthBalance");
 const modalUsdtBalance = document.getElementById("modalUsdtBalance");
 const betAmountInput = document.getElementById("betAmountInput");
@@ -458,6 +530,22 @@ const slicesGroup = document.getElementById("slices-group");
 const sliceTemplate = document.getElementById("slice-template");
 const betList = document.getElementById("bet-list");
 const betListPlaceholder = document.getElementById("bet-list-placeholder");
+// [BARU] Elemen DOM Referral
+const referralBtn = document.getElementById("referralBtn");
+const referralModalOverlay = document.getElementById("referral-modal-overlay");
+const referralModal = document.getElementById("referral-modal");
+const referralModalCloseBtn = document.getElementById("referral-modal-close-btn");
+const myNickname = document.getElementById("myNickname");
+const myReferrer = document.getElementById("myReferrer");
+const nicknameInput = document.getElementById("nicknameInput");
+const createNicknameBtn = document.getElementById("createNicknameBtn");
+const setReferrerSection = document.getElementById("setReferrerSection");
+const referrerNicknameInput = document.getElementById("referrerNicknameInput");
+const setReferrerBtn = document.getElementById("setReferrerBtn");
+const ethRewards = document.getElementById("ethRewards");
+const usdtRewards = document.getElementById("usdtRewards");
+const referralCount = document.getElementById("referralCount");
+const claimRewardsBtn = document.getElementById("claimRewardsBtn");
 
 
 // === FUNGSI UTAMA: Toggle Connect / Disconnect ===
@@ -474,12 +562,16 @@ async function toggleWallet() {
         faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
         walletBtn.innerText = "Disconnect";
+        referralBtn.style.display = "block"; // [BARU] Tampilkan tombol referral
         walletInfo.style.display = "block";
         walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
         
         await updateUserBalances();
         await fetchAndDisplayRoundData();
+        await fetchAndDisplayWinners();
+        await fetchReferralData(); // [BARU] Ambil data referral
         setupEventListeners();
+
     } catch (err) {
         console.error("Failed to connect wallet:", err);
         statusText.innerText = "Failed to connect. Check console & contract addresses.";
@@ -489,11 +581,16 @@ async function toggleWallet() {
     // Logika Disconnect
     userAddress = null; provider = null; signer = null;
     walletBtn.innerText = "Connect Wallet";
+    referralBtn.style.display = "none"; // [BARU] Sembunyikan tombol referral
     statusText.innerText = "Wallet not connected";
     walletInfo.style.display = "none";
     if (visualTimer) clearInterval(visualTimer);
     faylottoContract.removeAllListeners();
     resetRoundUI();
+    myEthDeposit.innerText = "0"; 
+    myUsdtDeposit.innerText = "0";
+    winnerList.innerHTML = "";
+    winnerList.appendChild(winnerListPlaceholder);
   }
 }
 
@@ -507,8 +604,6 @@ async function fetchAndDisplayRoundData() {
         
         if (roundInfo.finalized) {
             statusText.innerText = "Round finalized. Waiting for new round...";
-            // Jika ronde sudah difinalisasi, kita tetap HARUS memanggilnya
-            // untuk memicu _createNewRound di kontrak.
             showFinalizeButton();
             return;
         }
@@ -518,18 +613,19 @@ async function fetchAndDisplayRoundData() {
         const playersList = await faylottoContract.getRoundPlayers(currentRoundId);
         for (const playerAddress of playersList) {
             const deposits = await faylottoContract.getPlayerDeposits(currentRoundId, playerAddress);
-            addBetToState(playerAddress, deposits.ethAmount, deposits.erc20Amount);
+            addBetToState(playerAddress, deposits.ethAmount, deposits.erc20Amount, false);
         }
         updateWheelVisuals();
         updateBetList();
+        await updateMyDeposits();
 
         currentRoundEndTime = roundInfo.endTime.toNumber() * 1000;
         startVisualTimer(currentRoundEndTime);
 
         statusText.innerText = `Round ${currentRoundId.toString()} is live!`;
         placeBetBtn.disabled = false;
-        placeBetBtn.style.display = "block"; // Tampilkan tombol bet
-        finalizeBtn.style.display = "none"; // Sembunyikan tombol finalize
+        placeBetBtn.style.display = "block";
+        finalizeBtn.style.display = "none";
         isFinalizing = false;
     } catch (err) {
         console.error("Error fetching round data:", err);
@@ -537,32 +633,83 @@ async function fetchAndDisplayRoundData() {
     }
 }
 
+// === FUNGSI UTAMA: Ambil Data Pemenang ===
+async function fetchAndDisplayWinners() {
+    if (!faylottoContract) return;
+    try {
+        winnerList.innerHTML = "";
+        const winnersArray = await faylottoContract.getWinners(10); 
+        
+        if (winnersArray.length === 0) {
+            winnerList.appendChild(winnerListPlaceholder);
+            return;
+        }
+
+        for (const winner of winnersArray) {
+            const winnerAddr = winner.winner;
+            const roundId = winner.roundId.toString();
+            const ethAmount = parseFloat(ethers.utils.formatEther(winner.rewardETH)).toFixed(4);
+            const usdtAmount = parseFloat(ethers.utils.formatUnits(winner.rewardERC20, usdtDecimals)).toFixed(2);
+            
+            const shortId = (winnerAddr.toLowerCase() === userAddress.toLowerCase()) ? "You" : (winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4));
+            
+            let prizeHtml = "";
+            if (winner.rewardETH.gt(0)) prizeHtml += `${ethAmount} ETH`;
+            if (winner.rewardETH.gt(0) && winner.rewardERC20.gt(0)) prizeHtml += " + ";
+            if (winner.rewardERC20.gt(0)) prizeHtml += `${usdtAmount} USDT`;
+
+            const item = document.createElement("div");
+            item.className = "winner-list-item";
+            item.innerHTML = `
+              <div class="winner-id">
+                ${shortId}
+                <span>Round ${roundId}</span>
+              </div>
+              <div class="prize-line">Won: ${prizeHtml}</div>
+            `;
+            winnerList.appendChild(item);
+        }
+    } catch (err) {
+        console.error("Error fetching winners:", err);
+        winnerList.appendChild(winnerListPlaceholder);
+    }
+}
+
+
 // === FUNGSI UTAMA: Memulai Event Listener ===
 function setupEventListeners() {
     if (!faylottoContract) return;
     faylottoContract.removeAllListeners();
 
-    // Dengarkan taruhan BARU
     faylottoContract.on("BetETH", (roundId, player, amount) => {
         if (roundId.eq(currentRoundId)) {
-            addBetToState(player, amount, ethers.BigNumber.from(0), true); // 'true' berarti 'tambahkan'
+            addBetToState(player, amount, ethers.BigNumber.from(0), true);
             updateWheelVisuals();
             updateBetList();
+            if (player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
     faylottoContract.on("BetERC20", (roundId, player, amount) => {
         if (roundId.eq(currentRoundId)) {
-            addBetToState(player, ethers.BigNumber.from(0), amount, true); // 'true' berarti 'tambahkan'
+            addBetToState(player, ethers.BigNumber.from(0), amount, true);
             updateWheelVisuals();
             updateBetList();
+            if (player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
 
-    // Dengarkan event KUNCI: RoundFinalized
     faylottoContract.on("RoundFinalized", (roundId, winner, rewardETH, rewardERC20) => {
         if (roundId.eq(currentRoundId)) {
             handleRoundFinalized(roundId, winner);
         }
+    });
+    
+    // [BARU] Event listener untuk update UI referral
+    faylottoContract.on("NicknameCreated", (user) => {
+        if (user.toLowerCase() === userAddress.toLowerCase()) fetchReferralData();
+    });
+    faylottoContract.on("ReferralSet", (user) => {
+        if (user.toLowerCase() === userAddress.toLowerCase()) fetchReferralData();
     });
 }
 
@@ -588,14 +735,14 @@ async function resetAndFetchNewRound() {
     isSpinning = false;
     isFinalizing = false;
     
-    await new Promise(resolve => setTimeout(resolve, 3000)); // Jeda 3 detik
-    await fetchAndDisplayRoundData(); // Ambil ronde BARU (kontrak sudah membuat yg baru)
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    await fetchAndDisplayWinners(); // Refresh daftar pemenang
+    await fetchAndDisplayRoundData(); // Ambil ronde baru
 }
 
-// === [BARU] FUNGSI UTAMA: Panggil Finalize dari Tombol ===
+// === FUNGSI UTAMA: Panggil Finalize dari Tombol ===
 async function callFinalizeRound() {
-    if (!signer) return alert("Please connect your wallet to finalize.");
-    if (!faylottoContract) return alert("Contract not loaded.");
+    if (!signer || !faylottoContract) return alert("Please connect your wallet.");
 
     finalizeBtn.disabled = true;
     statusText.innerText = "Sending finalization transaction...";
@@ -604,18 +751,16 @@ async function callFinalizeRound() {
         const tx = await faylottoContract.finalizeRound(currentRoundId);
         statusText.innerText = "Finalizing... awaiting confirmation.";
         await tx.wait();
-        // Event listener "RoundFinalized" akan mengambil alih dari sini
-        console.log("Finalize transaction confirmed. Event listener will now take over.");
-        // Kita tidak perlu melakukan apa-apa lagi
+        console.log("Finalize transaction confirmed.");
     } catch (err) {
         console.error("Finalize call failed:", err);
         alert(err.reason || "Failed to finalize. (Perhaps it's not time yet, or someone else just called it)");
         statusText.innerText = "Finalization failed. Still waiting...";
-        finalizeBtn.disabled = false; // Aktifkan lagi jika gagal
+        finalizeBtn.disabled = false;
     }
 }
 
-// === FUNGSI MODAL (Tidak berubah) ===
+// === FUNGSI MODAL TARUHAN (Bet Modal) ===
 function showBetModal() {
   if (!signer) return alert("Connect wallet first!");
   if (isFinalizing) return alert("Round is ending, new bets are closed.");
@@ -624,11 +769,11 @@ function showBetModal() {
   modalUsdtBalance.innerText = ethers.utils.formatUnits(rawUsdtBalance || 0, usdtDecimals);
   betAmountInput.value = "";
   
-  modalOverlay.classList.add("show");
+  betModalOverlay.classList.add("show");
   betModal.classList.add("show");
 }
 function hideBetModal() {
-  modalOverlay.classList.remove("show");
+  betModalOverlay.classList.remove("show");
   betModal.classList.remove("show");
 }
 function setAmountByPercent(percent) {
@@ -644,16 +789,13 @@ function setAmountByPercent(percent) {
   betAmountInput.value = ethers.utils.formatUnits(amount, decimals);
 }
 
-// === FUNGSI MODAL: Konfirmasi & Kirim Transaksi (Tidak berubah) ===
+// === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
 async function confirmBet() {
   const amountStr = betAmountInput.value;
   const currency = betCurrencySelect.value;
-  
   if (!amountStr || parseFloat(amountStr) <= 0) return alert("Please enter a valid amount.");
-  
   confirmBetBtn.disabled = true;
   confirmBetBtn.innerText = "Processing...";
-  
   try {
     let tx;
     if (currency === 'ETH') {
@@ -661,15 +803,12 @@ async function confirmBet() {
     } else {
       tx = await placeBetUSDT(amountStr);
     }
-    
     statusText.innerText = `Bet sent! Awaiting confirmation...`;
     await tx.wait();
-    
     statusText.innerText = `Bet confirmed! Good luck.`;
-    hideModal();
+    hideBetModal();
     await updateUserBalances();
-    // Event listener akan meng-update roda
-    
+    await updateMyDeposits();
   } catch (err) {
     console.error(err);
     const errorMessage = err.reason || err.message || "Transaction failed!";
@@ -692,7 +831,6 @@ async function placeBetUSDT(amountStr) {
   if (amountUsdt.gt(rawUsdtBalance)) throw new Error("Insufficient USDT balance.");
   const minUsdt = ethers.utils.parseUnits("0.5", usdtDecimals);
   if (amountUsdt.lt(minUsdt)) throw new Error(`Minimum bet is 0.5 USDT`);
-  
   const currentAllowance = await usdtContract.allowance(userAddress, FAYLOTTO_ADDRESS);
   if (currentAllowance.lt(amountUsdt)) {
     statusText.innerText = "Need approval. Please approve in MetaMask...";
@@ -703,13 +841,136 @@ async function placeBetUSDT(amountStr) {
   return faylottoContract.placeBetERC20(amountUsdt);
 }
 
-// === FUNGSI HELPER ===
+
+// ===========================================
+// === [BARU] FUNGSI-FUNGSI REFERRAL ===
+// ===========================================
+
+// --- Tampilkan & Sembunyikan Modal Referral ---
+async function showReferralModal() {
+    if (!signer) return alert("Connect wallet first!");
+    
+    // Selalu ambil data terbaru saat modal dibuka
+    await fetchReferralData(); 
+    
+    referralModalOverlay.classList.add("show");
+    referralModal.classList.add("show");
+}
+function hideReferralModal() {
+  referralModalOverlay.classList.remove("show");
+  referralModal.classList.remove("show");
+}
+
+// --- Ambil Data Referral dari Kontrak ---
+async function fetchReferralData() {
+    if (!faylottoContract) return;
+    try {
+        const nick = await faylottoContract.nicknames(userAddress);
+        const referrer = await faylottoContract.referrerOf(userAddress);
+        const rewards = await faylottoContract.getReferralRewards(userAddress);
+        const count = await faylottoContract.getReferralCount(userAddress);
+        
+        // Panggil fungsi untuk update UI
+        updateReferralUI(nick, referrer, rewards, count);
+        
+    } catch (err) {
+        console.error("Error fetching referral data:", err);
+        alert("Could not load referral data.");
+    }
+}
+
+// --- Update UI Modal Referral ---
+function updateReferralUI(nick, referrer, rewards, count) {
+    // 1. Update Info Saya
+    myNickname.innerText = nick || "-";
+    if (referrer === ethers.constants.AddressZero) {
+        myReferrer.innerText = "-";
+        setReferrerSection.style.display = "block"; // Tampilkan section
+    } else {
+        myReferrer.innerText = referrer.slice(0, 6) + "..." + referrer.slice(-4);
+        setReferrerSection.style.display = "none"; // Sembunyikan section
+    }
+
+    // 2. Update Rewards Saya
+    ethRewards.innerText = parseFloat(ethers.utils.formatEther(rewards.ethReward)).toFixed(6);
+    usdtRewards.innerText = parseFloat(ethers.utils.formatUnits(rewards.erc20Reward, usdtDecimals)).toFixed(2);
+    referralCount.innerText = count.toString();
+    
+    // 3. Atur Tombol Claim
+    if (rewards.ethReward.gt(0) || rewards.erc20Reward.gt(0)) {
+        claimRewardsBtn.disabled = false;
+    } else {
+        claimRewardsBtn.disabled = true;
+    }
+}
+
+// --- Panggil Kontrak: createNickname ---
+async function callCreateNickname() {
+    const nick = nicknameInput.value;
+    if (!nick || nick.length < 3) return alert("Nickname must be at least 3 characters.");
+    
+    createNicknameBtn.disabled = true;
+    createNicknameBtn.innerText = "Processing...";
+    try {
+        const tx = await faylottoContract.createNickname(nick);
+        await tx.wait();
+        alert("Nickname created/updated successfully!");
+        await fetchReferralData(); // Refresh UI
+    } catch (err) {
+        console.error("Error creating nickname:", err);
+        alert(err.reason || "Failed to create nickname.");
+    } finally {
+        createNicknameBtn.disabled = false;
+        createNicknameBtn.innerText = "Create";
+    }
+}
+
+// --- Panggil Kontrak: setReferralByNickname ---
+async function callSetReferrer() {
+    const refNick = referrerNicknameInput.value;
+    if (!refNick) return alert("Please enter a referrer's nickname.");
+    
+    setReferrerBtn.disabled = true;
+    setReferrerBtn.innerText = "Processing...";
+    try {
+        const tx = await faylottoContract.setReferralByNickname(refNick);
+        await tx.wait();
+        alert("Referrer set successfully!");
+        await fetchReferralData(); // Refresh UI (akan menyembunyikan section ini)
+    } catch (err) {
+        console.error("Error setting referrer:", err);
+        alert(err.reason || "Failed to set referrer. (Nickname might not exist, or you already have one)");
+    } finally {
+        setReferrerBtn.disabled = false;
+        setReferrerBtn.innerText = "Set Referrer";
+    }
+}
+
+// --- Panggil Kontrak: claimReferralRewards ---
+async function callClaimRewards() {
+    claimRewardsBtn.disabled = true;
+    claimRewardsBtn.innerText = "Claiming...";
+    try {
+        const tx = await faylottoContract.claimReferralRewards();
+        await tx.wait();
+        alert("Rewards claimed successfully!");
+        await fetchReferralData(); // Refresh UI (rewards akan jadi 0)
+        await updateUserBalances(); // Refresh saldo dompet
+    } catch (err) {
+        console.error("Error claiming rewards:", err);
+        alert(err.reason || "Failed to claim rewards. (You might have no rewards)");
+    } finally {
+        // Tombol akan di-set ke disabled oleh fetchReferralData jika saldo 0
+        claimRewardsBtn.innerText = "Claim Rewards";
+    }
+}
+
+// === FUNGSI HELPER (Tidak berubah) ===
 async function updateUserBalances() {
   if (!provider || !userAddress || !usdtContract) return;
   try {
     rawEthBalance = await provider.getBalance(userAddress);
     ethBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
-    
     usdtDecimals = await usdtContract.decimals();
     rawUsdtBalance = await usdtContract.balanceOf(userAddress);
     usdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
@@ -718,55 +979,63 @@ async function updateUserBalances() {
     usdtBalance.innerText = "Error";
   }
 }
-
+async function updateMyDeposits() {
+    if (!faylottoContract || !currentRoundId || !userAddress) {
+        myEthDeposit.innerText = "0";
+        myUsdtDeposit.innerText = "0";
+        return;
+    }
+    try {
+        const deposits = await faylottoContract.getPlayerDeposits(currentRoundId, userAddress);
+        myEthDeposit.innerText = parseFloat(ethers.utils.formatEther(deposits.ethAmount)).toFixed(5);
+        myUsdtDeposit.innerText = parseFloat(ethers.utils.formatUnits(deposits.erc20Amount, usdtDecimals)).toFixed(2);
+    } catch (err) {
+        console.error("Could not fetch user deposits:", err);
+        myEthDeposit.innerText = "Error";
+        myUsdtDeposit.innerText = "Error";
+    }
+}
 function startVisualTimer(endTime) {
   if (visualTimer) clearInterval(visualTimer);
-
   visualTimer = setInterval(() => {
     const now = Date.now();
     const timeLeft = endTime - now;
-
     if (timeLeft <= 0) {
       clearInterval(visualTimer);
       timerText.innerText = "00:00";
-      // [DIUBAH] Panggil fungsi untuk menampilkan tombol finalize
       showFinalizeButton();
       return;
     }
-
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
     timerText.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }, 1000);
 }
-
-// [BARU] Fungsi untuk menukar tombol
 function showFinalizeButton() {
-    if (isFinalizing) return; // Jangan lakukan apa-apa jika sudah finalisasi
+    if (isFinalizing) return;
     statusText.innerText = "Round Ended! Click 'Finalize' to pick a winner.";
     placeBetBtn.disabled = true;
-    placeBetBtn.style.display = "none"; // Sembunyikan tombol bet
-    finalizeBtn.style.display = "block"; // Tampilkan tombol finalize
+    placeBetBtn.style.display = "none";
+    finalizeBtn.style.display = "block";
     finalizeBtn.disabled = false;
     isFinalizing = true;
 }
-
 function resetRoundUI() {
     players = {};
     totalWeight = ethers.BigNumber.from(0);
     slicesGroup.innerHTML = ''; 
     gsap.set(wheelSVG, { rotation: 0 }); 
     updateBetList();
-    // [BARU] Pastikan tombol kembali ke state awal
     placeBetBtn.style.display = "block";
-    placeBetBtn.disabled = true; // Akan diaktifkan oleh fetchAndDisplayRoundData
+    placeBetBtn.disabled = true;
     finalizeBtn.style.display = "none";
+    myEthDeposit.innerText = "0";
+    myUsdtDeposit.innerText = "0";
 }
-
-// [DIUBAH] addBetToState sekarang punya parameter 'isEvent'
 function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
-  if (!players[playerId]) {
-    players[playerId] = {
+  const playerKey = playerId.toLowerCase(); 
+  if (!players[playerKey]) {
+    players[playerKey] = {
       id: playerId,
       eth: ethers.BigNumber.from(0),
       usdt: ethers.BigNumber.from(0),
@@ -774,33 +1043,23 @@ function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
       data: { startAngle: 0, endAngle: 0 }
     };
   }
-  
-  const player = players[playerId];
-  
+  const player = players[playerKey];
   if (isEvent) {
-      // Jika dari event, tambahkan
       player.eth = player.eth.add(ethAmount);
       player.usdt = player.usdt.add(usdtAmount);
   } else {
-      // Jika dari fetch (awal), set/timpa
       player.eth = ethAmount;
       player.usdt = usdtAmount;
   }
-  
-  // Hitung ulang bobot
   const ethWeight = player.eth;
   const usdtFactor = ethers.BigNumber.from(10).pow(18 - usdtDecimals);
   const usdtWeight = player.usdt.mul(usdtFactor);
   player.weight = ethWeight.add(usdtWeight);
-  
-  // Hitung ulang totalWeight
   totalWeight = ethers.BigNumber.from(0);
   for (const pid in players) {
       totalWeight = totalWeight.add(players[pid].weight);
   }
 }
-
-// (Fungsi updateBetList & updateWheelVisuals tidak berubah)
 function updateBetList() {
   betList.innerHTML = ""; 
   const playerIds = Object.keys(players);
@@ -859,10 +1118,8 @@ function updateWheelVisuals() {
     currentAngle = endAngle;
   }
 }
-
-// (Fungsi spinToWinner & helper SVG tidak berubah)
 function spinToWinner(winnerId) {
-    const winner = players[winnerId];
+    const winner = players[winnerId.toLowerCase()];
     if (!winner) {
         console.error("Pemenang tidak ditemukan! Mereset...");
         resetAndFetchNewRound();
@@ -912,10 +1169,11 @@ function describeArc(x, y, radius, startAngle, endAngle) {
 // === 4. Inisialisasi & Event Listeners ===
 walletBtn.addEventListener("click", toggleWallet);
 placeBetBtn.addEventListener("click", showBetModal);
-finalizeBtn.addEventListener("click", callFinalizeRound); // [BARU]
+finalizeBtn.addEventListener("click", callFinalizeRound);
 
-modalCloseBtn.addEventListener("click", hideBetModal);
-modalOverlay.addEventListener("click", hideBetModal);
+// Listener Modal Bet
+betModalCloseBtn.addEventListener("click", hideBetModal);
+betModalOverlay.addEventListener("click", hideBetModal);
 confirmBetBtn.addEventListener("click", confirmBet);
 percentButtons.forEach(button => {
   button.addEventListener("click", () => {
@@ -923,6 +1181,14 @@ percentButtons.forEach(button => {
     setAmountByPercent(percent);
   });
 });
+
+// [BARU] Listener Modal Referral
+referralBtn.addEventListener("click", showReferralModal);
+referralModalCloseBtn.addEventListener("click", hideReferralModal);
+referralModalOverlay.addEventListener("click", hideReferralModal);
+createNicknameBtn.addEventListener("click", callCreateNickname);
+setReferrerBtn.addEventListener("click", callSetReferrer);
+claimRewardsBtn.addEventListener("click", callClaimRewards);
 </script>
 </body>
-</html>
+  </html>
