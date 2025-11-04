@@ -774,17 +774,18 @@ async function handleRoundFinalized(roundId, winner) {
     if (isSpinning) return;
     isSpinning = true;
     isFinalizing = true;
-    placeBetBtn.disabled = true;
-    placeBetBtn.style.display = "none";
-    finalizeBtn.style.display = "none";
-    if (visualTimer) clearInterval(visualTimer);
-    timerText.innerText = "ROUND ENDED";
+    // ... (sisa kode Anda) ...
     statusText.innerText = "Picking a winner...";
 
     await new Promise(resolve => setTimeout(resolve, 1000));
-    spinToWinner(winner); 
+    
+    // HAPUS: spinToWinner(winner); 
+    
+    // [BARU] Temukan objek player dari array
+    const targetPlayer = playersArray.find(p => p.addr.toLowerCase() === winner.toLowerCase());
+    spinToPlayer(targetPlayer); 
 }
-
+  
 // === FUNGSI UTAMA: Reset & Ambil Ronde Baru ===
 async function resetAndFetchNewRound() {
     console.log("Mereset untuk ronde baru...");
@@ -1098,8 +1099,16 @@ function showFinalizeButton() {
 function resetRoundUI() {
     players = {};
     totalWeight = ethers.BigNumber.from(0);
-    slicesGroup.innerHTML = ''; 
-    gsap.set(wheelSVG, { rotation: 0 }); 
+    playersArray = []; // [BARU] Bersihkan array
+    
+    // HAPUS: slicesGroup.innerHTML = ''; 
+    // HAPUS: gsap.set(wheelSVG, { rotation: 0 }); 
+    
+    if (ctx) {
+        currentRotation = 0;
+        drawDonut(); // [BARU] Gambar ulang donut kosong
+    }
+    
     updateBetList();
     placeBetBtn.style.display = "block";
     placeBetBtn.disabled = true;
