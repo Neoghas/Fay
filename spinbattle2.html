@@ -528,6 +528,19 @@ const usdtRewards = document.getElementById("usdtRewards");
 const referralCount = document.getElementById("referralCount");
 const claimRewardsBtn = document.getElementById("claimRewardsBtn");
 
+const PLAYER_COLORS = [
+  "#FF6B6B", // Merah
+  "#4ECDC4", // Turquoise
+  "#45B7D1", // Biru Cerah
+  "#F9D423", // Kuning
+  "#FFA62B", // Oranye
+  "#7B72E9", // Ungu
+  "#3DCC91", // Hijau
+  "#FF90B3", // Pink
+  "#C0E218", // Lime
+  "#3498DB"  // Biru
+];
+
 
 // === FUNGSI UTAMA: Toggle Connect / Disconnect ===
 async function toggleWallet() {
@@ -731,14 +744,20 @@ async function handleRoundFinalized(roundId, winner) {
     if (isSpinning) return;
     isSpinning = true;
     isFinalizing = true;
-    // ... (sisa kode Anda) ...
+    
+    // [PERBAIKAN DIMULAI] Tambahkan baris-baris yang hilang ini:
+    placeBetBtn.disabled = true;
+    placeBetBtn.style.display = "none";
+    finalizeBtn.style.display = "none";
+    if (visualTimer) clearInterval(visualTimer);
+    timerText.innerText = "ROUND ENDED";
+    // [PERBAIKAN SELESAI]
+
     statusText.innerText = "Picking a winner...";
 
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // HAPUS: spinToWinner(winner); 
-    
-    // [BARU] Temukan objek player dari array
+    // Temukan objek player dari array
     const targetPlayer = playersArray.find(p => p.addr.toLowerCase() === winner.toLowerCase());
     spinToPlayer(targetPlayer); 
 }
@@ -1073,17 +1092,25 @@ function resetRoundUI() {
     myEthDeposit.innerText = "0";
     myUsdtDeposit.innerText = "0";
 }
+
 function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
   const playerKey = playerId.toLowerCase(); 
   if (!players[playerKey]) {
+    
+    // [PERBAIKAN WARNA]
+    // Ambil warna dari palet berdasarkan jumlah pemain saat ini
+    const colorIndex = Object.keys(players).length;
+    const playerColor = PLAYER_COLORS[colorIndex % 10]; // Modulo 10 untuk keamanan
+    
     players[playerKey] = {
       id: playerId,
       eth: ethers.BigNumber.from(0),
       usdt: ethers.BigNumber.from(0),
-      color: `hsl(${Math.floor(Math.random() * 360)}, 90%, 60%)`,
-      data: { startAngle: 0, endAngle: 0 } // Ini tidak dipakai lagi oleh canvas, tapi tidak apa-apa
+      color: playerColor, // Gunakan warna baru
+      data: { startAngle: 0, endAngle: 0 } 
     };
   }
+  
   const player = players[playerKey];
   if (isEvent) {
       player.eth = player.eth.add(ethAmount);
@@ -1103,9 +1130,10 @@ function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
       totalWeight = totalWeight.add(players[pid].weight);
   }
 
-  // === TEMPEL DI SINI ===
   rebuildPlayersArrayAndDraw();
 }
+  
+  
 function updateBetList() {
   betList.innerHTML = ""; 
   const playerIds = Object.keys(players);
