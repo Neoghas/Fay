@@ -603,14 +603,8 @@ async function fetchAndDisplayRoundData() {
         currentRoundId = await faylottoContract.currentRoundId();
         const roundInfo = await faylottoContract.getRoundBasic(currentRoundId);
         
-        if (roundInfo.finalized) {
-            statusText.innerText = "Round finalized. Waiting for new round...";
-            showFinalizeButton();
-            return;
-        }
-
-        resetRoundUI();
-        
+        // Reset dan ambil data pemain DULU
+        resetRoundUI(); // (Ini akan me-reset players = {})
         const playersList = await faylottoContract.getRoundPlayers(currentRoundId);
         for (const playerAddress of playersList) {
             const deposits = await faylottoContract.getPlayerDeposits(currentRoundId, playerAddress);
@@ -620,14 +614,45 @@ async function fetchAndDisplayRoundData() {
         updateBetList();
         await updateMyDeposits();
 
-        currentRoundEndTime = roundInfo.endTime.toNumber() * 1000;
-        startVisualTimer(currentRoundEndTime);
+        // Ambil durasi ronde dari kontrak
+        try { 
+            contractRoundLengthSeconds = (await faylottoContract.roundLength()).toNumber(); 
+        } catch(e){ 
+            contractRoundLengthSeconds = 300; // Default 5 menit
+        }
+        
+        // === [LOGIKA LOOPING DIMULAI DI SINI] ===
+        const contractEndTime = roundInfo.endTime.toNumber() * 1000;
+        let effectiveEndTime = contractEndTime; // Waktu asli dari kontrak
+        const playerCount = Object.keys(players).length; // Cek pemain dari data LOKAL
+        const now = Date.now();
+        const timeLeft = contractEndTime - now;
 
-        statusText.innerText = `Round ${currentRoundId.toString()} is live!`;
-        placeBetBtn.disabled = false;
-        placeBetBtn.style.display = "block";
-        finalizeBtn.style.display = "none";
-        isFinalizing = false;
+        if (timeLeft <= 0 && playerCount === 0) {
+            // RONDE MACET (Expired + 0 Pemain)
+            statusText.innerText = "Round empty. Restarting countdown...";
+            // Buat timer "palsu" untuk UI
+            effectiveEndTime = Date.now() + (contractRoundLengthSeconds * 1000);
+            
+            placeBetBtn.disabled = false;
+            placeBetBtn.style.display = "block";
+            finalizeBtn.style.display = "none";
+            isFinalizing = false; // Pastikan ini di-reset
+            
+        } else if (timeLeft <= 0 && playerCount > 0) {
+            // Ronde berakhir normal, ada pemain
+            statusText.innerText = "Round ended. Waiting for finalization...";
+            // Biarkan startVisualTimer menanganinya
+        } else {
+            // Ronde normal sedang berjalan
+            statusText.innerText = `Round ${currentRoundId.toString()} is live!`;
+            placeBetBtn.disabled = false;
+            isFinalizing = false;
+        }
+
+        // Mulai timer dengan waktu yang sudah diputuskan
+        startVisualTimer(effectiveEndTime); 
+
     } catch (err) {
         console.error("Error fetching round data:", err);
         statusText.innerText = "Error syncing data. Please refresh.";
@@ -996,89 +1021,40 @@ async function updateMyDeposits() {
         myUsdtDeposit.innerText = "Error";
     }
 }
-async function startVisualTimer(endTime) {
+function startVisualTimer(endTime) {
   if (visualTimer) clearInterval(visualTimer);
-
-  visualTimer = setInterval(async () => {
+  
+  visualTimer = setInterval(() => {
     const now = Date.now();
     const timeLeft = endTime - now;
-    const timerText = document.getElementById("timerText");
-    const statusText = document.getElementById("statusText");
-    const finalizeBtn = document.getElementById("finalizeBtn");
-    const placeBetBtn = document.getElementById("placeBetBtn");
 
-    // Jika wallet belum konek, hentikan timer agar tidak error
-    if (!userAddress || !faylottoContract) {
-      clearInterval(visualTimer);
-      timerText.innerText = "--:--";
-      statusText.innerText = "Wallet not connected";
-      finalizeBtn.style.display = "none";
-      return;
-    }
-
-    // Ambil jumlah player aktif dari data kontrak (sesuaikan nama fungsi kontrakmu)
-    let playerCount = 0;
-    try {
-      playerCount = await faylottoContract.getPlayerCount(); 
-    } catch (err) {
-      console.warn("Gagal ambil data player:", err);
-    }
-
-    // ======== Kondisi jika waktu habis ========
     if (timeLeft <= 0) {
       clearInterval(visualTimer);
       timerText.innerText = "00:00";
 
+      // Cek jumlah pemain dari variabel LOKAL 'players' (cepat dan efisien)
+      const playerCount = Object.keys(players).length;
+
       if (playerCount > 0) {
-        // === ADA PEMAIN ===
-        statusText.innerText = `Round locked with ${playerCount} player(s)`;
-        finalizeBtn.style.display = "inline-block";
+        // JIKA ADA PEMAIN: Tampilkan tombol finalize (sekarang akan berfungsi)
+        showFinalizeButton();
       } else {
-        // === TIDAK ADA PEMAIN ===
-        statusText.innerText = "No players joined. Restarting round...";
-        finalizeBtn.style.display = "none";
-        placeBetBtn.disabled = true;
+        // JIKA TIDAK ADA PEMAIN: Panggil ulang fetchAndDisplayRoundData
+        // Ini akan memicu deteksi "ronde macet" lagi dan memulai timer palsu baru.
+        statusText.innerText = "No players. Restarting...";
+        placeBetBtn.disabled = true; 
+        finalizeBtn.style.display = "none"; 
 
-        // restart ronde baru setelah 3 detik
-        setTimeout(async () => {
-          placeBetBtn.disabled = false;
-          statusText.innerText = "New round started. Waiting for players...";
-          timerText.innerText = "--:--";
-
-          // ambil ulang data ronde terbaru dari kontrak
-          await fetchAndDisplayRoundData();
-
-          // hitung ulang waktu ronde baru (misal 15 detik dari sekarang)
-          const newEnd = Date.now() + 300000;
-          startVisualTimer(newEnd);
-        }, 3000);
+        setTimeout(fetchAndDisplayRoundData, 3000); // Tunggu 3 detik, lalu loop
       }
       return;
     }
 
-    // ======== Kondisi normal (selama timer berjalan) ========
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-    timerText.innerText = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-
+    timerText.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }, 1000);
 }
-
-// Tombol finalize → reset ronde baru
-document.getElementById("finalizeBtn").addEventListener("click", async () => {
-  const statusText = document.getElementById("statusText");
-  const finalizeBtn = document.getElementById("finalizeBtn");
-
-  finalizeBtn.style.display = "none";
-  statusText.innerText = "Round finalized. Starting new round...";
-
-  // tunggu sebentar lalu mulai ronde baru
-  setTimeout(async () => {
-    await fetchAndDisplayRoundData();
-    const newEnd = Date.now() + 300000;
-    startVisualTimer(newEnd);
-  }, 2000);
-});
   
 function showFinalizeButton() {
     if (isFinalizing) return;
