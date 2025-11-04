@@ -1407,29 +1407,26 @@ function spinToPlayer(targetPlayer) {
       resetAndFetchNewRound();
       return;
   }
-  if (isSpinning) return;
-  isSpinning = true;
+
+  // === [PERBAIKAN BUG] ===
+  // Kita hapus 'if (isSpinning) return;' dan 'isSpinning = true;' dari sini.
+  // Fungsi 'handleRoundFinalized' sudah menangani penguncian 'isSpinning'.
+  // === [AKHIR PERBAIKAN] ===
 
   // hitung sudut tengah slice (dalam radian)
   const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
-  // Ubah ke derajat. (0 rad = jam 3, 270 deg = jam 12/atas)
+  // Ubah ke derajat. (270 deg = jam 12/atas)
   const midDeg = (midRad * 180 / Math.PI);
 
   // Kita ingin 'midDeg' berakhir di ATAS (yaitu 270 derajat)
   const targetRotationDeg = 270 - midDeg;
   
-
-  // === [INI ADALAH PERUBAHAN ANDA] ===
-  
-  // [BARU] Durasi acak antara 30.000ms (30 detik) dan 40.000ms (40 detik)
+  // === [LOGIKA DURASI ACAK ANDA] ===
+  // Durasi acak antara 30.000ms (30 detik) dan 40.000ms (40 detik)
   const duration = Math.floor(Math.random() * (40000 - 30000 + 1)) + 30000;
-  
-  // [BARU] Buat jumlah putaran dinamis, agar tidak terlalu lambat
-  // (Sekitar 1.2 detik per putaran)
+  // Buat jumlah putaran dinamis
   const spins = Math.floor(duration / 1200); 
-  
-  // === [AKHIR PERUBAHAN] ===
-  
+  // === [AKHIR LOGIKA DURASI] ===
 
   // Rotasi akhir = putaran penuh + rotasi target
   const finalRotation = (spins * 360) + targetRotationDeg;
@@ -1453,8 +1450,8 @@ function spinToPlayer(targetPlayer) {
     if (t < 1) {
       requestAnimationFrame(animate);
     } else {
-      // === [LOGIKA PENTING KONEKSI KE GAME] ===
-      isSpinning = false; 
+      // === Logika Reset Game ===
+      isSpinning = false; // Buka kunci HANYA setelah animasi selesai
       
       const winnerId = targetPlayer.addr;
       const isWinner = (winnerId.toLowerCase() === userAddress.toLowerCase());
@@ -1464,7 +1461,6 @@ function spinToPlayer(targetPlayer) {
       
       // Panggil fungsi reset utama Anda untuk memulai ronde baru
       resetAndFetchNewRound(); 
-      // === [AKHIR LOGIKA PENTING] ===
     }
   }
   requestAnimationFrame(animate);
