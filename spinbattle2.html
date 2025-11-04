@@ -1494,19 +1494,32 @@ createNicknameBtn.addEventListener("click", callCreateNickname);
 setReferrerBtn.addEventListener("click", callSetReferrer);
 claimRewardsBtn.addEventListener("click", callClaimRewards);
 
-  document.addEventListener("visibilitychange", () => {
-    // Cek apakah pengguna baru saja KEMBALI ke tab ini
+  // === [PERBAIKAN BARU UNTUK CANVAS HILANG] ===
+
+// Buat satu fungsi khusus untuk menggambar ulang
+function handleCanvasRedraw() {
+    // Cek apakah 'ctx' (konteks canvas) sudah ada
+    if (ctx) {
+        console.log("Window/Tab kembali aktif. Menggambar ulang canvas...");
+        // Paksa gambar ulang donut dengan rotasi terakhir
+        drawDonut(currentRotation);
+    }
+}
+
+// 1. Panggil saat TAB kembali terlihat (yang lama)
+document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === 'visible') {
-        
-        // Cek apakah 'ctx' (konteks canvas) sudah ada
-        // (Jika belum connect wallet, 'ctx' masih null)
-        if (ctx) {
-            console.log("Tab kembali terlihat. Menggambar ulang canvas...");
-            // Paksa gambar ulang donut dengan rotasi terakhir yang diketahui
-            drawDonut(currentRotation);
-        }
+        handleCanvasRedraw();
     }
 });
+
+// 2. Panggil saat JENDELA browser kembali fokus (yang baru)
+window.addEventListener("focus", () => {
+    handleCanvasRedraw();
+});
+
+// === [AKHIR PERBAIKAN] ===
+
 </script>
 </body>
-  </html>
+</html>
