@@ -1130,6 +1130,7 @@ function updateBetList() {
     betList.appendChild(item);
   });
 }
+
 function updateWheelVisuals() {
   let currentAngle = 0;
   for (const playerId in players) {
@@ -1141,15 +1142,22 @@ function updateWheelVisuals() {
     const angle = percentage * 360;
     const startAngle = currentAngle;
     const endAngle = currentAngle + angle;
+
     if (!player.sliceElement) {
         const newSliceFragment = sliceTemplate.content.cloneNode(true);
         player.sliceElement = newSliceFragment.querySelector("path");
         player.titleElement = newSliceFragment.querySelector("title");
         player.sliceElement.setAttribute("fill", player.color);
-        slicesGroup.appendChild(newSliceFragment);
+        
+        // === [PERBAIKAN DI SINI] ===
+        // Kita tambahkan elemen <path>-nya, bukan seluruh fragment template
+        slicesGroup.appendChild(player.sliceElement); 
     }
+
     const shortId = (player.id.toLowerCase() === userAddress.toLowerCase()) ? "You" : player.id.slice(0,6);
     player.titleElement.textContent = `${shortId}: ${(percentage * 100).toFixed(2)}%`;
+    
+    // Animasi GSAP ini akan memperbarui atribut 'd' (bentuk) dari slice
     gsap.to(player.data, {
         startAngle: startAngle,
         endAngle: endAngle,
@@ -1163,6 +1171,7 @@ function updateWheelVisuals() {
     currentAngle = endAngle;
   }
 }
+  
 function spinToWinner(winnerId) {
     const winner = players[winnerId.toLowerCase()];
     if (!winner) {
