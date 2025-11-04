@@ -998,36 +998,58 @@ async function updateMyDeposits() {
 }
 function startVisualTimer(endTime) {
   if (visualTimer) clearInterval(visualTimer);
-  
+
   visualTimer = setInterval(() => {
     const now = Date.now();
     const timeLeft = endTime - now;
+    const playerCount = Object.keys(players || {}).length; // jumlah pemain aktif
 
+    // ======== Kondisi jika waktu habis ========
     if (timeLeft <= 0) {
       clearInterval(visualTimer);
       timerText.innerText = "00:00";
 
-      // === [PERUBAHAN DIMULAI DI SINI] ===
-      // Periksa jumlah pemain sebelum menampilkan tombol Finalize
-      const playerCount = Object.keys(players).length;
-
       if (playerCount > 0) {
-        // JIKA ADA PEMAIN: Tampilkan tombol finalize seperti biasa
-        showFinalizeButton();
+        // === ADA PEMAIN ===
+        statusText.innerText = `Round locked with ${playerCount} player(s)`;
+        showFinalizeButton(); // tampilkan tombol finalize
       } else {
-        // JIKA TIDAK ADA PEMAIN: Reset/Loop ronde
-        statusText.innerText = "Round ended. No players. Restarting...";
-        placeBetBtn.disabled = true; // Nonaktifkan taruhan
-        finalizeBtn.style.display = "none"; // Pastikan finalize tersembunyi
+        // === TIDAK ADA PEMAIN ===
+        statusText.innerText = "No players joined. Restarting round...";
+        finalizeBtn.style.display = "none";
+        placeBetBtn.disabled = true;
 
-        // Panggil ulang fetchAndDisplayRoundData setelah 3 detik untuk "me-loop"
-        // Ini akan terus memeriksa sampai ada pemain yang masuk.
-        setTimeout(fetchAndDisplayRoundData, 3000);
+        // restart ronde baru setelah 3 detik
+        setTimeout(() => {
+          placeBetBtn.disabled = false;
+          statusText.innerText = "New round started. Waiting for players...";
+          timerText.innerText = "--:--";
+
+          // hitung ulang endTime baru (misal 15 detik dari sekarang)
+          const newEnd = Date.now() + 15000;
+          startVisualTimer(newEnd);
+        }, 3000);
       }
-      // === [PERUBAHAN SELESAI] ===
-      
       return;
     }
+
+    // ======== Kondisi normal (selama timer berjalan) ========
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    timerText.innerText = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+
+  }, 1000);
+}
+
+// Tombol finalize diklik → reset ronde baru
+finalizeBtn.addEventListener("click", () => {
+  finalizeBtn.style.display = "none";
+  statusText.innerText = "Round finalized. Starting new round...";
+  setTimeout(() => {
+    const newEnd = Date.now() + 15000; // waktu ronde baru
+    startVisualTimer(newEnd);
+  }, 2000);
+});
 
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
