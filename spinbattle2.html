@@ -559,6 +559,21 @@ const PLAYER_COLORS = [
   "#3498DB"  // Biru
 ];
 
+  document.addEventListener("DOMContentLoaded", () => {
+    // Ambil canvas dan gambar roda kosong (No bets yet)
+    const canvas = document.getElementById('donutCanvas');
+    if (canvas) { // Cek jika canvas ada
+        ctx = canvas.getContext('2d');
+        cw = canvas.width;
+        ch = canvas.height;
+        cx = cw / 2;
+        cy = ch / 2;
+        drawDonut(); // Gambar roda kosong "No bets yet" saat halaman dimuat
+    } else {
+        console.error("Elemen canvas 'donutCanvas' tidak ditemukan!");
+    }
+});
+
 
 // === FUNGSI UTAMA: Toggle Connect / Disconnect ===
 async function toggleWallet() {
@@ -578,13 +593,6 @@ async function toggleWallet() {
         walletInfo.style.display = "block";
         walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
 
-        const canvas = document.getElementById('donutCanvas');
-        ctx = canvas.getContext('2d');
-        cw = canvas.width;
-        ch = canvas.height;
-        cx = cw / 2;
-        cy = ch / 2;
-        drawDonut();
         await updateUserBalances();
         await fetchAndDisplayRoundData();
         await fetchAndDisplayWinners();
