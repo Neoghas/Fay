@@ -589,7 +589,14 @@ async function toggleWallet() {
         referralBtn.style.display = "block"; // [BARU] Tampilkan tombol referral
         walletInfo.style.display = "block";
         walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
-        
+
+        const canvas = document.getElementById('donutCanvas');
+        ctx = canvas.getContext('2d');
+        cw = canvas.width;
+        ch = canvas.height;
+        cx = cw / 2;
+        cy = ch / 2;
+        drawDonut();
         await updateUserBalances();
         await fetchAndDisplayRoundData();
         await fetchAndDisplayWinners();
@@ -1108,7 +1115,7 @@ function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
       eth: ethers.BigNumber.from(0),
       usdt: ethers.BigNumber.from(0),
       color: `hsl(${Math.floor(Math.random() * 360)}, 90%, 60%)`,
-      data: { startAngle: 0, endAngle: 0 }
+      data: { startAngle: 0, endAngle: 0 } // Ini tidak dipakai lagi oleh canvas, tapi tidak apa-apa
     };
   }
   const player = players[playerKey];
@@ -1123,10 +1130,15 @@ function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
   const usdtFactor = ethers.BigNumber.from(10).pow(18 - usdtDecimals);
   const usdtWeight = player.usdt.mul(usdtFactor);
   player.weight = ethWeight.add(usdtWeight);
+  
+  // Hitung ulang total bobot
   totalWeight = ethers.BigNumber.from(0);
   for (const pid in players) {
       totalWeight = totalWeight.add(players[pid].weight);
   }
+
+  // === TEMPEL DI SINI ===
+  rebuildPlayersArrayAndDraw();
 }
 function updateBetList() {
   betList.innerHTML = ""; 
@@ -1154,6 +1166,247 @@ function updateBetList() {
   });
 }
 
+// ======= Draw donut on canvas =======
+    function drawDonut(rotationDeg = currentRotation) {
+      ctx.clearRect(0,0,cw,ch);
+      // apply rotation by translating and rotating context
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rotationDeg * Math.PI / 180);
+      ctx.translate(-cx, -cy);
+
+      // background circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, outerR + 6, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,0.01)';
+      ctx.fill();
+
+      if (!playersArray || playersArray.length === 0) {
+        // draw empty donut
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,0.02)';
+        ctx.fill();
+        // inner hole
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        ctx.arc(cx, cy, innerR, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.restore();
+        // center label
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.font = '14px Inter';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('No bets yet', cx, cy);
+        return;
+      }
+
+      // draw sectors
+      for (let i=0;i<playersArray.length;i++){
+        const p = playersArray[i];
+        const sa = p.startAngle;
+        const ea = p.endAngle;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, outerR, sa, ea, false);
+        ctx.closePath();
+        ctx.fillStyle = p.color;
+        ctx.fill();
+      }
+
+      // inner circle to make donut
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(cx, cy, innerR, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+
+      // draw separators (thin lines)
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = 1;
+      for (let i=0;i<playersArray.length;i++){
+        const p = playersArray[i];
+        const angle = (p.startAngle + p.endAngle) / 2;
+        // draw radial line at startAngle
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(p.startAngle) * (innerR+2), cy + Math.sin(p.startAngle) * (innerR+2));
+        ctx.lineTo(cx + Math.cos(p.startAngle) * outerR, cy + Math.sin(p.startAngle) * outerR);
+        ctx.stroke();
+      }
+
+      // labels (address short) along middle of sector
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px Inter';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      for (let i=0;i<playersArray.length;i++){
+        const p = playersArray[i];
+        const mid = (p.startAngle + p.endAngle) / 2;
+        const rlabel = (outerR + innerR) / 2;
+        const lx = cx + Math.cos(mid) * rlabel;
+        const ly = cy + Math.sin(mid) * rlabel;
+        const short = p.addr.slice(0,6);
+        ctx.fillStyle = 'rgba(0,12,20,0.85)';
+        // draw small pill background for readability
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.roundRect = ctx.roundRect || function(x,y,w,h,r){ if (w<2*r) r=w/2; if (h<2*r) r=h/2; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); };
+        // approximate pill
+        const text = short;
+        ctx.font = '12px Inter';
+        const tw = ctx.measureText(text).width + 8;
+        // draw pill in two colors (hybrid effect)
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.roundRect(lx - tw/2, ly - 12/2, tw, 16, 8);
+        ctx.fillStyle = '#fff';
+        ctx.fillText(text, lx, ly);
+      }
+
+      ctx.restore();
+    }
+
+    // polyfill for roundRect if needed
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
+        if (w<2*r) r=w/2; if (h<2*r) r=h/2;
+        this.beginPath();
+        this.moveTo(x+r,y);
+        this.arcTo(x+w,y,x+w,y+h,r);
+        this.arcTo(x+w,y+h,x,y+h,r);
+        this.arcTo(x,y+h,x,y,r);
+        this.arcTo(x,y,x+w,y,r);
+        this.closePath();
+        this.fill();
+      };
+        }
+
+// [BARU] Fungsi "Bridge"
+function rebuildPlayersArrayAndDraw() {
+    playersArray = []; // Kosongkan array
+    const playerKeys = Object.keys(players);
+    
+    // Konversi objek 'players' ke 'playersArray'
+    for (const key of playerKeys) {
+        playersArray.push({
+            addr: players[key].id,
+            weight: players[key].weight, // Ambil bobot yang sudah dihitung
+            color: players[key].color
+        });
+    }
+
+    // Hitung sudut untuk canvas (dalam radian)
+    let currentAngle = 0;
+    const totalW = totalWeight; // Gunakan totalWeight global
+    
+    for (const p of playersArray) {
+        p.startAngle = currentAngle;
+        let percentage = 0;
+        if (totalW.gt(0)) {
+            // Hitung persentase dari BigNumber
+            percentage = p.weight.mul(1000000).div(totalW).toNumber() / 1000000;
+        }
+        // Sudut dalam Radian (Math.PI * 2 = 360 derajat)
+        p.endAngle = currentAngle + (percentage * Math.PI * 2);
+        currentAngle = p.endAngle;
+    }
+    
+    // Gambar ulang donut dengan data baru
+    drawDonut();
+}
+
+  
+  
+  // ======= Weighted random selection (client-side) =======
+    function pickWinnerClientSide() {
+      if (!playersArray || playersArray.length === 0) return null;
+      const total = playersArray.reduce((acc,p)=> acc + p.weight, 0n);
+      if (total === 0n) return null;
+      // random BigInt in range [0, total-1]
+      const rand = randBigInt(total);
+      let cum = 0n;
+      for (let i=0;i<playersArray.length;i++){
+        cum += playersArray[i].weight;
+        if (rand < cum) return playersArray[i];
+      }
+      return playersArray[playersArray.length-1];
+    }
+
+  function randBigInt(max) {
+      // use crypto.getRandomValues to build randomness
+      // build a random BigInt less than max
+      const bytes = Math.ceil((max.toString(2).length)/8);
+      let rand;
+      do {
+        const arr = new Uint8Array(bytes);
+        window.crypto.getRandomValues(arr);
+        rand = 0n;
+        for (let i=0;i<arr.length;i++) rand = (rand << 8n) + BigInt(arr[i]);
+      } while (rand >= max);
+      return rand;
+    }
+
+  // ======= Spin animation =======
+function spinToPlayer(targetPlayer) {
+  if (!targetPlayer) {
+      console.error("Target spin tidak ditemukan!");
+      // Jika target tidak ada, langsung reset
+      resetAndFetchNewRound();
+      return;
+  }
+  if (isSpinning) return;
+  isSpinning = true;
+
+  // hitung sudut tengah slice (dalam radian)
+  const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
+  // Ubah ke derajat. (0 rad = jam 3, -90 deg atau 270 deg = jam 12/atas)
+  const midDeg = (midRad * 180 / Math.PI);
+
+  // Kita ingin 'midDeg' berakhir di ATAS (yaitu 270 derajat, atau -90)
+  // Pointer-nya statis di 270 deg.
+  const targetRotationDeg = 270 - midDeg;
+  
+  const spins = 5; // 5 putaran penuh
+  // Rotasi akhir = putaran penuh + rotasi target
+  const finalRotation = (spins * 360) + targetRotationDeg;
+  
+  const startRotation = currentRotation; // Rotasi awal
+  const duration = 6000; // 6 detik
+  const startTime = performance.now();
+
+  function animate(now) {
+    const t = Math.min(1, (now - startTime) / duration);
+    // easing (easeOutQuart)
+    const eased = 1 - Math.pow(1 - t, 4);
+    
+    // Hitung total jarak rotasi yang harus ditempuh
+    let totalSpinDistance = finalRotation - (startRotation % 360);
+    // Pastikan berputar ke arah yang benar dan selalu positif
+    while(totalSpinDistance <= 0) totalSpinDistance += 360; 
+
+    currentRotation = startRotation + (totalSpinDistance * eased);
+    drawDonut(currentRotation);
+    
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // === [LOGIKA PENTING KONEKSI KE GAME] ===
+      isSpinning = false; 
+      
+      const winnerId = targetPlayer.addr;
+      const isWinner = (winnerId.toLowerCase() === userAddress.toLowerCase());
+      const winnerName = isWinner ? "You" : winnerId.slice(0, 6) + "...";
+      statusText.innerText = `Winner is ${winnerName}!`;
+      alert(`Pemenangnya adalah ${winnerName}!`);
+      
+      // Panggil fungsi reset utama Anda untuk memulai ronde baru
+      resetAndFetchNewRound(); 
+      // === [AKHIR LOGIKA PENTING] ===
+    }
+  }
+  requestAnimationFrame(animate);
+}
 
 function spinToWinner(winnerId) {
     const winner = players[winnerId.toLowerCase()];
