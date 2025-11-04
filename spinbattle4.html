@@ -833,42 +833,58 @@ async function resetAndFetchNewRound() {
     await fetchAndDisplayRoundData(); // Ambil ronde baru
 }
 
-// GANTI SELURUH FUNGSI LAMA ANDA DENGAN YANG INI
+// === PERBAIKAN: HANDLE FINALISASI ===
 async function callFinalizeRound() {
-    if (!signer || !faylottoContract) return alert("Please connect your wallet.");
+  if (!signer || !faylottoContract) return alert("Please connect your wallet.");
 
-    finalizeBtn.disabled = true;
-    statusText.innerText = "Sending finalization transaction...";
+  finalizeBtn.disabled = true;
+  statusText.innerText = "Sending finalization transaction...";
 
-    try {
-        const tx = await faylottoContract.finalizeRound(currentRoundId);
-        statusText.innerText = "Finalizing... awaiting confirmation.";
-        
-        const receipt = await tx.wait(); 
-        console.log("Finalize transaction confirmed.", receipt);
+  try {
+    const tx = await faylottoContract.finalizeRound(currentRoundId);
+    statusText.innerText = "Finalizing... awaiting confirmation.";
 
-        const event = receipt.events?.find(e => e.event === 'RoundFinalized');
-        
-        if (event) {
-            const [roundId, winner] = event.args; 
-            console.log(`Event RoundFinalized found: Round ${roundId}, Winner ${winner}`);
-            
-            if (!isSpinning) {
-                handleRoundFinalized(roundId, winner);
-            }
-        } else {
-            console.error("Tx success, but RoundFinalized event not found!");
-            alert("Finalization success, but event not found. Resetting...");
-            if (!isSpinning) {
-                resetAndFetchNewRound();
-            }
-        }
-    } catch (err) {
-        console.error("Finalize call failed:", err.message);
-        alert(err.reason || "Failed to finalize. (Perhaps it's not time yet, or someone else just called it)");
-        statusText.innerText = "Finalization failed. Still waiting...";
-        finalizeBtn.disabled = false;
-    }
+    // Tunggu konfirmasi transaksi
+    await tx.wait();
+    console.log("Finalize transaction confirmed. Waiting for event...");
+
+    // Jangan langsung alert — biarkan listener RoundFinalized yang menanganinya
+    // (handleRoundFinalized akan dipicu otomatis oleh event listener)
+  } catch (err) {
+    console.error("Finalize call failed:", err.message);
+    alert(err.reason || "Failed to finalize. (Perhaps it's not time yet, or someone else just called it)");
+    statusText.innerText = "Finalization failed. Still waiting...";
+    finalizeBtn.disabled = false;
+  }
+}
+
+// === PERBAIKAN: HANDLER EVENT ROUND FINALIZED ===
+async function handleRoundFinalized(roundId, winnerAddr) {
+  if (isSpinning) return;
+  isSpinning = true;
+
+  console.log(`handleRoundFinalized() → Round ${roundId}, winner ${winnerAddr}`);
+
+  const winnerPlayer = playersArray.find(p =>
+    p.addr.toLowerCase() === winnerAddr.toLowerCase()
+  );
+
+  if (!winnerPlayer) {
+    console.error("Pemenang tidak ditemukan di playersArray!");
+    await resetAndFetchNewRound();
+    return;
+  }
+
+  pendingWinner = winnerPlayer;
+  statusText.innerText = "Spinning the wheel...";
+
+  // Jalankan animasi spin dan tunggu selesai
+  await spinToPlayer(winnerPlayer);
+
+  // Setelah animasi selesai, baru tampilkan alert dan reset
+  alert(`🎉 Round ${roundId} selesai!\nPemenang: ${winnerPlayer.addr.slice(0,6)}...${winnerPlayer.addr.slice(-4)}`);
+  
+  await resetAndFetchNewRound();
 }
     
 // === FUNGSI MODAL TARUHAN (Bet Modal) ===
@@ -1460,53 +1476,30 @@ function rebuildPlayersArrayAndDraw() {
 
 // ======= Spin animation =======
 function spinToPlayer(targetPlayer) {
-  if (!targetPlayer) {
-    console.error("Target spin tidak ditemukan!");
-    resetAndFetchNewRound();
-    return;
-  }
+  return new Promise(resolve => {
+    const targetIndex = playersArray.indexOf(targetPlayer);
+    const sliceAngle = (2 * Math.PI) / playersArray.length;
+    const targetAngle = (Math.PI * 3 / 2) - (sliceAngle * targetIndex) - (sliceAngle / 2);
+    const finalRotation = (Math.PI * 10) + targetAngle; // Putaran 5 kali + posisi pemenang
 
-  const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
-  const midDeg = (midRad * 180 / Math.PI);
-  const targetRotationDeg = 270 - midDeg;
+    const spinDuration = 10000 + Math.random() * 5000;
+    const start = performance.now();
 
-  const duration = Math.floor(Math.random() * (40000 - 30000 + 1)) + 30000;
-  const spins = Math.floor(duration / 1200);
-  const finalRotation = (spins * 360) + targetRotationDeg;
-  const startRotation = currentRotation;
-  const startTime = performance.now();
-
-  function animate(now) {
-    const t = Math.min(1, (now - startTime) / duration);
-    const eased = 1 - Math.pow(1 - t, 4);
-
-    let totalSpinDistance = finalRotation - (startRotation % 360);
-    while (totalSpinDistance <= 0) totalSpinDistance += 360;
-
-    currentRotation = startRotation + (totalSpinDistance * eased);
-    drawDonut(currentRotation);
-
-    if (t < 1) {
-      requestAnimationFrame(animate);
-    } else {
-      // animasi selesai!
-      isSpinning = false;
-      
-      // 🔥 tampilkan alert SETELAH spin selesai
-      if (pendingWinner) {
-        const winnerName = (pendingWinner.addr.toLowerCase() === userAddress.toLowerCase())
-          ? "You"
-          : pendingWinner.addr.slice(0, 6) + "...";
-        statusText.innerText = `Winner is ${winnerName}!`;
-        alert(`Pemenangnya adalah ${winnerName}!`);
-        pendingWinner = null;
+    function animate(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / spinDuration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3); // easing out
+      currentRotation = finalRotation * ease;
+      drawDonut();
+      if (progress < 1) requestAnimationFrame(animate);
+      else {
+        drawDonut();
+        resolve(); // penting agar bisa di-await
       }
-
-      resetAndFetchNewRound();
     }
-  }
 
-  requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
+  });
 }
 
 // [BARU] Fungsi untuk menampilkan/menyembunyikan Modal Wallet
