@@ -729,16 +729,134 @@ async function handleRoundFinalized(roundId, winner) {
     spinToWinner(winner); 
 }
 
-// === FUNGSI UTAMA: Reset & Ambil Ronde Baru ===
+/* ASUMSI: 
+  - Anda memiliki variabel global: `playersArray`, `currentRoundId`, `isSpinning`, `isFinalizing`
+  - Anda memiliki fungsi `fetchAndDisplayRoundData` dan `fetchAndDisplayWinners`.
+  - Kontrak Anda (`faylottoContract`) memiliki fungsi `getRoundBasic` untuk mengambil data ronde.
+*/
+
+// ==========================================================
+// ASUMSI 1: Anda membutuhkan fungsi untuk mengambil data ronde
+// ==========================================================
+async function getRoundData(roundId) {
+    try {
+        const roundData = await faylottoContract.getRoundBasic(roundId);
+        return roundData;
+    } catch (e) {
+        console.error("Gagal mengambil data ronde:", e);
+        return null;
+    }
+}
+
+// ==========================================================
+// ASUMSI 2: Anda membutuhkan fungsi SPIN (PUTAR RODA)
+// ==========================================================
+/**
+ * Memulai animasi putaran ke pemain yang menang.
+ * @param {object} winnerPlayer - Objek pemain dari playersArray (berisi addr, color, startAngle, endAngle)
+ */
+async function spinToPlayer(winnerPlayer) {
+    console.log(`Memutar roda ke pemenang: ${winnerPlayer.addr}`);
+    isSpinning = true;
+
+    // --- TEMPATKAN LOGIKA ANIMASI PUTARAN ANDA DI SINI ---
+    // (Contoh: menggunakan GSAP atau manipulasi CSS transform)
+    // 1. Hitung sudut target berdasarkan winnerPlayer.startAngle / endAngle.
+    // 2. Animasikan rotasi #wheel-svg.
+    // 3. Gunakan durasi sekitar 5-7 detik.
+
+    // Contoh placeholder animasi (ganti dengan kode Anda):
+    await new Promise(resolve => {
+        // Ganti ini dengan listener 'onComplete' dari GSAP atau 'transitionend' dari CSS
+        setTimeout(() => {
+            console.log("Animasi spin selesai.");
+            resolve();
+        }, 5000); // Asumsi durasi spin 5 detik
+    });
+    // --- AKHIR LOGIKA ANIMASI ---
+    
+    // Setelah spin selesai, panggil fungsi reset untuk ronde berikutnya
+    await resetAndFetchNewRound();
+}
+
+
+// ==========================================================
+// FUNGSI ANDA (YANG SUDAH ADA)
+// ==========================================================
 async function resetAndFetchNewRound() {
     console.log("Mereset untuk ronde baru...");
     isSpinning = false;
     isFinalizing = false;
     
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    await fetchAndDisplayWinners(); // Refresh daftar pemenang
-    await fetchAndDisplayRoundData(); // Ambil ronde baru
+    // Hapus disable dari tombol finalize setelah semua selesai
+    finalizeBtn.disabled = false; 
+    
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Delay
+    await fetchAndDisplayWinners(); 
+    await fetchAndDisplayRoundData(); // Ambil ronde BARU (misal: ronde #5 -> #6)
 }
+
+// ==========================================================
+// FUNGSI ANDA (YANG DIPERBAIKI)
+// ==========================================================
+async function callFinalizeRound() {
+    if (!signer || !faylottoContract) return alert("Please connect your wallet.");
+    if (isSpinning || isFinalizing) return alert("Harap tunggu, sedang memproses.");
+
+    isFinalizing = true;
+    finalizeBtn.disabled = true;
+    statusText.innerText = "Mengirim transaksi finalisasi...";
+
+    // Simpan ID ronde saat ini SEBELUM difinalisasi
+    const roundToFinalize = currentRoundId; 
+
+    try {
+        const tx = await faylottoContract.finalizeRound(roundToFinalize);
+        statusText.innerText = "Finalisasi... menunggu konfirmasi.";
+        await tx.wait();
+        
+        statusText.innerText = "Terkonfirmasi! Mengambil pemenang...";
+        console.log("Finalize transaction confirmed.");
+
+        // --- INI BAGIAN PENTING YANG HILANG ---
+        
+        // 1. Ambil data ronde yang BARU SAJA difinalisasi
+        const finalizedRound = await getRoundData(roundToFinalize);
+        
+        if (!finalizedRound || !finalizedRound.winner || finalizedRound.winner.startsWith("0x0000")) {
+            throw new Error("Gagal mengambil pemenang dari ronde yang difinalisasi.");
+        }
+
+        const winnerAddress = finalizedRound.winner;
+        console.log(`Pemenang on-chain: ${winnerAddress}`);
+
+        // 2. Cari pemenang di 'playersArray' yang ada di UI
+        const winnerPlayer = playersArray.find(p => p.addr.toLowerCase() === winnerAddress.toLowerCase());
+
+        if (winnerPlayer) {
+            // 3. Panggil fungsi spin!
+            statusText.innerText = `Pemenang: ${winnerAddress.slice(0, 6)}... Roda berputar!`;
+            
+            // Fungsi spinToPlayer akan menangani pemanggilan resetAndFetchNewRound
+            await spinToPlayer(winnerPlayer); 
+        
+        } else {
+            // Kasus aneh: pemenang ada di chain, tapi tidak ada di UI?
+            console.error("Pemenang ditemukan di chain, tapi tidak ada di array UI.", playersArray, winnerAddress);
+            alert(`Pemenang adalah ${winnerAddress}, tapi tidak ada di roda. Mereset...`);
+            await resetAndFetchNewRound(); // Langsung reset
+        }
+        // --- AKHIR BAGIAN PENTING ---
+
+    } catch (err) {
+        console.error("Finalize call failed:", err);
+        alert(err.reason || "Gagal finalisasi. (Mungkin belum waktunya, atau sudah dipanggil orang lain)");
+        statusText.innerText = "Finalisasi gagal. Menunggu ronde baru...";
+        isFinalizing = false;
+        finalizeBtn.disabled = false; // Aktifkan lagi jika error
+    }
+}
+
 
 // === FUNGSI UTAMA: Panggil Finalize dari Tombol ===
 async function callFinalizeRound() {
