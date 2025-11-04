@@ -998,15 +998,37 @@ async function updateMyDeposits() {
 }
 function startVisualTimer(endTime) {
   if (visualTimer) clearInterval(visualTimer);
+  
   visualTimer = setInterval(() => {
     const now = Date.now();
     const timeLeft = endTime - now;
+
     if (timeLeft <= 0) {
       clearInterval(visualTimer);
       timerText.innerText = "00:00";
-      showFinalizeButton();
+
+      // === [PERUBAHAN DIMULAI DI SINI] ===
+      // Periksa jumlah pemain sebelum menampilkan tombol Finalize
+      const playerCount = Object.keys(players).length;
+
+      if (playerCount > 0) {
+        // JIKA ADA PEMAIN: Tampilkan tombol finalize seperti biasa
+        showFinalizeButton();
+      } else {
+        // JIKA TIDAK ADA PEMAIN: Reset/Loop ronde
+        statusText.innerText = "Round ended. No players. Restarting...";
+        placeBetBtn.disabled = true; // Nonaktifkan taruhan
+        finalizeBtn.style.display = "none"; // Pastikan finalize tersembunyi
+
+        // Panggil ulang fetchAndDisplayRoundData setelah 3 detik untuk "me-loop"
+        // Ini akan terus memeriksa sampai ada pemain yang masuk.
+        setTimeout(fetchAndDisplayRoundData, 3000);
+      }
+      // === [PERUBAHAN SELESAI] ===
+      
       return;
     }
+
     const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
     timerText.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
