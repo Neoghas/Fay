@@ -1483,31 +1483,77 @@ function rebuildPlayersArrayAndDraw() {
     }
 
 // ======= Spin animation =======
-function spinToPlayer(targetPlayer) {
-  return new Promise(resolve => {
-    const targetIndex = playersArray.indexOf(targetPlayer);
-    const sliceAngle = (2 * Math.PI) / playersArray.length;
-    const targetAngle = (Math.PI * 3 / 2) - (sliceAngle * targetIndex) - (sliceAngle / 2);
-    const finalRotation = (Math.PI * 10) + targetAngle; // Putaran 5 kali + posisi pemenang
+// 🎯 Spin wheel menuju pemain pemenang dengan animasi realistis + highlight
+async function spinToPlayer(winnerAddress) {
+  if (!winnerAddress || playersArray.length === 0) return;
 
-    const spinDuration = 10000 + Math.random() * 5000;
-    const start = performance.now();
+  const canvas = document.getElementById('donutCanvas');
+  const ctx = canvas.getContext('2d');
+  const totalSectors = playersArray.length;
+  const winnerIndex = playersArray.findIndex(p => p.addr.toLowerCase() === winnerAddress.toLowerCase());
+  if (winnerIndex === -1) return;
 
-    function animate(now) {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / spinDuration, 1);
-      const ease = 1 - Math.pow(1 - progress, 3); // easing out
-      currentRotation = finalRotation * ease;
-      drawDonut();
-      if (progress < 1) requestAnimationFrame(animate);
-      else {
-        drawDonut();
-        resolve(); // penting agar bisa di-await
-      }
+  const spins = 8 + Math.random() * 2; // 8–10 putaran penuh biar natural
+  const winnerMidAngle = (playersArray[winnerIndex].startAngle + playersArray[winnerIndex].endAngle) / 2;
+  const finalAngle = (Math.PI * 2 * spins) - winnerMidAngle + Math.PI / 2; // berhenti di atas
+
+  const spinDuration = 10000 + Math.random() * 5000; // 10–15 detik acak
+  const startTime = performance.now();
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / spinDuration, 1);
+
+    // easing: cepat di awal, melambat di akhir
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const currentAngle = easeOut * finalAngle;
+
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(currentAngle);
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    drawDonutWheel(ctx);
+    ctx.restore();
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      highlightWinner(winnerIndex);
     }
+  }
 
-    requestAnimationFrame(animate);
-  });
+  requestAnimationFrame(animate);
+}
+
+// ✨ Efek highlight sektor pemenang
+function highlightWinner(index) {
+  const canvas = document.getElementById('donutCanvas');
+  const ctx = canvas.getContext('2d');
+  const p = playersArray[index];
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const outerR = Math.min(canvas.width, canvas.height) / 2 - 10;
+  const innerR = outerR / 2;
+
+  // kilau efek neon
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, p.startAngle, p.endAngle, false);
+  ctx.closePath();
+  ctx.shadowColor = p.color;
+  ctx.shadowBlur = 30;
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = p.color;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  // teks pemenang di bawah canvas
+  const winnerEl = document.getElementById('winnerInfo');
+  if (winnerEl) {
+    winnerEl.innerHTML = `<span style="color:${p.color};font-weight:bold;">Winner:</span> ${p.addr.slice(0, 10)}...`;
+  }
 }
 
 // [BARU] Fungsi untuk menampilkan/menyembunyikan Modal Wallet
