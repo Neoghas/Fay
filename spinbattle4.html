@@ -546,6 +546,7 @@ let currentRotation = 0; // Rotasi roda saat ini
 let playersArray = [];
 let myCurrentEthDeposit = ethers.BigNumber.from(0);
 let myCurrentUsdtDeposit = ethers.BigNumber.from(0);
+let pendingWinner = null;
 
 // --- Elemen DOM ---
 const walletBtn = document.getElementById("walletBtn");
@@ -797,26 +798,28 @@ function setupEventListeners() {
 }
 
 // === FUNGSI UTAMA: Handle Finalisasi ===
-async function handleRoundFinalized(roundId, winner) {
-    if (isSpinning) return;
-    isSpinning = true;
-    isFinalizing = true;
-    
-    // [PERBAIKAN DIMULAI] Tambahkan baris-baris yang hilang ini:
-    placeBetBtn.disabled = true;
-    placeBetBtn.style.display = "none";
-    finalizeBtn.style.display = "none";
-    if (visualTimer) clearInterval(visualTimer);
-    timerText.innerText = "ROUND ENDED";
-    // [PERBAIKAN SELESAI]
+function handleRoundFinalized(roundId, winnerAddr) {
+  if (isSpinning) return;
+  isSpinning = true;
 
-    statusText.innerText = "Picking a winner...";
+  console.log(`handleRoundFinalized() → Round ${roundId}, winner ${winnerAddr}`);
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Temukan objek player dari array
-    const targetPlayer = playersArray.find(p => p.addr.toLowerCase() === winner.toLowerCase());
-    spinToPlayer(targetPlayer); 
+  // Cari data pemain pemenang
+  const winnerPlayer = playersArray.find(p =>
+    p.addr.toLowerCase() === winnerAddr.toLowerCase()
+  );
+
+  if (!winnerPlayer) {
+    console.error("Pemenang tidak ditemukan di playersArray!");
+    resetAndFetchNewRound();
+    return;
+  }
+
+  // Simpan sementara alamat pemenang global untuk alert nanti
+  pendingWinner = winnerPlayer;
+
+  // Jalankan animasi spin
+  spinToPlayer(winnerPlayer);
 }
   
 // === FUNGSI UTAMA: Reset & Ambil Ronde Baru ===
@@ -1458,22 +1461,17 @@ function rebuildPlayersArrayAndDraw() {
 // ======= Spin animation =======
 function spinToPlayer(targetPlayer) {
   if (!targetPlayer) {
-      console.error("Target spin tidak ditemukan!");
-      resetAndFetchNewRound();
-      return;
+    console.error("Target spin tidak ditemukan!");
+    resetAndFetchNewRound();
+    return;
   }
-
-  statusText.innerText = "Spinning..."; // [BARU] Tampilkan status spin
 
   const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
   const midDeg = (midRad * 180 / Math.PI);
   const targetRotationDeg = 270 - midDeg;
-  
-  // [PERBAIKAN] Durasi lebih pendek: 5-8 detik
-  const duration = Math.floor(Math.random() * (8000 - 5000 + 1)) + 5000;
-  // Jumlah putaran 4-7
-  const spins = Math.floor(Math.random() * (7 - 4 + 1)) + 4; 
 
+  const duration = Math.floor(Math.random() * (40000 - 30000 + 1)) + 30000;
+  const spins = Math.floor(duration / 1200);
   const finalRotation = (spins * 360) + targetRotationDeg;
   const startRotation = currentRotation;
   const startTime = performance.now();
@@ -1481,27 +1479,33 @@ function spinToPlayer(targetPlayer) {
   function animate(now) {
     const t = Math.min(1, (now - startTime) / duration);
     const eased = 1 - Math.pow(1 - t, 4);
-    
+
     let totalSpinDistance = finalRotation - (startRotation % 360);
-    while(totalSpinDistance <= 0) totalSpinDistance += 360; 
+    while (totalSpinDistance <= 0) totalSpinDistance += 360;
 
     currentRotation = startRotation + (totalSpinDistance * eased);
     drawDonut(currentRotation);
-    
+
     if (t < 1) {
       requestAnimationFrame(animate);
     } else {
+      // animasi selesai!
       isSpinning = false;
       
-      const winnerId = targetPlayer.addr;
-      const isWinner = (winnerId.toLowerCase() === userAddress.toLowerCase());
-      const winnerName = isWinner ? "You" : winnerId.slice(0, 6) + "...";
-      statusText.innerText = `Winner is ${winnerName}!`;
-      alert(`Pemenangnya adalah ${winnerName}!`);
-      
-      resetAndFetchNewRound(); 
+      // 🔥 tampilkan alert SETELAH spin selesai
+      if (pendingWinner) {
+        const winnerName = (pendingWinner.addr.toLowerCase() === userAddress.toLowerCase())
+          ? "You"
+          : pendingWinner.addr.slice(0, 6) + "...";
+        statusText.innerText = `Winner is ${winnerName}!`;
+        alert(`Pemenangnya adalah ${winnerName}!`);
+        pendingWinner = null;
+      }
+
+      resetAndFetchNewRound();
     }
   }
+
   requestAnimationFrame(animate);
 }
 
