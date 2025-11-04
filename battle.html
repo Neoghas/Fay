@@ -4,321 +4,46 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>FaylottoSpinBattle - Frontend Demo</title>
-    <style>
+  <style>
     :root {
-      /* [BARU] Palet warna minimalis & futuristik */
-      --bg-dark: #0D1117; /* GitHub dark bg */
-      --bg-gradient-start: #161B22;
-      --card-bg: rgba(30, 36, 46, 0.7); /* Transparan */
-      --card-border: rgba(255, 255, 255, 0.1);
-      --accent-blue: #3088FF;
-      --accent-green: #23D18B;
-      --text-primary: #E6EDF3;
-      --text-secondary: #8B949E; /* Muted */
-      --danger: #F85149;
-      --success: #34D399;
-      
+      --bg: #0f1724;
+      --card: #0b1220;
+      --accent: #3b82f6;
+      --muted: #9aa4b2;
+      --glass: rgba(255,255,255,0.03);
+      --success: #16a34a;
+      --danger: #ef4444;
       font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-      font-synthesis: none;
-      text-rendering: optimizeLegibility;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
     }
-
-    html, body { 
-      height: 100%; 
-      margin: 0; 
-      background: radial-gradient(circle at 10% 10%, var(--bg-gradient-start) 0%, var(--bg-dark) 60%); 
-      color: var(--text-primary); 
-    }
-    
-    .container { 
-      max-width: 1100px; 
-      margin: 28px auto; 
-      padding: 20px; 
-    }
-    
-    .header { 
-      display: flex; 
-      align-items: center; 
-      justify-content: space-between; 
-      gap: 12px; 
-      flex-wrap: wrap; /* [BARU] Fleksibel di mobile */
-    }
-    
-    .brand { 
-      display: flex; 
-      gap: 12px; 
-      align-items: center; 
-    }
-    
-    .logo { 
-      width: 48px; 
-      height: 48px; 
-      border-radius: 10px; 
-      display: grid; 
-      place-items: center; 
-      background: linear-gradient(135deg, var(--accent-blue), var(--accent-green)); 
-      color: var(--bg-dark); 
-      font-weight: 700; 
-      font-size: 20px;
-    }
-    
-    h1 { 
-      margin: 0; 
-      font-size: 18px; 
-    }
-    
-    /* [DIUBAH] Desain "Glassmorphism" untuk kartu */
-    .card { 
-      background: var(--card-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-radius: 12px; 
-      padding: 24px; /* [DIUBAH] Padding lebih besar */
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); 
-      border: 1px solid var(--card-border); 
-    }
-    
-    .row { 
-      display: flex; 
-      gap: 16px; /* [DIUBAH] Jarak lebih besar */
-      margin-top: 16px; 
-      flex-wrap: wrap; 
-    }
-    
-    .col { 
-      flex: 1; 
-      min-width: 240px; 
-    }
-    
-    .muted { 
-      color: var(--text-secondary); 
-      font-size: 13px; 
-    }
-    
-    /* [DIUBAH] Desain tombol baru */
-    button { 
-      background: var(--accent-blue); 
-      color: #fff; /* [DIUBAH] Teks putih */
-      border: none; 
-      padding: 10px 16px; /* [DIUBAH] Padding lebih besar */
-      border-radius: 8px; 
-      cursor: pointer; 
-      font-weight: 600; 
-      font-size: 14px;
-      transition: all 0.2s ease;
-    }
-    
-    button:hover {
-      background: #3B8FF7;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 15px rgba(48, 136, 255, 0.2);
-    }
-    
-    button:active {
-      transform: translateY(0);
-      opacity: 0.9;
-    }
-
-    button.ghost { 
-      background: transparent; 
-      border: 1px solid var(--card-border); 
-      color: var(--text-secondary); 
-    }
-    
-    button.ghost:hover {
-      background: var(--card-border);
-      color: var(--text-primary);
-      transform: none;
-      box-shadow: none;
-    }
-    
-    /* [DIUBAH] Desain input baru */
-    input[type=text], input[type=number] { 
-      width: 100%; 
-      padding: 10px 12px; /* [DIUBAH] Padding lebih besar */
-      border-radius: 8px; 
-      border: 1px solid var(--card-border); 
-      background: rgba(0, 0, 0, 0.2); /* [DIUBAH] Latar belakang lebih gelap */
-      color: inherit; 
-      font-size: 14px;
-      box-sizing: border-box;
-      transition: all 0.2s ease;
-    }
-    
-    input[type=text]:focus, input[type=number]:focus {
-      outline: none;
-      border-color: var(--accent-blue);
-      background: rgba(0, 0, 0, 0.1);
-      box-shadow: 0 0 0 3px rgba(48, 136, 255, 0.3);
-    }
-    
-    .small { 
-      font-size: 13px; 
-    }
-    
-    .grid-2 { 
-      display: grid; 
-      grid-template-columns: 1fr 1fr; 
-      gap: 12px; 
-    }
-    
-    .balances { 
-      display: flex; 
-      gap: 16px; /* [DIUBAH] Jarak lebih besar */
-      align-items: center; 
-    }
-    
-    .badge { 
-      background: var(--glass); 
-      padding: 8px 12px; /* [DIUBAH] Padding lebih besar */
-      border-radius: 8px; /* [DIUBAH] Radius lebih kecil */
-      font-weight: 600; 
-      font-size: 13px; /* [DIUBAH] */
-    }
-    
-    .danger { 
-      color: var(--danger); 
-    }
-    
-    .success { 
-      color: var(--success); 
-    }
-    
-    .players-list { 
-      display: flex; 
-      flex-direction: column; 
-      gap: 6px; 
-      margin-top: 8px; 
-      max-height: 150px; /* [BARU] */
-      overflow-y: auto; /* [BARU] */
-    }
-    
-    .player-item { 
-      background: rgba(255, 255, 255, 0.03); /* [DIUBAH] Sedikit lebih terang */
-      padding: 8px 10px; /* [DIUBAH] */
-      border-radius: 6px; /* [DIUBAH] */
-      display: flex; 
-      justify-content: space-between; 
-      font-size: 13px; 
-    }
-    
-    .footer { 
-      margin-top: 18px; 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      color: var(--text-secondary); 
-      font-size: 13px; 
-    }
-    
-    /* [DIUBAH] Tampilan terminal */
-    pre { 
-      background: rgba(0, 0, 0, 0.3); /* [DIUBAH] */
-      border: 1px solid var(--card-border); /* [BARU] */
-      padding: 12px; 
-      border-radius: 8px; 
-      overflow: auto; 
-      max-height: 220px; 
-      font-family: "Courier New", Courier, monospace; /* [BARU] */
-      font-size: 12px; /* [BARU] */
-      color: #C1D1D9; /* [BARU] */
-    }
-    
-    .winners { 
-      display: flex; 
-      flex-direction: column; /* [DIUBAH] Daftar vertikal */
-      gap: 8px; /* [DIUBAH] */
-      margin-top: 12px; 
-      max-height: 150px; /* [BARU] */
-      overflow-y: auto; /* [BARU] */
-    }
-    
-    .winner-card { 
-      background: linear-gradient(90deg, rgba(48, 136, 255, 0.08), rgba(255, 255, 255, 0.01)); /* [DIUBAH] */
-      padding: 10px 12px; /* [DIUBAH] */
-      border-radius: 8px; 
-      border: 1px solid rgba(48, 136, 255, 0.2); /* [BARU] */
-    }
-    
-    .inline { 
-      display: flex; 
-      gap: 8px; 
-      align-items: center; 
-    }
-    
-    .small-muted { 
-      color: var(--text-secondary); 
-      font-size: 12px; 
-    }
-    
-    /* [DIUBAH] Tata letak Donut */
-    .donut-wrap { 
-      display: grid; /* [DIUBAH] */
-      grid-template-columns: 360px 1fr; /* [DIUBAH] */
-      gap: 24px; /* [DIUBAH] */
-      align-items: center; 
-      margin-top: 24px; /* [DIUBAH] */
-    }
-    
-    #donutCanvas { 
-      background: radial-gradient(circle at center, rgba(255,255,255,0.02), transparent 40%); 
-      border-radius: 50%; 
-      box-shadow: 0 8px 30px rgba(0,0,0,0.6); 
-      max-width: 360px; /* [BARU] */
-      width: 100%; /* [BARU] */
-      height: auto; /* [BARU] */
-    }
-    
-    .donut-legend { 
-      max-width: 100%; /* [DIUBAH] */
-      text-align: left; 
-    }
-    
-    .legend-item { 
-      display: flex; 
-      justify-content: space-between; 
-      padding: 6px 8px; 
-      border-radius: 8px; 
-      margin-bottom: 6px; 
-      background: rgba(255, 255, 255, 0.02); /* [DIUBAH] */
-      font-size: 13px; 
-    }
-    
-    .countdown { 
-      font-weight: 700; 
-      color: var(--accent-green); /* [DIUBAH] */
-      background: rgba(35, 209, 139, 0.1); /* [DIUBAH] */
-      padding: 6px 10px; /* [DIUBAH] */
-      border-radius: 8px; 
-      display: inline-block; 
-      border: 1px solid rgba(35, 209, 139, 0.3); /* [BARU] */
-    }
-    
-    /* [DIUBAH] Media Query */
-    @media (max-width: 900px) {
-      .donut-wrap {
-        grid-template-columns: 1fr; /* Tumpuk donut di tablet */
-      }
-    }
-    
-    @media (max-width: 720px) { 
-      .grid-2 { 
-        grid-template-columns: 1fr; 
-      } 
-      .header { 
-        flex-direction: column; 
-        align-items: flex-start; 
-        gap: 10px; 
-      } 
-      .balances {
-        flex-direction: column; /* [BARU] Tumpuk saldo di mobile */
-        align-items: flex-start;
-      }
-    }
+    html,body { height:100%; margin:0; background: radial-gradient(circle at 10% 10%, #071023 0%, var(--bg) 60%); color:#e6eef6; }
+    .container { max-width:1100px; margin:28px auto; padding:20px; }
+    .header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .brand { display:flex; gap:12px; align-items:center; }
+    .logo { width:48px; height:48px; border-radius:10px; display:grid; place-items:center; background:linear-gradient(135deg,var(--accent),#6ee7b7); color:#04203a; font-weight:700; }
+    h1 { margin:0; font-size:18px; }
+    .card { background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:16px; box-shadow: 0 6px 22px rgba(2,6,23,0.7); border:1px solid rgba(255,255,255,0.03); }
+    .row { display:flex; gap:12px; margin-top:12px; flex-wrap:wrap; }
+    .col { flex:1; min-width:240px; }
+    .muted { color:var(--muted); font-size:13px; }
+    button { background:var(--accent); color:#041023; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
+    button.ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:var(--muted); }
+    input[type=text], input[type=number] { width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit; }
+    .small { font-size:13px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .balances { display:flex; gap:12px; align-items:center; }
+    .badge { background:var(--glass); padding:8px 10px; border-radius:10px; font-weight:600; }
+    .danger { color:var(--danger); }
+    .success { color:var(--success); }
+    .players-list { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+    .player-item { background:rgba(255,255,255,0.02); padding:8px; border-radius:8px; display:flex; justify-content:space-between; font-size:13px; }
+    .footer { margin-top:18px; display:flex; justify-content:space-between; align-items:center; color:var(--muted); font-size:13px; }
+    pre { background:#00111a; padding:12px; border-radius:8px; overflow:auto; max-height:220px; }
+    .winners { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+    .winner-card { background:linear-gradient(180deg, rgba(59,130,246,0.06), rgba(255,255,255,0.02)); padding:10px; border-radius:8px; min-width:220px; }
+    .inline { display:flex; gap:8px; align-items:center; }
+    .small-muted { color:var(--muted); font-size:12px; }
+    @media (max-width:720px) { .grid-2 { grid-template-columns: 1fr; } .header { flex-direction:column; align-items:flex-start; gap:10px; } }
   </style>
-
 </head>
 <body>
   <div class="container">
@@ -488,10 +213,17 @@
   </div>
 
   <!-- Ethers.js v5 -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script>
     // ======= Minimal ABIs needed =======
-    const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_erc20Token","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetERC20","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetETH","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"erc20Token","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"erc20Reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalERC20","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getWinnerCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getWinners","outputs":[{"components":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.WinnerInfo[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsERC20","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
+    const CONTRACT_ABI = [
+      // read
+      "function getRoundBasic(uint256) view returns (uint256 id, uint256 startTime, uint256 endTime, bool finalized, address winner, uint256 totalETH, uint256 totalERC20, uint256 playersCount)",
+      "function getRoundPlayers(uint256) view returns (address[])",
+      "function getPlayerDeposits(uint256,address) view returns (uint256 ethAmount, uint256 erc20Amount)",
+      "function getWinnerCount() view returns (uint256)",
+      "function getWinners(uint256 limit) view returns (tuple(uint256 winnerId,uint256 roundId,address winner,uint256 rewardETH,uint256 rewardERC20,uint256 timestamp)[])",
+      "function getReferralRewards(address) view returns (uint256,uint256)",
 
       // write
       "function placeBetETH() payable",
@@ -505,7 +237,12 @@
       "function currentRoundId() view returns (uint256)"
     ];
 
-    const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
+    const ERC20_ABI = [
+      "function decimals() view returns (uint8)",
+      "function balanceOf(address) view returns (uint256)",
+      "function approve(address,uint256) returns (bool)",
+      "function allowance(address,address) view returns (uint256)"
+    ];
 
     // ======= App State =======
     let provider, signer;
