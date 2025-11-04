@@ -596,8 +596,6 @@ const PLAYER_COLORS = [
     }
 });
 
-
-// === FUNGSI UTAMA: Toggle Connect / Disconnect ===
 // === FUNGSI UTAMA: Toggle Connect / Disconnect ===
 async function toggleWallet() {
   // Fungsi ini sekarang HANYA menangani KONEKSI
@@ -613,16 +611,10 @@ async function toggleWallet() {
       usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
       faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-      walletBtn.innerText = "Terhubung"; // [PERUBAHAN] Teks baru
+      walletBtn.innerText = "Terhubung"; // [PERBAIKAN] Teks baru
       referralBtn.style.display = "block"; 
-      // walletInfo.style.display = "block"; // <-- HAPUS (tidak ada lagi)
       walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
       
-      // Inisialisasi Canvas (jika dipindah ke sini)
-      // const canvas = document.getElementById('donutCanvas');
-      // ... (kode inisialisasi canvas Anda) ...
-      // (Jika kode canvas Anda ada di DOMContentLoaded, biarkan saja)
-
       await updateUserBalances();
       await fetchAndDisplayRoundData();
       await fetchAndDisplayWinners();
@@ -634,9 +626,8 @@ async function toggleWallet() {
       statusText.innerText = "Failed to connect. Check console & contract addresses.";
       provider = null; signer = null; userAddress = null;
   }
-  // HAPUS seluruh blok 'else' (logika disconnect) dari sini
 }
-  } else {
+  
     // Logika Disconnect
     userAddress = null; provider = null; signer = null;
     walletBtn.innerText = "Connect Wallet";
@@ -1547,16 +1538,6 @@ function disconnectWallet() {
     usdtBalance.innerText = "0";
 }
 
-// === 4. Inisialisasi & Event Listeners ===
-// Listener baru yang "pintar"
-walletBtn.addEventListener("click", () => {
-    if (!userAddress) {
-        toggleWallet(); // Jika belum konek, panggil fungsi konek
-    } else {
-        showWalletModal(); // Jika sudah konek, tampilkan modal
-    }
-});
-
   // === [PERBAIKAN BARU] ===
 const walletModalOverlay = document.getElementById("wallet-modal-overlay");
 const walletModal = document.getElementById("wallet-modal");
@@ -1573,7 +1554,7 @@ function handleCanvasRedraw() {
     }
 }
 
-// === 4. Inisialisasi & Event Listeners ===
+  // === 4. Inisialisasi & Event Listeners ===
 
 // Listener Tombol Utama
 walletBtn.addEventListener("click", () => {
