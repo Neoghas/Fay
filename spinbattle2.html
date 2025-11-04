@@ -333,6 +333,28 @@
         flex-direction: column;
     }
   }
+
+  /* === Donut Wheel Section === */
+.donut-wrap {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+#donutCanvas {
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.02), transparent 40%);
+  border-radius: 50%;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.donut-legend {
+  max-width: 300px;
+  text-align: left;
+}
+/* ...dan sisa CSS lainnya dari kode baru Anda... */
 </style>
 </head>
 
@@ -351,17 +373,8 @@
   </div>
 
   <div class="app-body">
-    <div class="wheel-container">
-      <div class="wheel-pointer"></div>
-      <svg id="wheel-svg" viewBox="0 0 100 100">
-          <g transform="rotate(-90, 50, 50)" id="slices-group"></g>
-          <circle class="wheel-center" cx="50" cy="50" r="25" />
-      </svg>
-      <template id="slice-template">
-          <path class="slice" stroke-width="1.5">
-              <title></title>
-          </path>
-      </template>
+    <div class="donut-wrap">
+        <canvas id="donutCanvas" width="360" height="360"></canvas>
     </div>
 
     <div class="controls">
@@ -500,6 +513,16 @@ let isSpinning = false;
 let isFinalizing = false;
 let players = {};
 let totalWeight = ethers.BigNumber.from(0);
+let ctx, cw, ch, cx, cy;
+let outerR = 140; // Radius luar donut
+let innerR = 80;  // Radius dalam donut
+let currentRotation = 0; // Rotasi roda saat ini
+let playersArray = [];
+let ctx, cw, ch, cx, cy;
+let outerR = 140; // Radius luar donut
+let innerR = 80;  // Radius dalam donut
+let currentRotation = 0; // Rotasi roda saat ini
+let playersArray = [];
 
 // --- Elemen DOM ---
 const walletBtn = document.getElementById("walletBtn");
@@ -1131,47 +1154,7 @@ function updateBetList() {
   });
 }
 
-function updateWheelVisuals() {
-  let currentAngle = 0;
-  for (const playerId in players) {
-    const player = players[playerId];
-    let percentage = 0;
-    if (totalWeight.gt(0)) {
-      percentage = player.weight.mul(10000).div(totalWeight).toNumber() / 10000;
-    }
-    const angle = percentage * 360;
-    const startAngle = currentAngle;
-    const endAngle = currentAngle + angle;
 
-    if (!player.sliceElement) {
-        const newSliceFragment = sliceTemplate.content.cloneNode(true);
-        player.sliceElement = newSliceFragment.querySelector("path");
-        player.titleElement = newSliceFragment.querySelector("title");
-        player.sliceElement.setAttribute("fill", player.color);
-        
-        // === [PERBAIKAN DI SINI] ===
-        // Kita tambahkan elemen <path>-nya, bukan seluruh fragment template
-        slicesGroup.appendChild(player.sliceElement); 
-    }
-
-    const shortId = (player.id.toLowerCase() === userAddress.toLowerCase()) ? "You" : player.id.slice(0,6);
-    player.titleElement.textContent = `${shortId}: ${(percentage * 100).toFixed(2)}%`;
-    
-    // Animasi GSAP ini akan memperbarui atribut 'd' (bentuk) dari slice
-    gsap.to(player.data, {
-        startAngle: startAngle,
-        endAngle: endAngle,
-        duration: 0.7,
-        ease: "power2.out",
-        onUpdate: () => {
-            const d = describeArc(50, 50, 45, player.data.startAngle, player.data.endAngle);
-            player.sliceElement.setAttribute("d", d);
-        }
-    });
-    currentAngle = endAngle;
-  }
-}
-  
 function spinToWinner(winnerId) {
     const winner = players[winnerId.toLowerCase()];
     if (!winner) {
@@ -1202,22 +1185,6 @@ function spinToWinner(winnerId) {
             resetAndFetchNewRound();
         }
     });
-}
-function polarToCartesian(centerX, centerY, radius, angleInDegrees) {
-    var angleInRadians = (angleInDegrees) * Math.PI / 180.0;
-    return {
-        x: centerX + (radius * Math.cos(angleInRadians)),
-        y: centerY + (radius * Math.sin(angleInRadians))
-    };
-}
-function describeArc(x, y, radius, startAngle, endAngle) {
-    if (endAngle - startAngle >= 360) endAngle = startAngle + 359.99;
-    if (endAngle <= startAngle + 0.01) endAngle = startAngle + 0.01;
-    var start = polarToCartesian(x, y, radius, endAngle);
-    var end = polarToCartesian(x, y, radius, startAngle);
-    var largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-    var d = ["M", x, y, "L", start.x, start.y, "A", radius, radius, 0, largeArcFlag, 0, end.x, end.y, "Z"].join(" ");
-    return d;
 }
 
 // === 4. Inisialisasi & Event Listeners ===
