@@ -227,8 +227,9 @@
     cursor: pointer; line-height: 1; background: none; border: none;
   }
   .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-  .balance-display, .min-display { font-size: 13px; color: #999; line-height: 1.5; }
-  .balance-display span, .min-display span { font-weight: bold; color: var(--cyan-main); }
+  .balance-display, .limits-display { font-size: 13px; color: #999; line-height: 1.5; }
+  .limits-display p { margin: 2px 0; }
+  .balance-display span, .limits-display span { font-weight: bold; color: var(--cyan-main); }
   .input-group { display: flex; gap: 10px; }
   .input-group input, .input-group select {
     background: #06060c;
@@ -396,8 +397,9 @@
           <span id="modalUsdtBalance">0</span> USDT
         </p>
       </div>
-      <div class="min-display">
-        Mins: <span>0.00005 ETH</span> / <span>0.5 USDT</span>
+      <div class="limits-display"> <p>Mins: <span>0.00005 ETH</span> / <span>0.5 USDT</span></p>
+        <p>Max Total: <span>0.00256 ETH</span> / <span>10 USDT</span></p>
+        <p>Max Bets: <span>2 per round</span></p>
       </div>
       <div class="input-group">
         <input type="number" id="betAmountInput" placeholder="Custom Amount">
@@ -500,6 +502,8 @@ let outerR = 140; // Radius luar donut
 let innerR = 80;  // Radius dalam donut
 let currentRotation = 0; // Rotasi roda saat ini
 let playersArray = [];
+let myCurrentEthDeposit = ethers.BigNumber.from(0);
+let myCurrentUsdtDeposit = ethers.BigNumber.from(0);
 
 // --- Elemen DOM ---
 const walletBtn = document.getElementById("walletBtn");
@@ -885,18 +889,37 @@ async function confirmBet() {
     confirmBetBtn.innerText = "Confirm Bet";
   }
 }
+
 async function placeBetETH(amountStr) {
   const amountWei = ethers.utils.parseEther(amountStr);
   if (amountWei.gt(rawEthBalance)) throw new Error("Insufficient ETH balance.");
   const minEth = ethers.utils.parseEther("0.00005");
   if (amountWei.lt(minEth)) throw new Error("Minimum bet is 0.00005 ETH");
+
+  // [CEK BARU] Cek batas maksimal deposit
+  const maxEth = ethers.utils.parseEther("0.00256");
+  const newTotalDeposit = myCurrentEthDeposit.add(amountWei);
+  if (newTotalDeposit.gt(maxEth)) throw new Error("Max total deposit (0.00256 ETH) exceeded.");
+  
+  // Catatan: Cek 'Max 2 bets' akan ditangani oleh kontrak dan ditangkap oleh .catch()
+  
   return faylottoContract.placeBetETH({ value: amountWei });
 }
+  
 async function placeBetUSDT(amountStr) {
   const amountUsdt = ethers.utils.parseUnits(amountStr, usdtDecimals);
   if (amountUsdt.gt(rawUsdtBalance)) throw new Error("Insufficient USDT balance.");
   const minUsdt = ethers.utils.parseUnits("0.5", usdtDecimals);
   if (amountUsdt.lt(minUsdt)) throw new Error(`Minimum bet is 0.5 USDT`);
+
+  // [CEK BARU] Cek batas maksimal deposit (10 USDT)
+  // (Kita asumsikan usdtDecimals sudah 18)
+  const maxUsdt = ethers.utils.parseUnits("10", usdtDecimals); 
+  const newTotalDeposit = myCurrentUsdtDeposit.add(amountUsdt);
+  if (newTotalDeposit.gt(maxUsdt)) throw new Error("Max total deposit (10 USDT) exceeded.");
+
+  // Catatan: Cek 'Max 2 bets' akan ditangani oleh kontrak dan ditangkap oleh .catch()
+  
   const currentAllowance = await usdtContract.allowance(userAddress, FAYLOTTO_ADDRESS);
   if (currentAllowance.lt(amountUsdt)) {
     statusText.innerText = "Need approval. Please approve in MetaMask...";
@@ -906,7 +929,6 @@ async function placeBetUSDT(amountStr) {
   }
   return faylottoContract.placeBetERC20(amountUsdt);
 }
-
 
 // ===========================================
 // === [BARU] FUNGSI-FUNGSI REFERRAL ===
@@ -1045,14 +1067,23 @@ async function updateUserBalances() {
     usdtBalance.innerText = "Error";
   }
 }
-async function updateMyDeposits() {
+
+  async function updateMyDeposits() {
     if (!faylottoContract || !currentRoundId || !userAddress) {
         myEthDeposit.innerText = "0";
         myUsdtDeposit.innerText = "0";
+        myCurrentEthDeposit = ethers.BigNumber.from(0); // Reset
+        myCurrentUsdtDeposit = ethers.BigNumber.from(0); // Reset
         return;
     }
     try {
         const deposits = await faylottoContract.getPlayerDeposits(currentRoundId, userAddress);
+        
+        // Simpan ke variabel global (BigNumber)
+        myCurrentEthDeposit = deposits.ethAmount; 
+        myCurrentUsdtDeposit = deposits.erc20Amount;
+
+        // Tampilkan di UI (String)
         myEthDeposit.innerText = parseFloat(ethers.utils.formatEther(deposits.ethAmount)).toFixed(5);
         myUsdtDeposit.innerText = parseFloat(ethers.utils.formatUnits(deposits.erc20Amount, usdtDecimals)).toFixed(2);
     } catch (err) {
@@ -1060,7 +1091,7 @@ async function updateMyDeposits() {
         myEthDeposit.innerText = "Error";
         myUsdtDeposit.innerText = "Error";
     }
-}
+  }
 
   function startVisualTimer(endTime) {
   if (visualTimer) clearInterval(visualTimer);
