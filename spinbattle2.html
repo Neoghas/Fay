@@ -1556,20 +1556,35 @@ walletBtn.addEventListener("click", () => {
         showWalletModal(); // Jika sudah konek, tampilkan modal
     }
 });
+
+  // === [PERBAIKAN BARU] ===
+const walletModalOverlay = document.getElementById("wallet-modal-overlay");
+const walletModal = document.getElementById("wallet-modal");
+const walletModalCloseBtn = document.getElementById("wallet-modal-close-btn");
+const disconnectBtn = document.getElementById("disconnectBtn");
+
+// [BARU] Fungsi khusus untuk menggambar ulang canvas
+function handleCanvasRedraw() {
+    // Cek apakah 'ctx' (konteks canvas) sudah ada
+    if (ctx) {
+        console.log("Window/Tab kembali aktif. Menggambar ulang canvas...");
+        // Paksa gambar ulang donut dengan rotasi terakhir
+        drawDonut(currentRotation);
+    }
+}
+
+// === 4. Inisialisasi & Event Listeners ===
+
+// Listener Tombol Utama
+walletBtn.addEventListener("click", () => {
+    if (!userAddress) {
+        toggleWallet(); // Jika belum konek, panggil fungsi konek
+    } else {
+        showWalletModal(); // Jika sudah konek, tampilkan modal
+    }
+});
 placeBetBtn.addEventListener("click", showBetModal);
 finalizeBtn.addEventListener("click", callFinalizeRound);
-
-// ... (setelah listener modal referral)
-claimRewardsBtn.addEventListener("click", callClaimRewards);
-
-// [BARU] Listener Modal Wallet
-walletModalCloseBtn.addEventListener("click", hideWalletModal);
-walletModalOverlay.addEventListener("click", hideWalletModal);
-disconnectBtn.addEventListener("click", disconnectWallet);
-
-// ... (setelah listener canvas hilang)
-window.addEventListener("focus", () => {
-// ...
 
 // Listener Modal Bet
 betModalCloseBtn.addEventListener("click", hideBetModal);
@@ -1582,7 +1597,7 @@ percentButtons.forEach(button => {
   });
 });
 
-// [BARU] Listener Modal Referral
+// Listener Modal Referral
 referralBtn.addEventListener("click", showReferralModal);
 referralModalCloseBtn.addEventListener("click", hideReferralModal);
 referralModalOverlay.addEventListener("click", hideReferralModal);
@@ -1590,35 +1605,22 @@ createNicknameBtn.addEventListener("click", callCreateNickname);
 setReferrerBtn.addEventListener("click", callSetReferrer);
 claimRewardsBtn.addEventListener("click", callClaimRewards);
 
-  // === [PERBAIKAN BARU] ===
-const walletModalOverlay = document.getElementById("wallet-modal-overlay");
-const walletModal = document.getElementById("wallet-modal");
-const walletModalCloseBtn = document.getElementById("wallet-modal-close-btn");
-const disconnectBtn = document.getElementById("disconnectBtn");
+// [BARU] Listener Modal Wallet
+walletModalCloseBtn.addEventListener("click", hideWalletModal);
+walletModalOverlay.addEventListener("click", hideWalletModal);
+disconnectBtn.addEventListener("click", disconnectWallet);
 
-// Buat satu fungsi khusus untuk menggambar ulang
-function handleCanvasRedraw() {
-    // Cek apakah 'ctx' (konteks canvas) sudah ada
-    if (ctx) {
-        console.log("Window/Tab kembali aktif. Menggambar ulang canvas...");
-        // Paksa gambar ulang donut dengan rotasi terakhir
-        drawDonut(currentRotation);
-    }
-}
-
-// 1. Panggil saat TAB kembali terlihat (yang lama)
+// [BARU] Perbaikan Canvas Hilang (Canvas Redraw Fix)
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === 'visible') {
         handleCanvasRedraw();
     }
 });
-
-// 2. Panggil saat JENDELA browser kembali fokus (yang baru)
 window.addEventListener("focus", () => {
     handleCanvasRedraw();
 });
 
-// === [AKHIR PERBAIKAN] ===
+// === [AKHIR DARI SEMUA EVENT LISTENER] ===
 
 </script>
 </body>
