@@ -512,11 +512,7 @@ let isSpinning = false;
 let isFinalizing = false;
 let players = {};
 let totalWeight = ethers.BigNumber.from(0);
-let ctx, cw, ch, cx, cy;
-let outerR = 140; // Radius luar donut
-let innerR = 80;  // Radius dalam donut
-let currentRotation = 0; // Rotasi roda saat ini
-let playersArray = [];
+let contractRoundLengthSeconds = 300; // (Pastikan variabel ini ada dari timer)
 let ctx, cw, ch, cx, cy;
 let outerR = 140; // Radius luar donut
 let innerR = 80;  // Radius dalam donut
@@ -548,9 +544,6 @@ const betCurrencySelect = document.getElementById("betCurrencySelect");
 const percentButtons = document.querySelectorAll(".percent-btn");
 const confirmBetBtn = document.getElementById("confirmBetBtn");
 // Roda & List
-const wheelSVG = document.getElementById("wheel-svg");
-const slicesGroup = document.getElementById("slices-group");
-const sliceTemplate = document.getElementById("slice-template");
 const betList = document.getElementById("bet-list");
 const betListPlaceholder = document.getElementById("bet-list-placeholder");
 // [BARU] Elemen DOM Referral
@@ -639,7 +632,7 @@ async function fetchAndDisplayRoundData() {
             const deposits = await faylottoContract.getPlayerDeposits(currentRoundId, playerAddress);
             addBetToState(playerAddress, deposits.ethAmount, deposits.erc20Amount, false);
         }
-        updateWheelVisuals();
+        // updateWheelVisuals(); // <-- Dihapus (addBetToState sudah memanggil rebuild)
         updateBetList();
         await updateMyDeposits();
 
@@ -739,7 +732,7 @@ function setupEventListeners() {
     faylottoContract.on("BetETH", (roundId, player, amount) => {
         if (roundId.eq(currentRoundId)) {
             addBetToState(player, amount, ethers.BigNumber.from(0), true);
-            updateWheelVisuals();
+            // updateWheelVisuals(); // Hapus (sudah dihandle oleh addBetToState)
             updateBetList();
             if (player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
@@ -747,7 +740,7 @@ function setupEventListeners() {
     faylottoContract.on("BetERC20", (roundId, player, amount) => {
         if (roundId.eq(currentRoundId)) {
             addBetToState(player, ethers.BigNumber.from(0), amount, true);
-            updateWheelVisuals();
+            // updateWheelVisuals(); // Hapus (sudah dihandle oleh addBetToState)
             updateBetList();
             if (player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
@@ -1414,38 +1407,6 @@ function spinToPlayer(targetPlayer) {
     }
   }
   requestAnimationFrame(animate);
-}
-
-function spinToWinner(winnerId) {
-    const winner = players[winnerId.toLowerCase()];
-    if (!winner) {
-        console.error("Pemenang tidak ditemukan! Mereset...");
-        resetAndFetchNewRound();
-        return;
-    }
-    const startAngle = winner.data.startAngle;
-    const endAngle = winner.data.endAngle;
-    const sliceWidth = endAngle - startAngle;
-    const targetMiddleAngle = startAngle + sliceWidth / 2;
-    const finalTargetAngle = targetMiddleAngle;
-    let currentRotation = gsap.getProperty(wheelSVG, "rotation");
-    let currentPosition = currentRotation % 360;
-    const fullSpins = 5 * 360;
-    let distanceToTarget = -finalTargetAngle - currentPosition;
-    if (distanceToTarget > 0) distanceToTarget -= 360;
-    const totalSpinAmount = fullSpins + Math.abs(distanceToTarget);
-    gsap.to(wheelSVG, {
-        duration: 6,
-        rotation: `-=${totalSpinAmount}`,
-        ease: "power3.out",
-        onComplete: () => {
-            const isWinner = (winnerId.toLowerCase() === userAddress.toLowerCase());
-            const winnerName = isWinner ? "You" : winnerId.slice(0, 6) + "...";
-            statusText.innerText = `Winner is ${winnerName}!`;
-            alert(`Pemenangnya adalah ${winnerName}!`);
-            resetAndFetchNewRound();
-        }
-    });
 }
 
 // === 4. Inisialisasi & Event Listeners ===
