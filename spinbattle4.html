@@ -463,14 +463,14 @@
     </div>
   </div>
   
-  <div class="modal-overlay" id="referral-modal-overlay"></div>
-  <div class="modal" id="referral-modal">
-    <div class="modal-header">
-      <h2>Referral System</h2>
-      <button class="modal-close-btn" id="referral-modal-close-btn">&times;</button>
-    </div>
+  <div class="wallet-container">
+    <button class="referral-btn" id="referralBtn">Referral</button> <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+  </div>
+  
+  <div class="info-popup" id="referral-popup">
+    <button class="popup-close-btn" id="referral-popup-close-btn">&times;</button>
+    
     <div class="modal-body">
-        
       <div class="ref-section">
           <h3>My Info</h3>
           <div class="ref-info">
@@ -503,11 +503,13 @@
               Total Referrals: <span id="referralCount">0</span>
           </div>
       </div>
-
     </div>
+    
     <div class="modal-footer">
       <button id="claimRewardsBtn" class="modal-btn">Claim Rewards</button>
     </div>
+  </div>
+  <div class="modal-overlay" id="wallet-modal-overlay"></div>
   </div>
 
   <script>
@@ -983,19 +985,12 @@ async function placeBetUSDT(amountStr) {
 // === [BARU] FUNGSI-FUNGSI REFERRAL ===
 // ===========================================
 
-// --- Tampilkan & Sembunyikan Modal Referral ---
-async function showReferralModal() {
-    if (!signer) return alert("Connect wallet first!");
-    
-    // Selalu ambil data terbaru saat modal dibuka
-    await fetchReferralData(); 
-    
-    referralModalOverlay.classList.add("show");
-    referralModal.classList.add("show");
+// --- Tampilkan & Sembunyikan Popup Referral ---
+function showReferralPopup() {
+    referralPopup.style.display = 'block';
 }
-function hideReferralModal() {
-  referralModalOverlay.classList.remove("show");
-  referralModal.classList.remove("show");
+function hideReferralPopup() {
+    referralPopup.style.display = 'none';
 }
 
 // --- Ambil Data Referral dari Kontrak ---
@@ -1601,25 +1596,50 @@ percentButtons.forEach(button => {
   });
 });
 
-// Listener Modal Referral
-referralBtn.addEventListener("click", showReferralModal);
-referralModalCloseBtn.addEventListener("click", hideReferralModal);
-referralModalOverlay.addEventListener("click", hideReferralModal);
-createNicknameBtn.addEventListener("click", callCreateNickname); // [PERBAIKAN] Tambah )
+// Listener Popup Referral (BUKAN MODAL)
+referralBtn.addEventListener("click", () => {
+    // Toggle popup
+    if (referralPopup.style.display === 'block') {
+        hideReferralPopup();
+    } else {
+        fetchReferralData(); // Ambil data baru setiap kali dibuka
+        showReferralPopup();
+    }
+});
+referralPopupCloseBtn.addEventListener("click", hideReferralPopup);
+// 'createNicknameBtn', 'setReferrerBtn', dan 'claimRewardsBtn'
+// HANYA didaftarkan SATU KALI di sini:
+createNicknameBtn.addEventListener("click", callCreateNickname);
 setReferrerBtn.addEventListener("click", callSetReferrer);
 claimRewardsBtn.addEventListener("click", callClaimRewards);
+
+// Listener "Klik di Luar" untuk menutup popup referral
+window.addEventListener('click', (e) => {
+    // Cek jika popup referral terbuka
+    if (referralPopup.style.display === 'block') {
+        // Cek jika klik BUKAN di dalam popup DAN BUKAN di tombol referral
+        if (!referralPopup.contains(e.target) && !referralBtn.contains(e.target)) {
+            hideReferralPopup();
+        }
+    }
+});
 
 // Listener Modal Wallet
 walletModalCloseBtn.addEventListener("click", hideWalletModal);
 walletModalOverlay.addEventListener("click", hideWalletModal);
 disconnectBtn.addEventListener("click", disconnectWallet);
 
-// [BARU] Listener untuk redraw canvas saat window aktif kembali (untuk kasus tab switch)
+// [PERBAIKAN] Perbaikan Canvas Hilang (Canvas Redraw Fix)
+// (Kedua listener ini diperlukan)
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === 'visible') {
         handleCanvasRedraw();
     }
 });
+window.addEventListener("focus", () => {
+    handleCanvasRedraw();
+});
+
 </script >
 </body>
   </html>
