@@ -775,7 +775,7 @@ async function resetAndFetchNewRound() {
     await fetchAndDisplayRoundData(); // Ambil ronde baru
 }
 
-// === FUNGSI UTAMA: Panggil Finalize dari Tombol ===
+// GANTI SELURUH FUNGSI LAMA ANDA DENGAN YANG INI
 async function callFinalizeRound() {
     if (!signer || !faylottoContract) return alert("Please connect your wallet.");
 
@@ -784,9 +784,38 @@ async function callFinalizeRound() {
 
     try {
         const tx = await faylottoContract.finalizeRound(currentRoundId);
-        statusText.innerText = "Finalizing... awaiting confirmation.";
-        await tx.wait();
-        console.log("Finalize transaction confirmed.");
+        statusText.innerText = "Finalizing... awaiting confirmation."; // <-- Teks "Stuk" Anda
+        
+        // [PERBAIKAN DIMULAI]
+        // Kita tunggu receipt (tanda terima) transaksi
+        const receipt = await tx.wait(); 
+        console.log("Finalize transaction confirmed.", receipt);
+
+        // Daripada menunggu listener, kita cari event 'RoundFinalized' di dalam receipt
+        const event = receipt.events?.find(e => e.event === 'RoundFinalized');
+        
+        if (event) {
+            // Kita temukan event-nya!
+            // Ambil data pemenang dari event
+            const [roundId, winner] = event.args; 
+            console.log(`Event RoundFinalized DITEMUKAN dari receipt: Round ${roundId}, Winner ${winner}`);
+            
+            // Panggil handleRoundFinalized SECARA MANUAL
+            // Pengecekan 'isSpinning' akan mencegah putaran ganda (jika listener .on() juga terpicu)
+            if (!isSpinning) {
+                handleRoundFinalized(roundId, winner);
+            }
+        } else {
+            // Ini SANGAT aneh, tx sukses tapi event tidak ada.
+            console.error("Tx sukses, tapi event RoundFinalized tidak ditemukan di receipt!");
+            alert("Finalization success, but event not found. Resetting...");
+            // Paksa reset
+            if (!isSpinning) {
+                resetAndFetchNewRound();
+            }
+        }
+        // [PERBAIKAN SELESAI]
+        
     } catch (err) {
         console.error("Finalize call failed:", err);
         alert(err.reason || "Failed to finalize. (Perhaps it's not time yet, or someone else just called it)");
