@@ -1028,6 +1028,86 @@ async function saveEditComment(wid, cid) {
     }
 }
 
+// [WAJIB ADA] Fungsi untuk mengambil dan merender komentar
+async function fetchAndRenderComments(winnerId) {
+    const terminalDiv = document.getElementById(`terminal-${winnerId}`);
+    if (!terminalDiv) return;
+
+    const commentsListDiv = terminalDiv.querySelector('.comments-list');
+    if (!commentsListDiv) return;
+
+    commentsListDiv.innerHTML = "> LOADING NEURAL LOGS...";
+
+    // Gunakan kontrak yang tersedia (lebih baik yang read-only jika belum login)
+    let contractInstance = faylottoContract;
+    if (!contractInstance) {
+       if (!provider) provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
+       contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    }
+
+    try {
+        // Ambil semua komentar untuk pemenang ini dari kontrak
+        const comments = await contractInstance.getAllCommentsForWinner(winnerId);
+        
+        if (comments.length === 0) {
+            commentsListDiv.innerHTML = "> NO TRANSMISSIONS FOUND.";
+            return;
+        }
+
+        commentsListDiv.innerHTML = ""; // Bersihkan teks loading
+        
+        // Loop semua komentar dan tampilkan
+        for (let i = 0; i < comments.length; i++) {
+            const c = comments[i];
+            const user = c.user;
+            const text = c.text;
+            // Konversi timestamp ke waktu lokal
+            const time = new Date(c.timestamp.toNumber() * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " UTC";
+            
+            // Cek apakah ini komentar saya (untuk menampilkan tombol EDIT)
+            const isMyComment = (userAddress && user.toLowerCase() === userAddress.toLowerCase());
+            
+            // Coba ambil nickname komentator (jika ada)
+            let nickname = null;
+            try { nickname = await contractInstance.nicknames(user); } catch (e) {}
+            const displayName = nickname || user.slice(0,6) + '...';
+
+            const commentDiv = document.createElement('div');
+            commentDiv.className = "comment-log";
+            commentDiv.id = `comment-${winnerId}-${i}`;
+            
+            // Render HTML komentar individu
+            commentDiv.innerHTML = `
+                <div class="log-meta">
+                    <span class="log-nickname">${displayName}</span> [${time}] <br/>
+                    <span class="log-wallet">(${user.slice(0,6)}...${user.slice(-4)})</span>
+                </div>
+                <div class="log-message" id="msg-${winnerId}-${i}">${text}</div>
+                
+                ${isMyComment ? `
+                    <div class="edit-actions" style="display:none;" id="edit-actions-${winnerId}-${i}">
+                        <textarea class="terminal-input" id="edit-input-${winnerId}-${i}" rows="2" style="margin-top:5px;">${text}</textarea>
+                        <div style="display:flex; gap:5px; margin-top:5px;">
+                            <button class="terminal-btn" onclick="saveEditComment(${winnerId}, ${i})">[ SAVE ]</button>
+                            <button class="terminal-btn" style="color:#ff5555;border-color:#ff5555" onclick="cancelEditComment(${winnerId}, ${i})">[ CANCEL ]</button>
+                        </div>
+                    </div>
+                    <button class="terminal-btn" id="edit-btn-${winnerId}-${i}" onclick="showEditComment(${winnerId}, ${i})" style="opacity:0.7; margin-top:5px;">[ EDIT LOG ]</button>
+                ` : ''}
+            `;
+            commentsListDiv.appendChild(commentDiv);
+        }
+        
+        // Update juga jumlah komentar di tombol 💬
+        const commBtn = document.getElementById(`comm-btn-${winnerId}`);
+        if(commBtn) commBtn.innerText = `💬 (${comments.length})`;
+
+    } catch (err) {
+        console.error("Error fetching comments:", err);
+        commentsListDiv.innerHTML = "> ERROR: SIGNAL LOST.";
+    }
+}
+    
     function toggleComments(winnerId, winnerAddr) {
     const terminal = document.getElementById(`terminal-${winnerId}`);
     if (terminal.style.display === 'none') {
