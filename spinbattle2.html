@@ -504,7 +504,11 @@ body {
     </div>
   </div>
     <script>
-      const USDT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2"; 
+      // ===========================================
+// === 1. KONFIGURASI KONTRAK ===
+// ===========================================
+// ⚠️ GANTI INI DENGAN ALAMAT KONTRAK ANDA DI SEPOLIA
+const USDT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2"; 
 const FAYLOTTO_ADDRESS = "0xcB1262c9a322dD3191aeA92077fE65A59c71e0a7"; // Alamat kontrak baru Anda
 // ===========================================
 
@@ -519,7 +523,7 @@ const FAYLOTTO_ABI = [{"inputs":[{"internalType":"address","name":"_erc20Token",
 // --- Variabel Global ---
 let provider, signer, userAddress;
 let usdtContract, faylottoContract;
-let rawEthBalance, rawUsdtBalance, usdtDecimals = 18; // [PERBAIKAN] Ganti ke 18
+let rawEthBalance, rawUsdtBalance, usdtDecimals = 18; // [PERBAIKAN] Default 18
 let currentRoundId;
 let currentRoundEndTime = 0;
 let visualTimer = null;
@@ -564,7 +568,7 @@ const confirmBetBtn = document.getElementById("confirmBetBtn");
 const betList = document.getElementById("bet-list");
 const betListPlaceholder = document.getElementById("bet-list-placeholder");
 // Elemen DOM Referral (sekarang inline)
-const referralSection = document.getElementById("referral-section"); // [BARU] Tambah ID ini di HTML
+const referralSection = document.getElementById("referral-section"); 
 const myNickname = document.getElementById("myNickname");
 const myReferrer = document.getElementById("myReferrer");
 const nicknameInput = document.getElementById("nicknameInput");
@@ -611,7 +615,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     // Panggil fetchAndDisplayRoundData di awal
-    // agar timer/status ronde tampil SEBELUM wallet konek
     fetchAndDisplayRoundData();
     fetchAndDisplayWinners(); // Tampilkan pemenang sebelumnya
 });
@@ -629,10 +632,9 @@ async function toggleWallet() {
       signer = provider.getSigner();
       userAddress = await signer.getAddress();
 
-      // [BARU] Cek jaringan (Ganti 84532 dengan 11155111 jika Anda kembali ke Sepolia)
       const network = await provider.getNetwork();
-      if (network.chainId !== 84532 && network.chainId !== 84532) { // Izinkan Base Sepolia atau Sepolia
-          throw new Error("Please switch to Sepolia Base Testnet network.");
+      if (network.chainId !== 84532 && network.chainId !== 11155111) { // Izinkan Base Sepolia atau Sepolia
+          throw new Error("Please switch to Base Sepolia or Sepolia network.");
       }
       console.log("Connected to network:", network.name);
 
@@ -643,11 +645,10 @@ async function toggleWallet() {
       walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
       
       await updateUserBalances();
-      // Panggil ulang fetchAndDisplayRoundData untuk mengaktifkan tombol bet
       await fetchAndDisplayRoundData(); 
       await fetchAndDisplayWinners();
-      await fetchReferralData(); // [PERBAIKAN] Update referral inline
-      referralSection.style.display = "block"; // [BARU] Tampilkan section referral setelah connect
+      await fetchReferralData(); 
+      referralSection.style.display = "block"; // Tampilkan section referral
       setupEventListeners(); // Pasang listener SETELAH 'signer' ada
 
       console.log("Wallet connected successfully:", userAddress);
@@ -663,28 +664,25 @@ async function toggleWallet() {
 // === FUNGSI UTAMA: Ambil Data Ronde & Mulai Timer ===
 async function fetchAndDisplayRoundData() {
     
+    let contractInstance = faylottoContract;
     // Buat provider read-only jika belum ada (bahkan sebelum konek)
     if (!provider) {
-        // Ganti RPC jika perlu. 
-        // 11155111 = Sepolia | 84532 = Base Sepolia
         provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org"); 
     }
-    
     // Buat kontrak read-only jika belum ada (atau jika user disconnect)
-    if (!faylottoContract || !signer) {
-        faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    if (!contractInstance) {
+        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     }
     
     try {
         statusText.innerText = "Syncing round data...";
-        currentRoundId = await faylottoContract.currentRoundId();
-        const roundInfo = await faylottoContract.getRoundBasic(currentRoundId);
+        currentRoundId = await contractInstance.currentRoundId();
+        const roundInfo = await contractInstance.getRoundBasic(currentRoundId);
         
-        // Reset dan ambil data pemain
         resetRoundUI(); 
-        const playersList = await faylottoContract.getRoundPlayers(currentRoundId);
+        const playersList = await contractInstance.getRoundPlayers(currentRoundId);
         for (const playerAddress of playersList) {
-            const deposits = await faylottoContract.getPlayerDeposits(currentRoundId, playerAddress);
+            const deposits = await contractInstance.getPlayerDeposits(currentRoundId, playerAddress);
             addBetToState(playerAddress, deposits.ethAmount, deposits.erc20Amount, false);
         }
         updateBetList();
@@ -719,27 +717,32 @@ async function fetchAndDisplayRoundData() {
 // === FUNGSI UTAMA: Ambil Data Pemenang ===
 async function fetchAndDisplayWinners() {
     
-    if (!faylottoContract || !signer) {
+    let contractInstance = faylottoContract;
+    if (!contractInstance) {
        if (!provider) provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
-       faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+       contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     }
     
     try {
         winnerList.innerHTML = "";
-        const winnersArray = await faylottoContract.getWinners(10); 
+        const winnersArray = await contractInstance.getWinners(10); 
         
         if (winnersArray.length === 0) {
             winnerList.appendChild(winnerListPlaceholder);
             return;
         }
 
-        // [PERBAIKAN] Ambil desimal USDT SEBELUM loop
         let usdtDecimalsForWinners = 18; // Default
-        if (usdtContract) {
-            usdtDecimalsForWinners = await usdtContract.decimals();
-        } else if (provider) {
-            const tempUsdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
-            usdtDecimalsForWinners = await tempUsdtContract.decimals();
+        try {
+            // Coba ambil desimal dari kontrak yang sudah terhubung jika ada
+            if (usdtContract) {
+                usdtDecimalsForWinners = await usdtContract.decimals();
+            } else if (provider) { // Jika tidak, buat instance read-only
+                const tempUsdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
+                usdtDecimalsForWinners = await tempUsdtContract.decimals();
+            }
+        } catch (e) {
+            console.warn("Could not fetch USDT decimals for winner list, defaulting to 18.");
         }
 
         for (const winner of winnersArray) {
@@ -776,10 +779,10 @@ async function fetchAndDisplayWinners() {
 
 // === FUNGSI UTAMA: Memulai Event Listener ===
 function setupEventListeners() {
-    if (!faylottoContract || !signer) return; // Pastikan signer ada
-    faylottoContract.removeAllListeners(); // Hapus listener lama (jika ada)
+    if (!faylottoContract || !signer) return; 
+    faylottoContract.removeAllListeners(); 
 
-    // [PERBAIKAN] Gunakan 'faylottoContract' (yang sudah terhubung dgn signer)
+    // Gunakan 'faylottoContract' (yang sudah terhubung dgn signer)
     faylottoContract.on("BetETH", (roundId, player, amount) => {
         if (roundId.eq(currentRoundId)) {
             addBetToState(player, amount, ethers.BigNumber.from(0), true);
@@ -795,9 +798,9 @@ function setupEventListeners() {
         }
     });
     
-    // [PERBAIKAN] Kita TETAP butuh listener ini
-    faylottoContract.on("RoundFinalized", (roundId, winner, rewardETH, rewardERC20) => {
-        console.log("📡 Event RoundFinalized diterima:", roundId.toString(), winner);
+    // [PERBAIKAN] Dengar 'WinnerRecorded' BUKAN 'RoundFinalized'
+    faylottoContract.on("WinnerRecorded", (winnerId, roundId, winner, rewardETH, rewardERC20, timestamp) => {
+        console.log("📡 Event WinnerRecorded diterima:", roundId.toString(), winner);
         if (roundId.eq(currentRoundId)) {
             // Panggil handler HANYA JIKA 'isSpinning' belum di-set
             if (!isSpinning) {
@@ -866,7 +869,7 @@ async function callFinalizeRound() {
         const receipt = await tx.wait(); 
         console.log("Finalize transaction confirmed.", receipt);
 
-        // [PERBAIKAN] Cari event 'WinnerRecorded', BUKAN 'RoundFinalized'
+        // [PERBAIKAN] Cari event 'WinnerRecorded'
         const event = receipt.events?.find(e => e.event === 'WinnerRecorded');
         
         if (event) {
@@ -1009,7 +1012,7 @@ async function placeBetUSDT(amountStr) {
 // === FUNGSI-FUNGSI REFERRAL ===
 // ===========================================
 
-// --- Ambil Data Referral dari Kontrak ---
+// --- [PERBAIKAN] Fungsi Referral sekarang Inline (Bukan Modal) ---
 async function fetchReferralData() {
     if (!faylottoContract || !userAddress) return;
     try {
@@ -1028,22 +1031,19 @@ async function fetchReferralData() {
 
 // --- Update UI Referral (sekarang inline) ---
 function updateReferralUI(nick, referrer, rewards, count) {
-    // 1. Update Info Saya
     myNickname.innerText = nick || "-";
     if (referrer === ethers.constants.AddressZero) {
         myReferrer.innerText = "-";
-        setReferrerSection.style.display = "block"; // Tampilkan section
+        setReferrerSection.style.display = "block"; 
     } else {
         myReferrer.innerText = referrer.slice(0, 6) + "..." + referrer.slice(-4);
-        setReferrerSection.style.display = "none"; // Sembunyikan section
+        setReferrerSection.style.display = "none"; 
     }
 
-    // 2. Update Rewards Saya
     ethRewards.innerText = parseFloat(ethers.utils.formatEther(rewards.ethReward)).toFixed(6);
     usdtRewards.innerText = parseFloat(ethers.utils.formatUnits(rewards.erc20Reward, usdtDecimals)).toFixed(2);
     referralCount.innerText = count.toString();
     
-    // 3. Atur Tombol Claim
     if (rewards.ethReward.gt(0) || rewards.erc20Reward.gt(0)) {
         claimRewardsBtn.disabled = false;
     } else {
@@ -1083,7 +1083,7 @@ async function callSetReferrer() {
         const tx = await faylottoContract.setReferralByNickname(refNick);
         await tx.wait();
         alert("Referrer set successfully!");
-        await fetchReferralData(); // Refresh UI (akan menyembunyikan section ini)
+        await fetchReferralData(); 
     } catch (err) {
         console.error("Error setting referrer:", err.message);
         alert(err.reason || "Failed to set referrer. (Nickname might not exist, or you already have one)");
@@ -1118,7 +1118,6 @@ async function updateUserBalances() {
     rawEthBalance = await provider.getBalance(userAddress);
     ethBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
     
-    // [PERBAIKAN] Selalu ambil desimal dari kontrak
     usdtDecimals = await usdtContract.decimals(); 
     
     rawUsdtBalance = await usdtContract.balanceOf(userAddress);
@@ -1225,7 +1224,7 @@ function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
       eth: ethers.BigNumber.from(0),
       usdt: ethers.BigNumber.from(0),
       color: playerColor, 
-      data: { startAngle: 0, endAngle: 0 } 
+      data: { startAngle: 0, endAngle: 0 } // Ini tidak terpakai, tapi tidak apa-apa
     };
   }
   
@@ -1246,7 +1245,7 @@ function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
       totalWeight = totalWeight.add(players[pid].weight);
   }
 
-  rebuildPlayersArrayAndDraw();
+  rebuildPlayersArrayAndDraw(); // Panggil fungsi baru
 }
   
   
@@ -1278,7 +1277,7 @@ function updateBetList() {
 
 // ======= Draw donut on canvas =======
     function drawDonut(rotationDeg = currentRotation) {
-      if (!ctx) return; // Cek jika ctx belum siap (saat load)
+      if (!ctx) return; 
       
       ctx.clearRect(0,0,cw,ch);
       ctx.save();
@@ -1312,7 +1311,7 @@ function updateBetList() {
         ctx.restore();
         // center label
         ctx.fillStyle = '#ffffff';
-        ctx.font = '14px Ubuntu'; // Ganti ke Ubuntu (sudah di-load)
+        ctx.font = '14px Ubuntu'; 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('No bets yet', cx, cy);
@@ -1354,7 +1353,7 @@ function updateBetList() {
 
       // labels (address short) along middle of sector
       ctx.fillStyle = '#fff';
-      ctx.font = '12px Ubuntu'; // Ganti ke Ubuntu
+      ctx.font = '12px Ubuntu'; 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       for (let i=0;i<playersArray.length;i++){
@@ -1416,18 +1415,18 @@ function rebuildPlayersArrayAndDraw() {
     // Hitung sudut untuk canvas (dalam radian)
     let currentAngle = 0;
     // [PERBAIKAN] Total bobot sekarang hanyalah jumlah pemain
-    const totalW = ethers.BigNumber.from(playersArray.length); 
+    const totalPlayers = playersArray.length;
+    if (totalPlayers === 0) {
+        drawDonut(); // Gambar roda kosong jika tidak ada pemain
+        return;
+    }
+    
+    // [PERBAIKAN] Sudut yang sama untuk setiap pemain
+    const anglePerPlayer = (Math.PI * 2) / totalPlayers; 
     
     for (const p of playersArray) {
         p.startAngle = currentAngle;
-        let percentage = 0;
-        if (totalW.gt(0)) {
-            // (1 / total)
-            percentage = p.weight.mul(1000000).div(totalW).toNumber() / 1000000;
-        }
-        // Sudut dalam Radian (Math.PI * 2 = 360 derajat)
-        // [PERBAIKAN] Pastikan potongan sama besar
-        p.endAngle = currentAngle + (Math.PI * 2 / playersArray.length);
+        p.endAngle = currentAngle + anglePerPlayer;
         currentAngle = p.endAngle;
     }
     
@@ -1472,7 +1471,6 @@ function spinToPlayer(targetPlayer) {
       return;
   }
   
-  // Hapus 'if (isSpinning) return;'
   // 'handleRoundFinalized' sudah menangani penguncian 'isSpinning'
 
   // hitung sudut tengah slice (dalam radian)
@@ -1550,6 +1548,11 @@ function disconnectWallet() {
     winnerList.innerHTML = "";
     winnerList.appendChild(winnerListPlaceholder);
 
+    // Reset info di modal
+    walletAddress.innerText = "-";
+    ethBalance.innerText = "0";
+    usdtBalance.innerText = "0";
+    
     // [PERBAIKAN] Panggil ulang fetch data agar ronde tetap tampil
     fetchAndDisplayRoundData();
     fetchAndDisplayWinners();
@@ -1588,14 +1591,15 @@ percentButtons.forEach(button => {
 });
 
 // Listener Referral (sekarang inline, tanpa modal)
+// (Kita tidak perlu listener 'referralBtn' karena section-nya permanen)
 createNicknameBtn.addEventListener("click", callCreateNickname);
 setReferrerBtn.addEventListener("click", callSetReferrer);
 claimRewardsBtn.addEventListener("click", callClaimRewards);
 
-// Listener Modal Wallet
+// [BARU] Listener Modal Wallet
 walletModalCloseBtn.addEventListener("click", hideWalletModal);
 walletModalOverlay.addEventListener("click", hideWalletModal);
-disconnectBtn.addEventListener("click", disconnectWallet);
+disconnectBtn.addEventListener("click", disconnectBtn);
 
 // [BARU] Perbaikan Canvas Hilang (Canvas Redraw Fix)
 document.addEventListener("visibilitychange", () => {
@@ -1606,6 +1610,8 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("focus", () => {
     handleCanvasRedraw();
 });
-    </script>
+
+// === [AKHIR DARI SEMUA EVENT LISTENER] ===
+</script>
 </body>
   </html>
