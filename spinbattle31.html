@@ -1790,124 +1790,120 @@ function updateBetList() {
 
 // ======= Draw donut on canvas =======
     function drawDonut(rotationDeg = currentRotation) {
-      ctx.clearRect(0,0,cw,ch);
-      // apply rotation by translating and rotating context
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(rotationDeg * Math.PI / 180);
-      ctx.translate(-cx, -cy);
+  if (!ctx) return;
+  ctx.clearRect(0, 0, cw, ch);
+  
+  ctx.save(); // Simpan state awal
+  ctx.translate(cx, cy);
+  ctx.rotate(rotationDeg * Math.PI / 180);
+  ctx.translate(-cx, -cy);
 
-      // background circle
-      ctx.beginPath();
-      ctx.arc(cx, cy, outerR + 6, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(255,255,255,0.01)';
-      ctx.fill();
+  // Background circle selalu digambar
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR + 6, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.01)';
+  ctx.fill();
 
-      if (!playersArray || playersArray.length === 0) {
-        // draw empty donut
-        const gradient = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-        gradient.addColorStop(0, '#ff00e6');    // Tepi dalam (Terang - var(--pink-main))
-        gradient.addColorStop(0.7, '#6200ff');  // Tengah (Ungu - var(--purple-main))
-        gradient.addColorStop(1, '#0b0b12');    // Tepi luar (Sangat Gelap - var(--bg-dark-1))
-        
-        ctx.beginPath();
-        ctx.arc(cx, cy, outerR, 0, Math.PI*2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-        // inner hole
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(cx, cy, innerR, 0, Math.PI*2);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.restore();
-        // center label
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '14px Ubuntu'; // [PERBAIKAN] Ganti ke Ubuntu (sudah di-load)
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('No bets yet', cx, cy);
-        return;
-      }
+  if (!playersArray || playersArray.length === 0) {
+    // === RODA KOSONG ===
+    const gradient = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
+    gradient.addColorStop(0, '#ff00e6');
+    gradient.addColorStop(0.7, '#6200ff');
+    gradient.addColorStop(1, '#0b0b12');
 
-      // draw sectors
-      for (let i=0;i<playersArray.length;i++){
-        const p = playersArray[i];
-        const sa = p.startAngle;
-        const ea = p.endAngle;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, outerR, sa, ea, false);
-        ctx.closePath();
-        ctx.fillStyle = p.color;
-        ctx.fill();
-      }
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
 
-      // inner circle to make donut
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.arc(cx, cy, innerR, 0, Math.PI*2);
-      ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
+    // Lubang tengah
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
 
-      // draw separators (thin lines)
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-      ctx.lineWidth = 1;
-      for (let i=0;i<playersArray.length;i++){
-        const p = playersArray[i];
-        const angle = (p.startAngle + p.endAngle) / 2;
-        // draw radial line at startAngle
-        ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(p.startAngle) * (innerR+2), cy + Math.sin(p.startAngle) * (innerR+2));
-        ctx.lineTo(cx + Math.cos(p.startAngle) * outerR, cy + Math.sin(p.startAngle) * outerR);
-        ctx.stroke();
-      }
+    // Teks label - GAMBAR INI SEBELUM RESTORE
+    // Karena kita ingin teks ikut berputar atau setidaknya berada di tengah relatif terhadap donat
+    // Namun, biasanya teks label "No bets yet" tidak perlu ikut berputar.
+    // Jika ingin teks TETAP DIAM, panggil restore() SEBELUM menggambar teks.
+    // TAPI, masalah Anda mungkin karena teks tergambar di koordinat yang salah setelah restore.
+    // Mari kita coba gambar teks SETELAH restore agar posisinya absolut di tengah kanvas.
+    
+    ctx.restore(); // Restore state agar koordinat kembali normal (tanpa rotasi)
 
-      // labels (address short) along middle of sector
-      ctx.fillStyle = '#fff';
-      ctx.font = '12px Ubuntu'; // [PERBAIKAN] Ganti ke Ubuntu
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      for (let i=0;i<playersArray.length;i++){
-        const p = playersArray[i];
-        const mid = (p.startAngle + p.endAngle) / 2;
-        const rlabel = (outerR + innerR) / 2;
-        const lx = cx + Math.cos(mid) * rlabel;
-        const ly = cy + Math.sin(mid) * rlabel;
-        const short = p.addr.slice(0,6);
-        ctx.fillStyle = 'rgba(0,12,20,0.85)';
-        // draw small pill background for readability
-        ctx.beginPath();
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.roundRect = ctx.roundRect || function(x,y,w,h,r){ if (w<2*r) r=w/2; if (h<2*r) r=h/2; ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); ctx.fill(); };
-        // approximate pill
-        const text = short;
-        ctx.font = '12px Ubuntu';
-        const tw = ctx.measureText(text).width + 8;
-        // draw pill in two colors (hybrid effect)
-        ctx.fillStyle = 'rgba(0,0,0,0.45)';
-        ctx.roundRect(lx - tw/2, ly - 12/2, tw, 16, 8);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(text, lx, ly);
-      }
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px Ubuntu';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No bets yet', cx, cy);
+    return;
+  }
 
-      ctx.restore();
+  // === RODA ADA PEMAIN ===
+  for (let i = 0; i < playersArray.length; i++) {
+    const p = playersArray[i];
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, outerR, p.startAngle, p.endAngle, false);
+    ctx.closePath();
+    ctx.fillStyle = p.color;
+    ctx.fill();
+  }
+
+  // Lubang tengah
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  // Garis pemisah
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < playersArray.length; i++) {
+    const p = playersArray[i];
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(p.startAngle) * (innerR + 2), cy + Math.sin(p.startAngle) * (innerR + 2));
+    ctx.lineTo(cx + Math.cos(p.startAngle) * outerR, cy + Math.sin(p.startAngle) * outerR);
+    ctx.stroke();
+  }
+
+  // Label pemain
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '12px Ubuntu';
+  for (let i = 0; i < playersArray.length; i++) {
+    const p = playersArray[i];
+    const mid = (p.startAngle + p.endAngle) / 2;
+    const rlabel = (outerR + innerR) / 2;
+    const lx = cx + Math.cos(mid) * rlabel;
+    const ly = cy + Math.sin(mid) * rlabel;
+    const short = p.addr.slice(0, 6);
+
+    const tw = ctx.measureText(short).width + 8;
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    // Pastikan polyfill roundRect sudah ada atau gunakan arcTo
+    if (ctx.roundRect) {
+        ctx.roundRect(lx - tw / 2, ly - 12 / 2, tw, 16, 8);
+    } else {
+        // Fallback manual jika polyfill belum jalan
+        const x = lx - tw / 2, y = ly - 12 / 2, w = tw, h = 16, r = 8;
+        ctx.moveTo(x+r, y);
+        ctx.arcTo(x+w, y, x+w, y+h, r);
+        ctx.arcTo(x+w, y+h, x, y+h, r);
+        ctx.arcTo(x, y+h, x, y, r);
+        ctx.arcTo(x, y, x+w, y, r);
     }
+    ctx.fill();
 
-    // polyfill for roundRect if needed
-    if (!CanvasRenderingContext2D.prototype.roundRect) {
-      CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
-        if (w<2*r) r=w/2; if (h<2*r) r=h/2;
-        this.beginPath();
-        this.moveTo(x+r,y);
-        this.arcTo(x+w,y,x+w,y+h,r);
-        this.arcTo(x+w,y+h,x,y+h,r);
-        this.arcTo(x,y+h,x,y,r);
-        this.arcTo(x,y,x+w,y,r);
-        this.closePath();
-        this.fill();
-      };
-        }
+    ctx.fillStyle = '#fff';
+    ctx.fillText(short, lx, ly);
+  }
+
+  ctx.restore(); // Restore state akhir jika ada pemain
+    }
 
 // [BARU] Fungsi "Bridge"
 function rebuildPlayersArrayAndDraw() {
