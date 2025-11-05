@@ -546,6 +546,10 @@ let currentRotation = 0; // Rotasi roda saat ini
 let playersArray = [];
 let myCurrentEthDeposit = ethers.BigNumber.from(0);
 let myCurrentUsdtDeposit = ethers.BigNumber.from(0);
+    
+let faylottoContract;       // koneksi kontrak Solidity (ethers.js)
+let signer;                 // wallet user yang terhubung
+let pendingWinner = null;   // pemenang yang sedang di-spin
 
 // --- Elemen DOM ---
 const walletBtn = document.getElementById("walletBtn");
@@ -781,11 +785,28 @@ function setupEventListeners() {
         }
     });
 
-    faylottoContract.on("RoundFinalized", (roundId, winner, rewardETH, rewardERC20) => {
-        if (roundId.eq(currentRoundId)) {
-            handleRoundFinalized(roundId, winner);
-        }
-    });
+    // 📡 EVENT LISTENER UNTUK ROUND FINALIZED
+faylottoContract.on("RoundFinalized", async (roundId, winner, rewardETH, rewardERC20) => {
+  console.log("📡 Event RoundFinalized diterima:", roundId.toString(), winner);
+
+  // ✅ Pastikan ini ronde yang sedang aktif
+  if (!currentRoundId || !roundId.eq(currentRoundId)) {
+    console.warn("⚠️ Event bukan untuk round aktif. Diabaikan.");
+    return;
+  }
+
+  // 🚫 Hindari pemanggilan ganda saat sedang spinning
+  if (isSpinning || isFinalizing) {
+    console.warn("⚙️ Sudah dalam proses finalisasi, abaikan event duplikat.");
+    return;
+  }
+
+  try {
+    await handleRoundFinalized(roundId, winner);
+  } catch (err) {
+    console.error("❌ Error di handleRoundFinalized:", err);
+  }
+});
     
     // [BARU] Event listener untuk update UI referral
     faylottoContract.on("NicknameCreated", (user) => {
@@ -797,26 +818,52 @@ function setupEventListeners() {
 }
 
 // === FUNGSI UTAMA: Handle Finalisasi ===
-async function handleRoundFinalized(roundId, winner) {
-    if (isSpinning) return;
-    isSpinning = true;
-    isFinalizing = true;
-    
-    // [PERBAIKAN DIMULAI] Tambahkan baris-baris yang hilang ini:
-    placeBetBtn.disabled = true;
-    placeBetBtn.style.display = "none";
-    finalizeBtn.style.display = "none";
-    if (visualTimer) clearInterval(visualTimer);
-    timerText.innerText = "ROUND ENDED";
-    // [PERBAIKAN SELESAI]
+// 🌀 EVENT HANDLER UNTUK ROUND FINALIZED (sinkron dengan animasi wheel)
+async function handleRoundFinalized(roundId, winnerAddr) {
+  if (isSpinning) return;
+  isSpinning = true;
+  isFinalizing = true;
 
-    statusText.innerText = "Picking a winner...";
+  // 🔒 Matikan interaksi selama proses
+  placeBetBtn.disabled = true;
+  placeBetBtn.style.display = "none";
+  finalizeBtn.style.display = "none";
+  if (visualTimer) clearInterval(visualTimer);
+  timerText.innerText = "ROUND ENDED";
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Temukan objek player dari array
-    const targetPlayer = playersArray.find(p => p.addr.toLowerCase() === winner.toLowerCase());
-    spinToPlayer(targetPlayer); 
+  statusText.innerText = "Picking a winner...";
+
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // 🎯 Temukan player pemenang di array
+  const winnerPlayer = playersArray.find(
+    p => p.addr.toLowerCase() === winnerAddr.toLowerCase()
+  );
+
+  if (!winnerPlayer) {
+    console.error("⚠️ Winner not found in playersArray!");
+    statusText.innerText = "Winner not found. Reloading...";
+    await resetAndFetchNewRound();
+    isSpinning = false;
+    isFinalizing = false;
+    return;
+  }
+
+  statusText.innerText = "Spinning the wheel...";
+  
+  // 🎡 Jalankan animasi spin
+  await spinToPlayer(winnerAddr);
+
+  // ✨ Setelah selesai
+  statusText.innerText = "🎉 Winner selected!";
+  highlightWinner(playersArray.findIndex(p => p.addr.toLowerCase() === winnerAddr.toLowerCase()));
+
+  setTimeout(async () => {
+    alert(`🎉 Round ${roundId} finished!\nWinner: ${winnerAddr.slice(0, 6)}...${winnerAddr.slice(-4)}`);
+    await resetAndFetchNewRound();
+    isSpinning = false;
+    isFinalizing = false;
+  }, 1200);
 }
   
 // === FUNGSI UTAMA: Reset & Ambil Ronde Baru ===
@@ -1467,69 +1514,52 @@ function rebuildPlayersArrayAndDraw() {
     }
 
 // ======= Spin animation =======
-function spinToPlayer(targetPlayer) {
-  if (!targetPlayer) {
-      console.error("Target spin tidak ditemukan!");
-      // Jika target tidak ada, langsung reset
-      resetAndFetchNewRound();
-      return;
-  }
+async function spinToPlayer(winnerAddress) {
+  if (!winnerAddress || playersArray.length === 0) return;
 
-  // === [PERBAIKAN BUG] ===
-  // Kita hapus 'if (isSpinning) return;' dan 'isSpinning = true;' dari sini.
-  // Fungsi 'handleRoundFinalized' sudah menangani penguncian 'isSpinning'.
-  // === [AKHIR PERBAIKAN] ===
+  const canvas = document.getElementById('donutCanvas');
+  const ctx = canvas.getContext('2d');
+  const totalSectors = playersArray.length;
+  const winnerIndex = playersArray.findIndex(
+    p => p.addr.toLowerCase() === winnerAddress.toLowerCase()
+  );
+  if (winnerIndex === -1) return;
 
-  // hitung sudut tengah slice (dalam radian)
-  const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
-  // Ubah ke derajat. (270 deg = jam 12/atas)
-  const midDeg = (midRad * 180 / Math.PI);
+  // 🔹 Bagian ini menentukan berapa banyak putaran
+  const spins = 8 + Math.random() * 2; // 8–10 kali putaran penuh
 
-  // Kita ingin 'midDeg' berakhir di ATAS (yaitu 270 derajat)
-  const targetRotationDeg = 270 - midDeg;
-  
-  // === [LOGIKA DURASI ACAK ANDA] ===
-  // Durasi acak antara 30.000ms (30 detik) dan 40.000ms (40 detik)
-  const duration = Math.floor(Math.random() * (40000 - 30000 + 1)) + 30000;
-  // Buat jumlah putaran dinamis
-  const spins = Math.floor(duration / 1200); 
-  // === [AKHIR LOGIKA DURASI] ===
+  // 🔹 Hitung sudut akhir agar berhenti tepat di pemenang
+  const winnerMidAngle = (playersArray[winnerIndex].startAngle + playersArray[winnerIndex].endAngle) / 2;
+  const finalAngle = (Math.PI * 2 * spins) - winnerMidAngle + Math.PI / 2;
 
-  // Rotasi akhir = putaran penuh + rotasi target
-  const finalRotation = (spins * 360) + targetRotationDeg;
-  
-  const startRotation = currentRotation; // Rotasi awal
+  // 🔹 Durasi spin acak antara 10–15 detik
+  const spinDuration = 10000 + Math.random() * 5000;
   const startTime = performance.now();
 
+  // 🔹 Di sinilah animasi rotasi sebenarnya terjadi
   function animate(now) {
-    const t = Math.min(1, (now - startTime) / duration);
-    // easing (easeOutQuart)
-    const eased = 1 - Math.pow(1 - t, 4);
-    
-    // Hitung total jarak rotasi yang harus ditempuh
-    let totalSpinDistance = finalRotation - (startRotation % 360);
-    // Pastikan berputar ke arah yang benar dan selalu positif
-    while(totalSpinDistance <= 0) totalSpinDistance += 360; 
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / spinDuration, 1);
 
-    currentRotation = startRotation + (totalSpinDistance * eased);
-    drawDonut(currentRotation);
-    
-    if (t < 1) {
-      requestAnimationFrame(animate);
+    // easing (biar berasa realistis: cepat di awal, lambat di akhir)
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+    const currentAngle = easeOut * finalAngle;
+
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(currentAngle); // 🔥 inilah rotasinya!
+    ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    drawDonutWheel(ctx);
+    ctx.restore();
+
+    if (progress < 1) {
+      requestAnimationFrame(animate); // terus panggil frame berikutnya
     } else {
-      // === Logika Reset Game ===
-      isSpinning = false; // Buka kunci HANYA setelah animasi selesai
-      
-      const winnerId = targetPlayer.addr;
-      const isWinner = (winnerId.toLowerCase() === userAddress.toLowerCase());
-      const winnerName = isWinner ? "You" : winnerId.slice(0, 6) + "...";
-      statusText.innerText = `Winner is ${winnerName}!`;
-      alert(`Pemenangnya adalah ${winnerName}!`);
-      
-      // Panggil fungsi reset utama Anda untuk memulai ronde baru
-      resetAndFetchNewRound(); 
+      highlightWinner(winnerIndex); // ketika selesai, beri efek kilau pemenang
     }
   }
+
   requestAnimationFrame(animate);
 }
 
