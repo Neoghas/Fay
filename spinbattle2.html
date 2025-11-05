@@ -3,329 +3,182 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Faylotto Spin Battle — Wheel Donut</title>
+  <title>Faylotto Spin Battle — Wheel Donut (ETH + USDT)</title>
 
   <!-- GSAP -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" integrity="" crossorigin="anonymous"></script>
-  <!-- Ethers -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <!-- Ethers v6 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.min.js"></script>
 
   <style>
     :root{
-      --bg:#0b0f1a;
-      --card:#0f1622;
+      --bg:#071025;
+      --card:#0f1724;
       --accent:#7c5cff;
       --muted:#9aa7c7;
-      --glass: rgba(255,255,255,0.03);
     }
-    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;}
-    body{
-      margin:0;
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background: radial-gradient(circle at 10% 10%, #071024 0%, #01040a 60%);
-      color:#e6eef8;
-      padding:28px;
-    }
-
-    .app {
-      width:980px;
-      max-width:95%;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
-      border-radius:14px;
-      padding:22px;
-      box-shadow: 0 8px 30px rgba(1,8,20,0.6);
-      position:relative;
-    }
-
-    .topbar {
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-bottom:16px;
-    }
-    .brand{
-      display:flex;
-      gap:12px;
-      align-items:center;
-    }
-    .brand h1{font-size:18px;margin:0}
-    .wallet-btn {
-      background:var(--glass);
-      border:1px solid rgba(255,255,255,0.04);
-      padding:8px 14px;
-      border-radius:12px;
-      cursor:pointer;
-      display:flex;
-      gap:10px;
-      align-items:center;
-      font-size:14px;
-    }
-    .wallet-dot{width:10px;height:10px;border-radius:50%;background:#32d74b;box-shadow:0 0 6px #32d74b44;}
-    .wallet-addr{font-family:monospace;font-size:13px;color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-
-    .layout {
-      display:flex;
-      gap:24px;
-      align-items:flex-start;
-    }
-
-    /* Wheel area */
-    .wheel-area{
-      width:540px;
-      background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
-      border-radius:12px;
-      padding:18px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      gap:12px;
-      justify-content:center;
-    }
-
-    canvas#wheel {
-      width:420px;
-      height:420px;
-      border-radius:50%;
-      background: conic-gradient(#081021, #07101d);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.6), inset 0 4px 20px rgba(255,255,255,0.02);
-    }
-
-    .wheel-center {
-      position:relative;
-      margin-top:-380px;
-      pointer-events:none;
-      width:420px;
-      height:420px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-    .donut-hole {
-      width:140px;height:140px;border-radius:50%;
-      background:linear-gradient(180deg,#0a111a,#071021);
-      border:6px solid rgba(255,255,255,0.02);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      box-shadow:0 8px 20px rgba(0,0,0,0.6);
-      pointer-events:none;
-    }
-    .donut-hole h2{margin:0;font-size:16px}
-    .donut-hole p{margin:0;font-size:12px;color:var(--muted)}
-
-    .spin-controls{
-      display:flex;
-      gap:12px;
-      margin-top:6px;
-      align-items:center;
-    }
-    .btn {
-      background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
-      border:1px solid rgba(255,255,255,0.04);
-      padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:600;
-    }
-    .btn.primary {
-      background:linear-gradient(180deg,var(--accent), #5a44f2);
-      color:white;border:none;box-shadow:0 8px 30px rgba(92, 64, 255, 0.18);
-    }
-    .muted { color:var(--muted); font-size:13px; }
-
-    /* Right panel */
-    .info-panel{
-      width:320px;
-      background:var(--card);
-      border-radius:12px;
-      padding:14px;
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-      min-height:300px;
-    }
-    .info-panel h3{margin:0 0 6px 0}
-    .info-row{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:10px;background:rgba(255,255,255,0.01);font-size:14px}
-    .small {font-size:12px;color:var(--muted)}
-
-    /* Modal */
-    .modal-overlay {
-      position:fixed;inset:0;background:rgba(2,6,15,0.6);display:none;align-items:center;justify-content:center;z-index:60;
-    }
-    .modal {
-      width:460px;background:linear-gradient(180deg,#091123,#07101a);border-radius:12px;padding:16px;border:1px solid rgba(255,255,255,0.04);
-      box-shadow:0 20px 60px rgba(0,0,0,0.7);
-    }
-    .modal .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-    .modal .modal-body{display:flex;flex-direction:column;gap:10px}
-    .field {display:flex;flex-direction:column;gap:6px}
-    input[type="number"]{
-      width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;font-size:14px;
-    }
-    .token-select{display:flex;gap:8px}
-    .token-item{padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);cursor:pointer}
-    .token-item.active{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border-color:rgba(124,92,255,0.6);}
-
-    .pct-row{display:flex;gap:8px}
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial;}
+    body{margin:0;min-height:100vh;background:radial-gradient(circle at 10% 10%, #08122a 0%, #02040a 60%);color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:24px;}
+    .app{width:980px;max-width:96%;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border-radius:12px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,0.6);}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .brand{display:flex;gap:12px;align-items:center}
+    .brand h1{margin:0;font-size:18px}
+    .wallet-btn{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);padding:8px 14px;border-radius:12px;cursor:pointer;display:flex;gap:10px;align-items:center}
+    .wallet-dot{width:10px;height:10px;border-radius:50%;background:#ffbf00;display:inline-block}
+    .layout{display:flex;gap:20px;align-items:flex-start}
+    .wheel-area{flex:1;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);padding:14px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:12px}
+    canvas#wheel{width:420px;height:420px;border-radius:50%;background:transparent}
+    .donut-hole{position:relative;margin-top:-380px;pointer-events:none;width:140px;height:140px;border-radius:50%;background:linear-gradient(180deg,#081224,#06101a);border:6px solid rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;flex-direction:column}
+    .spin-controls{display:flex;gap:10px;align-items:center}
+    .btn{padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit;cursor:pointer}
+    .btn.primary{background:linear-gradient(180deg,var(--accent),#5a44f2);border:none;color:white}
+    .info-panel{width:300px;background:var(--card);padding:12px;border-radius:10px;display:flex;flex-direction:column;gap:10px}
+    .info-row{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)}
+    .small{font-size:13px;color:var(--muted)}
+    /* modal */
+    .modal-overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:60}
+    .modal{width:460px;background:linear-gradient(180deg,#091123,#07101a);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,0.04)}
+    input[type="number"]{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    .token-item{padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    .token-item.active{border-color:rgba(124,92,255,0.6);background:rgba(124,92,255,0.05)}
+    .pct-row{display:flex;gap:6px}
     .pct-btn{flex:1;padding:8px;border-radius:8px;text-align:center;cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
-    .deposit-info{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)}
-    .disconnect{margin-top:6px;padding:10px;border-radius:10px;background:#1a2230;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
-
-    .note { font-size:12px;color:var(--muted) }
-    .tiny { font-size:11px;color:var(--muted) }
-    .addr { font-family:monospace; font-size:13px; color: #cfe3ff; }
-
-    @media (max-width:900px){
-      .layout{flex-direction:column;align-items:center}
-      .wheel-area{width:100%}
-      .info-panel{width:100%}
-    }
+    .deposit-info{display:flex;justify-content:space-between;padding:8px;border-radius:8px;background:rgba(255,255,255,0.01)}
+    .note{font-size:12px;color:var(--muted)}
+    @media (max-width:900px){.layout{flex-direction:column}.info-panel{width:100%}}
   </style>
 </head>
 <body>
   <div class="app">
     <div class="topbar">
       <div class="brand">
-        <img src="" alt="" style="width:44px;height:44px;border-radius:10px;background:linear-gradient(90deg,#7c5cff,#4da6ff)">
+        <div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(90deg,#7c5cff,#4da6ff)"></div>
         <div>
           <h1>Faylotto Spin Battle</h1>
-          <div class="small">Visual wheel & place-bet UI — connected to contract</div>
+          <div class="small">Wheel visual + Place Bet (ETH / USDT)</div>
         </div>
       </div>
-
       <div style="display:flex;gap:12px;align-items:center">
-        <div class="small">Round ID: <span id="roundId">-</span></div>
-        <button id="walletBtn" class="wallet-btn" title="Open wallet / place bet">
-          <span class="wallet-dot" id="walletDot" style="display:none"></span>
-          <span id="walletLabel">Connect</span>
-        </button>
+        <div class="small">Round: <span id="roundId">-</span></div>
+        <button id="walletBtn" class="wallet-btn"><span id="walletDot" style="display:none" class="wallet-dot"></span><span id="walletLabel">Connect</span></button>
       </div>
     </div>
 
     <div class="layout">
       <div class="wheel-area">
-        <div style="position:relative">
-          <canvas id="wheel" width="840" height="840"></canvas>
-          <div class="wheel-center">
-            <div class="donut-hole">
-              <h2 id="wheelTitle">Spin Battle</h2>
-              <p id="wheelSubtitle" class="small">Visual weights from on-chain deposits</p>
-            </div>
-          </div>
+        <canvas id="wheel" width="840" height="840"></canvas>
+        <div class="donut-hole">
+          <div style="font-weight:700" id="wheelTitle">Spin Battle</div>
+          <div class="small">Visual weights (on-chain)</div>
         </div>
-
         <div class="spin-controls">
           <button id="spinBtn" class="btn primary">Spin</button>
           <button id="placeBetBtn" class="btn">Place Bet</button>
-          <div class="muted tiny">Predicted by client — on-chain decides final winner</div>
+          <button id="refreshBtn" class="btn">Refresh</button>
         </div>
-
-        <div class="muted tiny">Last winner: <span id="lastWinner">-</span></div>
+        <div class="small">Last winner: <span id="lastWinner">-</span></div>
       </div>
 
       <div class="info-panel">
-        <h3>Round Info</h3>
+        <h3 style="margin:0">Round Info</h3>
         <div class="info-row"><div>Players</div><div id="playersCount">0</div></div>
         <div class="info-row"><div>Total ETH</div><div id="totalETH">0</div></div>
         <div class="info-row"><div>Total USDT</div><div id="totalUSDT">0</div></div>
-        <div style="height:8px"></div>
-        <h3>Your Deposits</h3>
+        <h3 style="margin:0">Your Deposits</h3>
         <div class="info-row"><div>ETH</div><div id="yourETH">0</div></div>
         <div class="info-row"><div>USDT</div><div id="yourUSDT">0</div></div>
         <div style="height:8px"></div>
-        <h3>Actions</h3>
-        <div style="display:flex;gap:8px;">
-          <button id="refreshBtn" class="btn">Refresh</button>
-          <button id="openPlaceBet" class="btn">Open Bet</button>
+        <div style="display:flex;gap:8px">
+          <button id="openModalBtn" class="btn">Open Bet</button>
+          <button id="disconnectBtn" class="btn">Disconnect</button>
         </div>
-        <div style="flex:1"></div>
-        <div class="small">Contract status & quick tools</div>
       </div>
     </div>
   </div>
 
   <!-- Modal -->
-  <div id="modalOverlay" class="modal-overlay" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-header">
-        <h3 id="modalTitle">Place Bet</h3>
+  <div id="modalOverlay" class="modal-overlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div>
+          <div class="small">Place Bet</div>
+          <div id="modalAddr" style="font-family:monospace;font-size:13px;color:#cfe3ff">Not connected</div>
+        </div>
         <div>
           <button id="closeModal" class="btn">Close</button>
         </div>
       </div>
-      <div class="modal-body">
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <div class="tiny">Wallet</div>
-            <div class="addr" id="modalAddr">Not connected</div>
-          </div>
-          <div>
-            <div class="tiny">Status</div>
-            <div id="modalStatus" class="small">Disconnected</div>
-          </div>
-        </div>
 
-        <div class="field">
-          <div class="tiny">Token</div>
-          <div class="token-select">
-            <div id="tokenETH" class="token-item active">ETH</div>
-            <div id="tokenUSDT" class="token-item">USDT</div>
-          </div>
+      <div style="margin-bottom:10px">
+        <div class="small">Token</div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <div id="tokenETH" class="token-item active">ETH</div>
+          <div id="tokenUSDT" class="token-item">USDT</div>
         </div>
-
-        <div class="field">
-          <div class="tiny">Amount</div>
-          <input id="amountInput" type="number" step="any" placeholder="0.0001" min="0" />
-        </div>
-
-        <div class="field">
-          <div class="tiny">Quick %</div>
-          <div class="pct-row">
-            <div class="pct-btn" data-pct="5">5%</div>
-            <div class="pct-btn" data-pct="10">10%</div>
-            <div class="pct-btn" data-pct="25">25%</div>
-            <div class="pct-btn" data-pct="50">50%</div>
-            <div class="pct-btn" data-pct="75">75%</div>
-            <div class="pct-btn" data-pct="100">100%</div>
-          </div>
-        </div>
-
-        <div>
-          <div class="tiny">Your current round deposits</div>
-          <div class="deposit-info"><div>ETH deposited</div><div id="modalYourETH">0</div></div>
-          <div class="deposit-info"><div>USDT deposited</div><div id="modalYourUSDT">0</div></div>
-        </div>
-
-        <div style="display:flex;gap:8px;">
-          <button id="modalPlaceBet" class="btn primary" style="flex:1">Place Bet</button>
-          <button id="modalDisconnect" class="disconnect" style="flex:1">Disconnect</button>
-        </div>
-
-        <div class="note">Min ETH: <b>0.0001</b> • Max ETH: <b>0.00256</b> — Min USDT: <b>0.5</b> • Max USDT: <b>10</b></div>
       </div>
+
+      <div style="margin-bottom:10px">
+        <div class="small">Amount</div>
+        <input id="amountInput" type="number" step="any" placeholder="0.0001" />
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div class="small">Quick %</div>
+        <div class="pct-row" style="margin-top:6px">
+          <div class="pct-btn" data-pct="5">5%</div>
+          <div class="pct-btn" data-pct="10">10%</div>
+          <div class="pct-btn" data-pct="25">25%</div>
+          <div class="pct-btn" data-pct="50">50%</div>
+          <div class="pct-btn" data-pct="75">75%</div>
+          <div class="pct-btn" data-pct="100">100%</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <div class="small">Your current round deposits</div>
+        <div class="deposit-info"><div>ETH</div><div id="modalYourETH">0</div></div>
+        <div class="deposit-info" style="margin-top:6px"><div>USDT</div><div id="modalYourUSDT">0</div></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="modalPlaceBet" class="btn primary" style="flex:1">Place Bet</button>
+        <button id="modalDisconnect" class="btn" style="flex:1">Disconnect</button>
+      </div>
+
+      <div style="margin-top:8px" class="note">Min ETH: <b>0.0001</b> • Max ETH: <b>0.00256</b> — Min USDT: <b>0.5</b> • Max USDT: <b>10</b></div>
     </div>
   </div>
 
 <script>
 /*
-  Frontend JS: wheel donut with GSAP + ethers integration
-  - Edit CONTRACT_ADDRESS and USDT_CONTRACT_ADDRESS to point to deployed contract addresses.
-  - Uses ethers.js v6
+  Full integration script:
+  - Replace CONTRACT_ADDRESS and USDT_CONTRACT_ADDRESS with real addresses
+  - Uses ethers v6 BrowserProvider + Contract
+  - ERC20_ABI included
+  - Listens to WinnerRecorded event
 */
 
+/// ===== CONFIG: MASUKKAN ALAMAT KONTRAK & USDT DI SINI =====
 const CONTRACT_ADDRESS = "0xcB1262c9a322dD3191aeA92077fE65A59c71e0a7";
-const USDT_CONTRACT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2"; // ERC20 token (USDT) address
-const CHAIN_ID = 11155111; // Sepolia example; adjust to network used
+const USDT_CONTRACT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2";
+const RPC_CHAIN_ID = 11155111; // sepolia example; adjust if needed
 
-// Minimal ABI fragments we call
-const ABI = [{"inputs":[{"internalType":"address","name":"_erc20Token","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetERC20","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetETH","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_BETS_PER_PLAYER","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_ETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_USDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"erc20Token","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"erc20Reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalERC20","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getWinnerCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getWinners","outputs":[{"components":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.WinnerInfo[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsERC20","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
+// Limits (must match contract)
+const MIN_ETH = 0.0001;
+const MAX_ETH = 0.00256;
+const MIN_USDT = 0.5;
+const MAX_USDT = 10;
 
-  const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
+// client scaling when calculating weights (no price oracle)
+const CLIENT_MAX_USDT = 10; // used to normalize USDT into similar scale as ETH for visualization
 
-let provider, signer, contract;
-let currentRound = null;
-let players = []; // array of {address, eth, erc20, weight}
-let yourAddress = null;
-let erc20Decimals = 18;
+// Minimal contract ABI (fragments used)
+const CONTRACT_ABI = [{"inputs":[{"internalType":"address","name":"_erc20Token","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetERC20","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetETH","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_BETS_PER_PLAYER","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_ETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_USDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"erc20Token","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"erc20Amount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"erc20Reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalERC20","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getWinnerCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"limit","type":"uint256"}],"name":"getWinners","outputs":[{"components":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.WinnerInfo[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsERC20","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardERC20","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
 
+// ERC20 ABI (minimal)
+const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
+
+/// ===== UI ELEMENTS =====
 const walletBtn = document.getElementById('walletBtn');
 const walletLabel = document.getElementById('walletLabel');
 const walletDot = document.getElementById('walletDot');
@@ -336,11 +189,11 @@ const tokenUSDT = document.getElementById('tokenUSDT');
 const amountInput = document.getElementById('amountInput');
 const pctBtns = document.querySelectorAll('.pct-btn');
 const modalAddr = document.getElementById('modalAddr');
-const modalStatus = document.getElementById('modalStatus');
 const modalPlaceBet = document.getElementById('modalPlaceBet');
 const modalDisconnect = document.getElementById('modalDisconnect');
 const placeBetBtn = document.getElementById('placeBetBtn');
-const openPlaceBet = document.getElementById('openPlaceBet');
+const openModalBtn = document.getElementById('openModalBtn');
+const disconnectBtn = document.getElementById('disconnectBtn');
 const spinBtn = document.getElementById('spinBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 
@@ -354,6 +207,7 @@ const lastWinnerEl = document.getElementById('lastWinner');
 const modalYourETH = document.getElementById('modalYourETH');
 const modalYourUSDT = document.getElementById('modalYourUSDT');
 
+// canvas
 const canvas = document.getElementById('wheel');
 const ctx = canvas.getContext('2d');
 const size = canvas.width;
@@ -361,140 +215,108 @@ const cx = size/2;
 const cy = size/2;
 const outerR = size*0.45;
 const innerR = size*0.2;
+
+let provider = null;
+let signer = null;
+let contract = null;
+let erc20 = null;
+let erc20Decimals = 18;
+let userAddress = null;
+let selectedToken = 'ETH';
+let players = []; // {address, eth, erc, weight}
 let rotation = 0;
 
-// limits
-const MIN_ETH = 0.0001;
-const MAX_ETH = 0.00256;
-const MIN_USDT = 0.5;
-const MAX_USDT = 10;
+/// ===== Helper utils =====
+function shortAddr(a){ if(!a) return '-'; return a.slice(0,6) + '...' + a.slice(-4); }
+function safeNum(x){ try{ return Number(x.toString()); } catch(e){ return 0; } }
 
-// utilities
-function short(addr){
-  if(!addr) return '-';
-  return addr.slice(0,6) + '...' + addr.slice(-4);
-}
-function toNum(x){
-  try{ return Number(x.toString()); } catch(e){ return 0; }
+function colorFromAddress(s){
+  let h = 0;
+  for(let i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i))|0; }
+  const hue = Math.abs(h) % 360;
+  return `hsl(${hue} 70% 40%)`;
 }
 
-// connect wallet
+/// ===== Wallet connect / setup =====
 async function connectWallet(){
-  if(window.ethereum === undefined){
-    alert("Please install MetaMask or compatible wallet.");
-    return;
-  }
+  if(!window.ethereum) { alert("Please install MetaMask or compatible wallet."); return; }
   provider = new ethers.BrowserProvider(window.ethereum);
   await provider.send("eth_requestAccounts", []);
   signer = await provider.getSigner();
-  yourAddress = await signer.getAddress();
-  const network = await provider.getNetwork();
-  // instantiate contract
-  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-
-  // attempt to fetch token decimals for display (ERC20)
-  try {
-    const erc20 = new ethers.Contract(USDT_CONTRACT_ADDRESS, ["function decimals() view returns (uint8)","function balanceOf(address) view returns (uint256)"], provider);
-    erc20Decimals = await erc20.decimals();
-  } catch(e){
-    console.warn("Could not read token decimals", e);
-    erc20Decimals = 18;
-  }
-
-  walletLabel.textContent = short(yourAddress);
+  userAddress = await signer.getAddress();
+  walletLabel.textContent = shortAddr(userAddress);
   walletDot.style.display = 'inline-block';
-  modalAddr.textContent = yourAddress;
-  modalStatus.textContent = "Connected";
-  walletLabel.title = yourAddress;
-
-  // show connected state
+  modalAddr.textContent = userAddress;
+  // create contract instances
+  contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+  erc20 = new ethers.Contract(USDT_CONTRACT_ADDRESS, ERC20_ABI, provider);
+  try{ erc20Decimals = await erc20.decimals(); } catch(e){ erc20Decimals = 18; }
+  // attach event listeners for contract events
+  attachContractListeners();
+  // fetch current state
+  await fetchRoundAndPlayers();
+  // change walletBtn to open modal
   walletBtn.onclick = () => openModal();
-  fetchRoundAndPlayers();
+  placeBetBtn.onclick = () => openModal();
+  openModalBtn.onclick = () => openModal();
+  disconnectBtn.onclick = disconnectWallet;
 }
 
-// disconnect wallet (client-side)
 function disconnectWallet(){
-  provider = null;
-  signer = null;
-  contract = null;
-  yourAddress = null;
-  walletLabel.textContent = "Connect";
-  walletDot.style.display = 'none';
-  modalAddr.textContent = "Not connected";
-  modalStatus.textContent = "Disconnected";
+  provider = null; signer = null; contract = null; erc20 = null; userAddress = null;
+  walletLabel.textContent = "Connect"; walletDot.style.display = 'none'; modalAddr.textContent = "Not connected";
   modalOverlay.style.display = 'none';
+  roundIdEl.textContent = "-";
+  playersCountEl.textContent = 0;
+  totalETHEl.textContent = 0;
+  totalUSDTEl.textContent = 0;
+  yourETHEl.textContent = 0;
+  yourUSDTEl.textContent = 0;
+  lastWinnerEl.textContent = "-";
+  walletBtn.onclick = connectWallet;
+  placeBetBtn.onclick = async ()=>{ await connectWallet(); openModal(); };
+  openModalBtn.onclick = async ()=>{ await connectWallet(); openModal(); };
 }
 
-// open/close modal
-function openModal(){
-  modalOverlay.style.display = 'flex';
-}
-function closeModalFn(){
-  modalOverlay.style.display = 'none';
-}
+/// ===== Modal open/close =====
+function openModal(){ modalOverlay.style.display = 'flex'; }
+function closeModalFn(){ modalOverlay.style.display = 'none'; }
+document.getElementById('closeModal').onclick = closeModalFn;
+modalOverlay.onclick = (e)=>{ if(e.target === modalOverlay) closeModalFn(); };
 
-// wire modal close
-closeModal.onclick = closeModalFn;
-modalOverlay.onclick = (e)=>{ if(e.target===modalOverlay) closeModalFn(); }
-walletBtn.addEventListener('click', async ()=>{
-  if(!yourAddress) await connectWallet();
-  else openModal();
-});
-placeBetBtn.addEventListener('click', async ()=>{
-  if(!yourAddress) {
-    await connectWallet();
-  }
-  openModal();
-});
-openPlaceBet.addEventListener('click', ()=>{
-  if(!yourAddress) connectWallet();
-  openModal();
-});
-modalDisconnect.addEventListener('click', ()=>{
-  disconnectWallet();
-});
+walletBtn.onclick = connectWallet;
+placeBetBtn.onclick = async ()=>{ if(!userAddress) await connectWallet(); openModal(); };
+openModalBtn.onclick = async ()=>{ if(!userAddress) await connectWallet(); openModal(); };
+disconnectBtn.onclick = disconnectWallet;
 
-// token selection
-let selectedToken = 'ETH';
-tokenETH.addEventListener('click', ()=>{ selectedToken='ETH'; tokenETH.classList.add('active'); tokenUSDT.classList.remove('active'); updateAmountPlaceholder(); });
-tokenUSDT.addEventListener('click', ()=>{ selectedToken='USDT'; tokenUSDT.classList.add('active'); tokenETH.classList.remove('active'); updateAmountPlaceholder(); });
+/// ===== Token selection UI =====
+tokenETH.onclick = ()=>{ selectedToken='ETH'; tokenETH.classList.add('active'); tokenUSDT.classList.remove('active'); amountInput.placeholder = MIN_ETH; };
+tokenUSDT.onclick = ()=>{ selectedToken='USDT'; tokenUSDT.classList.add('active'); tokenETH.classList.remove('active'); amountInput.placeholder = MIN_USDT; };
 
-function updateAmountPlaceholder(){
-  if(selectedToken==='ETH') amountInput.placeholder = MIN_ETH;
-  else amountInput.placeholder = MIN_USDT;
-}
-
-// percentage buttons: compute percent of user's balance (on-chain). We will fetch balances (ETH and USDT) then apply.
-let userBalances = {eth:0, erc20:0};
-
+/// ===== Quick % buttons use wallet balance (eth or erc20) =====
+let cachedBalances = {eth:0, erc20:0};
 pctBtns.forEach(btn=>{
   btn.addEventListener('click', async ()=>{
     const pct = Number(btn.dataset.pct);
-    // ensure balances are loaded
-    if(!provider || !yourAddress){ alert("Connect wallet first"); return; }
+    if(!provider || !userAddress){ alert("Connect wallet first"); return; }
     if(selectedToken === 'ETH'){
-      // get ETH balance
-      let bal = userBalances.eth;
-      if(bal===0){
-        const raw = await provider.getBalance(yourAddress);
+      let bal = cachedBalances.eth;
+      if(bal === 0){
+        const raw = await provider.getBalance(userAddress);
         bal = Number(ethers.formatEther(raw));
-        userBalances.eth = bal;
+        cachedBalances.eth = bal;
       }
       const val = (bal * pct)/100;
       amountInput.value = Number(val.toFixed(8));
     } else {
-      let bal = userBalances.erc20;
-      if(bal===0){
+      let bal = cachedBalances.erc20;
+      if(bal === 0){
         try{
-          const erc20 = new ethers.Contract(USDT_CONTRACT_ADDRESS, ["function balanceOf(address) view returns (uint256)"], provider);
-          const raw = await erc20.balanceOf(yourAddress);
+          const tokenProv = new ethers.Contract(USDT_CONTRACT_ADDRESS, ERC20_ABI, provider);
+          const raw = await tokenProv.balanceOf(userAddress);
           bal = Number(ethers.formatUnits(raw, erc20Decimals));
-          userBalances.erc20 = bal;
-        }catch(e){
-          console.warn(e);
-          alert("Failed fetching token balance");
-          return;
-        }
+          cachedBalances.erc20 = bal;
+        } catch(e){ console.warn(e); alert("Failed fetch token balance"); return; }
       }
       const val = (bal * pct)/100;
       amountInput.value = Number(val.toFixed(6));
@@ -502,37 +324,27 @@ pctBtns.forEach(btn=>{
   });
 });
 
-// core: fetch round and players
+/// ===== Fetch round & players from contract =====
 async function fetchRoundAndPlayers(){
   if(!contract) return;
   try{
-    // currentRoundId is stored in contract as public currentRoundId? In ABI it's not included. We'll try to call getRoundPlayers for id  (we'll try reading contract.currentRoundId if available)
-    let currentRoundId = 1;
-    try{
-      currentRoundId = await contract.currentRoundId();
-    }catch(e){
-      // fallback: assume 1
-      currentRoundId = 1;
-    }
-    roundIdEl.textContent = currentRoundId.toString();
+    const rid = await contract.currentRoundId();
+    roundIdEl.textContent = rid.toString();
 
-    const playersAddrs = await contract.getRoundPlayers(currentRoundId);
-    // fetch each player's deposits
+    const playersAddrs = await contract.getRoundPlayers(rid);
     players = [];
-    let totalETH = 0;
-    let totalERC = 0;
-    for(let addr of playersAddrs){
-      const dep = await contract.getPlayerDeposits(currentRoundId, addr);
+    let totalETH = 0, totalERC = 0;
+    for(const addr of playersAddrs){
+      const dep = await contract.getPlayerDeposits(rid, addr);
       const ethAmt = Number(ethers.formatEther(dep.ethAmount));
       const ercAmt = Number(ethers.formatUnits(dep.erc20Amount, erc20Decimals));
       totalETH += ethAmt;
       totalERC += ercAmt;
-      players.push({address:addr, eth:ethAmt, erc:ercAmt});
+      players.push({address: addr, eth: ethAmt, erc: ercAmt});
     }
-    // populate weights (simple: normalize both assets by converting ERC20 to ETH-equivalent? We can't price; we'll weight by eth + erc (treated equally) but scale so both matter)
-    // For demonstration we convert erc share by dividing by MAX_USDT (10) to scale similar magnitudes
+    // compute weights (simple normalization)
     players = players.map(p=>{
-      const weight = Math.max(0.0000001, p.eth + (p.erc / ${MAX_USDT || 10})); // placeholder scaling (client-side)
+      const weight = Math.max(0.0000001, p.eth + (p.erc / CLIENT_MAX_USDT));
       return {...p, weight};
     });
 
@@ -540,9 +352,8 @@ async function fetchRoundAndPlayers(){
     totalETHEl.textContent = totalETH.toFixed(6);
     totalUSDTEl.textContent = totalERC.toFixed(6);
 
-    // update your deposits if connected
-    if(yourAddress){
-      const yourDep = await contract.getPlayerDeposits(currentRoundId, yourAddress);
+    if(userAddress){
+      const yourDep = await contract.getPlayerDeposits(rid, userAddress);
       const yourEth = Number(ethers.formatEther(yourDep.ethAmount));
       const yourErc = Number(ethers.formatUnits(yourDep.erc20Amount, erc20Decimals));
       yourETHEl.textContent = yourEth;
@@ -551,259 +362,277 @@ async function fetchRoundAndPlayers(){
       modalYourUSDT.textContent = yourErc;
     }
 
-    // draw wheel
-    drawWheel();
-  }catch(err){
-    console.error("fetchRoundAndPlayers err:", err);
-  }
+    drawWheel(); // initial draw
+  }catch(e){ console.error("fetchRoundAndPlayers err:", e); }
 }
 
-// Draw wheel donut using players[] weights
+/// ===== Draw wheel & rotated draw =====
 function drawWheel(){
   ctx.clearRect(0,0,size,size);
-  // background ring
-  const totalWeight = players.reduce((s,p)=>s+p.weight,0) || 1;
-  let start = 0;
+
   if(players.length === 0){
-    // draw default 6 sectors
-    const colors = ['#2b2f63','#3a2b50','#253047','#2c3b2f','#3b2530','#2a2a3a'];
+    // draw placeholder slices
     const sectors = 6;
+    const colors = ['#243b6b','#2b3050','#213c3b','#3b2630','#2b2b3a','#202030'];
     for(let i=0;i<sectors;i++){
-      const ang = (2*Math.PI* i)/sectors;
-      const ang2 = (2*Math.PI*(i+1))/sectors;
-      ctx.beginPath();
-      ctx.moveTo(cx,cy);
-      ctx.arc(cx,cy,outerR,ang,ang2);
-      ctx.arc(cx,cy,innerR,ang2,ang,true);
-      ctx.closePath();
-      ctx.fillStyle = colors[i % colors.length];
-      ctx.fill();
-      // label
-      const mid = (ang+ang2)/2;
-      const tx = cx + Math.cos(mid)*(innerR+ (outerR-innerR)/2);
-      const ty = cy + Math.sin(mid)*(innerR+ (outerR-innerR)/2);
-      ctx.save();
-      ctx.translate(tx,ty);
-      ctx.rotate(mid);
-      ctx.fillStyle = '#cfe3ff';
-      ctx.font = 'bold 14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Empty', 0,0);
-      ctx.restore();
+      const a1 = (2*Math.PI*i)/sectors;
+      const a2 = (2*Math.PI*(i+1))/sectors;
+      drawSlice(a1,a2, colors[i%colors.length], 'Empty');
     }
+    drawPointer();
     return;
   }
 
-  // dynamic sectors
-  for(let i=0;i<players.length;i++){
-    const p = players[i];
-    const slice = (p.weight / totalWeight) * (2*Math.PI);
-    const ang = start;
-    const ang2 = start + slice;
-    ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    // color: generate from address hash
-    const color = colorFromString(p.address);
-    ctx.arc(cx,cy,outerR,ang,ang2);
-    ctx.arc(cx,cy,innerR,ang2,ang,true);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    // label
-    const mid = (ang+ang2)/2;
-    const tx = cx + Math.cos(mid)*(innerR+ (outerR-innerR)/2);
-    const ty = cy + Math.sin(mid)*(innerR+ (outerR-innerR)/2);
-    ctx.save();
-    ctx.translate(tx,ty);
-    ctx.rotate(mid);
-    ctx.fillStyle = '#e6f0ff';
-    ctx.font = 'bold 12px monospace';
-    ctx.textAlign = 'center';
-    const name = short(p.address);
-    ctx.fillText(name, 0, 0);
-    ctx.restore();
-    start = ang2;
-  }
-}
-
-// helper color from string
-function colorFromString(s){
-  let h = 0;
-  for(let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i))|0;
-  const hue = Math.abs(h) % 360;
-  return `hsl(${hue} 70% 35%)`;
-}
-
-// Spin animation — picks a random target based on weights (client-side visualization)
-function spinWheel(){
-  if(players.length === 0){
-    // small spin
-    gsap.to(this, {duration:3, onUpdate:()=>{}, onComplete:()=>{ alert("No players yet"); }});
-    return;
-  }
-  // pick by weighted random
+  // draw with rotation 0
+  let start = 0;
   const total = players.reduce((s,p)=>s+p.weight,0);
-  let r = Math.random()*total;
-  let pickIdx = 0;
-  for(let i=0;i<players.length;i++){
-    r -= players[i].weight;
-    if(r<=0){ pickIdx=i; break; }
-  }
-  // compute angular target so that chosen player lands at pointer (top)
-  // compute cumulative angle for pick
-  let start = 0;
-  for(let i=0;i<pickIdx;i++) start += (players[i].weight/total)*(2*Math.PI);
-  const pickSlice = (players[pickIdx].weight/total)*(2*Math.PI);
-  const midAngle = start + pickSlice/2;
-  // convert to rotation so that midAngle aligns with top ( -Math.PI/2 )
-  const currentRot = rotation;
-  // we will rotate many rounds + align
-  const targetRot = currentRot + (Math.PI*4) - (midAngle - (-Math.PI/2)); // 4*PI spin
-  // animate rotation variable and redraw via requestAnimationFrame
-  const duration = 4.2;
-  gsap.to(window, {
-    duration,
-    ease: "power4.out",
-    onStart: ()=>{
-      spinBtn.disabled = true;
-      spinBtn.textContent = "Spinning...";
-    },
-    onComplete: ()=>{
-      spinBtn.disabled = false;
-      spinBtn.textContent = "Spin";
-      alert("Visual winner: " + players[pickIdx].address + "\nNOTE: final on-chain winner determined by contract finalizeRound.");
-    },
-    onUpdate: function() {
-      const v = gsap.getProperty(this, "rotation") // not used
-    }
-  });
-
-  // animate rotation variable and redraw
-  const tl = gsap.timeline({
-    onUpdate: function(){ drawRotated(rotation); },
-    onComplete: function(){ drawRotated(rotation); }
-  });
-  tl.to({r:rotation}, {r:targetRot, duration, ease:"power4.out", onUpdate:function(){ rotation = this.targets()[0].r; }});
-}
-
-// draw wheel rotated visually
-function drawRotated(rot){
-  ctx.save();
-  ctx.clearRect(0,0,size,size);
-  // create offscreen to rotate canvas? simpler: translate/rotate entire ctx
-  ctx.translate(cx,cy);
-  ctx.rotate(rot);
-  ctx.translate(-cx,-cy);
-  // draw slices again but using same routine with rotation applied
-  const totalWeight = players.reduce((s,p)=>s+p.weight,0) || 1;
-  let start = 0;
   for(let i=0;i<players.length;i++){
     const p = players[i];
-    const slice = (p.weight / totalWeight) * (2*Math.PI);
-    const ang = start;
-    const ang2 = start + slice;
-    ctx.beginPath();
-    ctx.moveTo(cx,cy);
-    const color = colorFromString(p.address);
-    ctx.arc(cx,cy,outerR,ang,ang2);
-    ctx.arc(cx,cy,innerR,ang2,ang,true);
-    ctx.closePath();
-    ctx.fillStyle = color;
-    ctx.fill();
-    // label
-    const mid = (ang+ang2)/2;
-    const tx = cx + Math.cos(mid)*(innerR+ (outerR-innerR)/2);
-    const ty = cy + Math.sin(mid)*(innerR+ (outerR-innerR)/2);
-    ctx.save();
-    ctx.translate(tx,ty);
-    ctx.rotate(mid);
-    ctx.fillStyle = '#e6f0ff';
-    ctx.font = 'bold 12px monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText(short(p.address), 0, 0);
-    ctx.restore();
-    start = ang2;
+    const slice = (p.weight/total)*(2*Math.PI);
+    const a1 = start;
+    const a2 = start + slice;
+    drawSlice(a1,a2, colorFromAddress(p.address), shortAddr(p.address));
+    start = a2;
   }
-  ctx.restore();
+  drawPointer();
+}
 
-  // draw static pointer at top
+function drawSlice(a1, a2, color, label){
+  ctx.beginPath();
+  ctx.moveTo(cx,cy);
+  ctx.arc(cx,cy,outerR,a1,a2);
+  ctx.arc(cx,cy,innerR,a2,a1,true);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  // draw label at middle
+  const mid = (a1+a2)/2;
+  const tx = cx + Math.cos(mid) * (innerR + (outerR-innerR)/2);
+  const ty = cy + Math.sin(mid) * (innerR + (outerR-innerR)/2);
+  ctx.save();
+  ctx.translate(tx,ty);
+  ctx.rotate(mid);
+  ctx.fillStyle = '#e6f0ff';
+  ctx.font = 'bold 12px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, 0,0);
+  ctx.restore();
+}
+
+function drawPointer(){
   ctx.beginPath();
   ctx.moveTo(cx, cy - outerR - 12);
   ctx.lineTo(cx - 12, cy - outerR + 18);
   ctx.lineTo(cx + 12, cy - outerR + 18);
   ctx.closePath();
-  ctx.fillStyle = '#fffb';
+  ctx.fillStyle = '#ffffffcc';
   ctx.fill();
 }
 
-// place bet action (client -> contract)
+/// draw rotated wheel (called during animation)
+function drawRotated(rot){
+  ctx.save();
+  ctx.clearRect(0,0,size,size);
+  ctx.translate(cx,cy);
+  ctx.rotate(rot);
+  ctx.translate(-cx,-cy);
+
+  if(players.length === 0){
+    const sectors = 6;
+    const colors = ['#243b6b','#2b3050','#213c3b','#3b2630','#2b2b3a','#202030'];
+    for(let i=0;i<sectors;i++){
+      const a1 = (2*Math.PI*i)/sectors;
+      const a2 = (2*Math.PI*(i+1))/sectors;
+      drawSlice(a1,a2, colors[i%colors.length], 'Empty');
+    }
+  } else {
+    let start = 0;
+    const total = players.reduce((s,p)=>s+p.weight,0);
+    for(let i=0;i<players.length;i++){
+      const p = players[i];
+      const slice = (p.weight/total)*(2*Math.PI);
+      const a1 = start;
+      const a2 = start + slice;
+      drawSlice(a1,a2, colorFromAddress(p.address), shortAddr(p.address));
+      start = a2;
+    }
+  }
+  ctx.restore();
+  // pointer static
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - outerR - 12);
+  ctx.lineTo(cx - 12, cy - outerR + 18);
+  ctx.lineTo(cx + 12, cy - outerR + 18);
+  ctx.closePath();
+  ctx.fillStyle = '#ffffffcc';
+  ctx.fill();
+}
+
+/// ===== Spin logic (client-side visual pick by weight) =====
+function spinVisual(){
+  if(players.length === 0){ gsap.to(this, {duration:1.2, onComplete:()=>alert('Belum ada pemain')}); return; }
+
+  const total = players.reduce((s,p)=>s+p.weight,0);
+  let r = Math.random()*total;
+  let pickIdx = 0;
+  for(let i=0;i<players.length;i++){
+    r -= players[i].weight;
+    if(r <= 0){ pickIdx = i; break; }
+  }
+
+  // compute angle of selected slice
+  let start = 0;
+  for(let i=0;i<pickIdx;i++) start += (players[i].weight/total)*(2*Math.PI);
+  const slice = (players[pickIdx].weight/total)*(2*Math.PI);
+  const mid = start + slice/2;
+  // target rotation so mid aligns to top (-PI/2)
+  const currentRot = rotation;
+  const spins = 3; // number of full rotations
+  const target = currentRot + (Math.PI*2*spins) + ((-Math.PI/2) - mid);
+  const duration = 4.2;
+
+  spinBtn.disabled = true;
+  spinBtn.textContent = 'Spinning...';
+
+  gsap.to({r:currentRot}, {
+    r: target,
+    duration,
+    ease: "power4.out",
+    onUpdate: function() { rotation = this.targets()[0].r; drawRotated(rotation); },
+    onComplete: function() {
+      spinBtn.disabled = false;
+      spinBtn.textContent = 'Spin';
+      const winner = players[pickIdx].address;
+      alert('Visual winner: ' + winner + '\nNote: final winner ditentukan on-chain oleh kontrak saat finalizeRound().');
+    }
+  });
+}
+
+/// ===== Place bet (ETH or USDT) =====
 modalPlaceBet.addEventListener('click', async ()=>{
-  const valStr = amountInput.value;
-  if(!valStr || isNaN(valStr) || Number(valStr) <= 0) { alert("Enter a valid amount"); return; }
-  const amount = Number(valStr);
-  if(!contract || !signer){ alert("Connect wallet first"); return; }
+  if(!signer || !contract){ alert("Connect wallet first"); return; }
+  const rawVal = amountInput.value;
+  if(!rawVal || isNaN(rawVal) || Number(rawVal) <= 0){ alert("Masukkan jumlah valid"); return; }
+  const val = Number(rawVal);
 
   try{
     if(selectedToken === 'ETH'){
-      if(amount < MIN_ETH || amount > MAX_ETH) { alert(`ETH amount must be between ${MIN_ETH} and ${MAX_ETH}`); return; }
-      // send tx to placeBetETH with value
-      const tx = await signer.sendTransaction({ to: CONTRACT_ADDRESS, data: contract.interface.encodeFunctionData("placeBetETH"), value: ethers.parseEther(amount.toString()) });
-      alert("Transaction sent: " + tx.hash);
+      if(val < MIN_ETH || val > MAX_ETH){ alert(`ETH harus antara ${MIN_ETH} dan ${MAX_ETH}`); return; }
+      const parsed = ethers.parseEther(val.toString());
+      // call placeBetETH payable
+      const tx = await signer.sendTransaction({ to: CONTRACT_ADDRESS, data: contract.interface.encodeFunctionData("placeBetETH"), value: parsed });
+      modalPlaceBet.disabled = true;
+      modalPlaceBet.textContent = 'Sending...';
       await tx.wait();
-      alert("Bet confirmed on-chain");
-    } else {
-      if(amount < MIN_USDT || amount > MAX_USDT){ alert(`USDT amount must be between ${MIN_USDT} and ${MAX_USDT}`); return; }
-      // need to ensure approval is done on USDT contract to this contract
-      const erc20Abi = ["function approve(address spender, uint256 amount) returns (bool)", "function allowance(address owner,address spender) view returns (uint256)"];
-      const token = new ethers.Contract(USDT_CONTRACT_ADDRESS, erc20Abi, signer);
-      const decimals = erc20Decimals;
-      const amtUnits = ethers.parseUnits(amount.toString(), decimals);
-      const allowance = await token.allowance(yourAddress, CONTRACT_ADDRESS);
-      if(allowance < amtUnits){
-        const approveTx = await token.approve(CONTRACT_ADDRESS, amtUnits);
+      alert('Bet ETH berhasil: ' + tx.hash);
+      modalPlaceBet.disabled = false;
+      modalPlaceBet.textContent = 'Place Bet';
+    } else { // USDT
+      if(val < MIN_USDT || val > MAX_USDT){ alert(`USDT harus antara ${MIN_USDT} dan ${MAX_USDT}`); return; }
+      // prepare token contract with signer
+      const tokenWithSigner = new ethers.Contract(USDT_CONTRACT_ADDRESS, ERC20_ABI, signer);
+      const parsed = ethers.parseUnits(val.toString(), erc20Decimals);
+      // check allowance
+      const allowance = await tokenWithSigner.allowance(userAddress, CONTRACT_ADDRESS);
+      if(allowance < parsed){
+        const approveTx = await tokenWithSigner.approve(CONTRACT_ADDRESS, parsed);
+        modalPlaceBet.disabled = true;
+        modalPlaceBet.textContent = 'Approving...';
         await approveTx.wait();
       }
-      const tx = await contract.placeBetERC20(amtUnits);
-      alert("Transaction sent: " + tx.hash);
+      // call placeBetERC20
+      modalPlaceBet.textContent = 'Placing...';
+      const tx = await contract.placeBetERC20(parsed);
       await tx.wait();
-      alert("Bet confirmed on-chain");
+      alert('Bet USDT berhasil: ' + tx.hash);
+      modalPlaceBet.textContent = 'Place Bet';
+      modalPlaceBet.disabled = false;
     }
 
     // refresh UI
     await fetchRoundAndPlayers();
     closeModalFn();
-  }catch(err){
-    console.error(err);
-    alert("Tx failed: " + (err?.message || err));
+
+  }catch(e){
+    console.error(e);
+    alert('Transaksi gagal: ' + (e?.message || e));
+    modalPlaceBet.disabled = false;
+    modalPlaceBet.textContent = 'Place Bet';
   }
 });
 
-// refresh button
+modalDisconnect.addEventListener('click', ()=>{ disconnectWallet(); });
+
+/// ===== Refresh button =====
 refreshBtn.addEventListener('click', fetchRoundAndPlayers);
-spinBtn.addEventListener('click', spinWheel);
 
-// initial draw
-drawWheel();
+/// ===== Spin button =====
+spinBtn.addEventListener('click', spinVisual);
 
-// simple auto-refresh loop (every 12s) to keep wheel-ish in sync — only if connected
-setInterval(async ()=>{
-  if(contract) await fetchRoundAndPlayers();
-}, 12000);
+/// ===== Modal open handlers =====
+openModalBtn.addEventListener('click', openModal);
+placeBetBtn.addEventListener('click', openModal);
 
-// attempt to detect accounts changed (metaMask)
-if(window.ethereum){
-  window.ethereum.on && window.ethereum.on('accountsChanged', (accounts)=> {
-    if(accounts.length === 0) disconnectWallet();
-    else { yourAddress = accounts[0]; walletLabel.textContent = short(yourAddress); modalAddr.textContent = yourAddress; }
-  });
-  window.ethereum.on && window.ethereum.on('chainChanged', (chainId)=> {
-    // do nothing here, but could force refresh
+/// ===== Listen contract events (WinnerRecorded) =====
+function attachContractListeners(){
+  if(!contract) return;
+  // WinnerRecorded(uint256 winnerId, uint256 roundId, address winner, uint256 rewardETH, uint256 rewardERC20, uint256 timestamp)
+  try {
+    contract.on("WinnerRecorded", (winnerId, roundId, winner, rewardETH, rewardERC20, timestamp) => {
+      console.log("WinnerRecorded event:", { winnerId: winnerId.toString(), roundId: roundId.toString(), winner, rewardETH: rewardETH.toString(), rewardERC20: rewardERC20.toString() });
+      lastWinnerEl.textContent = shortAddr(winner) + ' (r' + roundId.toString() + ')';
+      // highlight winner on wheel (simple flash)
+      highlightWinnerOnWheel(winner);
+      // refresh to clear round & create new one
+      setTimeout(()=>fetchRoundAndPlayers(), 1200);
+    });
+  } catch(e){ console.warn("attachContractListeners err", e); }
+}
+
+/// ===== highlight winner visually =====
+function highlightWinnerOnWheel(addr){
+  // find index
+  const idx = players.findIndex(p=>p.address.toLowerCase() === addr.toLowerCase());
+  if(idx === -1) return;
+  // flash that sector by animating rotation to center it briefly then back
+  const total = players.reduce((s,p)=>s+p.weight,0);
+  let start = 0;
+  for(let i=0;i<idx;i++) start += (players[i].weight/total)*(2*Math.PI);
+  const slice = (players[idx].weight/total)*(2*Math.PI);
+  const mid = start + slice/2;
+  const target = rotation + ((-Math.PI/2) - mid);
+  gsap.to({r: rotation}, {
+    r: target,
+    duration: 1.2,
+    ease: "power2.out",
+    onUpdate: function(){ rotation = this.targets()[0].r; drawRotated(rotation); },
+    onComplete: function(){
+      // small pulse
+      gsap.to({}, {duration:0.2, onComplete: ()=>{ /* noop */ }});
+    }
   });
 }
 
-// small init for UI
-updateAmountPlaceholder();
+/// ===== Auto-refresh loop (if connected) =====
+setInterval(async ()=>{
+  if(contract) await fetchRoundAndPlayers();
+}, 15000);
 
+/// ===== Try draw initial placeholder =====
+drawWheel();
+
+/// ===== MetaMask event listeners: accounts/chain changes =====
+if(window.ethereum){
+  window.ethereum.on && window.ethereum.on('accountsChanged', (accounts)=>{
+    if(!accounts || accounts.length===0) disconnectWallet();
+    else { userAddress = accounts[0]; walletLabel.textContent = shortAddr(userAddress); modalAddr.textContent = userAddress; fetchRoundAndPlayers(); }
+  });
+  window.ethereum.on && window.ethereum.on('chainChanged', (chainId)=>{
+    // optional: prompt reload if wrong chain
+    console.log('chainChanged', chainId);
+  });
+}
 </script>
 </body>
-  </html>
+          </html>
