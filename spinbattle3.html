@@ -397,7 +397,6 @@
     </div>
   </div>
 
-<div class="app-body">
     <div class="donut-wrap">
         <div class="donut-pointer"></div>
         <canvas id="donutCanvas" width="360" height="360"></canvas>
@@ -875,51 +874,47 @@ async function resetAndFetchNewRound() {
 
 // GANTI SELURUH FUNGSI LAMA ANDA DENGAN YANG INI
 async function callFinalizeRound() {
-    if (!signer || !faylottoContract) return alert("Please connect your wallet.");
+  if (!signer || !faylottoContract) return alert("Please connect your wallet.");
 
-    finalizeBtn.disabled = true;
-    statusText.innerText = "Sending finalization transaction...";
+  finalizeBtn.disabled = true;
+  statusText.innerText = "Sending finalization transaction...";
 
-    try {
-        const tx = await faylottoContract.finalizeRound(currentRoundId);
-        statusText.innerText = "Finalizing... awaiting confirmation."; // <-- Teks "Stuk" Anda
-        
-        // [PERBAIKAN DIMULAI]
-        // Kita tunggu receipt (tanda terima) transaksi
-        const receipt = await tx.wait(); 
-        console.log("Finalize transaction confirmed.", receipt);
+  try {
+    const tx = await faylottoContract.finalizeRound(currentRoundId);
+    statusText.innerText = "Finalizing... awaiting confirmation.";
 
-        // Daripada menunggu listener, kita cari event 'RoundFinalized' di dalam receipt
-        const event = receipt.events?.find(e => e.event === 'RoundFinalized');
-        
-        if (event) {
-            // Kita temukan event-nya!
-            // Ambil data pemenang dari event
-            const [roundId, winner] = event.args; 
-            console.log(`Event RoundFinalized DITEMUKAN dari receipt: Round ${roundId}, Winner ${winner}`);
-            
-            // Panggil handleRoundFinalized SECARA MANUAL
-            // Pengecekan 'isSpinning' akan mencegah putaran ganda (jika listener .on() juga terpicu)
-            if (!isSpinning) {
-                handleRoundFinalized(roundId, winner);
-            }
-        } else {
-            // Ini SANGAT aneh, tx sukses tapi event tidak ada.
-            console.error("Tx sukses, tapi event RoundFinalized tidak ditemukan di receipt!");
-            alert("Finalization success, but event not found. Resetting...");
-            // Paksa reset
-            if (!isSpinning) {
-                resetAndFetchNewRound();
-            }
+    const receipt = await tx.wait();
+    console.log("Finalize transaction confirmed.", receipt);
+
+    // Jangan langsung panggil handleRoundFinalized di sini.
+    // Tunggu event listener RoundFinalized.
+    // Kalau dalam 6 detik tidak muncul, panggil fallback.
+
+    const event = receipt.events?.find(e => e.event === "RoundFinalized");
+    if (event) {
+      const [roundId, winner] = event.args;
+
+      console.log(`Event RoundFinalized ditemukan di receipt, menunggu animasi event listener...`);
+      
+      // fallback manual kalau listener gagal jalan
+      setTimeout(() => {
+        if (!isSpinning && !isFinalizing) {
+          console.warn("Fallback aktif — event listener tidak jalan, memanggil handleRoundFinalized manual.");
+          handleRoundFinalized(roundId, winner);
         }
-        // [PERBAIKAN SELESAI]
-        
-    } catch (err) {
-        console.error("Finalize call failed:", err.message);
-        alert(err.reason || "Failed to finalize. (Perhaps it's not time yet, or someone else just called it)");
-        statusText.innerText = "Finalization failed. Still waiting...";
-        finalizeBtn.disabled = false;
+      }, 6000);
+    } else {
+      console.error("Tx sukses tapi event RoundFinalized tidak ditemukan.");
+      alert("Finalization done, event missing. Fetching next round...");
+      await resetAndFetchNewRound();
     }
+
+  } catch (err) {
+    console.error("Finalize call failed:", err.message);
+    alert(err.reason || "Failed to finalize. (Perhaps not time yet, or already finalized)");
+    statusText.innerText = "Finalization failed. Still waiting...";
+    finalizeBtn.disabled = false;
+  }
 }
 
 // === FUNGSI MODAL TARUHAN (Bet Modal) ===
