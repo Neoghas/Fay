@@ -813,52 +813,35 @@ faylottoContract.on("RoundFinalized", async (roundId, winner, rewardETH, rewardE
 }
 
 // === FUNGSI UTAMA: Handle Finalisasi ===
-// 🌀 EVENT HANDLER UNTUK ROUND FINALIZED (sinkron dengan animasi wheel)
 async function handleRoundFinalized(roundId, winnerAddr) {
-  if (isSpinning) return;
-  isSpinning = true;
-  isFinalizing = true;
+    if (isSpinning) return;
+    isSpinning = true;
+    isFinalizing = true;
+    
+    // Sembunyikan semua tombol agar user fokus ke roda
+    placeBetBtn.style.display = "none";
+    finalizeBtn.style.display = "none";
+    if (visualTimer) clearInterval(visualTimer);
+    timerText.innerText = "WINNER!";
+    statusText.innerText = "Spinning to the winner...";
 
-  // 🔒 Matikan interaksi selama proses
-  placeBetBtn.disabled = true;
-  placeBetBtn.style.display = "none";
-  finalizeBtn.style.display = "none";
-  if (visualTimer) clearInterval(visualTimer);
-  timerText.innerText = "ROUND ENDED";
-
-  statusText.innerText = "Picking a winner...";
-
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // 🎯 Temukan player pemenang di array
-  const winnerPlayer = playersArray.find(
-    p => p.addr.toLowerCase() === winnerAddr.toLowerCase()
-  );
-
-  if (!winnerPlayer) {
-    console.error("⚠️ Winner not found in playersArray!");
-    statusText.innerText = "Winner not found. Reloading...";
-    await resetAndFetchNewRound();
-    isSpinning = false;
-    isFinalizing = false;
-    return;
-  }
-
-  statusText.innerText = "Spinning the wheel...";
-  
-  // 🎡 Jalankan animasi spin
-  await spinToPlayer(winnerAddr);
-
-  // ✨ Setelah selesai
-  statusText.innerText = "🎉 Winner selected!";
-  highlightWinner(playersArray.findIndex(p => p.addr.toLowerCase() === winnerAddr.toLowerCase()));
-
-  setTimeout(async () => {
-    alert(`🎉 Round ${roundId} finished!\nWinner: ${winnerAddr.slice(0, 6)}...${winnerAddr.slice(-4)}`);
-    await resetAndFetchNewRound();
-    isSpinning = false;
-    isFinalizing = false;
-  }, 1200);
+    // Beri jeda sedikit sebelum mulai berputar (efek dramatis)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Cari siapa pemain yang menang di array lokal kita
+    const targetPlayer = playersArray.find(p => p.addr.toLowerCase() === winnerAddr.toLowerCase());
+    
+    if (!targetPlayer) {
+        // Aneh, pemenang tidak ada di data lokal kita. Langsung reset saja.
+        console.error("Winner not found in local playersArray!");
+        resetAndFetchNewRound();
+        return;
+    }
+    
+    // MULAI PUTARAN! Dan tunggu sampai selesai.
+    await spinToPlayer(targetPlayer); 
+    
+    // <-- Kode di bawah ini baru akan jalan SETELAH roda berhenti berputar
 }
   
 // === FUNGSI UTAMA: Reset & Ambil Ronde Baru ===
@@ -874,47 +857,47 @@ async function resetAndFetchNewRound() {
 
 // GANTI SELURUH FUNGSI LAMA ANDA DENGAN YANG INI
 async function callFinalizeRound() {
-  if (!signer || !faylottoContract) return alert("Please connect your wallet.");
+    if (!signer || !faylottoContract) return alert("Please connect your wallet.");
 
-  finalizeBtn.disabled = true;
-  statusText.innerText = "Sending finalization transaction...";
+    finalizeBtn.disabled = true;
+    statusText.innerText = "Sending finalization transaction...";
 
-  try {
-    const tx = await faylottoContract.finalizeRound(currentRoundId);
-    statusText.innerText = "Finalizing... awaiting confirmation.";
+    try {
+        // 1. Kirim transaksi ke blockchain
+        const tx = await faylottoContract.finalizeRound(currentRoundId);
+        statusText.innerText = "Finalizing... awaiting confirmation.";
+        
+        // 2. Tunggu sampai transaksi DIKONFIRMASI oleh blockchain
+        const receipt = await tx.wait(); 
+        console.log("Finalize transaction confirmed.", receipt);
 
-    const receipt = await tx.wait();
-    console.log("Finalize transaction confirmed.", receipt);
-
-    // Jangan langsung panggil handleRoundFinalized di sini.
-    // Tunggu event listener RoundFinalized.
-    // Kalau dalam 6 detik tidak muncul, panggil fallback.
-
-    const event = receipt.events?.find(e => e.event === "RoundFinalized");
-    if (event) {
-      const [roundId, winner] = event.args;
-
-      console.log(`Event RoundFinalized ditemukan di receipt, menunggu animasi event listener...`);
-      
-      // fallback manual kalau listener gagal jalan
-      setTimeout(() => {
-        if (!isSpinning && !isFinalizing) {
-          console.warn("Fallback aktif — event listener tidak jalan, memanggil handleRoundFinalized manual.");
-          handleRoundFinalized(roundId, winner);
+        // 3. Cari event 'WinnerRecorded' di dalam struk transaksi
+        const event = receipt.events?.find(e => e.event === 'WinnerRecorded');
+        
+        if (event) {
+            // Hore! Ada pemenang. Ambil datanya.
+            const roundId = event.args[1]; 
+            const winnerAddr = event.args[2];
+            console.log(`Winner found: ${winnerAddr} for Round ${roundId}`);
+            
+            // 4. Mulai animasi putaran!
+            if (!isSpinning) {
+                handleRoundFinalized(roundId, winnerAddr);
+            }
+        } else {
+            // Yah, ronde kosong. Tidak ada pemenang.
+            console.log("Round was empty. Resetting...");
+            if (!isSpinning) {
+                resetAndFetchNewRound();
+            }
         }
-      }, 6000);
-    } else {
-      console.error("Tx sukses tapi event RoundFinalized tidak ditemukan.");
-      alert("Finalization done, event missing. Fetching next round...");
-      await resetAndFetchNewRound();
+        
+    } catch (err) {
+        console.error("Finalize failed:", err);
+        alert("Finalization failed. See console for details.");
+        statusText.innerText = "Finalization failed.";
+        finalizeBtn.disabled = false; // Biarkan user mencoba lagi jika gagal
     }
-
-  } catch (err) {
-    console.error("Finalize call failed:", err.message);
-    alert(err.reason || "Failed to finalize. (Perhaps not time yet, or already finalized)");
-    statusText.innerText = "Finalization failed. Still waiting...";
-    finalizeBtn.disabled = false;
-  }
 }
 
 // === FUNGSI MODAL TARUHAN (Bet Modal) ===
@@ -1505,53 +1488,51 @@ function rebuildPlayersArrayAndDraw() {
     }
 
 // ======= Spin animation =======
-async function spinToPlayer(winnerAddress) {
-  if (!winnerAddress || playersArray.length === 0) return;
+function spinToPlayer(targetPlayer) {
+  return new Promise((resolveAnimation) => { // Bungkus animasi dalam Promise
+      if (!targetPlayer) {
+          resetAndFetchNewRound();
+          resolveAnimation(); return;
+      }
 
-  const canvas = document.getElementById('donutCanvas');
-  const ctx = canvas.getContext('2d');
-  const totalSectors = playersArray.length;
-  const winnerIndex = playersArray.findIndex(
-    p => p.addr.toLowerCase() === winnerAddress.toLowerCase()
-  );
-  if (winnerIndex === -1) return;
+      // ... (perhitungan sudut sama seperti sebelumnya) ...
+      const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
+      const midDeg = (midRad * 180 / Math.PI);
+      const targetRotationDeg = 270 - midDeg;
+      
+      const duration = Math.floor(Math.random() * (40000 - 30000 + 1)) + 30000;
+      const spins = Math.floor(duration / 1200); 
+      const finalRotation = (spins * 360) + targetRotationDeg;
+      const startRotation = currentRotation; 
+      const startTime = performance.now();
 
-  // 🔹 Bagian ini menentukan berapa banyak putaran
-  const spins = 8 + Math.random() * 2; // 8–10 kali putaran penuh
-
-  // 🔹 Hitung sudut akhir agar berhenti tepat di pemenang
-  const winnerMidAngle = (playersArray[winnerIndex].startAngle + playersArray[winnerIndex].endAngle) / 2;
-  const finalAngle = (Math.PI * 2 * spins) - winnerMidAngle + Math.PI / 2;
-
-  // 🔹 Durasi spin acak antara 10–15 detik
-  const spinDuration = 10000 + Math.random() * 5000;
-  const startTime = performance.now();
-
-  // 🔹 Di sinilah animasi rotasi sebenarnya terjadi
-  function animate(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / spinDuration, 1);
-
-    // easing (biar berasa realistis: cepat di awal, lambat di akhir)
-    const easeOut = 1 - Math.pow(1 - progress, 3);
-    const currentAngle = easeOut * finalAngle;
-
-    ctx.save();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(currentAngle); // 🔥 inilah rotasinya!
-    ctx.translate(-canvas.width / 2, -canvas.height / 2);
-    drawDonutWheel(ctx);
-    ctx.restore();
-
-    if (progress < 1) {
-      requestAnimationFrame(animate); // terus panggil frame berikutnya
-    } else {
-      highlightWinner(winnerIndex); // ketika selesai, beri efek kilau pemenang
-    }
-  }
-
-  requestAnimationFrame(animate);
+      function animate(now) {
+        const t = Math.min(1, (now - startTime) / duration);
+        const eased = 1 - Math.pow(1 - t, 4);
+        currentRotation = startRotation + ((finalRotation - startRotation) * eased); // Rumus rotasi yang lebih stabil
+        drawDonut(currentRotation);
+        
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          // ANIMASI SELESAI!
+          isSpinning = false; 
+          
+          // Tampilkan alert pemenang SEKARANG
+          const winnerId = targetPlayer.addr;
+          const isWinner = (userAddress && winnerId.toLowerCase() === userAddress.toLowerCase());
+          const winnerName = isWinner ? "YOU!" : winnerId.slice(0, 6) + "...";
+          statusText.innerText = `Winner is ${winnerName}`;
+          alert(`🎉 WINNER: ${winnerName} 🎉`);
+          
+          // Reset game untuk ronde berikutnya
+          resetAndFetchNewRound(); 
+          
+          resolveAnimation(); // Beri tahu handleRoundFinalized bahwa kita sudah selesai
+        }
+      }
+      requestAnimationFrame(animate);
+  });
 }
 
 // [BARU] Fungsi untuk menampilkan/menyembunyikan Modal Wallet
