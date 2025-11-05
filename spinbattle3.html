@@ -39,84 +39,111 @@
   overflow-y: auto; /* Izinkan scroll vertikal */
   }
 
-/* === HERO SECTION STYLES (DIGITAL VAULT) === */
+/* === HERO SECTION (NEURAL COMMAND) === */
 #hero-section {
     position: relative;
     width: 100%;
-    height: 100vh; /* Full screen */
+    min-height: 90vh;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    /* Background gelap dengan grid halus untuk kesan cyber-security */
-    background: 
-        linear-gradient(rgba(11, 11, 18, 0.9), rgba(11, 11, 18, 0.9)),
-        repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 255, 255, 0.03) 2px, rgba(0, 255, 255, 0.03) 4px),
-        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0, 255, 255, 0.03) 2px, rgba(0, 255, 255, 0.03) 4px),
-        var(--bg-dark-1);
+    padding-top: 80px;
+    background: var(--bg-dark-2); /* Latar belakang hitam pekat */
 }
 
-/* Container untuk Model 3D (Three.js nanti) */
-#vault-container {
+/* Container utama background */
+#command-center-bg {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
+    perspective: 1000px; /* Untuk efek 3D pada grid */
     z-index: 0;
-    /* Sementara kita pakai placeholder gradient radial sebelum Three.js siap */
-    background: radial-gradient(circle at 50% 50%, rgba(98, 0, 255, 0.2) 0%, transparent 60%);
+    opacity: 0.5; /* Supaya tidak terlalu ramai */
 }
 
-.hero-content {
-    position: relative; z-index: 2; /* Di atas vault */
-    text-align: center; max-width: 800px; padding: 20px;
-    /* Memberikan efek kaca agar teks terbaca di atas model 3D nanti */
-    background: rgba(10, 10, 25, 0.3);
-    backdrop-filter: blur(4px);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+/* Lantai Grid 3D */
+.grid-floor {
+    position: absolute;
+    bottom: -30%; left: -50%; width: 200%; height: 100%;
+    background-image: 
+        linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+    transform: rotateX(60deg); /* Efek perspektif */
+    animation: gridMove 20s linear infinite;
 }
 
-.hero-title {
-    font-size: 3.5rem; font-weight: 800; margin-bottom: 20px; line-height: 1.1;
-    color: #fff; letter-spacing: -1px;
+/* Cincin HUD Berputar */
+.hud-ring-outer {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 600px; height: 600px;
+    margin: -300px 0 0 -300px;
+    border: 1px dashed var(--blue-main);
+    border-radius: 50%;
+    opacity: 0.2;
+    animation: spinRight 120s linear infinite;
 }
-.hero-title .highlight-text {
-    color: var(--pink-main); /* Pink neon agar kontras dengan vault yang biasanya biru/metalik */
-    text-shadow: 0 0 25px rgba(255, 0, 230, 0.5);
-}
-
-.hero-subtitle {
-    font-size: 1.2rem; color: #ccc; margin-bottom: 50px; line-height: 1.6;
-}
-
-/* Scroll Indicator yang Menarik */
-.scroll-indicator {
-    display: inline-flex; flex-direction: column; align-items: center;
-    color: var(--cyan-main); cursor: pointer;
-    animation: bounce 2s infinite;
-    opacity: 0.8; transition: opacity 0.3s;
-}
-.scroll-indicator:hover { opacity: 1; }
-.scroll-indicator span {
-    font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px;
-}
-.arrow-down {
-    width: 20px; height: 20px;
-    border-right: 3px solid var(--cyan-main);
-    border-bottom: 3px solid var(--cyan-main);
-    transform: rotate(45deg);
+.hud-ring-inner {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 400px; height: 400px;
+    margin: -200px 0 0 -200px;
+    border: 2px solid transparent;
+    border-top-color: var(--cyan-main);
+    border-bottom-color: var(--cyan-main);
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: spinLeft 60s linear infinite;
 }
 
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-    40% { transform: translateY(-10px); }
-    60% { transform: translateY(-5px); }
+/* Aliran Data (Garis bergerak) */
+.data-stream-vertical {
+    position: absolute;
+    top: 0; left: 20%;
+    width: 1px; height: 100%;
+    background: linear-gradient(to bottom, transparent, var(--pink-main), transparent);
+    opacity: 0.3;
+    animation: dataFlow 5s ease-in-out infinite;
+}
+.data-stream-horizontal {
+    position: absolute;
+    top: 30%; left: 0;
+    width: 100%; height: 1px;
+    background: linear-gradient(to right, transparent, var(--blue-main), transparent);
+    opacity: 0.3;
+    animation: dataFlow 8s ease-in-out infinite reverse;
 }
 
-/* Responsif */
-@media (max-width: 768px) {
-    .hero-title { font-size: 2.5rem; }
-    .hero-subtitle { font-size: 1rem; }
+/* Inti Pusat (Glow berdenyut) */
+.central-core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100px; height: 100px;
+    background: radial-gradient(circle, var(--purple-main) 0%, transparent 70%);
+    filter: blur(20px);
+    animation: pulseCore 4s ease-in-out infinite alternate;
 }
+
+/* Dekorasi Pojok HUD */
+.hud-corner {
+    position: absolute;
+    width: 50px; height: 50px;
+    border-color: var(--cyan-main);
+    opacity: 0.5;
+}
+.top-left { top: 20px; left: 20px; border-top: 2px solid; border-left: 2px solid; }
+.top-right { top: 20px; right: 20px; border-top: 2px solid; border-right: 2px solid; }
+.bottom-left { bottom: 20px; left: 20px; border-bottom: 2px solid; border-left: 2px solid; }
+.bottom-right { bottom: 20px; right: 20px; border-bottom: 2px solid; border-right: 2px solid; }
+
+/* Animasi */
+@keyframes gridMove { from { background-position: 0 0; } to { background-position: 0 40px; } }
+@keyframes spinRight { 100% { transform: rotate(360deg); } }
+@keyframes spinLeft { 100% { transform: rotate(-360deg); } }
+@keyframes dataFlow { 0% { opacity: 0; transform: translateY(-100%); } 50% { opacity: 0.5; } 100% { opacity: 0; transform: translateY(100%); } }
+@keyframes pulseCore { 0% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.5); } }
   
   .app-body {
     display: flex;
@@ -703,21 +730,23 @@
   </div>
 
   <section id="hero-section">
-    <div id="vault-container"></div>
+    <div id="command-center-bg">
+        <div class="grid-floor"></div>
+        <div class="hud-ring-outer"></div>
+        <div class="hud-ring-inner"></div>
+        <div class="data-stream-vertical"></div>
+        <div class="data-stream-horizontal"></div>
+        <div class="central-core">
+            <div class="core-pulse"></div>
+        </div>
+        <div class="hud-corner top-left"></div>
+        <div class="hud-corner top-right"></div>
+        <div class="hud-corner bottom-left"></div>
+        <div class="hud-corner bottom-right"></div>
+    </div>
     
     <div class="hero-content">
-        <h1 class="hero-title">
-            Unlock the <span class="highlight-text">Future</span> of Wealth
-        </h1>
-        <p class="hero-subtitle">
-            Simpan aset Anda, putar roda keberuntungan, dan menangkan hadiah besar dalam ekosistem Web3 yang paling aman dan transparan.
-        </p>
-        
-        <div class="scroll-indicator" onclick="document.querySelector('.app-body').scrollIntoView({behavior: 'smooth'})">
-            <span>Mulai Bermain</span>
-            <div class="arrow-down"></div>
         </div>
-    </div>
   </section>
 
   <div class="app-body" style="margin-top: 80px;"> 
