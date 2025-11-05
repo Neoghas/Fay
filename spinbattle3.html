@@ -410,6 +410,91 @@
     color: gold; /* Warna emas untuk bintang aktif */
 }
 
+  /* === [BARU] Gaya Komentar Futuristik (Terminal) === */
+
+/* Container terminal utama */
+.comments-terminal {
+    background: rgba(0, 0, 0, 0.8); /* Latar lebih gelap agar teks terminal terbaca */
+    border: 1px solid var(--purple-main);
+    border-radius: 6px;
+    padding: 10px;
+    font-family: 'Courier Prime', monospace; /* Font monospace penting untuk gaya terminal */
+    font-size: 12px;
+    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
+    max-height: 300px; /* Batasi tinggi agar tidak terlalu panjang */
+    overflow-y: auto; /* Scroll jika komentar banyak */
+}
+
+/* Header terminal (misal: > LOG FOR WINNER...) */
+.terminal-header {
+    color: var(--cyan-main);
+    border-bottom: 1px dashed var(--purple-main);
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+    font-size: 10px; 
+    opacity: 0.8;
+    letter-spacing: 1px;
+}
+
+/* Blok satu komentar individu */
+.comment-log {
+    margin-bottom: 12px;
+    padding-left: 8px;
+    border-left: 2px solid var(--blue-main); /* Indikator garis di kiri */
+}
+
+/* Metadata komentar (Nickname, Waktu, Wallet) */
+.log-meta { 
+    color: #888; 
+    font-size: 10px; 
+    margin-bottom: 2px; 
+}
+.log-nickname { 
+    color: var(--pink-main); /* Nickname warna pink neon */
+    font-weight: bold; 
+}
+.log-wallet { 
+    color: #555; 
+}
+
+/* Isi pesan komentar */
+.log-message { 
+    color: #eee; 
+    line-height: 1.4; 
+    white-space: pre-wrap; /* Agar enter/baris baru terbaca */
+}
+
+/* Input gaya terminal */
+.terminal-input {
+    flex-grow: 1; /* Mengisi sisa ruang */
+    background: rgba(0,0,0,0.3);
+    border: none; 
+    border-bottom: 1px solid var(--cyan-main);
+    color: var(--cyan-main);
+    font-family: 'Courier Prime', monospace;
+    padding: 4px 6px; 
+    outline: none;
+    font-size: 12px;
+}
+.terminal-input::placeholder {
+    color: rgba(0, 255, 255, 0.3);
+}
+
+/* Tombol gaya terminal ([ SEND ], [ EDIT LOG ], dll) */
+.terminal-btn {
+    background: rgba(0, 255, 255, 0.1);
+    border: 1px solid var(--cyan-main);
+    color: var(--cyan-main); 
+    padding: 3px 8px; 
+    font-size: 10px;
+    cursor: pointer; 
+    font-family: 'Courier Prime', monospace;
+    transition: all 0.2s ease;
+}
+.terminal-btn:hover { 
+    background: var(--cyan-main); 
+    color: #000; /* Teks jadi hitam saat hover agar kontras */
+}
 </style>
 </head>
 
@@ -758,7 +843,7 @@ async function fetchAndDisplayRoundData() {
   
 // === FUNGSI UTAMA: Ambil Data Pemenang Lengkap & Fitur Sosial ===
 async function fetchAndDisplayWinners() {
-    // Pastikan kontrak read-only tersedia jika belum connect wallet
+    // Pastikan kontrak read-only tersedia
     let contractInstance = faylottoContract;
     if (!contractInstance) {
        if (!provider) provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
@@ -775,9 +860,7 @@ async function fetchAndDisplayWinners() {
         }
 
         let usdtDecimalsWinner = 18;
-        try {
-             if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals();
-        } catch (e) {}
+        try { if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals(); } catch (e) {}
 
         for (const winner of winnersArray) {
             const winnerId = winner.winnerId.toString();
@@ -789,18 +872,16 @@ async function fetchAndDisplayWinners() {
             const shortId = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) ? "You" : (winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4));
 
             // --- AMBIL DATA SOSIAL ---
-            let likes = 0;
-            let ratingCount = 0; // [BARU] Variabel untuk jumlah rating
-            let isLikedByMe = false;
-            let myRating = 0;
+            let likes = 0, ratingCount = 0, commentCount = 0;
+            let isLikedByMe = false, myRating = 0;
 
-            // Selalu bisa ambil data publik (jumlah like/rating) meskipun belum connect
             try {
                 likes = (await contractInstance.getLikeCount(winnerId)).toNumber();
                 ratingCount = (await contractInstance.getRatingCountForWinner(winnerId)).toNumber();
+                // [BARU] Ambil jumlah komentar juga
+                commentCount = (await contractInstance.getCommentCountForWinner(winnerId)).toNumber();
             } catch (e) { console.warn("Gagal ambil data publik sosial", e); }
 
-            // Hanya ambil data pribadi jika sudah connect
             if (userAddress && faylottoContract) { 
                 try {
                     const signedContract = faylottoContract.connect(signer);
@@ -840,6 +921,23 @@ async function fetchAndDisplayWinners() {
                       <span style="font-size: 12px; color: #888;">(${ratingCount})</span>
                   </div>
 
+                  <button class="terminal-btn" id="comm-btn-${winnerId}" style="background:none; border:none; color:var(--cyan-main); font-size:16px; cursor:pointer;" 
+                          onclick="toggleComments(${winnerId}, '${winnerAddr}')">
+                    💬 (${commentCount})
+                  </button>
+
+              </div>
+
+              <div class="comments-terminal" id="terminal-${winnerId}" style="display: none; margin-top: 10px;">
+                  <div class="terminal-header">> LOG FOR WINNER: ${winnerAddr.slice(0,10)}...</div>
+                  
+                  <div class="comments-list"></div>
+
+                  <div class="new-comment-section" style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(120, 0, 255, 0.2); display: flex; gap: 5px; align-items: center;">
+                      <span style="color: var(--cyan-main);">></span>
+                      <input type="text" class="terminal-input" id="new-comment-${winnerId}" placeholder="Transmit data..." />
+                      <button class="terminal-btn" onclick="submitComment(${winnerId})">[ SEND ]</button>
+                  </div>
               </div>
             `;
             winnerList.appendChild(item);
@@ -848,7 +946,8 @@ async function fetchAndDisplayWinners() {
         console.error("Error fetching winners:", err.message);
         winnerList.appendChild(winnerListPlaceholder);
     }
-                       }
+                      }
+                       
     
 // Fungsi Helper untuk Like
 async function toggleLike(winnerId) {
@@ -874,6 +973,71 @@ async function rateWinner(winnerId, stars) {
     }
 }
 
+    // Kirim Komentar Baru
+async function submitComment(winnerId) {
+    if (!signer) return alert("Connect wallet first.");
+    const input = document.getElementById(`new-comment-${winnerId}`);
+    const text = input.value.trim();
+    if (!text) return;
+
+    try {
+        input.disabled = true;
+        input.value = "TRANSMITTING...";
+        const tx = await faylottoContract.addCommentToWinner(winnerId, text);
+        await tx.wait();
+        
+        input.value = "";
+        fetchAndRenderComments(winnerId); // Refresh komentar
+    } catch (err) {
+        console.error(err);
+        alert("Failed to send comment.");
+    } finally {
+        input.disabled = false;
+        if(input.value === "TRANSMITTING...") input.value = "";
+    }
+}
+
+// Tampilkan Mode Edit
+function showEditComment(wid, cid) {
+    document.getElementById(`msg-${wid}-${cid}`).style.display = 'none';
+    document.getElementById(`edit-btn-${wid}-${cid}`).style.display = 'none';
+    document.getElementById(`edit-actions-${wid}-${cid}`).style.display = 'block';
+}
+
+// Batalkan Mode Edit
+function cancelEditComment(wid, cid) {
+    document.getElementById(`msg-${wid}-${cid}`).style.display = 'block';
+    document.getElementById(`edit-btn-${wid}-${cid}`).style.display = 'inline-block';
+    document.getElementById(`edit-actions-${wid}-${cid}`).style.display = 'none';
+}
+
+// Simpan Editan
+async function saveEditComment(wid, cid) {
+    if (!signer) return;
+    const input = document.getElementById(`edit-input-${wid}-${cid}`);
+    const newText = input.value.trim();
+    if (!newText) return alert("Comment cannot be empty.");
+
+    try {
+        const tx = await faylottoContract.editCommentOnWinner(wid, cid, newText);
+        await tx.wait();
+        fetchAndRenderComments(wid); // Refresh setelah simpan
+    } catch (err) {
+        console.error("Edit failed:", err);
+        alert("Failed to edit comment.");
+    }
+}
+
+    function toggleComments(winnerId, winnerAddr) {
+    const terminal = document.getElementById(`terminal-${winnerId}`);
+    if (terminal.style.display === 'none') {
+        terminal.style.display = 'block';
+        // Load komentar hanya saat dibuka (Lazy Loading)
+        fetchAndRenderComments(winnerId);
+    } else {
+        terminal.style.display = 'none';
+    }
+    }
 
 // === FUNGSI UTAMA: Memulai Event Listener ===
 function setupEventListeners() {
