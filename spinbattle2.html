@@ -1397,43 +1397,39 @@ function updateBetList() {
       };
     }
 
-// [BARU] Fungsi "Bridge"
+// Fungsi bobot potongan pizza
 function rebuildPlayersArrayAndDraw() {
-    playersArray = []; // Kosongkan array
+    playersArray = [];
     const playerKeys = Object.keys(players);
     
-    // Konversi objek 'players' ke 'playersArray'
+    // Ubah jadi ambil bobot dari nilai taruhan
     for (const key of playerKeys) {
+        const betValue = Number(players[key].bet) || 0; // pastikan angka
         playersArray.push({
             addr: players[key].id,
-            // [PERBAIKAN] Gunakan bobot 1 untuk undian adil
-            weight: ethers.BigNumber.from(1), 
+            weight: betValue, // gunakan jumlah taruhan sebagai bobot
             color: players[key].color
         });
     }
 
-    // Hitung sudut untuk canvas (dalam radian)
-    let currentAngle = 0;
-    // [PERBAIKAN] Total bobot sekarang hanyalah jumlah pemain
-    const totalPlayers = playersArray.length;
-    if (totalPlayers === 0) {
-        drawDonut(); // Gambar roda kosong jika tidak ada pemain
+    // Hitung total bobot semua pemain
+    const totalWeight = playersArray.reduce((sum, p) => sum + p.weight, 0);
+    if (totalWeight === 0) {
+        drawDonut();
         return;
     }
-    
-    // [PERBAIKAN] Sudut yang sama untuk setiap pemain
-    const anglePerPlayer = (Math.PI * 2) / totalPlayers; 
-    
+
+    // Hitung sudut setiap pemain proporsional terhadap bobot
+    let currentAngle = 0;
     for (const p of playersArray) {
+        const angle = (p.weight / totalWeight) * (Math.PI * 2);
         p.startAngle = currentAngle;
-        p.endAngle = currentAngle + anglePerPlayer;
+        p.endAngle = currentAngle + angle;
         currentAngle = p.endAngle;
     }
-    
-    // Gambar ulang donut dengan data baru
+
     drawDonut();
 }
-
   
   
   // ======= Weighted random selection (client-side) =======
