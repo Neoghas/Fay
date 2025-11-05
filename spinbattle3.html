@@ -987,18 +987,24 @@ async function submitComment(winnerId) {
 
     try {
         input.disabled = true;
-        input.value = "TRANSMITTING...";
+        // Simpan nilai asli untuk jaga-jaga jika gagal
+        const originalValue = input.value;
+        input.value = "TRANSMITTING..."; // Tampilkan status loading di input
+
         const tx = await faylottoContract.addCommentToWinner(winnerId, text);
-        await tx.wait();
+        await tx.wait(); // Tunggu konfirmasi blockchain
         
+        // [PERBAIKAN UTAMA]
+        // Transaksi sukses! Kosongkan input dan refresh komentar SEGERA.
         input.value = "";
-        fetchAndRenderComments(winnerId); // Refresh komentar
+        await fetchAndRenderComments(winnerId); // <-- INI YANG HILANG
+        
     } catch (err) {
         console.error(err);
         alert("Failed to send comment.");
+        input.value = text; // Kembalikan teks asli jika gagal agar user tidak perlu ketik ulang
     } finally {
         input.disabled = false;
-        if(input.value === "TRANSMITTING...") input.value = "";
     }
 }
 
