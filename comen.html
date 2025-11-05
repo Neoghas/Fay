@@ -5,261 +5,140 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Contoh Halaman Referral</title>
   <style>
-    /* Reset dan tata letak sederhana */
-    :root{
-      --bg:#0f1724;
-      --card:#0b1220;
-      --accent:#06b6d4;
-      --muted:#94a3b8;
-      --radius:12px;
-      --glass: rgba(255,255,255,0.03);
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-    }
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      min-height:100vh;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background: linear-gradient(180deg, var(--bg), #020617 120%);
-      color:#e6eef8;
-      padding:24px;
-    }
+    /* === [BARU] Gaya Komentar Terminal === */
 
-    .container{
-      width:100%;
-      max-width:920px;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      border-radius:16px;
-      padding:20px;
-      box-shadow: 0 8px 24px rgba(2,6,23,0.7);
-      border: 1px solid rgba(255,255,255,0.03);
-      display:grid;
-      gap:18px;
-      grid-template-columns: 1fr 340px;
-    }
+/* Container utama untuk feed komentar */
+.comments-terminal {
+    margin-top: 15px;
+    background: rgba(0, 0, 0, 0.6); /* Latar gelap transparan */
+    border: 1px solid var(--purple-main);
+    border-radius: 8px;
+    padding: 10px;
+    font-family: 'Courier New', Courier, monospace; /* Font gaya terminal */
+    font-size: 13px;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8); /* Efek kedalaman */
+}
 
-    header{
-      grid-column: 1/-1;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-    }
-    .brand{
-      display:flex;align-items:center;gap:12px;
-    }
-    .logo{
-      width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#7c3aed);
-      display:flex;align-items:center;justify-content:center;font-weight:700;color:#001;
-      box-shadow: 0 4px 12px rgba(6,182,212,0.12);
-    }
-    h1{font-size:18px;margin:0}
-    p.lead{margin:0;color:var(--muted);font-size:13px}
+/* Header terminal (opsional, untuk estetika) */
+.terminal-header {
+    color: var(--cyan-main);
+    border-bottom: 1px dashed var(--purple-main);
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+    font-size: 11px;
+    opacity: 0.8;
+}
 
-    /* Kartu referral */
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,0.01), var(--glass));
-      border-radius:var(--radius);
-      padding:14px;
-      border:1px solid rgba(255,255,255,0.03);
-    }
-    .ref-input{
-      display:flex;
-      gap:8px;
-      margin-top:10px;
-    }
-    input[type="text"]{
-      flex:1;
-      padding:10px 12px;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,0.04);
-      background:transparent;
-      color:inherit;
-      outline:none;
-    }
-    button.btn{
-      padding:10px 12px;
-      border-radius:10px;
-      border:0;
-      cursor:pointer;
-      font-weight:600;
-      background:var(--accent);
-      color:#001;
-    }
-    .muted{color:var(--muted);font-size:13px;margin-top:8px}
+/* Satu blok komentar individual */
+.comment-log {
+    margin-bottom: 12px;
+    padding-left: 10px;
+    border-left: 2px solid var(--blue-main); /* Garis indikator di kiri */
+    position: relative; /* Untuk posisi tombol edit */
+}
 
-    /* Sisi kanan: QR + info */
-    .side{
-      display:flex;
-      flex-direction:column;
-      gap:12px;
-    }
-    .qr{
-      background:linear-gradient(180deg, rgba(0,0,0,0.25), rgba(255,255,255,0.01));
-      padding:12px;
-      border-radius:12px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-height:220px;
-      border:1px dashed rgba(255,255,255,0.03);
-    }
-    .qr img{max-width:100%;height:auto;border-radius:6px}
+/* Baris meta data (Nickname, Waktu, Wallet) */
+.log-meta {
+    color: #888;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+.log-nickname {
+    color: var(--pink-main); /* Nickname warna pink neon */
+    font-weight: bold;
+    font-size: 13px;
+}
+.log-wallet {
+    color: #555; /* Wallet lebih samar */
+    font-size: 10px;
+}
 
-    .wallet{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      justify-content:space-between;
-    }
-    .wallet button{flex:1;background:#111827;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);color:var(--muted)}
-    .small{text-transform:uppercase;font-size:12px;color:var(--muted);letter-spacing:0.06em}
+/* Isi teks komentar */
+.log-message {
+    color: #eee;
+    line-height: 1.4;
+    white-space: pre-wrap; /* Agar baris baru terbaca */
+}
 
-    /* Responsif */
-    @media (max-width:900px){
-      .container{grid-template-columns:1fr; padding:14px}
-      .side{order:2}
-    }
+/* Efek kursor berkedip untuk input */
+.blinking-cursor::after {
+    content: '|';
+    animation: blink 1s step-start infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Tombol Edit & Save (Gaya Terminal) */
+.terminal-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--cyan-main);
+    padding: 2px 6px;
+    font-size: 10px;
+    cursor: pointer;
+    margin-top: 5px;
+    font-family: inherit; /* Ikuti font terminal */
+}
+.terminal-btn:hover {
+    background: var(--purple-main);
+    color: #fff;
+}
+.edit-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+/* Input area untuk komentar baru/edit */
+.terminal-input {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: none;
+    border-bottom: 1px solid var(--cyan-main);
+    color: var(--cyan-main);
+    font-family: 'Courier New', monospace;
+    padding: 5px;
+    outline: none;
+    resize: vertical; /* Bisa diubah ukurannya vertikal */
+}
   </style>
 </head>
 <body>
-  <main class="container" role="main">
-    <header>
-      <div class="brand">
-        <div class="logo">RR</div>
-        <div>
-          <h1>Program Referral</h1>
-          <p class="lead">Bagikan linkmu — dapatkan reward saat orang mendaftar.</p>
+  <div class="comments-terminal">
+    <div class="terminal-header">> DECRYPTING NEURAL FEED...</div>
+
+    <div class="comment-log">
+        <div class="log-meta">
+            <span class="log-nickname">Neo_Glitch</span> 
+            [14:35:22 UTC] <br/>
+            <span class="log-wallet">(0xAb5C...991f)</span>
         </div>
-      </div>
-
-      <div style="display:flex;gap:8px;align-items:center;">
-        <div class="small">Saldo Reward</div>
-        <div style="background:#071126;padding:8px 12px;border-radius:10px;font-weight:700">Rp 0</div>
-      </div>
-    </header>
-
-    <!-- Kiri: input link + deskripsi -->
-    <section class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-        <strong>Link Referral Anda</strong>
-        <button class="btn" id="generateBtn">Generate baru</button>
-      </div>
-
-      <div class="ref-input">
-        <input id="refLink" type="text" readonly value="https://example.com/signup?ref=YOURID" />
-        <button class="btn" id="copyBtn">Salin</button>
-      </div>
-
-      <div class="muted">
-        Salin link referral dan bagikan ke teman. Anda akan mendapatkan reward sesuai syarat & ketentuan.
-      </div>
-
-      <hr style="margin:14px 0;border:0;border-top:1px solid rgba(255,255,255,0.03)">
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn" id="openPromo">Lihat Promo</button>
-        <button class="btn" id="shareWeb" style="background:#0ea5a4">Bagikan (Web Share)</button>
-      </div>
-    </section>
-
-    <!-- Kanan: QR + wallet -->
-    <aside class="side">
-      <div class="card qr" id="qrWrap" aria-hidden="false">
-        <!-- QR akan diisi dinamis -->
-        <img id="qrImage" alt="QR Code" src="https://chart.googleapis.com/chart?cht=qr&chs=240x240&chl=https://example.com/signup?ref=YOURID" />
-      </div>
-
-      <div class="card wallet">
-        <div style="flex:1">
-          <div style="font-weight:700">Koneksi Wallet</div>
-          <div class="muted">Hubungkan MetaMask untuk melihat saldo & status referral.</div>
+        <div class="log-message">Gg wp! Hoki banget spin terakhirnya. Sistem RNG-nya kerasa adil sekarang.</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;width:160px">
-          <button id="connectWallet" class="btn" style="background:#111827;color:#e6eef8;border:1px solid rgba(255,255,255,0.04)">Konek</button>
-          <button id="disconnectWallet" class="btn" style="background:#7c3aed;color:#fff;display:none">Putus</button>
+
+    <div class="comment-log" style="border-left-color: var(--pink-main);">
+        <div class="log-meta">
+            <span class="log-nickname">You (CyberNinja)</span> 
+            [14:40:05 UTC] <br/>
+            <span class="log-wallet">(0x7CD...1D3)</span>
         </div>
-      </div>
-    </aside>
-  </main>
+        
+        <div class="log-message" id="msg-123">Tunggu ronde depan, giliran saya menang! 🚀</div>
+        
+        <div class="edit-mode" style="display: none;"> <textarea class="terminal-input" rows="2">Tunggu ronde depan, giliran saya menang! 🚀</textarea>
+            <div class="edit-actions">
+                <button class="terminal-btn">[ SAVE OVERWRITE ]</button>
+                <button class="terminal-btn" style="color: #ff5555; border-color: #ff5555;">[ CANCEL ]</button>
+            </div>
+        </div>
+         <button class="terminal-btn">[ EDIT LOG ]</button>
+    </div>
 
-  <script>
-    // Elemen
-    const refLinkInput = document.getElementById('refLink');
-    const copyBtn = document.getElementById('copyBtn');
-    const qrImage = document.getElementById('qrImage');
-    const generateBtn = document.getElementById('generateBtn');
-    const shareWeb = document.getElementById('shareWeb');
-    const connectWallet = document.getElementById('connectWallet');
-    const disconnectWallet = document.getElementById('disconnectWallet');
+    <div class="new-comment-section">
+        <span style="color: var(--cyan-main);">></span>
+        <input type="text" class="terminal-input" placeholder="Masukkan transmisi data..." />
+        <button class="terminal-btn" style="width: 100%; margin-top: 8px;">[ TRANSMIT DATA ]</button>
+    </div>
+  </div>
 
-    // Fungsi salin
-    copyBtn.addEventListener('click', async () => {
-      try {
-        await navigator.clipboard.writeText(refLinkInput.value);
-        copyBtn.textContent = 'Disalin!';
-        setTimeout(()=> copyBtn.textContent = 'Salin', 1200);
-      } catch (e){
-        alert('Gagal menyalin — Anda bisa salin manual.');
-      }
-    });
-
-    // Generate simple random referral ID (demo saja)
-    generateBtn.addEventListener('click', () => {
-      const id = Math.random().toString(36).slice(2,10).toUpperCase();
-      const link = `https://example.com/signup?ref=${id}`;
-      refLinkInput.value = link;
-      // update QR via Google Chart API (besar 240x240)
-      qrImage.src = `https://chart.googleapis.com/chart?cht=qr&chs=240x240&chl=${encodeURIComponent(link)}`;
-      generateBtn.textContent = 'Generated';
-      setTimeout(()=> generateBtn.textContent = 'Generate baru', 1200);
-    });
-
-    // Web Share API jika tersedia
-    shareWeb.addEventListener('click', async () => {
-      const data = { title: 'Referral Link', text: 'Daftar lewat link ini', url: refLinkInput.value };
-      if (navigator.share) {
-        try { await navigator.share(data); }
-        catch(e){ /* user cancel */ }
-      } else {
-        alert('Fitur share tidak tersedia di browser ini. Silakan salin link.');
-      }
-    });
-
-    // Placeholder konek wallet (MetaMask)
-    connectWallet.addEventListener('click', async () => {
-      if (!window.ethereum) return alert('Silakan install MetaMask atau wallet EVM lain.');
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const addr = accounts[0];
-        connectWallet.style.display = 'none';
-        disconnectWallet.style.display = 'block';
-        connectWallet.textContent = 'Konek';
-        alert('Wallet terhubung: ' + addr);
-      } catch (e) {
-        console.error(e);
-        alert('Gagal menghubungkan wallet.');
-      }
-    });
-    disconnectWallet.addEventListener('click', () => {
-      // Tidak ada metode standar untuk memutus MetaMask dari dApp sisi klien.
-      disconnectWallet.style.display = 'none';
-      connectWallet.style.display = 'block';
-      alert('Silakan putus koneksi dari ekstensi/wallet jika ingin sepenuhnya logout.');
-    });
-
-    // Inisialisasi: (bisa diganti oleh server)
-    (function init(){
-      // jika user punya ref di query param, tampilkan itu (demo)
-      const q = new URLSearchParams(location.search);
-      if (q.get('ref')) {
-        const link = `https://example.com/signup?ref=${q.get('ref')}`;
-        refLinkInput.value = link;
-        qrImage.src = `https://chart.googleapis.com/chart?cht=qr&chs=240x240&chl=${encodeURIComponent(link)}`;
-      }
-    })();
-  </script>
 </body>
 </html>
