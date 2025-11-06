@@ -690,6 +690,151 @@
     box-shadow: 0 0 20px rgba(0, 0, 255, 1), 0 0 30px rgba(0, 0, 255, 0.8); /* Shadow lebih terang */
     transform: rotate(360deg); /* Efek berputar */
 }
+
+/* === Style Modal Profil Player === */
+.profile-body {
+    align-items: center;
+    text-align: center;
+    padding-top: 30px !important; /* Tambah jarak atas */
+}
+
+/* Avatar Robot dengan Cincin Berputar */
+.profile-avatar-container {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 20px;
+}
+.profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #0b0b15;
+    border: 2px solid var(--cyan-main);
+    padding: 5px; /* Jarak dari border */
+    position: relative;
+    z-index: 2;
+}
+.avatar-ring {
+    position: absolute;
+    top: -10px; left: -10px; right: -10px; bottom: -10px;
+    border: 2px dashed var(--pink-main);
+    border-radius: 50%;
+    animation: spinRight 20s linear infinite;
+    opacity: 0.6;
+    z-index: 1;
+}
+
+/* Info Teks */
+#profileNickname {
+    color: var(--cyan-main);
+    font-size: 24px;
+    margin: 0 0 10px 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+.profile-address-box {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-family: 'Courier Prime', monospace;
+    font-size: 12px;
+    color: #aaa;
+    cursor: pointer;
+    display: inline-block;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.2s ease;
+}
+.profile-address-box:hover {
+    border-color: var(--cyan-main);
+    color: #fff;
+}
+
+/* Grid Statistik */
+.profile-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    width: 100%;
+    margin-top: 30px;
+}
+.stat-box {
+    background: linear-gradient(135deg, rgba(20, 20, 40, 0.8), rgba(10, 10, 20, 0.9));
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid var(--purple-main);
+    text-align: left;
+}
+.stat-label {
+    display: block;
+    font-size: 10px;
+    color: #88aaff;
+    letter-spacing: 1px;
+    margin-bottom: 5px;
+}
+.stat-value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #fff;
+}
+.active-glow {
+    color: var(--cyan-main);
+    text-shadow: 0 0 8px var(--cyan-main);
+}
+
+  /* === [BARU] Gaya Avatar di Riwayat Pemenang === */
+.winner-main-content {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start; /* Rata atas agar rapi jika teks panjang */
+}
+
+.winner-avatar-small {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid var(--pink-main); /* Border pink agar mencolok */
+    background: #0b0b15;
+    padding: 2px;
+    flex-shrink: 0; /* Agar avatar tidak mengecil */
+    cursor: pointer; /* Menunjukkan bisa diklik */
+    transition: transform 0.2s ease;
+}
+.winner-avatar-small:hover {
+    transform: scale(1.1); /* Efek zoom sedikit saat hover */
+}
+
+.winner-info-text {
+    flex-grow: 1; /* Mengisi sisa ruang */
+    width: 100%; /* Memastikan lebar penuh */
+}
+
+  /* Gaya untuk Avatar di dalam Komentar */
+.comment-log {
+    display: flex;
+    gap: 10px; /* Jarak antara avatar dan teks */
+    align-items: flex-start;
+    /* ... style lama ... */
+}
+.comment-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    border: 1px solid var(--cyan-main);
+    background: #0b0b15;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.comment-avatar:hover {
+    transform: scale(1.1);
+}
+.comment-content {
+    flex-grow: 1;
+    width: 100%; /* Agar isi komentar mengisi sisa ruang */
+}
+  
   @media (min-width: 768px) {
   #donutCanvas {
     /* Ubah ukuran sesuai keinginan Anda, misalnya 500px */
@@ -862,6 +1007,37 @@
       <button id="claimRewardsBtn" class="modal-btn">Claim Rewards</button>
     </div>
   </div>
+
+  <div class="modal-overlay" id="profile-modal-overlay"></div>
+<div class="modal" id="profile-modal">
+    <div class="modal-header">
+        <h2>IDENTITY_LOG</h2> <button class="modal-close-btn" id="profile-modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body profile-body">
+        <div class="profile-avatar-container">
+            <img id="profileAvatar" src="" alt="Avatar" class="profile-avatar-img">
+            <div class="avatar-ring"></div>
+        </div>
+        
+        <div class="profile-main-info">
+            <h3 id="profileNickname">LOADING...</h3>
+            <div class="profile-address-box" onclick="copyToClipboard(this.innerText)" title="Click to Copy">
+                <span id="profileAddress">0x000...0000</span> <i class="fa-regular fa-copy" style="font-size: 12px; opacity: 0.6;"></i>
+            </div>
+        </div>
+
+        <div class="profile-stats-grid">
+            <div class="stat-box">
+                <span class="stat-label">REFERRALS</span>
+                <span class="stat-value" id="profileRefCount">-</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">STATUS</span>
+                <span class="stat-value active-glow">ACTIVE</span>
+            </div>
+             </div>
+    </div>
+</div>
 
   <footer>
     <div id="footer" class="social-icons">
@@ -1333,74 +1509,84 @@ async function fetchAndRenderComments(winnerId) {
 
     commentsListDiv.innerHTML = "> LOADING NEURAL LOGS...";
 
-    // Gunakan kontrak yang tersedia (lebih baik yang read-only jika belum login)
     let contractInstance = faylottoContract;
     if (!contractInstance) {
-       if (!provider) provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
-       contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+        if (!provider) provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
+        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     }
 
     try {
-        // Ambil semua komentar untuk pemenang ini dari kontrak
         const comments = await contractInstance.getAllCommentsForWinner(winnerId);
-        
+
         if (comments.length === 0) {
             commentsListDiv.innerHTML = "> NO TRANSMISSIONS FOUND.";
+            const commBtn = document.getElementById(`comm-btn-${winnerId}`);
+            if (commBtn) commBtn.innerText = `💬 (0)`;
             return;
         }
 
-        commentsListDiv.innerHTML = ""; // Bersihkan teks loading
-        
-        // Loop semua komentar dan tampilkan
+        commentsListDiv.innerHTML = ""; // Bersihkan loading text
+        const fragment = document.createDocumentFragment();
+
         for (let i = 0; i < comments.length; i++) {
             const c = comments[i];
             const user = c.user;
             const text = c.text;
-            // Konversi timestamp ke waktu lokal
             const dateObj = new Date(c.timestamp.toNumber() * 1000);
             const time = dateObj.toLocaleString('id-ID', {
                 hour: '2-digit', minute: '2-digit', second: '2-digit',
-                day: '2-digit', month: '2-digit', year: 'numeric',
-                hour12: false
+                day: '2-digit', month: '2-digit', year: 'numeric', hour12: false
             });
-          
-            // Cek apakah ini komentar saya (untuk menampilkan tombol EDIT)
+
             const isMyComment = (userAddress && user.toLowerCase() === userAddress.toLowerCase());
-            
-            // Coba ambil nickname komentator (jika ada)
             let nickname = null;
             try { nickname = await contractInstance.nicknames(user); } catch (e) {}
-            const displayName = nickname || user.slice(0,6) + '...';
+            const displayName = nickname || user.slice(0, 6) + '...';
+            
+            // [BARU] Generate URL Avatar
+            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${user}&baseColor=0b0b15&size=40`;
 
             const commentDiv = document.createElement('div');
             commentDiv.className = "comment-log";
             commentDiv.id = `comment-${winnerId}-${i}`;
-            
-            // Render HTML komentar individu
-            commentDiv.innerHTML = `
-                <div class="log-meta">
-                    <span class="log-nickname">${displayName}</span>
-                    <span class="log-wallet">(${user.slice(0,6)}...${user.slice(-4)})</span> [${time}]
-                </div><br>
-                <div class="log-message" id="msg-${winnerId}-${i}">${text}</div>
-                <br>
-                ${isMyComment ? `
-                    <div class="edit-actions" style="display:none;" id="edit-actions-${winnerId}-${i}">
-                        <textarea class="terminal-input" id="edit-input-${winnerId}-${i}" rows="2" style="margin-top:5px;">${text}</textarea>
+
+            // [BARU] Struktur HTML dengan Avatar
+            let commentHTML = `
+                <img src="${avatarUrl}" alt="Avatar" class="comment-avatar" onclick="showPlayerProfile('${user}')">
+                
+                <div class="comment-content">
+                    <div class="log-meta">
+                        <span class="log-nickname" style="cursor: pointer; text-decoration: underline;" onclick="showPlayerProfile('${user}')">
+                            ${displayName}
+                        </span>
+                        <span class="log-wallet" style="cursor: pointer;" onclick="showPlayerProfile('${user}')">
+                            (${user.slice(0, 6)}...${user.slice(-4)})
+                        </span> [${time}]
+                    </div>
+                    <div class="log-message" id="msg-${winnerId}-${i}">${text}</div>
+            `;
+
+            if (isMyComment) {
+                commentHTML += `
+                    <div class="edit-actions" style="display:none; margin-top: 10px;" id="edit-actions-${winnerId}-${i}">
+                        <textarea class="terminal-input" id="edit-input-${winnerId}-${i}" rows="2">${text}</textarea>
                         <div style="display:flex; gap:5px; margin-top:5px;">
                             <button class="terminal-btn" onclick="saveEditComment(${winnerId}, ${i})">[ SAVE ]</button>
                             <button class="terminal-btn" style="color:#ff5555;border-color:#ff5555" onclick="cancelEditComment(${winnerId}, ${i})">[ CANCEL ]</button>
                         </div>
                     </div>
                     <button class="terminal-btn" id="edit-btn-${winnerId}-${i}" onclick="showEditComment(${winnerId}, ${i})" style="opacity:0.7; margin-top:5px;">[ EDIT LOG ]</button>
-                ` : ''}
-            `;
-            commentsListDiv.appendChild(commentDiv);
+                `;
+            }
+            
+            commentHTML += `</div>`; // Tutup div .comment-content
+            commentDiv.innerHTML = commentHTML;
+            fragment.appendChild(commentDiv);
         }
-        
-        // Update juga jumlah komentar di tombol 💬
+
+        commentsListDiv.appendChild(fragment);
         const commBtn = document.getElementById(`comm-btn-${winnerId}`);
-        if(commBtn) commBtn.innerText = `💬 (${comments.length})`;
+        if (commBtn) commBtn.innerText = `💬 (${comments.length})`;
 
     } catch (err) {
         console.error("Error fetching comments:", err);
@@ -2257,9 +2443,56 @@ function handleCanvasRedraw() {
     }
 }
 
+    // --- FUNGSI PROFIL PLAYER ---
+async function showPlayerProfile(address) {
+    // 1. Tampilkan modal dulu (loading state)
+    const modal = document.getElementById('profile-modal');
+    const overlay = document.getElementById('profile-modal-overlay');
+    document.getElementById('profileNickname').innerText = "SCANNING...";
+    document.getElementById('profileAddress').innerText = address;
+    document.getElementById('profileRefCount').innerText = "-";
+    // Generate avatar robot dari address
+    document.getElementById('profileAvatar').src = `https://api.dicebear.com/9.x/bottts/svg?seed=${address}&baseColor=0b0b15`; 
+    
+    modal.classList.add('show');
+    overlay.classList.add('show');
+
+    // 2. Ambil data dari blockchain
+    try {
+        // Gunakan provider read-only jika belum connect, atau signer jika sudah
+        const contract = faylottoContract || new ethers.providers.JsonRpcProvider("https://sepolia.base.org").then(p => new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, p));
+        // Pastikan contract adalah objek, jika Promise (dari baris atas), tunggu dulu
+        const activeContract = (contract.then) ? await contract : contract;
+
+        const nickname = await activeContract.nicknames(address);
+        const refCount = await activeContract.getReferralCount(address);
+
+        // 3. Update UI dengan data asli
+        document.getElementById('profileNickname').innerText = nickname || "UNKNOWN_USER";
+        document.getElementById('profileRefCount').innerText = refCount.toString();
+
+    } catch (e) {
+        console.error("Gagal load profil:", e);
+        document.getElementById('profileNickname').innerText = "ERROR";
+    }
+}
+
+// Fungsi Tutup Modal Profil
+function hideProfileModal() {
+    document.getElementById('profile-modal').classList.remove('show');
+    document.getElementById('profile-modal-overlay').classList.remove('show');
+}
+
+// Helper Copy to Clipboard (berguna untuk address)
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+    alert("Address copied: " + text);
+}
+
 // === 4. Inisialisasi & Event Listeners ===
 
 document.addEventListener("DOMContentLoaded", () => {
+// Listener Modal Profil
     // --- Listener Tombol Utama ---
     walletBtn.addEventListener("click", () => {
         if (!userAddress) {
@@ -2270,6 +2503,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     placeBetBtn.addEventListener("click", showBetModal);
     finalizeBtn.addEventListener("click", callFinalizeRound);
+
+   document.getElementById('profile-modal-close-btn').addEventListener('click', hideProfileModal);
+   document.getElementById('profile-modal-overlay').addEventListener('click', hideProfileModal);
 
     // --- Listener Modal Bet ---
     betModalCloseBtn.addEventListener("click", hideBetModal);
