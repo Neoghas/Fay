@@ -908,6 +908,46 @@
     .victory-title { font-size: 4rem; }
     .victory-glitch { font-size: 0.9rem; letter-spacing: 2px; }
 }
+
+  /* === LEADERBOARD STYLES === */
+.leaderboard-section {
+    width: 90%; max-width: 820px; margin: 40px auto;
+    text-align: center;
+}
+.section-title {
+    color: #fff; font-size: 24px; margin-bottom: 20px; letter-spacing: 2px;
+    text-shadow: 0 0 10px var(--purple-main);
+}
+.leaderboard-container {
+    background: rgba(10, 10, 25, 0.6);
+    border: 1px solid var(--purple-main);
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 0 30px rgba(98, 0, 255, 0.2);
+}
+.lb-header, .lb-item {
+    display: grid;
+    grid-template-columns: 0.5fr 2fr 1fr 1.5fr; /* Pembagian kolom */
+    padding: 10px;
+    border-bottom: 1px solid rgba(120, 0, 255, 0.2);
+    font-size: 12px; text-align: left;
+}
+.lb-header {
+    color: var(--cyan-main); font-weight: bold; letter-spacing: 1px;
+}
+.lb-item {
+    color: #ccc; transition: all 0.2s ease;
+}
+.lb-item:hover {
+    background: rgba(98, 0, 255, 0.1); color: #fff;
+}
+.lb-rank { font-weight: bold; color: var(--pink-main); }
+.lb-loading { padding: 20px; color: #888; font-style: italic; animation: blink 1s infinite; }
+
+/* Highlight untuk Juara 1, 2, 3 */
+.lb-item.rank-1 { background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), transparent); border-left: 3px solid gold; }
+.lb-item.rank-2 { border-left: 3px solid silver; }
+.lb-item.rank-3 { border-left: 3px solid #cd7f32; /* Bronze */ }
   
   @media (min-width: 768px) {
   #donutCanvas {
@@ -1122,6 +1162,21 @@
         <button class="claim-victory-btn" onclick="hideVictoryScreen()">ACKNOWLEDGE</button>
     </div>
   </div>
+
+  <section class="leaderboard-section">
+    <h2 class="section-title">TOP PILOTS</h2>
+    <div class="leaderboard-container">
+        <div class="lb-header">
+            <span>RANK</span>
+            <span>PILOT (ADDRESS)</span>
+            <span>WINS</span>
+            <span>TOTAL ETH</span>
+        </div>
+        <div id="leaderboard-list">
+            <div class="lb-loading">> SCANNING BLOCKCHAIN FOR ELITE PILOTS...</div>
+        </div>
+    </div>
+  </section>
 
 <audio id="sfx-click" src="clickI.mp3" preload="auto"></audio>
 <audio id="sfx-spin" src="spinI.mp3" preload="auto"></audio>
@@ -2721,6 +2776,73 @@ function stopVictoryConfetti() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
     
+   // === FUNGSI LEADERBOARD (FRONTEND-ONLY) ===
+async function fetchAndRenderLeaderboard() {
+    const list = document.getElementById('leaderboard-list');
+    if (!list) return;
+
+    // Gunakan provider read-only jika belum connect
+    let providerToUse = provider || new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
+    let contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerToUse);
+
+    try {
+        // 1. Ambil event 'WinnerRecorded' dari masa lalu (misal: 5000 blok terakhir)
+        // Sesuaikan range blok jika perlu, atau ambil dari blok awal kontrak
+        const currentBlock = await providerToUse.getBlockNumber();
+        const fromBlock = Math.max(0, currentBlock - 50000); // Sekitar 1 minggu terakhir di Base (asumsi 2s/blok)
+        
+        const filter = contract.filters.WinnerRecorded();
+        const logs = await contract.queryFilter(filter, fromBlock, "latest");
+
+        // 2. Proses Data: Hitung statistik per pemain
+        const stats = {};
+        logs.forEach(log => {
+            const { winner, rewardETH, rewardERC20 } = log.args;
+            if (!stats[winner]) {
+                stats[winner] = { wins: 0, totalEth: ethers.BigNumber.from(0) };
+            }
+            stats[winner].wins += 1;
+            stats[winner].totalEth = stats[winner].totalEth.add(rewardETH);
+            // Bisa juga tambahkan totalUSDT jika mau
+        });
+
+        // 3. Urutkan: Berdasarkan jumlah kemenangan (atau total ETH)
+        const sortedLeaderboard = Object.entries(stats)
+            .map(([addr, data]) => ({ addr, ...data }))
+            .sort((a, b) => b.wins - a.wins) // Urutkan berdasarkan 'wins' terbanyak
+            .slice(0, 10); // Ambil Top 10
+
+        // 4. Render ke HTML
+        if (sortedLeaderboard.length === 0) {
+            list.innerHTML = "<div class='lb-loading' style='animation:none;'>NO DATA YET. BE THE FIRST!</div>";
+            return;
+        }
+
+        list.innerHTML = ""; // Bersihkan loading
+        sortedLeaderboard.forEach((player, index) => {
+            const rank = index + 1;
+            const shortAddr = player.addr.slice(0, 6) + "..." + player.addr.slice(-4);
+            const ethTotal = parseFloat(ethers.utils.formatEther(player.totalEth)).toFixed(4);
+            
+            // Cek apakah ini user yang sedang login
+            const isMe = userAddress && player.addr.toLowerCase() === userAddress.toLowerCase();
+            const displayName = isMe ? "YOU" : shortAddr;
+
+            list.innerHTML += `
+                <div class="lb-item rank-${rank}" style="${isMe ? 'color:var(--cyan-main); font-weight:bold;' : ''}">
+                    <div class="lb-rank">#${rank}</div>
+                    <div style="cursor:pointer;" onclick="showPlayerProfile('${player.addr}')">${displayName}</div>
+                    <div>${player.wins}</div>
+                    <div>${ethTotal} ETH</div>
+                </div>
+            `;
+        });
+
+    } catch (err) {
+        console.error("Leaderboard error:", err);
+        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>FAILED TO LOAD DATA.</div>";
+    }
+          } 
 
 // Fungsi Tutup Modal Profil
 function hideProfileModal() {
