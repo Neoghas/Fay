@@ -5,10 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Faylotto Spin Battle</title>
 <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@700&display=swap" rel="stylesheet">
-<link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
-/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 <style>
   :root {
@@ -286,13 +283,14 @@
   .list-container {
     width: 100%;
     max-width: 400px;
-    max-height: 350px; 
+    height: 150px;
     background: rgba(10, 10, 20, 0.5);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 12px;
     box-sizing: border-box;
     overflow-y: auto;
+    flex: 1;
   }
   .list-container h3 {
     margin: 0 0 10px 0; font-size: 14px;
@@ -330,14 +328,6 @@
     color: #888; padding-top: 20px;
   }
 
-  @media (min-width: 768px) {
-  .list-container {
-    max-height: 400px; /* Tinggi maksimal lebih besar di PC */
-    /* Atau gunakan height tetap jika ingin selalu tinggi: */
-    /* height: 400px; */
-  }
-  }
-  
   /* === Modal Base (Digunakan oleh Bet & Referral) === */
   .modal-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -410,6 +400,77 @@
   .modal-btn:disabled {
     background: #555; color: #999;
     box-shadow: none; transform: none; cursor: not-allowed;
+  }
+  
+  /* [BARU] Style khusus untuk Referral Modal */
+  .ref-section {
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(120, 0, 255, 0.1);
+  }
+  .ref-section:last-child { border-bottom: none; }
+  .ref-section h3 {
+      font-size: 16px;
+      color: var(--cyan-main);
+      margin: 0 0 10px 0;
+  }
+  .ref-info {
+      font-size: 14px;
+      color: #ccc;
+      line-height: 1.6;
+  }
+  .ref-info span {
+      color: #fff;
+      font-weight: bold;
+  }
+  .ref-section .input-group {
+      margin-bottom: 10px;
+  }
+  
+  @media (max-width: 840px) {
+    .lists-wrapper {
+        flex-direction: column;
+    }
+  }
+
+  /* === Donut Wheel Section === */
+.donut-wrap {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  position: relative;
+}
+
+#donutCanvas {
+  background: linear-gradient(90deg, #03a9f4, #f441a5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  border-radius: 50%;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.donut-pointer {
+  position: absolute;
+  top: 15px; /* Sesuaikan sedikit agar pas di atas donut */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-top: 30px solid var(--blue-main); 
+  z-index: 10;
+  filter: drop-shadow(0 -2px 5px rgba(0, 179, 255, 0.7)); 
+}
+
+  @media (min-width: 768px) {
+  .list-container {
+    max-height: 400px; /* Tinggi maksimal lebih besar di PC */
+    /* Atau gunakan height tetap jika ingin selalu tinggi: */
+    /* height: 400px; */
+  }
   }
   
   /* === Style Khusus Modal Referral === */
@@ -555,88 +616,6 @@
     );
     pointer-events: none;
     opacity: 0.3;
-}
-
-  /* === Donut Wheel Section === */
-.donut-wrap {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  justify-content: center;
-  margin-top: 12px;
-  flex-wrap: wrap;
-  position: relative;
-}
-
-#donutCanvas {
-  background: linear-gradient(90deg, #03a9f4, #f441a5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  border-radius: 50%;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-}
-
-.donut-pointer {
-  position: absolute;
-  top: 15px; /* Sesuaikan sedikit agar pas di atas donut */
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 15px solid transparent;
-  border-right: 15px solid transparent;
-  border-top: 30px solid var(--blue-main); 
-  z-index: 10;
-  filter: drop-shadow(0 -2px 5px rgba(0, 179, 255, 0.7)); 
-}
-
-  @media (min-width: 768px) {
-  #donutCanvas {
-    /* Ubah ukuran sesuai keinginan Anda, misalnya 500px */
-    width: 500px !important;
-    height: 500px !important;
-  }
-
-  /* === [BARU] Style untuk Fitur Sosial === */
-.winner-social {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(120, 0, 255, 0.2);
-}
-
-.like-btn {
-    background: none;
-    border: none;
-    color: #888;
-    cursor: pointer;
-    font-size: 16px;
-    transition: color 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-.like-btn.liked {
-    color: var(--pink-main); /* Warna pink saat di-like */
-}
-.like-btn:hover {
-    color: #fff;
-}
-
-.rating-stars {
-    display: flex;
-    gap: 2px;
-}
-.star {
-    color: #555;
-    cursor: pointer;
-    font-size: 16px;
-    transition: color 0.2s ease;
-}
-.star.active, .star:hover {
-    color: gold; /* Warna emas untuk bintang aktif */
 }
 
   /* === [BARU] Gaya Komentar Futuristik (Terminal) === */
@@ -816,228 +795,125 @@
 </head>
 
 <body>
-
-  <nav class="navbar">
-
+   <nav class="navbar">
       <div class="navbar-logo">
-
-          <img src="logo.svg" alt="Faylotto Logo" style="height: 40px; margin-right: 10px;">
-
-          <span style="font-weight:bold; font-size:20px; color:var(--cyan-main);"></span>
-
-      </div>
-
+    <img src="logo.svg" alt="Faylotto Logo" style="height: 40px; margin-right: 10px;">
+    <span style="font-weight:bold; font-size:20px; color:var(--cyan-main);"></span></div>
       <div class="navbar-actions">
-
           <button class="referral-btn" id="referralBtn">Referral</button>
-
           <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
-
       </div>
-
-  </nav>
-
-
+   </nav>
 
   <div class="modal-overlay" id="wallet-modal-overlay"></div>
-
   <div class="modal" id="wallet-modal">
-
     <div class="modal-header">
-
       <h2>Wallet Info</h2>
-
       <button class="modal-close-btn" id="wallet-modal-close-btn">&times;</button>
-
     </div>
-
     <div class="modal-body" id="walletInfo"> 
-
       <p>Address: <span id="walletAddress">-</span></p>
-
       <p>Balance (ETH): <span id="ethBalance">0</span></p>
-
       <p>Balance (USDT): <span id="usdtBalance">0</span></p>
-
       <hr/>
-
       <p>My Deposits (ETH): <span id="myEthDeposit">0</span></p>
-
       <p>My Deposits (USDT): <span id="myUsdtDeposit">0</span></p>
-
     </div>
-
     <div class="modal-footer">
-
       <button id="disconnectBtn" class="modal-btn modal-btn-disconnect">Disconnect</button>
-
     </div>
-
   </div>
-
-
 
   <section id="hero-section">
-
     <div class="hero-static-bg"></div>
-
+    
     <div class="hero-content">
-
         <h2 class="hero-title">
-
          <span class="highlight-text">Faylotto Spin Battle</span></h2>
-
         <p class="hero-subtitle">
-
             Putar roda keberuntungan pertarungan di jaringan terdesentralisasi. Adil, transparan, dan otomatis.
-
         </p>
-
+        
         <div class="hero-cta-container" onclick="document.querySelector('.app-body').scrollIntoView({behavior: 'smooth'})">
-
             <button class="play-now-btn">
-
                 PLAY NOW! <span class="arrow-icon">↓</span>
-
             </button>
-
         </div>
-
     </div>
-
   </section>
 
-
-
   <div class="app-body" style="margin-top: 80px;"> 
+      
+      </div>
 
     <div class="donut-wrap">
-
         <div class="donut-pointer"></div>
-
         <canvas id="donutCanvas" width="360" height="360"></canvas>
-
     </div>
-
-
 
     <div class="controls">
-
       <button id="placeBetBtn" class="main-btn">Place Bet</button>
-
       <button id="finalizeBtn" class="main-btn">Finalize Round</button>
-
       <div class="status" id="statusText">Wallet not connected</div>
-
       <div class="timer" id="timerText"></div>
-
     </div>
-
     
-
     <div class="lists-wrapper">
-
       <div id="bet-list-container" class="list-container">
-
           <h3>Current Round Bets</h3>
-
           <div id="bet-list">
-
               <p id="bet-list-placeholder">No bets placed yet in this round.</p>
-
           </div>
-
       </div>
-
+      
       <div id="winner-list-container" class="list-container">
-
           <h3>Recent Winners</h3>
-
           <div id="winner-list">
-
               <p id="winner-list-placeholder">No winners yet.</p>
-
           </div>
-
       </div>
-
     </div>
-
-  </div> <div class="modal-overlay" id="bet-modal-overlay"></div>
-
-  <div class="modal" id="bet-modal">
-
-    <div class="modal-header">
-
-      <h2>Place Your Bet</h2>
-
-      <button class="modal-close-btn" id="bet-modal-close-btn">&times;</button>
-
-    </div>
-
-    <div class="modal-body">
-
-      <div class="balance-display">
-
-        <p>Your Balance:<br/>
-
-          <span id="modalEthBalance">0</span> ETH<br/>
-
-          <span id="modalUsdtBalance">0</span> USDT
-
-        </p>
-
-      </div>
-
-      <div class="limits-display"> <p>Mins: <span>0.00005 ETH</span> / <span>0.5 USDT</span></p>
-
-        <p>Max Total: <span>0.00256 ETH</span> / <span>10 USDT</span></p>
-
-        <p>Max Bets: <span>2 per round</span></p>
-
-      </div>
-
-      <div class="input-group">
-
-        <input type="number" id="betAmountInput" placeholder="Custom Amount">
-
-        <select id="betCurrencySelect">
-
-          <option value="ETH">ETH</option>
-
-          <option value="USDT">USDT</option>
-
-        </select>
-
-      </div>
-
-      <div class="percent-buttons">
-
-        <button class="percent-btn" data-percent="0.10">10%</button>
-
-        <button class="percent-btn" data-percent="0.25">25%</button>
-
-        <button class="percent-btn" data-percent="0.50">50%</button>
-
-        <button class="percent-btn" data-percent="0.57">57%</button>
-
-      </div>
-
-    </div>
-
-    <div class="modal-footer">
-
-      <button id="confirmBetBtn" class="modal-btn">Confirm Bet</button>
-
-    </div>
-
   </div>
 
+  <div class="modal-overlay" id="bet-modal-overlay"></div>
+  <div class="modal" id="bet-modal">
+    <div class="modal-header">
+      <h2>Place Your Bet</h2>
+      <button class="modal-close-btn" id="bet-modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="balance-display">
+        <p>Your Balance:<br/>
+          <span id="modalEthBalance">0</span> ETH<br/>
+          <span id="modalUsdtBalance">0</span> USDT
+        </p>
+      </div>
+      <div class="limits-display"> <p>Mins: <span>0.00005 ETH</span> / <span>0.5 USDT</span></p>
+        <p>Max Total: <span>0.00256 ETH</span> / <span>10 USDT</span></p>
+        <p>Max Bets: <span>2 per round</span></p>
+      </div>
+      <div class="input-group">
+        <input type="number" id="betAmountInput" placeholder="Custom Amount">
+        <select id="betCurrencySelect">
+          <option value="ETH">ETH</option>
+          <option value="USDT">USDT</option>
+        </select>
+      </div>
+      <div class="percent-buttons">
+        <button class="percent-btn" data-percent="0.10">10%</button>
+        <button class="percent-btn" data-percent="0.25">25%</button>
+        <button class="percent-btn" data-percent="0.50">50%</button>
+        <button class="percent-btn" data-percent="0.57">57%</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="confirmBetBtn" class="modal-btn">Confirm Bet</button>
+    </div>
+  </div>
   
-
   <div class="modal-overlay" id="referral-modal-overlay"></div>
 
-  <div class="modal" id="referral-modal">
+<div class="modal" id="referral-modal">
 
     <div class="modal-header">
 
@@ -1049,31 +925,31 @@
 
 
 
-    <div class="modal-body"> <div class="ref-section">
+    <div class="ref-section">
 
-            <h3>My Info</h3>
+    <h3>My Info</h3>
 
-            <div class="ref-info">
+    <div class="ref-info">
 
-                <div class="ref-data-box">
+        <div class="ref-data-box">
 
-                    <span class="ref-label">Nickname:</span>
+            <span class="ref-label">Nickname:</span>
 
-                    <span class="ref-value" id="myNickname">-</span>
-
-                </div>
-
-                <div class="ref-data-box">
-
-                    <span class="ref-label">Referrer:</span>
-
-                    <span class="ref-value" id="myReferrer">-</span>
-
-                </div>
-
-            </div>
+            <span class="ref-value" id="myNickname">-</span>
 
         </div>
+
+        <div class="ref-data-box">
+
+            <span class="ref-label">Referrer:</span>
+
+            <span class="ref-value" id="myReferrer">-</span>
+
+        </div>
+
+    </div>
+
+    </div>
 
 
 
@@ -1111,92 +987,72 @@
 
         <div class="ref-section">
 
-            <h3>My Rewards</h3>
+    <h3>My Rewards</h3>
 
-            <div class="ref-info">
+    <div class="ref-info">
 
-                <div class="ref-data-box">
+        <div class="ref-data-box">
 
-                    <span class="ref-label">ETH Reward:</span>
+            <span class="ref-label">ETH Reward:</span>
 
-                    <span class="ref-value" id="ethRewards">0</span>
-
-                </div>
-
-                <div class="ref-data-box">
-
-                    <span class="ref-label">USDT Reward:</span>
-
-                    <span class="ref-value" id="usdtRewards">0</span>
-
-                </div>
-
-                <div class="ref-data-box full-width" style="display: flex; justify-content: space-between; align-items: center;">
-
-                     <span class="ref-label" style="margin:0; font-size: 12px;">Total Referrals:</span>
-
-                     <span class="ref-value" id="referralCount" style="font-size: 18px; color: var(--pink-main);">0</span>
-
-                </div>
-
-            </div>
+            <span class="ref-value" id="ethRewards">0</span>
 
         </div>
 
-    </div> <div class="modal-footer">
+        <div class="ref-data-box">
+
+            <span class="ref-label">USDT Reward:</span>
+
+            <span class="ref-value" id="usdtRewards">0</span>
+
+        </div>
+
+        <div class="ref-data-box full-width" style="display: flex; justify-content: space-between; align-items: center;">
+
+             <span class="ref-label" style="margin:0; font-size: 12px;">Total Referrals:</span>
+
+             <span class="ref-value" id="referralCount" style="font-size: 18px; color: var(--pink-main);">0</span>
+
+        </div>
+
+    </div>
+
+        </div>
+
+
+
+    <div class="modal-footer">
 
         <button id="claimRewardsBtn" class="modal-btn">Claim Rewards</button>
 
     </div>
 
-  </div>
+</div>
 
-
+</div>
 
   <footer>
-
     <div id="footer" class="social-icons">
-
         <a href="https://x.com/FaylottoXyz" target="_blank"><i class="fa-brands fa-twitter"></i></a>
-
         <a href="https://t.me/FaylottoXyz" target="_blank"><i class="fa-brands fa-telegram"></i></a>
-
         <a href="https://t.me/Faylotto" target="_blank"><i class="fa-brands fa-telegram"></i></a>
-
         <a href="https://discord.gg/6uMYTdCZwJ" target="_blank"><i class="fa-brands fa-discord"></i></a>
-
         <a href="https://facebook.com/Faylotto" target="_blank"><i class="fa-brands fa-facebook"></i></a>
-
     </div>
-
     <p>
-
       © Powered By Faylotto.
-
       <span>
-
         <a href="https://docs.faylotto.xyz/policy/AllRightsReserved" style="color: #007bff; text-decoration: none;" target="_blank">
-
           <span id="year"></span> All rights reserved. 
-
         </a>
-
       </span>
-
       Play responsibly.
-
       <span>
-
         <a href="privacypolicy" style="color: #007bff; text-decoration: none;" target="_blank">
-
           Privacy Policy.
-
         </a>
-
       </span>
-
     </p>
-
   </footer>
 
   <script>
