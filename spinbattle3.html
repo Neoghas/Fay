@@ -834,12 +834,86 @@
     flex-grow: 1;
     width: 100%; /* Agar isi komentar mengisi sisa ruang */
 }
+
+  /* === VICTORY OVERLAY STYLES === */
+#victory-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(5, 5, 16, 0.95); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.5s ease;
+    backdrop-filter: blur(10px);
+}
+#victory-overlay.show { opacity: 1; pointer-events: auto; }
+
+#victory-canvas {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 1;
+}
+
+.victory-content {
+    position: relative; z-index: 2; text-align: center;
+    transform: scale(0.8); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+#victory-overlay.show .victory-content { transform: scale(1); }
+
+.victory-title {
+    font-size: 6rem; margin: 0; color: #fff;
+    font-family: "Ubuntu", sans-serif; font-weight: 900; font-style: italic;
+    text-shadow: 0 0 20px var(--cyan-main), 0 0 40px var(--cyan-main), 0 0 80px var(--cyan-main);
+    animation: titlePulse 1s infinite alternate;
+}
+
+.victory-glitch {
+    font-family: 'Courier Prime', monospace; color: var(--pink-main);
+    font-size: 1.2rem; letter-spacing: 4px; margin-bottom: 20px;
+    position: relative; display: inline-block;
+}
+/* Efek glitch sederhana dengan pseudo-elements */
+.victory-glitch::before, .victory-glitch::after {
+    content: attr(data-text); position: absolute; top: 0; left: 0; width: 100%;
+    background: rgba(5, 5, 16, 0.95); clip: rect(0, 0, 0, 0);
+}
+.victory-glitch::after {
+    left: 2px; text-shadow: -1px 0 red; animation: glitch-anim 2s infinite linear alternate-reverse;
+}
+
+.victory-subtitle {
+    color: #ccc; font-size: 1.2rem; margin-top: 10px;
+}
+
+.claim-victory-btn {
+    margin-top: 40px; padding: 15px 50px; font-size: 18px;
+    background: var(--pink-main); border: none; color: #fff; font-weight: bold;
+    border-radius: 4px; cursor: pointer;
+    box-shadow: 0 0 30px var(--pink-main);
+    transition: all 0.3s ease;
+}
+.claim-victory-btn:hover {
+    background: #fff; color: var(--pink-main); box-shadow: 0 0 50px #fff;
+}
+
+@keyframes titlePulse {
+    from { text-shadow: 0 0 20px var(--cyan-main), 0 0 40px var(--cyan-main); }
+    to { text-shadow: 0 0 40px var(--cyan-main), 0 0 80px var(--cyan-main); }
+}
+@keyframes glitch-anim {
+    0% { clip: rect(30px, 9999px, 10px, 0); }
+    5% { clip: rect(85px, 9999px, 66px, 0); }
+    /* ... bisa ditambahkan lebih banyak frame untuk glitch yang lebih acak ... */
+    100% { clip: rect(90px, 9999px, 100px, 0); }
+}
+
+/* Responsif untuk HP */
+@media (max-width: 768px) {
+    .victory-title { font-size: 4rem; }
+    .victory-glitch { font-size: 0.9rem; letter-spacing: 2px; }
+}
   
   @media (min-width: 768px) {
   #donutCanvas {
     /* Ubah ukuran sesuai keinginan Anda, misalnya 500px */
-    width: 500px !important;
-    height: 500px !important;
+    width: 550px !important;
+    height: 550px !important;
   }
 </style>
 </head>
@@ -1038,6 +1112,16 @@
              </div>
     </div>
 </div>
+
+  <div id="victory-overlay">
+    <canvas id="victory-canvas"></canvas>
+    <div class="victory-content">
+        <div class="victory-glitch" data-text="NEURAL SYNC COMPLETE">NEURAL SYNC COMPLETE</div>
+        <h1 class="victory-title">YOU WIN!</h1>
+        <p class="victory-subtitle">Funds transferring to your secure wallet...</p>
+        <button class="claim-victory-btn" onclick="hideVictoryScreen()">ACKNOWLEDGE</button>
+    </div>
+  </div>
 
 <audio id="sfx-click" src="clickI.mp3" preload="auto"></audio>
 <audio id="sfx-spin" src="spinI.mp3" preload="auto"></audio>
@@ -2373,7 +2457,7 @@ function spinToPlayer(targetPlayer) {
           resolveAnimation(); return;
       }
 
-      // ... (perhitungan sudut sama seperti sebelumnya) ...
+      // ... (perhitungan sudut) ...
       const midRad = (targetPlayer.startAngle + targetPlayer.endAngle) / 2;
       const midDeg = (midRad * 180 / Math.PI);
       const targetRotationDeg = 270 - midDeg;
@@ -2387,7 +2471,7 @@ function spinToPlayer(targetPlayer) {
       function animate(now) {
         const t = Math.min(1, (now - startTime) / duration);
         const eased = 1 - Math.pow(1 - t, 4);
-        currentRotation = startRotation + ((finalRotation - startRotation) * eased); // Rumus rotasi yang lebih stabil
+        currentRotation = startRotation + ((finalRotation - startRotation) * eased); 
         drawDonut(currentRotation);
         
         if (t < 1) {
@@ -2396,22 +2480,30 @@ function spinToPlayer(targetPlayer) {
           // ANIMASI SELESAI!
           isSpinning = false; 
           const spinAudio = document.getElementById('sfx-spin');
-            if(spinAudio) { spinAudio.pause(); spinAudio.currentTime = 0; }
+          if(spinAudio) { spinAudio.pause(); spinAudio.currentTime = 0; }
 
-            // Mainkan suara kemenangan!
-            playSound('sfx-win');
-          // Tampilkan alert pemenang SEKARANG
-          const winnerId = targetPlayer.addr;
-          const isWinner = (userAddress && winnerId.toLowerCase() === userAddress.toLowerCase());
-          const winnerName = isWinner ? "YOU!" : winnerId.slice(0, 6) + "...";
-          statusText.innerText = `Winner is ${winnerName}`;
-          alert(`🎉 WINNER: ${winnerName} 🎉`);
-          
+          // Mainkan suara kemenangan!
+          playSound('sfx-win');
+
+          // Cek pemenang
+          const isWinner = userAddress && (targetPlayer.addr.toLowerCase() === userAddress.toLowerCase());
+
+          if (isWinner) {
+              // JIKA MENANG: Tampilkan layar kemenangan epik!
+              showVictoryScreen();
+          } else {
+              // JIKA KALAH: Tampilkan alert standar
+              const winnerName = targetPlayer.addr.slice(0, 6) + "...";
+              // Gunakan showToast jika sudah ada, atau alert biasa
+              // showToast(`Winner is ${winnerName}! Better luck next time.`, 'info');
+              alert(`Winner is ${winnerName}! Better luck next time.`);
+          }
+            
           // Reset game untuk ronde berikutnya
           resetAndFetchNewRound(); 
           
           resolveAnimation(); // Beri tahu handleRoundFinalized bahwa kita sudah selesai
-        }
+        } // <-- Kurung tutup else dipindah ke sini
       }
       requestAnimationFrame(animate);
   });
@@ -2557,6 +2649,77 @@ function playSound(soundId) {
     confirmBetBtn.innerText = "Confirm Bet";
   }
     }
+
+    // === FUNGSI VICTORY OVERLAY ===
+let victoryAnimationId = null;
+
+function showVictoryScreen() {
+    const overlay = document.getElementById('victory-overlay');
+    overlay.classList.add('show');
+    playSound('sfx-win'); // Mainkan suara menang (jika ada)
+    startVictoryConfetti();
+}
+
+function hideVictoryScreen() {
+    const overlay = document.getElementById('victory-overlay');
+    overlay.classList.remove('show');
+    stopVictoryConfetti();
+}
+
+// Animasi Confetti Digital (Canvas)
+function startVictoryConfetti() {
+    const canvas = document.getElementById('victory-canvas');
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = window.innerWidth;
+    let height = canvas.height = window.innerHeight;
+    const particles = [];
+    const particleCount = 150;
+    const colors = ['#00ffff', '#ff00e6', '#6200ff', '#ffffff']; // Palet neon
+
+    for (let i = 0; i < particleCount; i++) {
+        particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height - height, // Mulai dari atas layar
+            w: Math.random() * 10 + 5,          // Lebar partikel (kotak/persegi panjang digital)
+            h: Math.random() * 10 + 5,
+            speed: Math.random() * 5 + 2,       // Kecepatan jatuh
+            color: colors[Math.floor(Math.random() * colors.length)],
+            tilt: Math.random() * 10,           // Rotasi
+            tiltAngleIns: Math.random() * 0.07 + 0.05
+        });
+    }
+
+    function animateConfetti() {
+        ctx.clearRect(0, 0, width, height);
+        particles.forEach(p => {
+            p.tilt += p.tiltAngleIns;
+            p.y += p.speed;
+            
+            // Gambar partikel digital (kotak)
+            ctx.beginPath();
+            ctx.lineWidth = p.w / 2;
+            ctx.strokeStyle = p.color;
+            ctx.moveTo(p.x + p.tilt + (p.w / 2), p.y);
+            ctx.lineTo(p.x + p.tilt, p.y + p.tilt + (p.h / 2));
+            ctx.stroke();
+
+            // Reset jika keluar layar bawah
+            if (p.y > height) {
+                p.x = Math.random() * width;
+                p.y = -20;
+            }
+        });
+        victoryAnimationId = requestAnimationFrame(animateConfetti);
+    }
+    animateConfetti();
+}
+
+function stopVictoryConfetti() {
+    if (victoryAnimationId) cancelAnimationFrame(victoryAnimationId);
+    const canvas = document.getElementById('victory-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
     
 
 // Fungsi Tutup Modal Profil
