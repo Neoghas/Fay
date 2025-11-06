@@ -1320,8 +1320,13 @@ async function fetchAndRenderComments(winnerId) {
             const user = c.user;
             const text = c.text;
             // Konversi timestamp ke waktu lokal
-            const time = new Date(c.timestamp.toNumber() * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + " UTC";
-            
+            const dateObj = new Date(c.timestamp.toNumber() * 1000);
+            const time = dateObj.toLocaleString('id-ID', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour12: false
+            });
+          
             // Cek apakah ini komentar saya (untuk menampilkan tombol EDIT)
             const isMyComment = (userAddress && user.toLowerCase() === userAddress.toLowerCase());
             
@@ -1337,9 +1342,9 @@ async function fetchAndRenderComments(winnerId) {
             // Render HTML komentar individu
             commentDiv.innerHTML = `
                 <div class="log-meta">
-                    <span class="log-nickname">${displayName}</span> [${time}] <br/>
-                    <span class="log-wallet">(${user.slice(0,6)}...${user.slice(-4)})</span>
-                </div><br><br>
+                    <span class="log-nickname">${displayName}</span>
+                    <span class="log-wallet">(${user.slice(0,6)}...${user.slice(-4)})</span> [${time}]
+                </div><br>
                 <div class="log-message" id="msg-${winnerId}-${i}">${text}</div>
                 <br>
                 ${isMyComment ? `
