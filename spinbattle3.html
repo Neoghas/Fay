@@ -1039,10 +1039,10 @@
     </div>
 </div>
 
-<audio id="sfx-click" src="clickI.mp3" preload="auto"></audio>
-<audio id="sfx-spin" src="spinI.mp3" preload="auto"></audio>
-<audio id="sfx-win" src="winI.mp3" preload="auto"></audio>
-<audio id="sfx-coin" src="coinI.mp3" preload="auto"></audio>
+<audio id="sfx-click" src="click.mp3" preload="auto"></audio>
+<audio id="sfx-spin" src="spin.mp3" preload="auto"></audio>
+<audio id="sfx-win" src="win.mp3" preload="auto"></audio>
+<audio id="sfx-coin" src="coin.mp3" preload="auto"></audio>
 
   <footer>
     <div id="footer" class="social-icons">
@@ -2395,7 +2395,11 @@ function spinToPlayer(targetPlayer) {
         } else {
           // ANIMASI SELESAI!
           isSpinning = false; 
-          
+          const spinAudio = document.getElementById('sfx-spin');
+            if(spinAudio) { spinAudio.pause(); spinAudio.currentTime = 0; }
+
+            // Mainkan suara kemenangan!
+            playSound('sfx-win');
           // Tampilkan alert pemenang SEKARANG
           const winnerId = targetPlayer.addr;
           const isWinner = (userAddress && winnerId.toLowerCase() === userAddress.toLowerCase());
@@ -2500,6 +2504,56 @@ function playSound(soundId) {
         audio.play().catch(e => console.warn("Audio autoplay blocked:", e));
     }
 }
+
+    function playSound(soundId) {
+    const audio = document.getElementById(soundId);
+    if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(e => console.warn("Audio blocked:", e));
+    }
+    }
+
+    async function confirmBet() {
+  const amountStr = betAmountInput.value;
+  const currency = betCurrencySelect.value;
+  if (!amountStr || parseFloat(amountStr) <= 0) return alert("Please enter a valid amount.");
+  
+  confirmBetBtn.disabled = true;
+  confirmBetBtn.innerText = "Processing...";
+  
+  try {
+    let tx;
+    // Memanggil fungsi terpisah Anda
+    if (currency === 'ETH') {
+      tx = await placeBetETH(amountStr);
+    } else {
+      tx = await placeBetUSDT(amountStr);
+    }
+
+    statusText.innerText = `Bet sent! Awaiting confirmation...`;
+    
+    // Tunggu transaksi selesai di blockchain
+    await tx.wait();
+    
+    // === [TAMBAHKAN SUARA DI SINI] ===
+    // Dimainkan HANYA jika transaksi sukses
+    playSound('sfx-coin'); 
+    // ================================
+
+    statusText.innerText = `Bet confirmed! Good luck.`;
+    hideBetModal();
+    await updateUserBalances();
+    await updateMyDeposits();
+    
+  } catch (err) {
+    console.error(err);
+    // ... (kode error handling Anda) ...
+    statusText.innerText = "Transaction failed.";
+  } finally {
+    confirmBetBtn.disabled = false;
+    confirmBetBtn.innerText = "Confirm Bet";
+  }
+    }
     
 
 // Fungsi Tutup Modal Profil
