@@ -1306,9 +1306,9 @@ async function fetchAndDisplayRoundData() {
     }
 }
   
-// === FUNGSI UTAMA: Ambil Data Pemenang Lengkap & Fitur Sosial ===
+// === FUNGSI UTAMA: Ambil Data Pemenang & Fitur Sosial ===
 async function fetchAndDisplayWinners() {
-    // Pastikan kontrak read-only tersedia
+    // Pastikan kontrak read-only tersedia jika belum connect wallet
     let contractInstance = faylottoContract;
     if (!contractInstance) {
        if (!provider) provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
@@ -1336,6 +1336,9 @@ async function fetchAndDisplayWinners() {
             const date = new Date(winner.timestamp.toNumber() * 1000).toLocaleString();
             const shortId = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) ? "You" : (winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4));
 
+            // [BARU] Generate URL Avatar untuk Pemenang
+            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}&baseColor=0b0b15&size=40`;
+
             // --- AMBIL DATA SOSIAL ---
             let likes = 0, ratingCount = 0, commentCount = 0;
             let isLikedByMe = false, myRating = 0;
@@ -1343,7 +1346,6 @@ async function fetchAndDisplayWinners() {
             try {
                 likes = (await contractInstance.getLikeCount(winnerId)).toNumber();
                 ratingCount = (await contractInstance.getRatingCountForWinner(winnerId)).toNumber();
-                // [BARU] Ambil jumlah komentar juga
                 commentCount = (await contractInstance.getCommentCountForWinner(winnerId)).toNumber();
             } catch (e) { console.warn("Gagal ambil data publik sosial", e); }
 
@@ -1357,26 +1359,36 @@ async function fetchAndDisplayWinners() {
 
             const item = document.createElement("div");
             item.className = "winner-list-item";
+            
+            // [PERBAIKAN UTAMA DI SINI]
+            // Menambahkan struktur HTML baru dengan avatar di sebelah kiri
             item.innerHTML = `
-              <div class="winner-id" style="display: flex; justify-content: space-between;">
-                <span>Round #${roundId}</span>
-                <small style="color: #888; font-size: 10px;">${date}</small>
-              </div>
-              <div style="margin-bottom: 4px; font-weight: bold; color: var(--cyan-main);">
-                Winner: ${shortId}
-              </div>
-              <div class="prize-line">
-                Won: ${winner.rewardETH.gt(0) ? ethAmt + ' ETH' : ''} 
-                     ${(winner.rewardETH.gt(0) && winner.rewardERC20.gt(0)) ? '+ ' : ''}
-                     ${winner.rewardERC20.gt(0) ? usdtAmt + ' USDT' : ''}
+              <div style="display: flex; gap: 10px; align-items: flex-start;">
+                  <img src="${avatarUrl}" alt="Avatar" 
+                       style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--cyan-main); cursor: pointer; background: #0b0b15;" 
+                       onclick="showPlayerProfile('${winnerAddr}')">
+                  
+                  <div style="flex-grow: 1;">
+                      <div class="winner-id" style="display: flex; justify-content: space-between;">
+                        <span>Round #${roundId}</span>
+                        <small style="color: #888; font-size: 10px;">${date}</small>
+                      </div>
+                      <div style="margin-bottom: 4px; font-weight: bold; color: var(--cyan-main); cursor: pointer; text-decoration: underline;" 
+                           onclick="showPlayerProfile('${winnerAddr}')">
+                        Winner: ${shortId}
+                      </div>
+                      <div class="prize-line">
+                        Won: ${winner.rewardETH.gt(0) ? ethAmt + ' ETH' : ''} 
+                             ${(winner.rewardETH.gt(0) && winner.rewardERC20.gt(0)) ? '+ ' : ''}
+                             ${winner.rewardERC20.gt(0) ? usdtAmt + ' USDT' : ''}
+                      </div>
+                  </div>
               </div>
 
               <div class="winner-social" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(120,0,255,0.2); display:flex; justify-content:space-between; align-items:center;">
-                  
                   <button class="like-btn" style="background:none; border:none; cursor:pointer; color: ${isLikedByMe ? '#ff00e6' : '#888'}; font-size:14px; display:flex; align-items:center; gap:4px;" onclick="toggleLike(${winnerId})">
                     ♥ <span>${likes}</span>
                   </button>
-
                   <div style="display:flex; align-items:center; gap:6px;">
                       <div class="rating-stars" style="display:flex;">
                         ${[1, 2, 3, 4, 5].map(i => `
@@ -1385,19 +1397,15 @@ async function fetchAndDisplayWinners() {
                       </div>
                       <span style="font-size: 12px; color: #888;">(${ratingCount})</span>
                   </div>
-
                   <button class="terminal-btn" id="comm-btn-${winnerId}" style="background:none; border:none; color:var(--cyan-main); font-size:16px; cursor:pointer;" 
                           onclick="toggleComments(${winnerId}, '${winnerAddr}')">
                     💬 (${commentCount})
                   </button>
-
               </div>
 
               <div class="comments-terminal" id="terminal-${winnerId}" style="display: none; margin-top: 10px;">
                   <div class="terminal-header">> LOG FOR WINNER: ${winnerAddr.slice(0,10)}...</div>
-                  
-                  <div class="comments-list"></div><br>
-
+                  <div class="comments-list"></div>
                   <div class="new-comment-section" style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(120, 0, 255, 0.2); display: flex; gap: 5px; align-items: center;">
                       <span style="color: var(--cyan-main);">></span>
                       <textarea class="terminal-input" id="new-comment-${winnerId}" placeholder="Transmit data..." rows="1" style="resize: none; overflow-y: hidden;" oninput="this.style.height = '';this.style.height = this.scrollHeight + 'px'"></textarea>
@@ -1411,7 +1419,7 @@ async function fetchAndDisplayWinners() {
         console.error("Error fetching winners:", err.message);
         winnerList.appendChild(winnerListPlaceholder);
     }
-                      }
+}
                        
     
 // Fungsi Helper untuk Like
