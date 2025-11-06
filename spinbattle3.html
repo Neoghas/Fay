@@ -2490,6 +2490,17 @@ async function showPlayerProfile(address) {
     }
 }
 
+// === FUNGSI HELPER AUDIO ===
+function playSound(soundId) {
+    const audio = document.getElementById(soundId);
+    if (audio) {
+        audio.currentTime = 0; // Reset ke awal jika sedang diputar
+        // Gunakan catch untuk menghindari error jika browser memblokir autoplay
+        audio.play().catch(e => console.warn("Audio autoplay blocked:", e));
+    }
+}
+    
+
 // Fungsi Tutup Modal Profil
 function hideProfileModal() {
     document.getElementById('profile-modal').classList.remove('show');
@@ -2502,25 +2513,53 @@ function copyToClipboard(text) {
     alert("Address copied: " + text);
 }
 
-// === 4. Inisialisasi & Event Listeners ===
+// === 4. Inisialisasi & Event Listeners (LENGKAP & DIPERBAIKI) ===
 
 document.addEventListener("DOMContentLoaded", () => {
-// Listener Modal Profil
-    // --- Listener Tombol Utama ---
+    console.log("🚀 App initializing...");
+
+    // 1. Inisialisasi Canvas (Roda Donat)
+    const canvas = document.getElementById('donutCanvas');
+    if (canvas) {
+        ctx = canvas.getContext('2d');
+        cw = canvas.width;
+        ch = canvas.height;
+        cx = cw / 2;
+        cy = ch / 2;
+        drawDonut(); // Gambar roda kosong segera
+    }
+
+    // 2. Cek Link Referral dari URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const refNick = urlParams.get('ref');
+    if (refNick) {
+        console.log("🔗 Referral detected:", refNick);
+        pendingReferrerNickname = refNick;
+    }
+
+    // 3. Panggil Data Awal SEGERA (Tanpa Menunggu Wallet)
+    // Ini yang sebelumnya hilang dan menyebabkan delay!
+    fetchAndDisplayRoundData();
+    fetchAndDisplayWinners();
+
+    // -------------------------------------------------
+    // 4. Pasang Semua Event Listeners
+    // -------------------------------------------------
+
+    // Listener Tombol Utama
     walletBtn.addEventListener("click", () => {
-        if (!userAddress) {
-            toggleWallet();
-        } else {
-            showWalletModal();
-        }
+        if (!userAddress) toggleWallet(); else showWalletModal();
     });
     placeBetBtn.addEventListener("click", showBetModal);
     finalizeBtn.addEventListener("click", callFinalizeRound);
 
-   document.getElementById('profile-modal-close-btn').addEventListener('click', hideProfileModal);
-   document.getElementById('profile-modal-overlay').addEventListener('click', hideProfileModal);
+    // Listener Modal Profil
+    const profileCloseBtn = document.getElementById('profile-modal-close-btn');
+    if (profileCloseBtn) profileCloseBtn.addEventListener('click', hideProfileModal);
+    const profileOverlay = document.getElementById('profile-modal-overlay');
+    if (profileOverlay) profileOverlay.addEventListener('click', hideProfileModal);
 
-    // --- Listener Modal Bet ---
+    // Listener Modal Bet
     betModalCloseBtn.addEventListener("click", hideBetModal);
     betModalOverlay.addEventListener("click", hideBetModal);
     confirmBetBtn.addEventListener("click", confirmBet);
@@ -2531,8 +2570,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- Listener Modal Referral ---
-    // Pastikan elemen-elemen ini ada di HTML kamu
+    // Listener Modal Referral
     if (referralBtn) referralBtn.addEventListener("click", showReferralModal);
     if (referralModalCloseBtn) referralModalCloseBtn.addEventListener("click", hideReferralModal);
     if (referralModalOverlay) referralModalOverlay.addEventListener("click", hideReferralModal);
@@ -2540,12 +2578,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (setReferrerBtn) setReferrerBtn.addEventListener("click", callSetReferrer);
     if (claimRewardsBtn) claimRewardsBtn.addEventListener("click", callClaimRewards);
 
-    // --- Listener Modal Wallet ---
+    // Listener Modal Wallet
     if (walletModalCloseBtn) walletModalCloseBtn.addEventListener("click", hideWalletModal);
     if (walletModalOverlay) walletModalOverlay.addEventListener("click", hideWalletModal);
     if (disconnectBtn) disconnectBtn.addEventListener("click", disconnectWallet);
 
-    // --- Listener Copy Referral ---
+    // Listener Copy Referral
     const copyBtn = document.getElementById("copyReferralBtn");
     if (copyBtn) {
         copyBtn.addEventListener("click", () => {
@@ -2555,26 +2593,20 @@ document.addEventListener("DOMContentLoaded", () => {
                 linkInput.setSelectionRange(0, 99999); // Dukungan mobile
                 navigator.clipboard.writeText(linkInput.value)
                     .then(() => alert("Referral link copied to clipboard!"))
-                    .catch(err => {
-                        console.error("Failed to copy: ", err);
-                        // Fallback
-                        try {
-                            document.execCommand('copy');
-                            alert("Referral link copied to clipboard!");
-                        } catch (ex) {
-                            alert("Failed to copy link automatically.");
-                        }
+                    .catch(() => {
+                        // Fallback manual jika navigator gagal
+                        document.execCommand('copy');
+                        alert("Referral link copied!");
                     });
             }
         });
     }
 
-    // --- Listener Lainnya ---
+    // Listener Perbaikan Canvas & Tab
     document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === 'visible') {
-            handleCanvasRedraw();
-        }
+        if (document.visibilityState === 'visible') handleCanvasRedraw();
     });
+    window.addEventListener("focus", handleCanvasRedraw);
 });
 
 </script>
