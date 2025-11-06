@@ -1763,21 +1763,22 @@ function hideReferralModal() {
 
     // --- Ambil Data Referral dari Kontrak ---
     async function fetchReferralData() {
-    if (!faylottoContract) return;
+    if (!faylottoContract || !userAddress) return;
+
     try {
+        if (!usdtDecimals) usdtDecimals = 18; 
+
         const nick = await faylottoContract.nicknames(userAddress);
         const referrer = await faylottoContract.referrerOf(userAddress);
         const rewards = await faylottoContract.getReferralRewards(userAddress);
         const count = await faylottoContract.getReferralCount(userAddress);
-        // Panggil fungsi untuk update UI
-        updateReferralUI(nick, referrer, rewards, count)    
-
+        
+        updateReferralUI(nick, referrer, rewards, count);
+        
     } catch (err) {
-        console.error("Error fetching referral data:", err.message);
-        alert("Could not load referral data.");
-
+        console.error("Error fetching referral data:", err);
+        
     }
-
     }
 
 // --- Update UI Modal Referral ---
