@@ -487,51 +487,72 @@
     font-size: 16px;
 }
 
-  /* === Cyberpunk Data Box Style === */
+/* === Cyberpunk Data Box Style (Revisi Layout) === */
+
+/* Container utama untuk info referral */
 .ref-info {
-    position: relative;
-    /* Latar gelap dengan sedikit transparansi */
-    background: linear-gradient(90deg, rgba(5, 5, 16, 0.9) 0%, rgba(10, 10, 30, 0.8) 100%);
-    /* Border kiri tebal berwarna cyan (var(--cyan-main) jika ada, atau #00ffff) */
-    border-left: 4px solid #00ffff; 
-    border-top: 1px solid rgba(0, 255, 255, 0.2);
-    border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-    /* Efek sudut terpotong di kanan atas */
-    clip-path: polygon(0 0, 95% 0, 100% 15%, 100% 100%, 0 100%);
-    padding: 15px 20px;
+    display: flex;
+    flex-wrap: wrap; /* Agar bisa turun ke baris baru */
+    gap: 10px; /* Jarak antar kotak */
     margin-bottom: 15px;
-    color: #aaccff; /* Warna teks label agak kebiruan */
-    font-family: 'Courier Prime', 'Courier New', monospace; /* Font gaya terminal */
-    font-size: 13px;
-    letter-spacing: 0.5px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5); /* Bayangan luar */
-    overflow: hidden;
 }
 
-/* Efek garis scanline halus berjalan di background */
-.ref-info::before {
+/* Kotak data individual */
+.ref-data-box {
+    flex: 1 1 45%; /* Default: ambil ~50% lebar (2 kolom) */
+    background: linear-gradient(135deg, rgba(10, 10, 30, 0.9), rgba(5, 5, 16, 0.8));
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-left: 3px solid var(--cyan-main); /* Aksen kiri */
+    padding: 10px;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+
+/* Kotak lebar penuh untuk Total Referrals */
+.ref-data-box.full-width {
+    flex: 1 1 100%;
+    border-left-color: var(--pink-main); /* Aksen warna beda untuk total */
+}
+
+/* Label data (misal: "Nickname:") */
+.ref-label {
+    display: block;
+    font-size: 10px;
+    color: #88aaff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    font-family: 'Courier Prime', monospace;
+}
+
+/* Nilai data (misal: "Contoh", "0.000") */
+.ref-value {
+    display: block;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Titik-titik jika terlalu panjang */
+}
+
+/* Efek scanline halus di setiap kotak */
+.ref-data-box::after {
     content: "";
     position: absolute;
-    top: -50%; left: 0;
-    width: 100%; height: 20px;
-    background: linear-gradient(to bottom, transparent, rgba(0, 255, 255, 0.1), transparent);
-    animation: scanline 4s linear infinite;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 255, 255, 0.05) 3px,
+        rgba(0, 255, 255, 0.05) 4px
+    );
     pointer-events: none;
-}
-
-/* Styling khusus untuk nilai data (span) */
-.ref-info span {
-    color: #ff00e6; /* Warna Pink Neon untuk data penting */
-    font-weight: 700;
-    text-shadow: 0 0 8px rgba(255, 0, 230, 0.6); /* Efek glow pada teks data */
-    float: right; /* [OPSIONAL] Agar data rata kanan rapi */
-}
-
-/* Animasi Scanline */
-@keyframes scanline {
-    0% { top: -50%; opacity: 0; }
-    50% { opacity: 1; }
-    100% { top: 150%; opacity: 0; }
+    opacity: 0.3;
 }
 
   /* === Donut Wheel Section === */
@@ -923,21 +944,31 @@
 
 
 
-    <div class="modal-body">
+    <div class="ref-section">
 
-        <div class="ref-section">
+    <h3>My Info</h3>
 
-            <h3>My Info</h3>
+    <div class="ref-info">
 
-            <div class="ref-info">
+        <div class="ref-data-box">
 
-                My Nickname: <span id="myNickname">-</span><br/>
+            <span class="ref-label">Nickname:</span>
 
-                My Referrer: <span id="myReferrer">-</span>
-
-            </div>
+            <span class="ref-value" id="myNickname">-</span>
 
         </div>
+
+        <div class="ref-data-box">
+
+            <span class="ref-label">Referrer:</span>
+
+            <span class="ref-value" id="myReferrer">-</span>
+
+        </div>
+
+    </div>
+
+    </div>
 
 
 
@@ -975,15 +1006,35 @@
 
         <div class="ref-section">
 
-            <h3>My Rewards</h3>
+    <h3>My Rewards</h3>
 
-            <div class="ref-info">
+    <div class="ref-info">
 
-                ETH: <span id="ethRewards">0</span> | USDT: <span id="usdtRewards">0</span><br/>
+        <div class="ref-data-box">
 
-                Total Referrals: <span id="referralCount">0</span>
+            <span class="ref-label">ETH Reward:</span>
 
-            </div>
+            <span class="ref-value" id="ethRewards">0</span>
+
+        </div>
+
+        <div class="ref-data-box">
+
+            <span class="ref-label">USDT Reward:</span>
+
+            <span class="ref-value" id="usdtRewards">0</span>
+
+        </div>
+
+        <div class="ref-data-box full-width" style="display: flex; justify-content: space-between; align-items: center;">
+
+             <span class="ref-label" style="margin:0; font-size: 12px;">Total Referrals:</span>
+
+             <span class="ref-value" id="referralCount" style="font-size: 18px; color: var(--pink-main);">0</span>
+
+        </div>
+
+    </div>
 
         </div>
 
