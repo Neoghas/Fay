@@ -510,33 +510,40 @@
     color: #fff;
 }
 
-/* === [REVISI] Style untuk Rating Bintang SVG === */
+/* === [REVISI FINAL] Style Bintang Rating === */
 .rating-stars {
     display: flex;
-    gap: 4px; /* Jarak antar bintang */
+    gap: 4px;
+    /* Kita BALIK urutannya agar :hover ~ berfungsi benar */
+    flex-direction: row-reverse; 
 }
 
-/* Ini adalah elemen <span> yang akan kita ubah jadi bintang */
 .star-icon {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
-    
-    /* Muat bentuk SVG Anda sebagai 'mask' */
-    mask-image: url('blackstar.svg'); /* GANTI PATH INI */
+    mask-image: url('blackstar.svg');
     mask-size: contain;
     mask-repeat: no-repeat;
     mask-position: center;
-    
-    /* Warna default (bintang kosong) */
-    background-color: #555; 
-    transition: background-color 0.2s ease;
+    background-color: #555; /* Default mati */
+    transition: background-color 0.1s ease;
 }
 
-/* Saat di-hover ATAU jika memiliki kelas 'active' */
+/* Saat hover di SATU bintang, 
+   SEMUA bintang "sebelumnya" (yang di kanannya di DOM) ikut menyala */
 .star-icon:hover,
+.star-icon:hover ~ .star-icon {
+    background-color: gold;
+}
+
+/* Terapkan warna 'active' (rating yang tersimpan) */
+/* Pastikan bintang 'active' tetap menyala meskipun tidak di-hover */
+.rating-stars:hover .star-icon.active {
+    background-color: gold;
+}
 .star-icon.active {
-    background-color: gold; /* Warna emas */
+    background-color: gold;
 }
 
   /* === [BARU] Gaya Komentar Futuristik (Terminal) === */
@@ -1677,20 +1684,20 @@ async function fetchAndDisplayWinners() {
               </div>
 
               <div class="winner-social" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(120,0,255,0.2); display:flex; justify-content:space-between; align-items:center;">
-                  <button class="like-btn" style="background:none; border:none; cursor:pointer; color: ${isLikedByMe ? '#ff00e6' : '#888'}; font-size:14px; display:flex; align-items:center; gap:4px;" onclick="toggleLike(${winnerId})"><img src="like.svg" style="width:20px; height:20px; vertical-align:middle;">Like<span>(${likes})</span>
+                  <button class="like-btn" style="background:none; border:none; cursor:pointer; color: ${isLikedByMe ? '#ff00e6' : '#888'}; font-size:14px; display:flex; align-items:center; gap:4px;" onclick="toggleLike(${winnerId})"><img src="like.svg" style="width:23px; height:23px; vertical-align:middle;">Like<span>(${likes})</span>
                   </button>
                   <div style="display:flex; align-items:center; gap:6px;">
                       <div class="rating-stars">
-                         ${[1, 2, 3, 4, 5].map(i => `
-                         <span class="star-icon ${i <= myRating ? 'active' : ''}" onclick="rateWinner(${winnerId}, ${i})"></span>
-                         `).join('')}
+                         ${[5, 4, 3, 2, 1].map(i => `
+    <span class="star-icon ${i <= myRating ? 'active' : ''}" onclick="rateWinner(${winnerId}, ${i})"></span>
+`).join('')}
                       </div>
                       <span style="font-size: 12px; color: #888;">(${ratingCount})</span>
                   </div>
                   <button class="terminal-btn" id="comm-btn-${winnerId}" 
         style="background:none; border:none; color:var(--cyan-main); font-size:14px; cursor:pointer; display:flex; align-items:center; gap:5px;" 
         onclick="toggleComments(${winnerId}, '${winnerAddr}')">
-    <img src="comment.svg" style="width:20px; height:20px; vertical-align:middle;">Comment
+    <img src="comment.svg" style="width:23px; height:23px; vertical-align:middle;">Log
     <span>(${commentCount})</span>
 </button>
               </div>
@@ -1819,10 +1826,15 @@ async function fetchAndRenderComments(winnerId) {
         const comments = await contractInstance.getAllCommentsForWinner(winnerId);
 
         if (comments.length === 0) {
-            commentsListDiv.innerHTML = "> NO TRANSMISSIONS FOUND.";
-            const commBtn = document.getElementById(`comm-btn-${winnerId}`);
-            if (commBtn) commBtn.innerText = `💬 (0)`;
-            return;
+    commentsListDiv.innerHTML = "> NO TRANSMISSIONS FOUND.";
+    const commBtn = document.getElementById(`comm-btn-${winnerId}`);
+    if (commBtn) {
+        
+        // [PERBAIKAN] Ganti .innerText menjadi .innerHTML
+        commBtn.innerHTML = `<img src="comment.svg" style="width:20px; height:20px; vertical-align:middle;"> <span>(0)</span>`;
+        // Saya kembalikan ke 20px dan <span> agar konsisten dengan gaya tombol Anda yang lain
+    }
+    return;
         }
 
         commentsListDiv.innerHTML = ""; // Bersihkan loading text
@@ -1886,8 +1898,10 @@ async function fetchAndRenderComments(winnerId) {
 
         commentsListDiv.appendChild(fragment);
         const commBtn = document.getElementById(`comm-btn-${winnerId}`);
-        if (commBtn) commBtn.innerText = `💬 (${comments.length})`;
-
+if(commBtn) {
+    commBtn.innerHTML = `<img src="comment.svg" style="width:20px; height:20px; vertical-align:middle;"> <span>(${comments.length})</span>`;
+}
+      
     } catch (err) {
         console.error("Error fetching comments:", err);
         commentsListDiv.innerHTML = "> ERROR: SIGNAL LOST.";
