@@ -1345,6 +1345,8 @@ let myCurrentEthDeposit = ethers.BigNumber.from(0);
 let myCurrentUsdtDeposit = ethers.BigNumber.from(0);
 let pendingReferrerNickname = null;
 let isLoadingWinners = false; // Flag untuk mencegah loading ganda
+let winnersToShow = 10; // [BARU] Melacak berapa banyak pemenang yang harus ditampilkan
+
     
 function getProvider() {
     // Cek apakah user punya wallet (misal MetaMask)
@@ -3212,26 +3214,54 @@ function copyToClipboard(text) {
     alert("Address copied: " + text);
 }
 
-    // [BARU] Fungsi untuk menangani 'load more' saat scroll
+    // [BARU] FUNGSI HELPER UNTUK INFINITE SCROLL
 async function loadMoreWinners() {
-    if (isLoadingWinners) return; // Jangan lakukan apa-apa jika sedang loading
+    // 1. Jangan jalankan jika sudah ada proses loading
+    if (isLoadingWinners) return; 
 
-    // Cek apakah kita sudah memuat semua pemenang
-    let contractInstance = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    // 2. Cek apakah kita sudah di akhir daftar
+    let contractInstance = faylottoContract;
+    if (!contractInstance) {
+       if (!provider) provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
+       contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    }
     const totalWinnerCount = (await contractInstance.getWinnerCount()).toNumber();
-    if (winnerList.children.length >= totalWinnerCount) {
+    
+    // Hitung jumlah item yang sudah ada di list
+    const currentItemCount = winnerList.getElementsByClassName('winner-list-item').length;
+
+    if (currentItemCount >= totalWinnerCount) {
         console.log("Semua riwayat pemenang sudah dimuat.");
         return; // Sudah semua, berhenti
     }
 
+    // 3. Mulai loading
     isLoadingWinners = true;
     console.log("Scroll ke bawah terdeteksi, memuat 15 riwayat lagi...");
     winnersToShow += 15; // Tambah jumlah yang akan ditampilkan
     
     await fetchAndDisplayWinners(); // Panggil fungsi utama lagi
     
-    isLoadingWinners = false; // Selesai loading, siap untuk scroll berikutnya
+    isLoadingWinners = false; // Selesai loading
 }
+
+// [BARU] EVENT LISTENER UNTUK SCROLL
+// (Tempatkan ini di dalam 'DOMContentLoaded' bersama listener tombol Anda)
+document.addEventListener("DOMContentLoaded", () => {
+    // ... (kode inisialisasi canvas dan listener tombol Anda yang lain) ...
+
+    const winnerListContainer = document.getElementById('winner-list-container');
+    if (winnerListContainer) {
+        winnerListContainer.addEventListener('scroll', () => {
+            // Cek jika user scroll 50px dari bawah
+            if (winnerListContainer.scrollTop + winnerListContainer.clientHeight >= winnerListContainer.scrollHeight - 50) {
+                if (!isLoadingWinners) { // Cek lagi di sini agar lebih aman
+                    loadMoreWinners();
+                }
+            }
+        });
+    }
+});
 
 // === 4. Inisialisasi & Event Listeners (LENGKAP & DIPERBAIKI) ===
 
@@ -3322,20 +3352,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-     // Tambahkan suara klik ke semua tombol
+          // Tambahkan suara klik ke semua tombol
 document.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => playSound('sfx-click'));
-});
-
-  const winnerListContainer = document.getElementById('winner-list-container');
-    if (winnerListContainer) {
-        winnerListContainer.addEventListener('scroll', () => {
-            // Cek jika user scroll 50px dari bawah
-            if (winnerListContainer.scrollTop + winnerListContainer.clientHeight >= winnerListContainer.scrollHeight - 50) {
-                loadMoreWinners();
-            }
-        });
-    }
 });
 
     // Listener Perbaikan Canvas & Tab
@@ -3343,6 +3362,7 @@ document.querySelectorAll('button').forEach(btn => {
         if (document.visibilityState === 'visible') handleCanvasRedraw();
     });
     window.addEventListener("focus", handleCanvasRedraw);
+});
 
 </script>
 </body>
