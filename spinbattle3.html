@@ -510,18 +510,33 @@
     color: #fff;
 }
 
+/* === [REVISI] Style untuk Rating Bintang SVG === */
 .rating-stars {
     display: flex;
-    gap: 2px;
+    gap: 4px; /* Jarak antar bintang */
 }
-.star {
-    color: #555;
+
+/* Ini adalah elemen <span> yang akan kita ubah jadi bintang */
+.star-icon {
+    width: 16px;
+    height: 16px;
     cursor: pointer;
-    font-size: 16px;
-    transition: color 0.2s ease;
+    
+    /* Muat bentuk SVG Anda sebagai 'mask' */
+    mask-image: url('blackstar.svg'); /* GANTI PATH INI */
+    mask-size: contain;
+    mask-repeat: no-repeat;
+    mask-position: center;
+    
+    /* Warna default (bintang kosong) */
+    background-color: #555; 
+    transition: background-color 0.2s ease;
 }
-.star.active, .star:hover {
-    color: gold; /* Warna emas untuk bintang aktif */
+
+/* Saat di-hover ATAU jika memiliki kelas 'active' */
+.star-icon:hover,
+.star-icon.active {
+    background-color: gold; /* Warna emas */
 }
 
   /* === [BARU] Gaya Komentar Futuristik (Terminal) === */
@@ -1665,10 +1680,10 @@ async function fetchAndDisplayWinners() {
                   <button class="like-btn" style="background:none; border:none; cursor:pointer; color: ${isLikedByMe ? '#ff00e6' : '#888'}; font-size:14px; display:flex; align-items:center; gap:4px;" onclick="toggleLike(${winnerId})"><img src="like.svg" style="width:20px; height:20px; vertical-align:middle;">Like<span>(${likes})</span>
                   </button>
                   <div style="display:flex; align-items:center; gap:6px;">
-                      <div class="rating-stars" style="display:flex;">
-                        ${[1, 2, 3, 4, 5].map(i => `
-                            <span style="cursor:pointer; color: ${i <= myRating ? 'gold' : '#555'}; font-size:16px;" onclick="rateWinner(${winnerId}, ${i})">★</span>
-                        `).join('')}
+                      <div class="rating-stars">
+                         ${[1, 2, 3, 4, 5].map(i => `
+                         <span class="star-icon ${i <= myRating ? 'active' : ''}" onclick="rateWinner(${winnerId}, ${i})"></span>
+                         `).join('')}
                       </div>
                       <span style="font-size: 12px; color: #888;">(${ratingCount})</span>
                   </div>
