@@ -1150,6 +1150,68 @@
 
     padding-right: 10px; /* Ruang untuk panah */
 }
+
+  /* Wrapper select */
+.select-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(120, 0, 255, 0.4);
+    border-radius: 12px;
+    padding: 6px 10px;
+    backdrop-filter: blur(6px);
+}
+
+/* Ikon di kiri */
+.input-icon {
+    width: 22px;
+    height: 22px;
+    margin-right: 6px;
+}
+
+/* Style select */
+#betCurrencySelect {
+    font-size: 16px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    padding: 6px 4px;
+    width: 100%;
+    cursor: pointer;
+    appearance: none;
+}
+
+/* Menghilangkan default arrow */
+#betCurrencySelect::-ms-expand {
+    display: none;
+}
+
+#betCurrencySelect:focus {
+    outline: none;
+}
+
+/* Opsi dalam dropdown */
+#betCurrencySelect option {
+    background: #0b0b0f;
+    color: white;
+    padding: 10px;
+    font-size: 16px;
+}
+
+/* Hover di dalam dropdown (desktop only) */
+#betCurrencySelect option:hover {
+    background: #1e0036;
+}
+
+/* Untuk device yang support popup Android/iOS */
+.currency-option {
+    font-size: 16px;
+    padding-left: 28px;
+    background-repeat: no-repeat;
+    background-size: 20px;
+    background-position: 5px center;
+}
   
   @media (min-width: 768px) {
   #donutCanvas {
@@ -1271,19 +1333,19 @@
       </div>
       
       <div class="input-group">
-        
-        <div class="input-icon-wrapper" style="flex-grow: 1; width: 65%;">
-            <i class="fa-solid fa-hashtag input-icon-fa"></i>
-            <input type="number" id="betAmountInput" placeholder="Custom Amount">
-        </div>
-        
-        <div class="input-icon-wrapper select-wrapper" style="width: 35%;">
-            <img src="eth.svg" class="input-icon" id="currency-icon" alt="">
-            <select id="betCurrencySelect">
-                <option value="ETH" data-icon="eth.svg">ETH</option>
-                <option value="USDT" data-icon="usdt.svg">USDT</option>
-            </select>
-        </div>
+
+    <div class="input-icon-wrapper" style="flex-grow: 1; width: 65%;">
+        <i class="fa-solid fa-hashtag input-icon-fa"></i>
+        <input type="number" id="betAmountInput" placeholder="Custom Amount">
+    </div>
+
+    <div class="input-icon-wrapper select-wrapper" style="width: 35%;">
+        <img src="eth.svg" class="input-icon" id="currency-icon" alt="">
+        <select id="betCurrencySelect">
+            <option value="ETH" data-icon="eth.svg" class="currency-option">ETH</option>
+            <option value="USDT" data-icon="usdt.svg" class="currency-option">USDT</option>
+        </select>
+    </div>
 
       </div>
       <div class="percent-buttons">
@@ -3274,6 +3336,17 @@ document.addEventListener("DOMContentLoaded", () => {
      // Tambahkan suara klik ke semua tombol
 document.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => playSound('sfx-click'));
+});
+
+  document.querySelectorAll("#betCurrencySelect option").forEach(opt => {
+    opt.style.backgroundImage = `url(${opt.dataset.icon})`;
+});
+
+const select = document.getElementById("betCurrencySelect");
+const icon = document.getElementById("currency-icon");
+
+select.addEventListener("change", () => {
+    icon.src = select.selectedOptions[0].dataset.icon;
 });
 
     // Listener Perbaikan Canvas & Tab
