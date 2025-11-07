@@ -1802,7 +1802,7 @@ async function fetchAndDisplayWinners() {
 
                         Winner: ${displayName}
 
-                      </div>
+                      </div><br>
 
 
 
@@ -1814,7 +1814,7 @@ async function fetchAndDisplayWinners() {
 
                              ${hasUsdtReward ? usdtAmt + ' USDT' : ''}
 
-                      </div>
+                      </div><br>
 
                   </div>
 
@@ -1826,9 +1826,9 @@ async function fetchAndDisplayWinners() {
 
                   <button class="like-btn ${isLikedByMe ? 'liked' : ''}" onclick="toggleLike(${winnerId})">
 
-                    <img src="like.svg" class="like-icon" alt="Like">
+                    <img src="like.svg" class="like-icon" alt="Like" style="width:30px; height:30px;">
 
-                    <span>${likes}</span>
+                    <span style="color:#ff00e6">Like (${likes})</span>
 
                   </button>
 
@@ -1854,7 +1854,7 @@ async function fetchAndDisplayWinners() {
 
                           onclick="toggleComments(${winnerId}, '${winnerAddr}')">
 
-                      <img src="comment.svg" style="width:20px; height:20px; filter: brightness(0) saturate(100%) invert(84%) sepia(87%) saturate(6835%) hue-rotate(130deg) brightness(102%) contrast(102%);">
+                      <img src="comment.svg" style="width:30px; height:30px; filter: brightness(0) saturate(100%) invert(84%) sepia(87%) saturate(6835%) hue-rotate(130deg) brightness(102%) contrast(102%);">
 
                       <span>(${commentCount})</span>
 
@@ -3348,6 +3348,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         document.execCommand('copy');
                         alert("Referral link copied!");
                     });
+            }
+        });
+    }
+
+  const winnerListContainer = document.getElementById('winner-list-container');
+    if (winnerListContainer) {
+        winnerListContainer.addEventListener('scroll', () => {
+            // Cek jika user scroll 50px dari bawah
+            if (winnerListContainer.scrollTop + winnerListContainer.clientHeight >= winnerListContainer.scrollHeight - 50) {
+                if (!isLoadingWinners) { // Cek lagi di sini agar lebih aman
+                    loadMoreWinners();
+                }
             }
         });
     }
