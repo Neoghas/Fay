@@ -1768,7 +1768,7 @@ async function toggleWallet() {
     }
 }
 
-  // [REVISI TOTAL] Fungsi 2: Menyelesaikan proses login setelah jaringan benar
+ // [REVISI TOTAL] Fungsi 2: Menyelesaikan proses login setelah jaringan benar
 async function completeLogin(signer) {
     
     // --- Bagian 2a: Tanda Tangan (Wajib) ---
@@ -1789,13 +1789,15 @@ async function completeLogin(signer) {
     }
 
     // --- Bagian 2b: Sukses Tanda Tangan! Update UI ---
-    // (Lakukan ini SEBELUM memuat data)
     usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
     faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-    walletBtn.innerText = "Terhubung";
+    walletBtn.innerText = "Connected";
     referralBtn.style.display = "block"; 
-    walletAddressEl.innerText = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+    
+    // [PERBAIKAN] Menggunakan nama variabel DOM Anda yang benar
+    walletAddress.innerText = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+    
     statusText.innerText = "Wallet Connected! Good luck.";
     showToast("Wallet Connected!", "success");
 
@@ -1804,7 +1806,6 @@ async function completeLogin(signer) {
     localStorage.setItem('walletExpiry', expiry);
 
     // --- Bagian 2c: Muat Data (Sekarang dibungkus try...catch sendiri) ---
-    // (Error di sini tidak akan membatalkan status "Terhubung")
     try {
         await updateUserBalances();
         await fetchAndDisplayRoundData();
@@ -3052,7 +3053,7 @@ function disconnectWallet() {
     userAddress = null; provider = null; signer = null;
     walletBtn.innerText = "Connect Wallet";
     referralBtn.style.display = "none";
-    referralPopup.style.display = 'none';
+    referralPopup.style.display = 'none'; // (Jika Anda menggunakan popup referral)
     statusText.innerText = "Wallet not connected";
     
     hideWalletModal(); 
@@ -3067,15 +3068,17 @@ function disconnectWallet() {
     }
     
     resetRoundUI();
-    walletAddressEl.innerText = "-";
-    ethBalanceEl.innerText = "0";
-    usdtBalanceEl.innerText = "0";
+    
+    // [PERBAIKAN] Menggunakan nama variabel DOM Anda yang benar
+    walletAddress.innerText = "-";
+    ethBalance.innerText = "0";
+    usdtBalance.innerText = "0";
     
     fetchAndDisplayRoundData();
     fetchAndDisplayWinners();
     showToast("Wallet disconnected.", "info");
 }
-
+    
 // [BARU] Fungsi khusus untuk menggambar ulang canvas
 function handleCanvasRedraw() {
     // Cek apakah 'ctx' (konteks canvas) sudah ada
