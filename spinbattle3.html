@@ -932,7 +932,7 @@
 }
 .lb-header, .lb-item {
     display: grid;
-    grid-template-columns: 0.5fr 2fr 1fr 1.5fr; /* Pembagian kolom */
+    grid-template-columns: 0.5fr 2fr 1fr 1.5fr 1.5fr; /* [REVISI] 5 kolom */
     padding: 10px;
     border-bottom: 1px solid rgba(120, 0, 255, 0.2);
     font-size: 12px; text-align: left;
@@ -1572,10 +1572,10 @@
     <div class="leaderboard-container">
         <div class="lb-header">
             <span>Rank</span>
-            <span>Pilot (Address)</span>
+            <span>Pilot</span>
             <span>Win</span>
             <span>Total ETH</span>
-        </div>
+            <span>Total USDT</span> </div>
         <div id="leaderboard-list">
             <div class="lb-loading">> No data is displayed...</div>
         </div>
@@ -3162,56 +3162,87 @@ function stopVictoryConfetti() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
     
-   // === FUNGSI LEADERBOARD (FRONTEND-ONLY) ===
+// === FUNGSI LEADERBOARD (FRONTEND-ONLY) ===
 async function fetchAndRenderLeaderboard() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
     const list = document.getElementById('leaderboard-list');
     if (!list) return;
-    let providerToUse = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+
+    // Gunakan provider read-only jika belum connect
+    let providerToUse = provider || new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
     let contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerToUse);
+
     try {
+        // [BARU] Ambil desimal USDT terlebih dahulu
+        let usdtDecimalsForLeaderboard = 18; // Default
+        try {
+            const tempUsdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, providerToUse);
+            usdtDecimalsForLeaderboard = await tempUsdtContract.decimals();
+        } catch (e) { console.warn("Could not fetch USDT decimals for leaderboard."); }
+
+
+        // 1. Ambil event 'WinnerRecorded'
         const currentBlock = await providerToUse.getBlockNumber();
         const fromBlock = Math.max(0, currentBlock - 50000); 
+        
         const filter = contract.filters.WinnerRecorded();
         const logs = await contract.queryFilter(filter, fromBlock, "latest");
+
+        // 2. Proses Data: Hitung statistik per pemain
         const stats = {};
         logs.forEach(log => {
             const { winner, rewardETH, rewardERC20 } = log.args;
             if (!stats[winner]) {
-                stats[winner] = { wins: 0, totalEth: ethers.BigNumber.from(0) };
+                stats[winner] = { 
+                    wins: 0, 
+                    totalEth: ethers.BigNumber.from(0),
+                    totalUsdt: ethers.BigNumber.from(0) // [BARU] Tambahkan totalUsdt
+                };
             }
             stats[winner].wins += 1;
             stats[winner].totalEth = stats[winner].totalEth.add(rewardETH);
+            stats[winner].totalUsdt = stats[winner].totalUsdt.add(rewardERC20); // [BARU] Tambahkan reward USDT
         });
+
+        // 3. Urutkan: Berdasarkan jumlah kemenangan
         const sortedLeaderboard = Object.entries(stats)
             .map(([addr, data]) => ({ addr, ...data }))
-            .sort((a, b) => b.wins - a.wins) 
-            .slice(0, 10); 
+            .sort((a, b) => b.wins - a.wins) // Urutkan berdasarkan 'wins' terbanyak
+            .slice(0, 10); // Ambil Top 10
+
+        // 4. Render ke HTML
         if (sortedLeaderboard.length === 0) {
-            list.innerHTML = "<div class='lb-loading' style='animation:none;'>No Data Yet. Be The First!</div>";
+            list.innerHTML = "<div class='lb-loading' style='animation:none;'>NO DATA YET. BE THE FIRST!</div>";
             return;
         }
-        list.innerHTML = ""; 
+
+        list.innerHTML = ""; // Bersihkan loading
         sortedLeaderboard.forEach((player, index) => {
             const rank = index + 1;
             const shortAddr = player.addr.slice(0, 6) + "..." + player.addr.slice(-4);
             const ethTotal = parseFloat(ethers.utils.formatEther(player.totalEth)).toFixed(4);
+            // [BARU] Format total USDT
+            const usdtTotal = parseFloat(ethers.utils.formatUnits(player.totalUsdt, usdtDecimalsForLeaderboard)).toFixed(2);
+            
             const isMe = userAddress && player.addr.toLowerCase() === userAddress.toLowerCase();
             const displayName = isMe ? "YOU" : shortAddr;
+
+            // [PERBAIKAN] Tambahkan <div> baru untuk usdtTotal
             list.innerHTML += `
                 <div class="lb-item rank-${rank}" style="${isMe ? 'color:var(--cyan-main); font-weight:bold;' : ''}">
                     <div class="lb-rank">#${rank}</div>
                     <div style="cursor:pointer;" onclick="showPlayerProfile('${player.addr}')">${displayName}</div>
                     <div>${player.wins}</div>
                     <div>${ethTotal} ETH</div>
+                    <div>${usdtTotal} USDT</div> 
                 </div>
             `;
         });
+
     } catch (err) {
         console.error("Leaderboard error:", err);
-        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>Failed To Load Data.</div>";
+        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>FAILED TO LOAD DATA.</div>";
     }
-} 
+}
 
 // Fungsi Tutup Modal Profil
 function hideProfileModal() {
