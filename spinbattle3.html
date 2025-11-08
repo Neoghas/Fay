@@ -1727,30 +1727,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// === FUNGSI UTAMA: Toggle Connect / Disconnect ===
-async function toggleWallet() {
-  // Fungsi ini sekarang HANYA menangani KONEKSI
-  if (userAddress) return; // Jika sudah terhubung, abaikan
-  if (!window.ethereum) return alert("Please install MetaMask.");
-  
-  try {
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
-      userAddress = await signer.getAddress();
+// Fungsi untuk reconnect otomatis dari localStorage
+async function reconnectWallet() {
+  const stored = localStorage.getItem('connectedWallet');
+  if (!stored) return;
 
-      // [BARU] Cek jaringan Sepolia (chain ID 11155111)
+  try {
+    const { address, expiry } = JSON.parse(stored);
+    if (Date.now() > expiry) {
+      localStorage.removeItem('connectedWallet');
+      return;
+    }
+
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    const accounts = await provider.listAccounts();
+    if (accounts.includes(address)) {
+      signer = provider.getSigner();
+      userAddress = address;
+
+      // Check chain
       const network = await provider.getNetwork();
       if (network.chainId !== 84532) {
-          throw new Error("Please switch to Sepolia network in MetaMask.");
+        await switchToBaseSepolia();
       }
-      console.log("Connected to network:", network.name);
 
       usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
       faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-      walletBtn.innerText = "Connect"; // [PERBAIKAN] Teks baru
-      referralBtn.style.display = "block"; 
+      walletBtn.innerText = "Terhubung";
+      referralBtn.style.display = "block";
       walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
       
       await updateUserBalances();
@@ -1759,80 +1764,145 @@ async function toggleWallet() {
       await fetchReferralData();
       setupEventListeners();
 
-     if (pendingReferrerNickname) {
-          try {
-              const currentRef = await faylottoContract.referrerOf(userAddress);
-              if (currentRef === ethers.constants.AddressZero) {
-                  // User belum punya referrer, tetapkan sekarang
-                  console.log("Setting pending referrer:", pendingReferrerNickname);
-                  // PENTING: Ini akan memunculkan popup transaksi MetaMask
-                  const tx = await faylottoContract.setReferralByNickname(pendingReferrerNickname);
-                  await tx.wait();
-                  alert(`Successfully referred by ${pendingReferrerNickname}!`);
-                  pendingReferrerNickname = null; // Clear setelah sukses
-                  fetchReferralData(); // Refresh UI
-              }
-          } catch (e) {
-              console.warn("Failed to auto-set referrer:", e.message);
-              // Jangan ganggu user dengan alert error jika gagal (misal nickname salah)
-          }
-     }
-
-      console.log("Wallet connected successfully:", userAddress);
-      statusText.innerText = "Click the button to start the Round!.";
-
+      console.log("Wallet reconnected from storage:", userAddress);
+    } else {
+      localStorage.removeItem('connectedWallet');
+    }
   } catch (err) {
-      console.error("Failed to connect wallet:", err.message);
-      statusText.innerText = "Failed to connect. Check MetaMask network (Sepolia) and contract addresses.";
-      provider = null; signer = null; userAddress = null;
-      alert(`Error: ${err.message}`);
+    console.error("Reconnect failed:", err);
+    localStorage.removeItem('connectedWallet');
   }
 }
 
-// === FUNGSI UTAMA: Ambil Data Ronde & Mulai Timer ===
-async function fetchAndDisplayRoundData() {
-    if (!faylottoContract) return;
-    try {
-        statusText.innerText = "Syncing round data...";
-        currentRoundId = await faylottoContract.currentRoundId();
-        const roundInfo = await faylottoContract.getRoundBasic(currentRoundId);
-        
-        // Reset dan ambil data pemain
-        resetRoundUI(); 
-        const playersList = await faylottoContract.getRoundPlayers(currentRoundId);
-        for (const playerAddress of playersList) {
-            const deposits = await faylottoContract.getPlayerDeposits(currentRoundId, playerAddress);
-            addBetToState(playerAddress, deposits.ethAmount, deposits.erc20Amount, false);
-        }
-        updateBetList();
-        await updateMyDeposits();
-
-        // === LOGIKA TIMER YANG BENAR (TERSINKRONISASI) ===
-        // Ambil endTime ASLI dari kontrak (dalam milidetik)
-        const contractEndTime = roundInfo.endTime.toNumber() * 1000;
-        const now = Date.now();
-        const timeLeft = contractEndTime - now;
-
-        if (timeLeft <= 0) {
-            // Jika waktu habis, langsung tampilkan Finalize (kontrak sudah siap)
-            statusText.innerText = "Round ended. Waiting for finalization...";
-            startVisualTimer(contractEndTime); // Ini akan langsung ke 00:00
-        } else {
-            // Jika ronde masih berjalan, tampilkan timer
-            statusText.innerText = `Round ${currentRoundId.toString()} is live!`;
-            placeBetBtn.disabled = false;
-            isFinalizing = false;
-            startVisualTimer(contractEndTime); // Mulai timer ASLI
-        }
-        // ===============================================
-
-        console.log("Round data fetched:", roundInfo);
-    } catch (err) {
-        console.error("Error fetching round data:", err.message);
-        statusText.innerText = "Error syncing data. Please refresh or check console.";
+// Fungsi switch jaringan ke Base Sepolia
+async function switchToBaseSepolia() {
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: '0x14a34' }], // Hex for 84532
+    });
+  } catch (err) {
+    if (err.code === 4902) { // Chain not added
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0x14a34',
+          chainName: 'Base Sepolia Testnet',
+          rpcUrls: ['https://sepolia.base.org'],
+          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+          blockExplorerUrls: ['https://sepolia.basescan.org'],
+        }],
+      });
+    } else {
+      throw err;
     }
+  }
 }
+
+// === FUNGSI UTAMA: Toggle Connect / Disconnect ===
+async function toggleWallet() {
+  if (userAddress) return; // Jika sudah terhubung, abaikan
+  if (!window.ethereum) return alert("Please install MetaMask.");
+
+  try {
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    // Cek & switch jaringan
+    const network = await provider.getNetwork();
+    if (network.chainId !== 84532) {
+      await switchToBaseSepolia();
+    }
+    console.log("Connected to network:", network.name);
+
+    usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
+    faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
+
+    walletBtn.innerText = "Connect"; // [PERBAIKAN] Teks baru  
+    referralBtn.style.display = "block";   
+    walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);  
+    
+    // Signature fitur
+    const localTime = new Date().toLocaleString();
+    const message = `Welcome to Faylotto Spin Battle, Play & Win! (${userAddress}) (${localTime})`;
+    const signature = await signer.signMessage(message);
+    console.log("Signature:", signature);
+    alert(`Signed: ${message}\nSignature: ${signature}`);
+
+    // Simpan di localStorage (1 bulan = 30 hari)
+    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+    localStorage.setItem('connectedWallet', JSON.stringify({ address: userAddress, expiry }));
+
+    await updateUserBalances();  
+    await fetchAndDisplayRoundData();  
+    await fetchAndDisplayWinners();  
+    await fetchReferralData();  
+    setupEventListeners();  
+
+    if (pendingReferrerNickname) {  
+      try {  
+          const currentRef = await faylottoContract.referrerOf(userAddress);  
+          if (currentRef === ethers.constants.AddressZero) {  
+              // User belum punya referrer, tetapkan sekarang  
+              console.log("Setting pending referrer:", pendingReferrerNickname);  
+              // PENTING: Ini akan memunculkan popup transaksi MetaMask  
+              const tx = await faylottoContract.setReferralByNickname(pendingReferrerNickname);  
+              await tx.wait();  
+              alert(`Successfully referred by ${pendingReferrerNickname}!`);  
+              pendingReferrerNickname = null; // Clear setelah sukses  
+              fetchReferralData(); // Refresh UI  
+          }  
+      } catch (e) {  
+          console.warn("Failed to auto-set referrer:", e.message);  
+          // Jangan ganggu user dengan alert error jika gagal (misal nickname salah)  
+      }  
+ }  
+
+    console.log("Wallet connected successfully:", userAddress);  
+    statusText.innerText = "Click the button to start the Round!.";
+
+  } catch (err) {
+    console.error("Failed to connect wallet:", err.message);
+    statusText.innerText = "Failed to connect. Check MetaMask network (Sepolia) and contract addresses.";
+    provider = null; signer = null; userAddress = null;
+    alert(`Error: ${err.message}`);
+  }
+}
+
+function disconnectWallet() {
+  userAddress = null; provider = null; signer = null;
+  walletBtn.innerText = "Connect Wallet";
+  referralBtn.style.display = "none";
+  statusText.innerText = "Wallet not connected";
+
+  hideWalletModal(); // Sembunyikan modal  
   
+  if (visualTimer) clearInterval(visualTimer);  
+  if (faylottoContract) faylottoContract.removeAllListeners(); // Cek dulu  
+  
+  resetRoundUI();  
+  myEthDeposit.innerText = "0";   
+  myUsdtDeposit.innerText = "0";  
+  winnerList.innerHTML = "";  
+  winnerList.appendChild(winnerListPlaceholder);  
+
+  // Reset info di modal  
+  walletAddress.innerText = "-";  
+  ethBalance.innerText = "0";  
+  usdtBalance.innerText = "0";  
+
+  fetchAndDisplayRoundData();  
+  fetchAndDisplayWinners();
+
+  // Hapus localStorage
+  localStorage.removeItem('connectedWallet');
+}
+
+// Panggil reconnect saat load
+reconnectWallet();
+
 // === FUNGSI UTAMA: Ambil Data Pemenang & Fitur Sosial ===
 async function fetchAndDisplayWinners() {
     let contractInstance = faylottoContract;
@@ -3007,31 +3077,8 @@ function hideWalletModal() {
     walletModal.classList.remove("show");
 }
 
-    function disconnectWallet() {
-    userAddress = null; provider = null; signer = null;
-    walletBtn.innerText = "Connect Wallet First";
-    referralBtn.style.display = "none";
-    statusText.innerText = "Wallet not connected";
+    // Function Disconnect Wallet
     
-    hideWalletModal(); // Sembunyikan modal
-    
-    if (visualTimer) clearInterval(visualTimer);
-    if (faylottoContract) faylottoContract.removeAllListeners(); // Cek dulu
-    
-    resetRoundUI();
-    myEthDeposit.innerText = "0"; 
-    myUsdtDeposit.innerText = "0";
-    winnerList.innerHTML = "";
-    winnerList.appendChild(winnerListPlaceholder);
-
-    // Reset info di modal
-    walletAddress.innerText = "-";
-    ethBalance.innerText = "0";
-    usdtBalance.innerText = "0";
-
-    fetchAndDisplayRoundData();
-    fetchAndDisplayWinners();
-    }
     
 // [BARU] Fungsi khusus untuk menggambar ulang canvas
 function handleCanvasRedraw() {
