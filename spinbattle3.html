@@ -1267,56 +1267,6 @@
   flex-grow: 1; /* Biarkan teks mengambil sisa ruang */
   word-wrap: break-word;
 }
-
-  /* === [BARU] Style untuk Avatar di Daftar Taruhan === */
-
-/* Ubah .bet-list-item agar menggunakan flexbox */
-.bet-list-item {
-    display: flex;
-    align-items: center; /* Sejajarkan avatar dan teks */
-    gap: 10px;
-    background: rgba(20, 20, 40, 0.7);
-    border-radius: 4px; padding: 8px 10px;
-    margin-bottom: 6px; font-size: 12px;
-}
-
-/* Avatar kecil di list */
-.bet-list-avatar {
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    border: 1px solid var(--cyan-main);
-    background: #0b0b15;
-    flex-shrink: 0; /* Jangan biarkan avatar penyok */
-}
-
-/* Info pemain (Nickname + Alamat) */
-.bet-list-player-info {
-    flex-grow: 1; /* Ambil sisa ruang */
-    min-width: 0; /* Mencegah teks mendorong layout */
-}
-.bet-list-player-info .player-id {
-    font-weight: bold; 
-    color: var(--cyan-main);
-    display: block; /* Tampilkan di baris sendiri */
-    font-size: 13px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis; /* Pangkas jika nama terlalu panjang */
-}
-.bet-list-player-info .player-address {
-    font-size: 10px;
-    color: #888;
-    display: block;
-}
-
-/* Jumlah taruhan (Tetap di kanan) */
-.bet-list-player-bets {
-    text-align: right;
-    color: #eee;
-    flex-shrink: 0;
-    font-size: 11px;
-}
   
   @media (min-width: 768px) {
   #donutCanvas {
@@ -1571,7 +1521,7 @@
     <h2 class="section-title">Top Pilot</h2>
     <div class="leaderboard-container">
         <div class="lb-header">
-            <span>Rank </span>
+            <span>Rank</span>
             <span>Pilot</span>
             <span>Win</span>
             <span>ETH</span>
@@ -1587,8 +1537,8 @@
 <audio id="sfx-win" src="winI.mp3" preload="auto"></audio>
 <audio id="sfx-coin" src="coin.mp3" preload="auto"></audio>
 
-<div id="toast-container"></div>
-  
+  <div id="toast-container></div>
+    
   <footer>
     <div id="footer" class="social-icons">
         <a href="https://x.com/FaylottoXyz" target="_blank"><i class="fa-brands fa-twitter"></i></a>
@@ -1611,9 +1561,10 @@
         </a>
       </span>
     </p>
-  </footer>
-<script>
-  // ===========================================
+    </footer>
+
+  <script>
+    // ===========================================
 // === 1. KONFIGURASI KONTRAK ===
 // ===========================================
     
@@ -2247,19 +2198,17 @@ function setupEventListeners() {
     }
     if (!contractToListen) return; 
     contractToListen.removeAllListeners(); 
-    contractToListen.on("BetETH", async (roundId, player, amount) => {
+    contractToListen.on("BetETH", (roundId, player, amount) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
             addBetToState(player, amount, ethers.BigNumber.from(0), true);
-            await updateBetList(); // <-- Tambahkan await
+            updateBetList();
             if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
-
-    // [PERBAIKAN 2] Jadikan fungsi callback ini 'async'
-    contractToListen.on("BetERC20", async (roundId, player, amount) => {
+    contractToListen.on("BetERC20", (roundId, player, amount) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
             addBetToState(player, ethers.BigNumber.from(0), amount, true);
-            await updateBetList(); // <-- Tambahkan await
+            updateBetList();
             if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
@@ -2284,49 +2233,61 @@ function setupEventListeners() {
     }
 }
 
+// === [PERBAIKAN BUG UTAMA] ===
 // Menambahkan fungsi `fetchAndDisplayRoundData` yang hilang
 async function fetchAndDisplayRoundData() {
-    let contract = (faylottoContract && signer) ? faylottoContract : new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-    
+    // 1. Dapatkan provider (bisa read-only)
+    let contractInstance = faylottoContract;
+    if (!contractInstance) {
+        if (!provider) provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
+        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    }
+
     try {
-        statusText.innerText = "Syncing...";
-        currentRoundId = await contract.currentRoundId();
-        const roundInfo = await contract.getRoundBasic(currentRoundId);
+        // 2. Reset UI ronde
+        resetRoundUI();
 
-        // [PERBAIKAN] Tunggu resetUI (yang sekarang juga memanggil updateBetList)
-        await resetRoundUI(); 
+        // 3. Ambil data ronde saat ini
+        currentRoundId = await contractInstance.currentRoundId();
+        const round = await contractInstance.getRoundBasic(currentRoundId);
 
-        const playersList = await contract.getRoundPlayers(currentRoundId);
-        for (const playerAddress of playersList) {
-            const deposits = await contract.getPlayerDeposits(currentRoundId, playerAddress);
-            addBetToState(playerAddress, deposits.ethAmount, deposits.erc20Amount, false);
+        // 4. Atur Timer
+        currentRoundEndTime = round.endTime.toNumber() * 1000;
+        const now = Date.now();
+        
+        if (now < currentRoundEndTime) {
+            // Ronde masih berjalan
+            statusText.innerText = "Ronde berjalan. Pasang bet Anda!";
+            placeBetBtn.disabled = !signer; // Aktifkan jika signer ada (sudah login)
+            startVisualTimer(currentRoundEndTime);
+        } else {
+            // Ronde sudah selesai, tunggu finalisasi
+            showFinalizeButton();
+            placeBetBtn.disabled = true;
+        }
+
+        // 5. Ambil data pemain di ronde ini
+        const playerAddrs = await contractInstance.getRoundPlayers(currentRoundId);
+        if (playerAddrs.length > 0) {
+            // Ambil deposit untuk setiap pemain
+            for (const addr of playerAddrs) {
+                const deposits = await contractInstance.getPlayerDeposits(currentRoundId, addr);
+                // Tambahkan ke state lokal untuk menggambar roda
+                addBetToState(addr, deposits.ethAmount, deposits.erc20Amount, false);
+            }
         }
         
-        // [PERBAIKAN] Panggil updateBetList LAGI SETELAH addBetToState
-        // agar pemain baru muncul
-        if (playersList.length > 0) {
-            await updateBetList(); 
-        }
+        updateBetList(); // Tampilkan pemain di list
+        if(signer) await updateMyDeposits(); // Update deposit *saya* jika sudah login
 
-        if(userAddress) {
-            await updateMyDeposits();
-        }
-
-        // === LOGIKA TIMER ===
-        const endTime = roundInfo.endTime.toNumber() * 1000;
-        const timeLeft = endTime - Date.now();
-
-        if (timeLeft <= 0) {
-            statusText.innerText = "Waiting for finalization...";
-            startVisualTimer(endTime);
-        } else {
-            statusText.innerText = `Round ${currentRoundId} live!`;
-            if (userAddress) placeBetBtn.disabled = false; 
-            isFinalizing = false;
-            startVisualTimer(endTime);
-        }
-    } catch (err) { console.error("Sync error:", err.message); }
+    } catch (err) {
+        console.error("Gagal mengambil data ronde:", err);
+        statusText.innerText = "Tidak dapat memuat data ronde. Hubungkan wallet.";
+        if (visualTimer) clearInterval(visualTimer);
+        timerText.innerText = "00:00";
+    }
 }
+
 
 // === FUNGSI UTAMA: Handle Finalisasi ===
 async function handleRoundFinalized(roundId, winnerAddr) {
@@ -2692,25 +2653,20 @@ function showFinalizeButton() {
     finalizeBtn.disabled = false;
 }
 
-  async function resetRoundUI() { // <-- Tambah 'async'
+  function resetRoundUI() {
+    // ... (Tidak ada perubahan pada fungsi ini) ...
     players = {};
     totalWeight = ethers.BigNumber.from(0);
     playersArray = []; 
-    
     if (ctx) {
         currentRotation = 0;
         drawDonut(); 
     }
-    
-    await updateBetList(); // <-- [PERBAIKAN] Tambah 'await'
-    
+    updateBetList();
     placeBetBtn.style.display = "block";
     placeBetBtn.disabled = true;
-
     finalizeBtn.style.display = "none";
-    finalizeBtn.innerText = "FINALIZE ROUND"; 
-    
-    // [PERBAIKAN] Pindahkan ini ke dalam reset agar bersih saat disconnect
+    finalizeBtn.innerText = "Finalize Round"; 
     myEthDeposit.innerText = "0";
     myUsdtDeposit.innerText = "0";
   }
@@ -2749,58 +2705,31 @@ function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
 }
   
   
-// [REVISI TOTAL] Fungsi updateBetList sekarang ASYNC dan AMAN
-async function updateBetList() {
-    betList.innerHTML = ""; 
-    const playerIds = Object.keys(players);
-  
-    if (playerIds.length === 0) {
-        betList.innerHTML = '<p id="bet-list-placeholder">No bets placed yet in this round.</p>';
-        return;
-    }
-
-    let contract = (faylottoContract && signer) ? faylottoContract : new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-
-    // [PERBAIKAN 3] Bungkus dengan try...catch
-    try {
-        const playerPromises = playerIds.map(async (id) => {
-            const player = players[id];
-            const ethAmount = parseFloat(ethers.utils.formatEther(player.eth)).toFixed(5);
-            const usdtAmount = parseFloat(ethers.utils.formatUnits(player.usdt, usdtDecimals)).toFixed(2);
-            
-            let nickname = null;
-            try { nickname = await contract.nicknames(id); } catch(e) {}
-            
-            const displayName = (userAddress && id.toLowerCase() === userAddress.toLowerCase()) 
-                                ? "You" 
-                                : (nickname || (id.slice(0, 6) + "..." + id.slice(-4)));
-            
-            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${id}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700&size=25`;
-
-            let betsHtml = "";
-            if (player.eth.gt(0)) betsHtml += `${ethAmount} ETH`;
-            if (player.eth.gt(0) && player.usdt.gt(0)) betsHtml += " + ";
-            if (player.usdt.gt(0)) betsHtml += `${usdtAmount} USDT`;
-
-            return `
-                <div class="bet-list-item" style="border-left: 3px solid ${player.color};">
-                    <img src="${avatarUrl}" alt="Avatar" class="bet-list-avatar">
-                    <div class="bet-list-player-info">
-                        <span class="player-id">${displayName}</span>
-                        <span class="player-address">${(displayName !== "You" && nickname) ? id.slice(0, 6) + "..." + id.slice(-4) : ''}</span>
-                    </div>
-                    <div class="bet-list-player-bets">${betsHtml}</div>
-                </div>
-            `;
-        });
-
-        const itemsHtml = await Promise.all(playerPromises);
-        betList.innerHTML = itemsHtml.join('');
-
-    } catch (err) {
-        console.error("Error during updateBetList:", err);
-        betList.innerHTML = '<p id="bet-list-placeholder" style="color:red;">Error loading player list.</p>';
-    }
+function updateBetList() {
+  // ... (Tidak ada perubahan pada fungsi ini) ...
+  betList.innerHTML = ""; 
+  const playerIds = Object.keys(players);
+  if (playerIds.length === 0) {
+    betList.innerHTML = '<p id="bet-list-placeholder">No bets placed yet in this round.</p>';
+    return;
+  }
+  playerIds.forEach(id => {
+    const player = players[id];
+    const ethAmount = parseFloat(ethers.utils.formatEther(player.eth)).toFixed(5);
+    const usdtAmount = parseFloat(ethers.utils.formatUnits(player.usdt, usdtDecimals)).toFixed(2);
+    const shortId = (userAddress && id.toLowerCase() === userAddress.toLowerCase()) ? "You" : (id.slice(0, 6) + "..." + id.slice(-4));
+    let betsHtml = "";
+    if (player.eth.gt(0)) betsHtml += `${ethAmount} ETH`;
+    if (player.eth.gt(0) && player.usdt.gt(0)) betsHtml += " + ";
+    if (player.usdt.gt(0)) betsHtml += `${usdtAmount} USDT`;
+    const item = document.createElement("div");
+    item.className = "bet-list-item";
+    item.innerHTML = `
+      <div class="player-id" style="color: ${player.color}">${shortId}</div>
+      <div class="player-bets">${betsHtml}</div>
+    `;
+    betList.appendChild(item);
+  });
 }
 
 // ======= Draw donut on canvas =======
@@ -3015,30 +2944,37 @@ function hideWalletModal() {
 }
 
     // Function Disconnect Wallet
-async function disconnectWallet() { // <-- Tambah 'async'
+function disconnectWallet() {
     userAddress = null; provider = null; signer = null;
     walletBtn.innerText = "Connect Wallet";
-    // ... (sisa kode Anda)
+    referralBtn.style.display = "none";
+    statusText.innerText = "Wallet not connected";
     
+    hideWalletModal(); 
+    
+    localStorage.removeItem(AUTO_CONNECT_KEY);
+    
+    if (visualTimer) clearInterval(visualTimer);
     if (faylottoContract) {
         faylottoContract.removeAllListeners();
         faylottoContract = null; 
     }
     
-    await resetRoundUI(); // <-- [PERBAIKAN] Tambah 'await'
-    
-    // [PERBAIKAN] Pindahkan reset info wallet ke sini
+    resetRoundUI();
+    myEthDeposit.innerText = "0"; 
+    myUsdtDeposit.innerText = "0";
+    winnerList.innerHTML = "";
+    winnerList.appendChild(winnerListPlaceholder);
+
+    // Reset info di modal
     walletAddress.innerText = "-";
     ethBalance.innerText = "0";
     usdtBalance.innerText = "0";
-    myEthDeposit.innerText = "0"; // Pastikan ini juga direset
-    myUsdtDeposit.innerText = "0"; // Pastikan ini juga direset
-    winnerList.innerHTML = "";
-    winnerList.appendChild(winnerListPlaceholder);
     
     fetchAndDisplayRoundData();
     fetchAndDisplayWinners();
-    showToast("Wallet disconnected.", "info");
+    // [FIX] Ganti showToast ke showStatus
+    showStatus("Wallet terputus.", "info");
 }
     
 function handleCanvasRedraw() {
@@ -3149,7 +3085,7 @@ function stopVictoryConfetti() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
     
-// === FUNGSI LEADERBOARD (FRONTEND-ONLY) ===
+   // === FUNGSI LEADERBOARD (FRONTEND-ONLY) ===
 async function fetchAndRenderLeaderboard() {
     const list = document.getElementById('leaderboard-list');
     if (!list) return;
@@ -3229,8 +3165,8 @@ async function fetchAndRenderLeaderboard() {
         console.error("Leaderboard error:", err);
         list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>FAILED TO LOAD DATA.</div>";
     }
-}
-
+  }
+    
 // Fungsi Tutup Modal Profil
 function hideProfileModal() {
     // ... (Tidak ada perubahan pada fungsi ini) ...
@@ -3401,9 +3337,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     window.addEventListener("focus", handleCanvasRedraw);
 
-    // [FIX] Hapus DOMContentLoaded yang duplikat (yang ada di file asli Anda baris 297)
-    // Logika referralnya sudah dipindah ke atas.
 });
-    </script>
-    </body>
-    </html>
+
+  </script>
+</body>
+</html>
