@@ -1150,6 +1150,81 @@
 
     padding-right: 10px; /* Ruang untuk panah */
 }
+
+  /* === [REVISI] CUSTOM TOAST NOTIFICATIONS === */
+#toast-container {
+    position: fixed;
+    top: 90px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 300px;
+}
+
+.toast {
+    position: relative; /* [PENTING] Agar tombol X bisa diposisikan */
+    width: 100%;
+    background: rgba(10, 10, 25, 0.95);
+    color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    box-sizing: border-box;
+    border-left: 5px solid var(--cyan-main);
+    display: flex; /* Menggunakan flex untuk padding border */
+    
+    animation: toastSlideIn 0.3s ease forwards;
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+/* [BARU] Konten di dalam toast, agar padding rapi */
+.toast-content {
+    padding: 15px 40px 15px 20px; /* Padding kanan lebih besar untuk tombol X */
+    font-size: 13px;
+    font-family: 'Courier Prime', monospace;
+    line-height: 1.4;
+}
+
+/* [BARU] Tombol 'X' untuk Menutup */
+.toast-close-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 25px;
+    height: 25px;
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+.toast-close-btn:hover {
+    color: #fff;
+}
+
+/* Jenis-jenis Notifikasi */
+.toast.info { border-left-color: var(--cyan-main); box-shadow: -5px 0 15px -5px var(--cyan-main); }
+.toast.success { border-left-color: #3DCC91; box-shadow: -5px 0 15px -5px #3DCC91; }
+.toast.error { border-left-color: var(--pink-main); box-shadow: -5px 0 15px -5px var(--pink-main); }
+.toast.warning { border-left-color: #F9D423; box-shadow: -5px 0 15px -5px #F9D423; }
+
+/* Animasi keluar */
+.toast.hiding {
+    animation: toastSlideOut 0.3s ease forwards;
+}
+
+@keyframes toastSlideIn { to { opacity: 1; transform: translateX(0); } }
+@keyframes toastSlideOut { to { opacity: 0; transform: translateX(100%); } }
+
+/* Penyesuaian di HP */
+@media (max-width: 480px) {
+    #toast-container { width: 90%; left: 5%; right: 5%; top: 80px; }
+}
   
   @media (min-width: 768px) {
   #donutCanvas {
@@ -1414,6 +1489,8 @@
         </div>
     </div>
   </section>
+
+  <div id="toast-container"></div>
 
 <audio id="sfx-click" src="clickI.mp3" preload="auto"></audio>
 <audio id="sfx-spin" src="spinI.mp3" preload="auto"></audio>
@@ -2241,12 +2318,20 @@ function setAmountByPercent(percent) {
 }
 
 // === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
-  async function confirmBet() {
+async function confirmBet() {
   const amountStr = betAmountInput.value;
-  const currency = betCurrencySelect.value;
-  if (!amountStr || parseFloat(amountStr) <= 0) return alert("Please enter a valid amount.");
+  // [PERBAIKAN] Ganti cara baca currency
+  const currency = betCurrencySelect.value; // Baca dari <select>
+  // Jika Anda sudah ganti ke tombol toggle, gunakan: const currency = selectedCurrency;
+  
+  if (!amountStr || parseFloat(amountStr) <= 0) {
+      showToast("Please enter a valid amount.", "error"); // [DIGANTI]
+      return;
+  }
+  
   confirmBetBtn.disabled = true;
   confirmBetBtn.innerText = "Processing...";
+  
   try {
     let tx;
     if (currency === 'ETH') {
@@ -2254,22 +2339,46 @@ function setAmountByPercent(percent) {
     } else {
       tx = await placeBetUSDT(amountStr);
     }
+    
     statusText.innerText = `Bet sent! Awaiting confirmation...`;
     await tx.wait();
-    statusText.innerText = `Bet confirmed! Good luck.`;
+    
+    // playSound('sfx-coin'); // (Opsional jika Anda punya suara)
+    showToast("Bet confirmed! Good luck.", "success"); // Notifikasi sukses
+    
     hideBetModal();
     await updateUserBalances();
     await updateMyDeposits();
+    
   } catch (err) {
     console.error(err);
-    const errorMessage = err.reason || err.message || "Transaction failed!";
-    alert(`Error: ${errorMessage}`);
+    // [DIGANTI] Logika error baru yang menggunakan showToast
+    const errorMessage = err.reason || err.data?.message || err.message || "Transaction failed!";
+    
+    if (errorMessage.includes("Max 2 bets per round")) {
+        showToast("Error: Max 2 bets per round.", "error");
+    } else if (errorMessage.includes("Max total deposit (0.00256 ETH)")) {
+        showToast("Error: Max 0.00256 ETH exceeded.", "error");
+    } else if (errorMessage.includes("Max total deposit (10 USDT)")) {
+        showToast("Error: Max 10 USDT exceeded.", "error");
+    } else if (errorMessage.includes("Insufficient ETH balance")) {
+        showToast("Error: Insufficient ETH balance.", "error");
+    } else if (errorMessage.includes("Insufficient USDT balance")) {
+        showToast("Error: Insufficient USDT balance.", "error");
+    } else if (errorMessage.includes("Minimum bet is 0.00005 ETH")) {
+        showToast("Error: Minimum bet is 0.00005 ETH.", "error");
+    } else if (errorMessage.includes("Minimum bet is 0.2 USDT")) { // Pastikan nilai min USDT Anda benar
+        showToast("Error: Minimum bet is 0.2 USDT.", "error");
+    } else {
+        showToast("Transaction failed. Check console.", "error");
+    }
+    
     statusText.innerText = "Transaction failed.";
   } finally {
     confirmBetBtn.disabled = false;
     confirmBetBtn.innerText = "Confirm Bet";
   }
-  }
+}
     
 async function placeBetETH(amountStr) {
   const amountWei = ethers.utils.parseEther(amountStr);
@@ -3167,7 +3276,44 @@ function copyToClipboard(text) {
     alert("Address copied: " + text);
 }
 
+ // === FUNGSI CUSTOM TOAST ===
+// Tipe: 'info' (default), 'success', 'error', 'warning'
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
     
+    // Buat elemen toast baru
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // [REVISI] Gunakan innerHTML untuk menambahkan tombol dan konten
+    toast.innerHTML = `
+        <span class="toast-content">${message}</span>
+        <button class="toast-close-btn" onclick="closeToast(this.parentElement)">&times;</button>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Hapus otomatis setelah 4 detik (jika tidak ditutup manual)
+    const timer = setTimeout(() => {
+        closeToast(toast);
+    }, 20000);
+    
+    // Simpan timer di elemen agar bisa dibatalkan jika ditutup manual
+    toast.dataset.timer = timer;
+}
+
+// [BARU] Fungsi helper untuk menutup toast (agar bisa dipanggil manual)
+function closeToast(toastElement) {
+    if (!toastElement) return;
+    
+    // Hentikan timer otomatis jika ada
+    clearTimeout(toastElement.dataset.timer);
+    
+    toastElement.classList.add('hiding');
+    // Hapus dari DOM setelah animasi selesai
+    setTimeout(() => toastElement.remove(), 300);
+}   
 
 // === 4. Inisialisasi & Event Listeners (LENGKAP & DIPERBAIKI) ===
 
