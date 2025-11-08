@@ -1575,9 +1575,14 @@ const FAYLOTTO_ADDRESS = "0x0778d39c5693b84d1dbDbd52E7e362f14BbEaF3F"; // Ganti 
 const WSS_URL = "wss://base-sepolia.drpc.org"; // GANTI DENGAN KUNCI ASLI ANDA!
 const HTTPS_URL = "https://sepolia.base.org";
 
-const REQUIRED_CHAIN_ID = 84532; // Sepolia Base Testnet
-const REQUIRED_CHAIN_NAME = "Base Sepolia Testnet";
-const REQUIRED_RPC_URL = "https://sepolia.base.org";
+// === KONFIGURASI ===
+const BASE_SEPOLIA = {
+  chainId: "0x14A74", // 84532 desimal → hex
+  chainName: "Base Sepolia Testnet",
+  nativeCurrency: { name: "Ethereum", symbol: "ETH", decimals: 18 },
+  rpcUrls: ["https://sepolia.base.org"],
+  blockExplorerUrls: ["https://sepolia.basescan.org/"]
+};
     
 // === 2. ABI LENGKAP ===
 const USDT_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
@@ -1731,154 +1736,99 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// === FUNGSI UTAMA: Toggle Connect / Disconnect ===
+// === UTAMA: CONNECT WALLET ===
 async function toggleWallet() {
-  if (userAddress) return; // Jika sudah terhubung, abaikan
+  if (userAddress) return;
   if (!window.ethereum) return alert("Please install MetaMask.");
 
   try {
-    provider = new ethers.providers.Web3Provider(window.ethereum);
+    provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
+    signer = await provider.getSigner();
     userAddress = await signer.getAddress();
 
-    // === CEK JARINGAN ===
-    const network = await provider.getNetwork();
-    if (network.chainId !== REQUIRED_CHAIN_ID) {
-      // Coba tambahkan jaringan otomatis
+    // === CEK / SWITCH / ADD NETWORK ===
+    const net = await provider.getNetwork();
+    if (net.chainId !== 84532n) {
       try {
+        // coba switch dulu
         await window.ethereum.request({
-          method: "wallet_addEthereumChain",
-          params: [
-            {
-              chainId: "84532", // 0x14a74 hex
-              chainName: REQUIRED_CHAIN_NAME,
-              nativeCurrency: {
-                name: "ETH",
-                symbol: "ETH",
-                decimals: 18,
-              },
-              rpcUrls: [REQUIRED_RPC_URL],
-              blockExplorerUrls: ["https://sepolia.basescan.org/"],
-            },
-          ],
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: BASE_SEPOLIA.chainId }]
         });
-        alert("Base Sepolia Testnet has been added. Please switch and reconnect.");
-        return;
-      } catch (e) {
-        throw new Error("Please switch to Base Sepolia Testnet in MetaMask.");
+      } catch (switchError) {
+        // kalau chain belum ada → tambahkan
+        if (switchError.code === 4902) {
+          await window.ethereum.request({
+            method: "wallet_addEthereumChain",
+            params: [BASE_SEPOLIA]
+          });
+        } else throw switchError;
       }
     }
 
-    console.log("✅ Connected to:", network.name);
+    // === SIGN PESAN ===
+    const msg = `Welcome to Faylotto Spin Battle, Play & Win!\n${userAddress}\n${new Date().toLocaleString()}`;
+    await signer.signMessage(msg);
 
     // === KONTRAK ===
     usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
     faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-    // === SIGN MESSAGE ===
-    const now = new Date().toLocaleString();
-    const message = `Welcome to Faylotto Spin Battle, Play & Win!\nAddress: ${userAddress}\nDate: ${now}`;
-    const signature = await signer.signMessage(message);
-    console.log("Signature:", signature);
+    connectBtn.style.display = "none";
+    disconnectBtn.style.display = "inline-block";
+    walletAddress.innerText = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+    statusText.innerText = "Wallet connected (Base Sepolia).";
 
-    // === SIMPAN DATA WALLET DI LOCAL STORAGE SELAMA 30 HARI ===
-    const expiry = Date.now() + 1000 * 60 * 60 * 24 * 30;
-    localStorage.setItem(
-      "faylottoWalletSession",
-      JSON.stringify({ userAddress, expiry })
-    );
+    // === SIMPAN LOCAL STORAGE 1 BULAN ===
+    localStorage.setItem("faylotto_wallet", JSON.stringify({
+      address: userAddress,
+      expire: new Date(Date.now() + 30*24*60*60*1000).toISOString()
+    }));
 
-    // === UPDATE UI ===
-    walletBtn.innerText = "Disconnect";
-    referralBtn.style.display = "block";
-    walletAddress.innerText = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
-
-    await updateUserBalances();
-    await fetchAndDisplayRoundData();
-    await fetchAndDisplayWinners();
-    await fetchReferralData();
-    setupEventListeners();
-
-    // === REFERRAL OTOMATIS ===
-    if (pendingReferrerNickname) {
-      try {
-        const currentRef = await faylottoContract.referrerOf(userAddress);
-        if (currentRef === ethers.constants.AddressZero) {
-          const tx = await faylottoContract.setReferralByNickname(pendingReferrerNickname);
-          await tx.wait();
-          alert(`Successfully referred by ${pendingReferrerNickname}!`);
-          pendingReferrerNickname = null;
-          fetchReferralData();
-        }
-      } catch (e) {
-        console.warn("Failed to auto-set referrer:", e.message);
-      }
-    }
-
-    console.log("✅ Wallet connected successfully:", userAddress);
-    statusText.innerText = "Wallet connected — ready to play!";
-
+    console.log("Wallet connected:", userAddress);
   } catch (err) {
-    console.error("❌ Failed to connect wallet:", err.message);
-    statusText.innerText = "Failed to connect. Please check MetaMask network.";
-    provider = null; signer = null; userAddress = null;
-    alert(`Error: ${err.message}`);
+    console.error("Connect failed:", err);
+    alert("Connection failed: " + err.message);
+    userAddress = null;
   }
 }
 
-// === DISCONNECT WALLET ===
+// === DISCONNECT ===
 function disconnectWallet() {
   userAddress = null;
   provider = null;
   signer = null;
+  usdtContract = null;
+  faylottoContract = null;
 
-  localStorage.removeItem("faylottoWalletSession"); // hapus sesi
-
-  walletBtn.innerText = "Connect Wallet";
-  referralBtn.style.display = "none";
-  statusText.innerText = "Wallet not connected";
-
-  hideWalletModal();
-  if (visualTimer) clearInterval(visualTimer);
-  if (faylottoContract) faylottoContract.removeAllListeners();
-
-  resetRoundUI();
-  myEthDeposit.innerText = "0";
-  myUsdtDeposit.innerText = "0";
-  winnerList.innerHTML = "";
-  winnerList.appendChild(winnerListPlaceholder);
-
+  connectBtn.style.display = "inline-block";
+  disconnectBtn.style.display = "none";
   walletAddress.innerText = "-";
-  ethBalance.innerText = "0";
-  usdtBalance.innerText = "0";
+  statusText.innerText = "Wallet disconnected.";
+  localStorage.removeItem("faylotto_wallet");
 
-  fetchAndDisplayRoundData();
-  fetchAndDisplayWinners();
-
-  console.log("🚪 Wallet disconnected manually.");
+  console.log("Wallet disconnected.");
 }
 
-// === AUTO RECONNECT JIKA MASIH VALID (30 HARI) ===
-async function autoReconnectWallet() {
-  const data = localStorage.getItem("faylottoWalletSession");
-  if (!data) return;
+// === AUTO RECONNECT ===
+async function reconnectWallet(addr) {
   try {
-    const session = JSON.parse(data);
-    if (Date.now() > session.expiry) {
-      localStorage.removeItem("faylottoWalletSession");
-      return;
-    }
-    console.log("🔁 Auto reconnecting wallet...");
-    await toggleWallet();
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    userAddress = addr;
+
+    connectBtn.style.display = "none";
+    disconnectBtn.style.display = "inline-block";
+    walletAddress.innerText = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+    statusText.innerText = "Wallet auto-reconnected.";
+
+    console.log("Auto-reconnected:", userAddress);
   } catch (e) {
-    console.warn("Auto reconnect failed:", e.message);
+    console.warn("Reconnect failed:", e.message);
+    localStorage.removeItem("faylotto_wallet");
   }
 }
-
-// Jalankan saat halaman dimuat
-window.addEventListener("load", autoReconnectWallet);
-
 
 // === FUNGSI UTAMA: Ambil Data Ronde & Mulai Timer ===
 async function fetchAndDisplayRoundData() {
