@@ -1151,73 +1151,121 @@
     padding-right: 10px; /* Ruang untuk panah */
 }
 
-  /* === [REVISI] CUSTOM TOAST NOTIFICATIONS === */
+    /* === STYLING NOTIFIKASI STATUS (TOAST) === */
 #toast-container {
-    position: fixed; top: 90px; right: 20px;
-    z-index: 10000; display: flex; flex-direction: column;
-    gap: 10px; width: 300px;
+  position: fixed; /* Tetap di layar saat di-scroll */
+  top: 90px; /* Di bawah navbar */
+  right: 20px;
+  z-index: 10000; /* Paling atas */
+  width: 300px;
+  max-width: 90%;
 }
 
-.toast {
-    position: relative;
-    width: 100%;
-    background: rgba(10, 10, 25, 0.95);
-    color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(5px);
-    box-sizing: border-box;
-    
-    /* [PERUBAHAN] Hapus border-left, tambahkan align-items dan padding */
-    /* border-left: 5px solid var(--cyan-main); */ /* <-- DIHAPUS */
-    display: flex;
-    align-items: center; /* Membuat ikon dan teks sejajar */
-    padding: 15px; /* Padding di container utama */
-    
-    animation: toastSlideIn 0.3s ease forwards;
-    opacity: 0;
-    transform: translateX(100%);
+/* Style untuk setiap notifikasi */
+.toast-notification {
+  background: #333;
+  color: white;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 14px;
+  border: 2px solid #555;
+  
+  /* Flexbox untuk ikon + teks */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  
+  /* Animasi fade-in dan fade-out */
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all 0.5s ease-in-out;
 }
 
-/* [BARU] Style untuk Ikon PNG di dalam toast */
-.toast-icon {
-    width: 24px;
-    height: 24px;
-    flex-shrink: 0; /* Mencegah ikon mengecil */
-    margin-right: 12px; /* Jarak antara ikon dan teks */
+/* Animasi saat muncul */
+.toast-notification.show {
+  opacity: 1;
+  transform: translateX(0);
 }
 
-/* [REVISI] Konten teks, padding diubah */
-.toast-content {
-    padding: 0; /* Hapus padding lama */
-    padding-right: 30px; /* Jarak untuk tombol X */
-    font-size: 13px;
-    font-family: 'Courier Prime', monospace;
-    line-height: 1.4;
-    flex-grow: 1; /* Biarkan teks mengisi sisa ruang */
+/* Animasi saat hilang */
+.toast-notification.hide {
+  opacity: 0;
+  transform: translateX(100%);
 }
 
-/* Tombol 'X' (Tetap sama) */
+/* Ikon di dalam toast */
+.toast-notification img {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+.toast-notification span {
+  flex-grow: 1;
+  word-wrap: break-word;
+}
+
+/* Warna berdasarkan tipe */
+.toast-notification.success {
+  background: #2c4c00;
+  border: 2px solid #69a31a;
+}
+.toast-notification.error {
+  background: #4a2c2c;
+  border: 2px solid #dc3545;
+}
+.toast-notification.info {
+  background: #56616e;
+  border: 2px solid #343a42;
+}
+.toast-notification.load {
+  background: #0a3c66; /* Abu-abu gelap */
+  border: border 2px solid #0061b3;
+}
+
+.toast-notification.warning {
+  background: #997a00;
+  border: 2px solid #ffcc00;
+}
+
+/* Warna untuk tipe 'spin' (Ungu/Pink) */
+.toast-notification.spin {
+  background: #501f66;
+  border: 2px solid #a03ecc; /* Mengambil warna dari gradien tombol */
+}
+
+/* Warna untuk tipe 'wolf' (Biru Cyan) */
+.toast-notification.wolf {
+  background: #804f00;
+  border: 2px solid #e68d00; /* Mengambil warna dari gradien tombol */
+}
+
+/* === STYLE BARU UNTUK TOMBOL CLOSE TOAST === */
 .toast-close-btn {
-    position: absolute; top: 5px; right: 5px;
-    width: 25px; height: 25px; background: transparent;
-    border: none; color: #888; font-size: 20px;
-    font-weight: bold; cursor: pointer; transition: color 0.2s ease;
+  background: none;
+  border: none;
+  color: #ff4d4d;
+  font-size: 24px;  /* Perbesar tombol 'x' */
+  font-weight: bold;
+  line-height: 1;
+  padding: 0 5px;
+  margin-left: 10px; /* Jarak dari teks */
+  cursor: pointer;
+  transition: color 0.2s;
 }
-.toast-close-btn:hover { color: #fff; }
 
-/* [REVISI] Jenis Notifikasi (sekarang memberi glow pada ikon) */
-.toast.info .toast-icon { filter: drop-shadow(0 0 5px var(--cyan-main)); }
-.toast.success .toast-icon { filter: drop-shadow(0 0 5px #3DCC91); }
-.toast.error .toast-icon { filter: drop-shadow(0 0 5px var(--pink-main)); }
-.toast.warning .toast-icon { filter: drop-shadow(0 0 5px #F9D423); }
+/* Tombol close jadi merah saat di-hover */
+.toast-close-btn:hover {
+  color: #ff8282; 
+}
 
-/* Animasi (Tetap sama) */
-.toast.hiding { animation: toastSlideOut 0.3s ease forwards; }
-@keyframes toastSlideIn { to { opacity: 1; transform: translateX(0); } }
-@keyframes toastSlideOut { to { opacity: 0; transform: translateX(100%); } }
-@media (max-width: 480px) {
-    #toast-container { width: 90%; left: 5%; right: 5%; top: 80px; }
+/* Pastikan span-nya tidak menabrak tombol */
+.toast-notification span {
+  flex-grow: 1; /* Biarkan teks mengambil sisa ruang */
+  word-wrap: break-word;
 }
   
   @media (min-width: 768px) {
@@ -1484,8 +1532,6 @@
     </div>
   </section>
 
-  <div id="toast-container"></div>
-
 <audio id="sfx-click" src="clickI.mp3" preload="auto"></audio>
 <audio id="sfx-spin" src="spinI.mp3" preload="auto"></audio>
 <audio id="sfx-win" src="winI.mp3" preload="auto"></audio>
@@ -1514,6 +1560,8 @@
       </span>
     </p>
   </footer>
+
+  <div id="toast-container"></div>
 
   <script>
 // ===========================================
@@ -3238,51 +3286,76 @@ function copyToClipboard(text) {
     alert("Address copied: " + text);
 }
 
- // === FUNGSI CUSTOM TOAST ===
-  const TOAST_ICONS = {
-    info: 'info.s g', 
-    success: 'success.svg',
-    error: 'error.svg',
-    warning: 'warning.svg'
-};
-// Tipe: 'info' (default), 'success', 'error', 'warning'
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    
-    // Buat elemen toast baru
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
+/**
+ * FUNGSI (MODIFIKASI LENGKAP): Toast dengan durasi 10 detik dan tombol close manual.
+ * @param {string} message - Teks yang ingin ditampilkan.
+ * @param {string} type - 'success', 'error', 'info', atau 'load'.
+ * @param {number} duration - Berapa lama (ms) sebelum hilang (default 10 detik).
+ */
+function showStatus(message, type = 'info', duration = 10000) { // <-- 1. Durasi diubah ke 10000
+  const container = document.getElementById('toast-container');
+  if (!container) return;
 
-   const iconPath = TOAST_ICONS[type] || TOAST_ICONS.info;
-    
-    // [REVISI] Gunakan innerHTML untuk menambahkan tombol dan konten
-    toast.innerHTML = `
-        <img src="${iconPath}" alt="${type}" class="toast-icon" /> 
-        <span class="toast-content">${message}</span>
-        <button class="toast-close-btn" onclick="closeToast(this.parentElement)">&times;</button>
-    `;
-    
-    container.appendChild(toast);
-    
-    const timer = setTimeout(() => {
-        closeToast(toast);
-    }, 20000); // Timer Anda 20 detik
-    
-    toast.dataset.timer = timer;
+  // 1. Tentukan ikon
+  let iconName = 'info-icon.svg'; 
+  if (type === 'success') iconName = 'success.svg';
+  else if (type === 'error') iconName = 'error.svg';
+  else if (type === 'load') iconName = 'load.svg';
+  else if (type === 'warning') iconName = 'warning.svg';
+  else if (type === 'spin') iconName = 'spin.svg';
+  else if (type === 'wolf') iconName = 'wolf.svg';
+
+  // 2. Buat elemen toast
+  const toast = document.createElement('div');
+  toast.className = `toast-notification ${type}`;
+  
+  // 3. Buat konten (IKON + TEKS)
+  // Ganti '' dengan 'images/' jika Anda menyimpannya di sub-folder
+  const icon = document.createElement('img');
+  icon.src = `${iconName}`; // Asumsi gambar ada di root
+  icon.alt = "status icon";
+
+  const text = document.createElement('span');
+  text.textContent = message;
+
+  // 4. Buat Tombol Close (×) (BARU)
+  const closeButton = document.createElement('button');
+  closeButton.className = 'toast-close-btn';
+  closeButton.innerHTML = '&times;'; // Simbol '×'
+
+  // 5. Gabungkan semua elemen
+  toast.appendChild(icon);
+  toast.appendChild(text);
+  toast.appendChild(closeButton);
+
+  // 6. Buat fungsi remove (agar rapi)
+  function removeToast() {
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    toast.addEventListener('transitionend', () => {
+      if (toast.parentNode === container) {
+          container.removeChild(toast);
+      }
+    }, { once: true });
+  }
+
+  // 7. Atur timer otomatis (10 detik)
+  const hideTimeout = setTimeout(removeToast, duration);
+
+  // 8. Atur onclick untuk tombol close (BARU)
+  closeButton.onclick = () => {
+    clearTimeout(hideTimeout); // <-- Penting: Batalkan timer otomatis
+    removeToast(); // <-- Panggil fungsi remove manual
+  };
+
+  // 9. Tambahkan ke container
+  container.appendChild(toast);
+
+  // 10. Tampilkan
+  setTimeout(() => {
+    toast.classList.add('show');
+  }, 10); 
 }
-
-// [BARU] Fungsi helper untuk menutup toast (agar bisa dipanggil manual)
-function closeToast(toastElement) {
-    if (!toastElement) return;
-    
-    // Hentikan timer otomatis jika ada
-    clearTimeout(toastElement.dataset.timer);
-    
-    toastElement.classList.add('hiding');
-    // Hapus dari DOM setelah animasi selesai
-    setTimeout(() => toastElement.remove(), 300);
-}   
 
 // === 4. Inisialisasi & Event Listeners (LENGKAP & DIPERBAIKI) ===
 
