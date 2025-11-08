@@ -1763,38 +1763,38 @@ async function switchOrAddNetwork() {
     }
 }
 
-/**
- * [BARU] Fungsi 2: Menyelesaikan proses login (setelah jaringan benar)
- */
+// [REVISI TOTAL] Fungsi 2: Menyelesaikan proses login setelah jaringan benar
 async function completeLogin(signer, isAutoConnect = false) {
     
-    // --- Bagian 2a: Tanda Tangan (Signature) ---
+    // --- Bagian 2a: Tanda Tangan (Wajib) ---
     try {
         userAddress = await signer.getAddress();
+        const localTime = new Date().toLocaleString('id-ID');
+        const message = `Welcome to Faylotto Spin Battle, Play & Win!\n\nUser: ${userAddress}\nTime: ${localTime}`;
         
-        // [FITUR 3] Hanya minta tanda tangan jika ini BUKAN auto-connect
+        // Minta tanda tangan HANYA jika ini koneksi manual
         if (!isAutoConnect) {
-            const localTime = new Date().toLocaleString('id-ID'); // Waktu lokal
-            const message = `Welcome to Faylotto Spin Battle, Play & Win!\n\nUser: ${userAddress}\nTime: ${localTime}`;
-            
             await signer.signMessage(message);
         }
 
     } catch (signError) {
         // Jika user menolak tanda tangan, BATALKAN login
         console.warn("Signature rejected by user.");
-        showToast("Signature required to log in.", "error");
+        showToast("Signature rejected. Login cancelled.", "error");
         provider = null; signer = null; userAddress = null;
         return; // Hentikan fungsi
     }
 
-    // --- Bagian 2b: Sukses Tanda Tangan! Update UI & Kontrak ---
+    // --- Bagian 2b: Sukses Tanda Tangan! Update UI ---
     usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
     faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
     walletBtn.innerText = "Terhubung";
     referralBtn.style.display = "block"; 
+    
+    // [PERBAIKAN] Menggunakan nama variabel DOM Anda yang benar (tanpa 'El')
     walletAddress.innerText = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
+    
     statusText.innerText = "Wallet Connected! Good luck.";
     
     if (!isAutoConnect) { // Jangan tampilkan toast jika auto-connect
@@ -1805,7 +1805,7 @@ async function completeLogin(signer, isAutoConnect = false) {
     const expiry = new Date().getTime() + AUTO_CONNECT_DURATION;
     localStorage.setItem(AUTO_CONNECT_KEY, expiry.toString());
 
-    // --- Bagian 2c: Muat Data Game (dibungkus try...catch) ---
+    // --- Bagian 2c: Muat Data (dibungkus try...catch sendiri) ---
     try {
         await updateUserBalances();
         await fetchAndDisplayRoundData();
@@ -1825,7 +1825,7 @@ async function completeLogin(signer, isAutoConnect = false) {
             }
         }
     } catch (dataError) {
-        console.error("Failed to load game data:", dataError);
+        console.error("Failed to load game data post-login:", dataError);
         showToast("Wallet connected, but failed to load game data.", "warning");
     }
 }
@@ -3108,9 +3108,10 @@ function disconnectWallet() {
     userAddress = null; provider = null; signer = null;
     walletBtn.innerText = "Connect Wallet";
     referralBtn.style.display = "none";
-    // referralPopup.style.display = 'none'; // (Jika Anda pakai popup referral)
-    // Sembunyikan modal referral jika sedang terbuka
-    if(typeof hideReferralModal === 'function') hideReferralModal();
+    
+    // Sembunyikan popup referral (ganti 'referralPopup' dengan ID modal Anda jika berbeda)
+    const refPopup = document.getElementById('referral-popup') || document.getElementById('referral-modal');
+    if (refPopup) refPopup.style.display = 'none';
 
     statusText.innerText = "Wallet not connected";
     
@@ -3127,7 +3128,7 @@ function disconnectWallet() {
     
     resetRoundUI();
     
-    // Reset info wallet di modal
+    // [PERBAIKAN] Menggunakan nama variabel DOM Anda yang benar
     walletAddress.innerText = "-";
     ethBalance.innerText = "0";
     usdtBalance.innerText = "0";
