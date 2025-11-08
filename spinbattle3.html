@@ -1733,63 +1733,87 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // === [REVISI] FUNGSI WALLET LENGKAP ===
-
-// [BARU] Fungsi 1: Mencoba mengganti jaringan
-async function switchNetwork() {
+// [REVISI TOTAL] Fungsi 3: Fungsi 'toggleWallet' utama
+async function toggleWallet() {
+    if (userAddress) return; 
+    if (!window.ethereum) return showToast("Please install MetaMask.", "error");
+    
     try {
-        await provider.send('wallet_switchEthereumChain', [{ chainId: BASE_SEPOLIA_PARAMS.chainId }]);
-    } catch (switchError) {
-        // Error code 4902 berarti jaringan belum ditambahkan
-        if (switchError.code === 4902) {
-            try {
-                // [FITUR 2] Rekomendasikan/tambahkan RPC baru
-                showToast("Network not found. Adding Base Sepolia...", "info");
-                await provider.send('wallet_addEthereumChain', [BASE_SEPOLIA_PARAMS]);
-            } catch (addError) {
-                console.error("Failed to add network:", addError);
-                throw new Error("Failed to add Base Sepolia network.");
-            }
-        } else {
-            console.error("Failed to switch network:", switchError);
-            throw new Error("Failed to switch network. Please check MetaMask.");
+        // --- Bagian 1: Koneksi & Ganti Jaringan ---
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        let signer = provider.getSigner();
+        
+        const network = await provider.getNetwork();
+
+        // Wajib pakai jaringan Base Sepolia (84532)
+        if (network.chainId !== 84532) {
+            showToast("Wrong network. Requesting switch to Base Sepolia...", "warning");
+            await switchNetwork();
+            // Re-inisialisasi signer setelah ganti jaringan
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
         }
+
+        // --- Bagian 2: Selesaikan Login (Tanda Tangan, dll.) ---
+        // Pindahkan error handling ke dalam completeLogin
+        await completeLogin(signer);
+
+    } catch (err) {
+        // Blok 'catch' ini SEKARANG HANYA menangani error koneksi atau ganti jaringan
+        console.error("Failed to connect wallet or switch network:", err.message);
+        statusText.innerText = "Failed to connect. Check MetaMask.";
+        provider = null; signer = null; userAddress = null;
+        showToast(err.message, "error");
     }
 }
 
-// [BARU] Fungsi 2: Menyelesaikan proses login setelah jaringan benar
+  // [REVISI TOTAL] Fungsi 2: Menyelesaikan proses login setelah jaringan benar
 async function completeLogin(signer) {
-    userAddress = await signer.getAddress();
-
-    // [FITUR 3] Minta Tanda Tangan (Signature)
-    const localTime = new Date().toLocaleString('id-ID');
-    const message = `Welcome to Faylotto Spin Battle, Play & Win!\n\nUser: ${userAddress}\nTime: ${localTime}`;
+    
+    // --- Bagian 2a: Tanda Tangan (Wajib) ---
     try {
+        userAddress = await signer.getAddress();
+        const localTime = new Date().toLocaleString('id-ID');
+        const message = `Welcome to Faylotto Spin Battle, Play & Win!\n\nUser: ${userAddress}\nTime: ${localTime}`;
+        
         await signer.signMessage(message);
+
     } catch (signError) {
-        // Jika user menolak tanda tangan, kita tetap lanjutkan login
+        // Jika user menolak tanda tangan, BATALKAN login
         console.warn("Signature rejected by user.");
-        showToast("Signature rejected, proceeding anyway.", "warning");
+        showToast("Signature rejected. Login cancelled.", "error");
+        // Reset manual karena login tidak selesai
+        provider = null; signer = null; userAddress = null;
+        return; // Hentikan fungsi di sini
     }
 
-    // Inisialisasi kontrak
+    // --- Bagian 2b: Sukses Tanda Tangan! Update UI ---
+    // (Lakukan ini SEBELUM memuat data)
     usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
     faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-    // Update UI
     walletBtn.innerText = "Terhubung";
     referralBtn.style.display = "block"; 
     walletAddressEl.innerText = userAddress.slice(0, 6) + "..." + userAddress.slice(-4);
-    
-    // Muat data
-    await updateUserBalances();
-    await fetchAndDisplayRoundData();
-    await fetchAndDisplayWinners();
-    await fetchReferralData();
-    setupEventListeners();
+    statusText.innerText = "Wallet Connected! Good luck.";
+    showToast("Wallet Connected!", "success");
 
-    // Cek referral dari URL
-    if (pendingReferrerNickname) {
-        try {
+    // [FITUR 4] Simpan koneksi di Local Storage
+    const expiry = new Date().getTime() + (30 * 24 * 60 * 60 * 1000); // 30 hari
+    localStorage.setItem('walletExpiry', expiry);
+
+    // --- Bagian 2c: Muat Data (Sekarang dibungkus try...catch sendiri) ---
+    // (Error di sini tidak akan membatalkan status "Terhubung")
+    try {
+        await updateUserBalances();
+        await fetchAndDisplayRoundData();
+        await fetchAndDisplayWinners();
+        await fetchReferralData();
+        setupEventListeners();
+
+        // Cek referral dari URL
+        if (pendingReferrerNickname) {
             const currentRef = await faylottoContract.referrerOf(userAddress);
             if (currentRef === ethers.constants.AddressZero) {
                 const tx = await faylottoContract.setReferralByNickname(pendingReferrerNickname);
@@ -1798,57 +1822,10 @@ async function completeLogin(signer) {
                 pendingReferrerNickname = null;
                 fetchReferralData();
             }
-        } catch (e) {
-            console.warn("Failed to auto-set referrer:", e.message);
         }
-    }
-
-    // [FITUR 4] Simpan koneksi di Local Storage
-    const expiry = new Date().getTime() + (30 * 24 * 60 * 60 * 1000); // 30 hari
-    localStorage.setItem('walletExpiry', expiry);
-
-    showToast("Wallet Connected!", "success");
-}
-
-// [REVISI TOTAL] Fungsi 3: Fungsi 'toggleWallet' utama
-async function toggleWallet() {
-    if (userAddress) return; 
-    if (!window.ethereum) return showToast("Please install MetaMask.", "error");
-    
-    try {
-        provider = new ethers.providers.Web3Provider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-        let signer = provider.getSigner();
-        
-        const network = await provider.getNetwork();
-
-        // [FITUR 1] Wajib pakai jaringan Base Sepolia
-        if (network.chainId !== 84532) {
-            showToast("Wrong network. Requesting switch to Base Sepolia...", "warning");
-            await switchNetwork();
-            // [PENTING] Re-inisialisasi signer setelah ganti jaringan
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            signer = provider.getSigner();
-        }
-
-        // Jika semua berhasil, selesaikan login
-        await completeLogin(signer);
-
-    } catch (err) {
-        console.error("Failed to connect wallet:", err.message);
-        statusText.innerText = "Failed to connect. Check MetaMask.";
-        provider = null; signer = null; userAddress = null;
-        showToast(err.message, "error");
-    }
-}
-
-// [BARU] Fungsi 4: Cek auto-connect saat halaman dimuat
-function checkAutoConnect() {
-    const expiry = localStorage.getItem('walletExpiry');
-    if (expiry && new Date().getTime() < Number(expiry)) {
-        console.log("Auto-connecting wallet...");
-        // Tunda sedikit agar halaman sempat load
-        setTimeout(toggleWallet, 500); 
+    } catch (dataError) {
+        console.error("Failed to load game data post-login:", dataError);
+        showToast("Wallet connected, but failed to load game data.", "warning");
     }
 }
 
