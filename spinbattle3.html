@@ -1267,6 +1267,56 @@
   flex-grow: 1; /* Biarkan teks mengambil sisa ruang */
   word-wrap: break-word;
 }
+
+  /* === [BARU] Style untuk Avatar di Daftar Taruhan === */
+
+/* Ubah .bet-list-item agar menggunakan flexbox */
+.bet-list-item {
+    display: flex;
+    align-items: center; /* Sejajarkan avatar dan teks */
+    gap: 10px;
+    background: rgba(20, 20, 40, 0.7);
+    border-radius: 4px; padding: 8px 10px;
+    margin-bottom: 6px; font-size: 12px;
+}
+
+/* Avatar kecil di list */
+.bet-list-avatar {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    border: 1px solid var(--cyan-main);
+    background: #0b0b15;
+    flex-shrink: 0; /* Jangan biarkan avatar penyok */
+}
+
+/* Info pemain (Nickname + Alamat) */
+.bet-list-player-info {
+    flex-grow: 1; /* Ambil sisa ruang */
+    min-width: 0; /* Mencegah teks mendorong layout */
+}
+.bet-list-player-info .player-id {
+    font-weight: bold; 
+    color: var(--cyan-main);
+    display: block; /* Tampilkan di baris sendiri */
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Pangkas jika nama terlalu panjang */
+}
+.bet-list-player-info .player-address {
+    font-size: 10px;
+    color: #888;
+    display: block;
+}
+
+/* Jumlah taruhan (Tetap di kanan) */
+.bet-list-player-bets {
+    text-align: right;
+    color: #eee;
+    flex-shrink: 0;
+    font-size: 11px;
+}
   
   @media (min-width: 768px) {
   #donutCanvas {
@@ -2704,31 +2754,59 @@ function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
 }
   
   
-function updateBetList() {
-  // ... (Tidak ada perubahan pada fungsi ini) ...
-  betList.innerHTML = ""; 
-  const playerIds = Object.keys(players);
-  if (playerIds.length === 0) {
-    betList.innerHTML = '<p id="bet-list-placeholder">No bets placed yet in this round.</p>';
-    return;
-  }
-  playerIds.forEach(id => {
-    const player = players[id];
-    const ethAmount = parseFloat(ethers.utils.formatEther(player.eth)).toFixed(5);
-    const usdtAmount = parseFloat(ethers.utils.formatUnits(player.usdt, usdtDecimals)).toFixed(2);
-    const shortId = (userAddress && id.toLowerCase() === userAddress.toLowerCase()) ? "You" : (id.slice(0, 6) + "..." + id.slice(-4));
-    let betsHtml = "";
-    if (player.eth.gt(0)) betsHtml += `${ethAmount} ETH`;
-    if (player.eth.gt(0) && player.usdt.gt(0)) betsHtml += " + ";
-    if (player.usdt.gt(0)) betsHtml += `${usdtAmount} USDT`;
-    const item = document.createElement("div");
-    item.className = "bet-list-item";
-    item.innerHTML = `
-      <div class="player-id" style="color: ${player.color}">${shortId}</div>
-      <div class="player-bets">${betsHtml}</div>
-    `;
-    betList.appendChild(item);
-  });
+// [REVISI TOTAL] Fungsi updateBetList sekarang ASYNC
+async function updateBetList() {
+    betList.innerHTML = ""; 
+    const playerIds = Object.keys(players);
+  
+    if (playerIds.length === 0) {
+        betList.innerHTML = '<p id="bet-list-placeholder">No bets placed yet in this round.</p>';
+        return;
+    }
+
+    // Gunakan provider read-only jika belum connect
+    let contract = (faylottoContract && signer) ? faylottoContract : new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+
+    // Kita gunakan Promise.all agar loading nickname lebih cepat (paralel)
+    const playerPromises = playerIds.map(async (id) => {
+        const player = players[id];
+        const ethAmount = parseFloat(ethers.utils.formatEther(player.eth)).toFixed(5);
+        const usdtAmount = parseFloat(ethers.utils.formatUnits(player.usdt, usdtDecimals)).toFixed(2);
+        
+        // Ambil Nickname
+        let nickname = null;
+        try { nickname = await contract.nicknames(id); } catch(e) {}
+        
+        // Tentukan Nama Tampilan
+        const displayName = (userAddress && id.toLowerCase() === userAddress.toLowerCase()) 
+                            ? "You" 
+                            : (nickname || (id.slice(0, 6) + "..." + id.slice(-4)));
+        
+        // Generate Avatar
+        const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${id}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700&size=25`;
+
+        // Siapkan teks taruhan
+        let betsHtml = "";
+        if (player.eth.gt(0)) betsHtml += `${ethAmount} ETH`;
+        if (player.eth.gt(0) && player.usdt.gt(0)) betsHtml += " + ";
+        if (player.usdt.gt(0)) betsHtml += `${usdtAmount} USDT`;
+
+        // Kembalikan HTML lengkap untuk pemain ini
+        return `
+            <div class="bet-list-item" style="border-left: 3px solid ${player.color};">
+                <img src="${avatarUrl}" alt="Avatar" class="bet-list-avatar">
+                <div class="bet-list-player-info">
+                    <span class="player-id">${displayName}</span>
+                    <span class="player-address">${(displayName !== "You" && nickname) ? id.slice(0, 6) + "..." + id.slice(-4) : ''}</span>
+                </div>
+                <div class="bet-list-player-bets">${betsHtml}</div>
+            </div>
+        `;
+    });
+
+    // Tunggu semua data nickname selesai diambil
+    const itemsHtml = await Promise.all(playerPromises);
+    betList.innerHTML = itemsHtml.join('');
 }
 
 // ======= Draw donut on canvas =======
