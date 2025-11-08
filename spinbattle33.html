@@ -1211,6 +1211,15 @@
 .toast.toast-info {
     border-left: 4px solid #3498db; /* Biru */
 }
+.toast.toast-load {
+    border-left: 4px solid #2ecc71; /* Hijau */
+}
+.toast.toast-wolf {
+    border-left: 4px solid #2ecc71; /* Hijau */
+}
+.toast.toast-warning {
+    border-left: 4px solid #2ecc71; /* Hijau */
+}
 
 /* Tombol Close */
 .toast-close-btn {
@@ -1586,11 +1595,17 @@ function showToast(message, type = 'info') { // Tipe: 'info', 'success', 'error'
     toast.className = `toast toast-${type}`;
     
     // [MODIFIKASI] Tentukan path ikon PNG berdasarkan tipe
-    let iconSrc = 'info.png'; // default (info)
+    let iconSrc = 'info.svg'; // default (info)
     if (type === 'success') {
-        iconSrc = 'success.png';
+        iconSrc = 'success.svg';
     } else if (type === 'error') {
-        iconSrc = 'error.png';
+        iconSrc = 'error.svg';
+    } else if (type === 'load') {
+        iconSrc = 'load.svg';
+    } else if (type === 'wolf') {
+        iconSrc = 'wolf.svg';
+    } else if (type === 'warning') {
+        iconSrc = 'warning.svg';
     }
     
     // [MODIFIKASI] Ganti <i> dengan <img>
@@ -1610,7 +1625,7 @@ function showToast(message, type = 'info') { // Tipe: 'info', 'success', 'error'
     // Timer untuk hapus otomatis
     const autoRemoveTimer = setTimeout(() => {
         removeToast(toast);
-    }, 5000); // 5 detik
+    }, 15000); // 5 detik
 
     // Hapus jika tombol close diklik
     const closeBtn = toast.querySelector('.toast-close-btn');
@@ -1804,7 +1819,7 @@ async function switchToBaseSepolia() {
 async function toggleWallet() {
   // Fungsi ini sekarang HANYA menangani KONEKSI
   if (userAddress) return; // Jika sudah terhubung, abaikan
-  if (!window.ethereum) return showToast("Please install MetaMask.", "error");
+  if (!window.ethereum) return showToast("Please install MetaMask.", "wolf");
   
   try {
       provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -1937,17 +1952,46 @@ async function fetchAndDisplayWinners() {
     
     try {
         winnerList.innerHTML = "";
-        const winnersArray = await contractInstance.getWinners(10); 
+        let winnersArray = await contractInstance.getWinners(10); 
         
         if (winnersArray.length === 0) {
             winnerList.appendChild(winnerListPlaceholder);
             return;
         }
 
+        // --- [PERBAIKAN DIMULAI DI SINI] ---
+
+        // 1. Urutkan Array
+        // Kita urutkan berdasarkan 'winnerId' secara menurun (descending).
+        // Ini mengasumsikan 'winnerId' yang lebih besar berarti lebih baru.
+        // Jika 'timestamp' lebih akurat, ganti 'winnerId' dengan 'timestamp'.
+        winnersArray.sort((a, b) => b.winnerId.toNumber() - a.winnerId.toNumber());
+
+        // 2. Filter Duplikat dan Entri Kosong
+        const processedWinnerIds = new Set();
+        const uniqueWinners = [];
+
+        for (const winner of winnersArray) {
+            const winnerIdStr = winner.winnerId.toString();
+
+            // Cek apakah ID ini "0" (entri kosong/default) ATAU sudah pernah kita tambahkan
+            if (winnerIdStr === "0" || processedWinnerIds.has(winnerIdStr)) {
+                continue; // Lewati entri ini
+            }
+
+            // Jika unik, tambahkan ke Set dan ke array baru
+            processedWinnerIds.add(winnerIdStr);
+            uniqueWinners.push(winner);
+        }
+        
+        // --- [AKHIR PERBAIKAN] ---
+
+
         let usdtDecimalsWinner = 18;
         try { if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals(); } catch (e) {}
       
-        for (const winner of winnersArray) {
+        // 3. Loop menggunakan array 'uniqueWinners' yang sudah bersih
+        for (const winner of uniqueWinners) {
             const winnerId = winner.winnerId.toString();
             const roundId = winner.roundId.toString();
             const winnerAddr = winner.winner;
@@ -1993,8 +2037,6 @@ async function fetchAndDisplayWinners() {
                 } catch (e) { }
             }
             
-            // === [PERBAIKAN DIMULAI DI SINI] ===
-
             // 1. Ambil Nickname Pemenang
             let winnerNickname = null;
             try {
@@ -2005,8 +2047,6 @@ async function fetchAndDisplayWinners() {
             const displayName = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) 
                                 ? "You" 
                                 : (winnerNickname || shortId);
-
-            // =================================
 
             const item = document.createElement("div");
             item.className = "winner-list-item";
@@ -2078,7 +2118,6 @@ async function fetchAndDisplayWinners() {
         winnerList.appendChild(winnerListPlaceholder);
     }
 }
-            
     
 // Fungsi Helper untuk Like
 async function toggleLike(winnerId) {
