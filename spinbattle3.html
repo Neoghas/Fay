@@ -2247,17 +2247,19 @@ function setupEventListeners() {
     }
     if (!contractToListen) return; 
     contractToListen.removeAllListeners(); 
-    contractToListen.on("BetETH", (roundId, player, amount) => {
+    contractToListen.on("BetETH", async (roundId, player, amount) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
             addBetToState(player, amount, ethers.BigNumber.from(0), true);
-            updateBetList();
+            await updateBetList(); // <-- Tambahkan await
             if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
-    contractToListen.on("BetERC20", (roundId, player, amount) => {
+
+    // [PERBAIKAN 2] Jadikan fungsi callback ini 'async'
+    contractToListen.on("BetERC20", async (roundId, player, amount) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
             addBetToState(player, ethers.BigNumber.from(0), amount, true);
-            updateBetList();
+            await updateBetList(); // <-- Tambahkan await
             if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
@@ -2285,55 +2287,53 @@ function setupEventListeners() {
 // === [PERBAIKAN BUG UTAMA] ===
 // Menambahkan fungsi `fetchAndDisplayRoundData` yang hilang
 async function fetchAndDisplayRoundData() {
-    // 1. Dapatkan provider (bisa read-only)
-    let contractInstance = faylottoContract;
-    if (!contractInstance) {
-        if (!provider) provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
-        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-    }
-
+    let contract = (faylottoContract && signer) ? faylottoContract : new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    
     try {
-        // 2. Reset UI ronde
-        resetRoundUI();
-
-        // 3. Ambil data ronde saat ini
-        currentRoundId = await contractInstance.currentRoundId();
-        const round = await contractInstance.getRoundBasic(currentRoundId);
-
-        // 4. Atur Timer
-        currentRoundEndTime = round.endTime.toNumber() * 1000;
-        const now = Date.now();
+        statusText.innerText = "Syncing...";
         
-        if (now < currentRoundEndTime) {
-            // Ronde masih berjalan
-            statusText.innerText = "Ronde berjalan. Pasang bet Anda!";
-            placeBetBtn.disabled = !signer; // Aktifkan jika signer ada (sudah login)
-            startVisualTimer(currentRoundEndTime);
-        } else {
+        // 1. Ambil data ronde saat ini
+        currentRoundId = await contract.currentRoundId();
+        const round = await contract.getRoundBasic(currentRoundId);
+
+        // 2. Reset UI (Kosongkan roda dan list)
+        resetRoundUI(); 
+
+        // 3. [LANGKAH YANG HILANG] Ambil data pemain yang sudah ada
+        const playersList = await contract.getRoundPlayers(currentRoundId);
+        for (const playerAddress of playersList) {
+            const deposits = await contract.getPlayerDeposits(currentRoundId, playerAddress);
+            // Tambahkan data pemain ke 'players' object dan gambar ulang roda
+            addBetToState(playerAddress, deposits.ethAmount, deposits.erc20Amount, false);
+        }
+        
+        // 4. [PERBAIKAN] Update list taruhan SETELAH pemain diambil
+        await updateBetList(); 
+        
+        // 5. Update deposit 'Saya' (jika sudah login)
+        if(userAddress) {
+            await updateMyDeposits();
+        }
+
+        // 6. Atur Timer
+        const endTime = round.endTime.toNumber() * 1000;
+        const timeLeft = endTime - Date.now();
+
+        if (timeLeft <= 0) {
             // Ronde sudah selesai, tunggu finalisasi
-            showFinalizeButton();
-            placeBetBtn.disabled = true;
+            statusText.innerText = "Waiting for finalization...";
+            startVisualTimer(endTime); // Ini akan langsung ke 00:00 & showFinalizeButton
+        } else {
+            // Ronde masih berjalan
+            statusText.innerText = `Round ${currentRoundId} live!`;
+            if (userAddress) placeBetBtn.disabled = false; // Aktifkan jika signer ada
+            isFinalizing = false;
+            startVisualTimer(endTime); // Mulai timer
         }
 
-        // 5. Ambil data pemain di ronde ini
-        const playerAddrs = await contractInstance.getRoundPlayers(currentRoundId);
-        if (playerAddrs.length > 0) {
-            // Ambil deposit untuk setiap pemain
-            for (const addr of playerAddrs) {
-                const deposits = await contractInstance.getPlayerDeposits(currentRoundId, addr);
-                // Tambahkan ke state lokal untuk menggambar roda
-                addBetToState(addr, deposits.ethAmount, deposits.erc20Amount, false);
-            }
-        }
-        
-        updateBetList(); // Tampilkan pemain di list
-        if(signer) await updateMyDeposits(); // Update deposit *saya* jika sudah login
-
-    } catch (err) {
-        console.error("Gagal mengambil data ronde:", err);
-        statusText.innerText = "Tidak dapat memuat data ronde. Hubungkan wallet.";
-        if (visualTimer) clearInterval(visualTimer);
-        timerText.innerText = "00:00";
+    } catch (err) { 
+        console.error("Sync error:", err.message); 
+        statusText.innerText = "Error syncing data.";
     }
 }
 
@@ -2754,7 +2754,7 @@ function addBetToState(playerId, ethAmount, usdtAmount, isEvent = false) {
 }
   
   
-// [REVISI TOTAL] Fungsi updateBetList sekarang ASYNC
+// [REVISI TOTAL] Fungsi updateBetList sekarang ASYNC dan AMAN
 async function updateBetList() {
     betList.innerHTML = ""; 
     const playerIds = Object.keys(players);
@@ -2764,49 +2764,48 @@ async function updateBetList() {
         return;
     }
 
-    // Gunakan provider read-only jika belum connect
     let contract = (faylottoContract && signer) ? faylottoContract : new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
 
-    // Kita gunakan Promise.all agar loading nickname lebih cepat (paralel)
-    const playerPromises = playerIds.map(async (id) => {
-        const player = players[id];
-        const ethAmount = parseFloat(ethers.utils.formatEther(player.eth)).toFixed(5);
-        const usdtAmount = parseFloat(ethers.utils.formatUnits(player.usdt, usdtDecimals)).toFixed(2);
-        
-        // Ambil Nickname
-        let nickname = null;
-        try { nickname = await contract.nicknames(id); } catch(e) {}
-        
-        // Tentukan Nama Tampilan
-        const displayName = (userAddress && id.toLowerCase() === userAddress.toLowerCase()) 
-                            ? "You" 
-                            : (nickname || (id.slice(0, 6) + "..." + id.slice(-4)));
-        
-        // Generate Avatar
-        const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${id}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700&size=25`;
+    // [PERBAIKAN 3] Bungkus dengan try...catch
+    try {
+        const playerPromises = playerIds.map(async (id) => {
+            const player = players[id];
+            const ethAmount = parseFloat(ethers.utils.formatEther(player.eth)).toFixed(5);
+            const usdtAmount = parseFloat(ethers.utils.formatUnits(player.usdt, usdtDecimals)).toFixed(2);
+            
+            let nickname = null;
+            try { nickname = await contract.nicknames(id); } catch(e) {}
+            
+            const displayName = (userAddress && id.toLowerCase() === userAddress.toLowerCase()) 
+                                ? "You" 
+                                : (nickname || (id.slice(0, 6) + "..." + id.slice(-4)));
+            
+            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${id}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700&size=25`;
 
-        // Siapkan teks taruhan
-        let betsHtml = "";
-        if (player.eth.gt(0)) betsHtml += `${ethAmount} ETH`;
-        if (player.eth.gt(0) && player.usdt.gt(0)) betsHtml += " + ";
-        if (player.usdt.gt(0)) betsHtml += `${usdtAmount} USDT`;
+            let betsHtml = "";
+            if (player.eth.gt(0)) betsHtml += `${ethAmount} ETH`;
+            if (player.eth.gt(0) && player.usdt.gt(0)) betsHtml += " + ";
+            if (player.usdt.gt(0)) betsHtml += `${usdtAmount} USDT`;
 
-        // Kembalikan HTML lengkap untuk pemain ini
-        return `
-            <div class="bet-list-item" style="border-left: 3px solid ${player.color};">
-                <img src="${avatarUrl}" alt="Avatar" class="bet-list-avatar">
-                <div class="bet-list-player-info">
-                    <span class="player-id">${displayName}</span>
-                    <span class="player-address">${(displayName !== "You" && nickname) ? id.slice(0, 6) + "..." + id.slice(-4) : ''}</span>
+            return `
+                <div class="bet-list-item" style="border-left: 3px solid ${player.color};">
+                    <img src="${avatarUrl}" alt="Avatar" class="bet-list-avatar">
+                    <div class="bet-list-player-info">
+                        <span class="player-id">${displayName}</span>
+                        <span class="player-address">${(displayName !== "You" && nickname) ? id.slice(0, 6) + "..." + id.slice(-4) : ''}</span>
+                    </div>
+                    <div class="bet-list-player-bets">${betsHtml}</div>
                 </div>
-                <div class="bet-list-player-bets">${betsHtml}</div>
-            </div>
-        `;
-    });
+            `;
+        });
 
-    // Tunggu semua data nickname selesai diambil
-    const itemsHtml = await Promise.all(playerPromises);
-    betList.innerHTML = itemsHtml.join('');
+        const itemsHtml = await Promise.all(playerPromises);
+        betList.innerHTML = itemsHtml.join('');
+
+    } catch (err) {
+        console.error("Error during updateBetList:", err);
+        betList.innerHTML = '<p id="bet-list-placeholder" style="color:red;">Error loading player list.</p>';
+    }
 }
 
 // ======= Draw donut on canvas =======
