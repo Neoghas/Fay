@@ -1153,18 +1153,13 @@
 
   /* === [REVISI] CUSTOM TOAST NOTIFICATIONS === */
 #toast-container {
-    position: fixed;
-    top: 90px;
-    right: 20px;
-    z-index: 10000;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    width: 300px;
+    position: fixed; top: 90px; right: 20px;
+    z-index: 10000; display: flex; flex-direction: column;
+    gap: 10px; width: 300px;
 }
 
 .toast {
-    position: relative; /* [PENTING] Agar tombol X bisa diposisikan */
+    position: relative;
     width: 100%;
     background: rgba(10, 10, 25, 0.95);
     color: #fff;
@@ -1172,56 +1167,55 @@
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(5px);
     box-sizing: border-box;
-    border-left: 5px solid var(--cyan-main);
-    display: flex; /* Menggunakan flex untuk padding border */
+    
+    /* [PERUBAHAN] Hapus border-left, tambahkan align-items dan padding */
+    /* border-left: 5px solid var(--cyan-main); */ /* <-- DIHAPUS */
+    display: flex;
+    align-items: center; /* Membuat ikon dan teks sejajar */
+    padding: 15px; /* Padding di container utama */
     
     animation: toastSlideIn 0.3s ease forwards;
     opacity: 0;
     transform: translateX(100%);
 }
 
-/* [BARU] Konten di dalam toast, agar padding rapi */
+/* [BARU] Style untuk Ikon PNG di dalam toast */
+.toast-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0; /* Mencegah ikon mengecil */
+    margin-right: 12px; /* Jarak antara ikon dan teks */
+}
+
+/* [REVISI] Konten teks, padding diubah */
 .toast-content {
-    padding: 15px 40px 15px 20px; /* Padding kanan lebih besar untuk tombol X */
+    padding: 0; /* Hapus padding lama */
+    padding-right: 30px; /* Jarak untuk tombol X */
     font-size: 13px;
     font-family: 'Courier Prime', monospace;
     line-height: 1.4;
+    flex-grow: 1; /* Biarkan teks mengisi sisa ruang */
 }
 
-/* [BARU] Tombol 'X' untuk Menutup */
+/* Tombol 'X' (Tetap sama) */
 .toast-close-btn {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    width: 25px;
-    height: 25px;
-    background: transparent;
-    border: none;
-    color: #888;
-    font-size: 20px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: color 0.2s ease;
+    position: absolute; top: 5px; right: 5px;
+    width: 25px; height: 25px; background: transparent;
+    border: none; color: #888; font-size: 20px;
+    font-weight: bold; cursor: pointer; transition: color 0.2s ease;
 }
-.toast-close-btn:hover {
-    color: #fff;
-}
+.toast-close-btn:hover { color: #fff; }
 
-/* Jenis-jenis Notifikasi */
-.toast.info { border-left-color: var(--cyan-main); box-shadow: -5px 0 15px -5px var(--cyan-main); }
-.toast.success { border-left-color: #3DCC91; box-shadow: -5px 0 15px -5px #3DCC91; }
-.toast.error { border-left-color: var(--pink-main); box-shadow: -5px 0 15px -5px var(--pink-main); }
-.toast.warning { border-left-color: #F9D423; box-shadow: -5px 0 15px -5px #F9D423; }
+/* [REVISI] Jenis Notifikasi (sekarang memberi glow pada ikon) */
+.toast.info .toast-icon { filter: drop-shadow(0 0 5px var(--cyan-main)); }
+.toast.success .toast-icon { filter: drop-shadow(0 0 5px #3DCC91); }
+.toast.error .toast-icon { filter: drop-shadow(0 0 5px var(--pink-main)); }
+.toast.warning .toast-icon { filter: drop-shadow(0 0 5px #F9D423); }
 
-/* Animasi keluar */
-.toast.hiding {
-    animation: toastSlideOut 0.3s ease forwards;
-}
-
+/* Animasi (Tetap sama) */
+.toast.hiding { animation: toastSlideOut 0.3s ease forwards; }
 @keyframes toastSlideIn { to { opacity: 1; transform: translateX(0); } }
 @keyframes toastSlideOut { to { opacity: 0; transform: translateX(100%); } }
-
-/* Penyesuaian di HP */
 @media (max-width: 480px) {
     #toast-container { width: 90%; left: 5%; right: 5%; top: 80px; }
 }
@@ -3280,6 +3274,12 @@ function copyToClipboard(text) {
 }
 
  // === FUNGSI CUSTOM TOAST ===
+  const TOAST_ICONS = {
+    info: 'info.s g', 
+    success: 'success.svg',
+    error: 'error.svg',
+    warning: 'warning.svg'
+};
 // Tipe: 'info' (default), 'success', 'error', 'warning'
 function showToast(message, type = 'info') {
     const container = document.getElementById('toast-container');
@@ -3288,21 +3288,22 @@ function showToast(message, type = 'info') {
     // Buat elemen toast baru
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
+
+   const iconPath = TOAST_ICONS[type] || TOAST_ICONS.info;
     
     // [REVISI] Gunakan innerHTML untuk menambahkan tombol dan konten
     toast.innerHTML = `
+        <img src="${iconPath}" alt="${type}" class="toast-icon" /> 
         <span class="toast-content">${message}</span>
         <button class="toast-close-btn" onclick="closeToast(this.parentElement)">&times;</button>
     `;
     
     container.appendChild(toast);
     
-    // Hapus otomatis setelah 4 detik (jika tidak ditutup manual)
     const timer = setTimeout(() => {
         closeToast(toast);
-    }, 20000);
+    }, 20000); // Timer Anda 20 detik
     
-    // Simpan timer di elemen agar bisa dibatalkan jika ditutup manual
     toast.dataset.timer = timer;
 }
 
