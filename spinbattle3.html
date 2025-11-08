@@ -2317,15 +2317,14 @@ function setAmountByPercent(percent) {
   betAmountInput.value = ethers.utils.formatUnits(amount, decimals);
 }
 
-// === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
+// === [GANTI FUNGSI LAMA ANDA DENGAN INI] ===
+
 async function confirmBet() {
   const amountStr = betAmountInput.value;
-  // [PERBAIKAN] Ganti cara baca currency
-  const currency = betCurrencySelect.value; // Baca dari <select>
-  // Jika Anda sudah ganti ke tombol toggle, gunakan: const currency = selectedCurrency;
+  const currency = betCurrencySelect.value; 
   
   if (!amountStr || parseFloat(amountStr) <= 0) {
-      showToast("Please enter a valid amount.", "error"); // [DIGANTI]
+      showToast("Please enter a valid amount.", "error"); // [PERBAIKAN]
       return;
   }
   
@@ -2343,18 +2342,19 @@ async function confirmBet() {
     statusText.innerText = `Bet sent! Awaiting confirmation...`;
     await tx.wait();
     
-    // playSound('sfx-coin'); // (Opsional jika Anda punya suara)
-    showToast("Bet confirmed! Good luck.", "success"); // Notifikasi sukses
+    // playSound('sfx-coin'); // (Opsional)
+    showToast("Bet confirmed! Good luck.", "success"); // [PERBAIKAN]
     
+    statusText.innerText = `Bet confirmed! Good luck.`;
     hideBetModal();
     await updateUserBalances();
     await updateMyDeposits();
-    
+
   } catch (err) {
     console.error(err);
-    // [DIGANTI] Logika error baru yang menggunakan showToast
     const errorMessage = err.reason || err.data?.message || err.message || "Transaction failed!";
     
+    // [PERBAIKAN UTAMA] Mengganti semua 'alert' dengan 'showToast'
     if (errorMessage.includes("Max 2 bets per round")) {
         showToast("Error: Max 2 bets per round.", "error");
     } else if (errorMessage.includes("Max total deposit (0.00256 ETH)")) {
@@ -2367,7 +2367,7 @@ async function confirmBet() {
         showToast("Error: Insufficient USDT balance.", "error");
     } else if (errorMessage.includes("Minimum bet is 0.00005 ETH")) {
         showToast("Error: Minimum bet is 0.00005 ETH.", "error");
-    } else if (errorMessage.includes("Minimum bet is 0.2 USDT")) { // Pastikan nilai min USDT Anda benar
+    } else if (errorMessage.includes("Minimum bet is 0.2 USDT")) {
         showToast("Error: Minimum bet is 0.2 USDT.", "error");
     } else {
         showToast("Transaction failed. Check console.", "error");
