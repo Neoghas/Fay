@@ -2284,59 +2284,49 @@ function setupEventListeners() {
     }
 }
 
-// === [PERBAIKAN BUG UTAMA] ===
 // Menambahkan fungsi `fetchAndDisplayRoundData` yang hilang
 async function fetchAndDisplayRoundData() {
     let contract = (faylottoContract && signer) ? faylottoContract : new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     
     try {
         statusText.innerText = "Syncing...";
-        
-        // 1. Ambil data ronde saat ini
         currentRoundId = await contract.currentRoundId();
-        const round = await contract.getRoundBasic(currentRoundId);
+        const roundInfo = await contract.getRoundBasic(currentRoundId);
 
-        // 2. Reset UI (Kosongkan roda dan list)
-        resetRoundUI(); 
+        // [PERBAIKAN] Tunggu resetUI (yang sekarang juga memanggil updateBetList)
+        await resetRoundUI(); 
 
-        // 3. [LANGKAH YANG HILANG] Ambil data pemain yang sudah ada
         const playersList = await contract.getRoundPlayers(currentRoundId);
         for (const playerAddress of playersList) {
             const deposits = await contract.getPlayerDeposits(currentRoundId, playerAddress);
-            // Tambahkan data pemain ke 'players' object dan gambar ulang roda
             addBetToState(playerAddress, deposits.ethAmount, deposits.erc20Amount, false);
         }
         
-        // 4. [PERBAIKAN] Update list taruhan SETELAH pemain diambil
-        await updateBetList(); 
-        
-        // 5. Update deposit 'Saya' (jika sudah login)
+        // [PERBAIKAN] Panggil updateBetList LAGI SETELAH addBetToState
+        // agar pemain baru muncul
+        if (playersList.length > 0) {
+            await updateBetList(); 
+        }
+
         if(userAddress) {
             await updateMyDeposits();
         }
 
-        // 6. Atur Timer
-        const endTime = round.endTime.toNumber() * 1000;
+        // === LOGIKA TIMER ===
+        const endTime = roundInfo.endTime.toNumber() * 1000;
         const timeLeft = endTime - Date.now();
 
         if (timeLeft <= 0) {
-            // Ronde sudah selesai, tunggu finalisasi
             statusText.innerText = "Waiting for finalization...";
-            startVisualTimer(endTime); // Ini akan langsung ke 00:00 & showFinalizeButton
+            startVisualTimer(endTime);
         } else {
-            // Ronde masih berjalan
             statusText.innerText = `Round ${currentRoundId} live!`;
-            if (userAddress) placeBetBtn.disabled = false; // Aktifkan jika signer ada
+            if (userAddress) placeBetBtn.disabled = false; 
             isFinalizing = false;
-            startVisualTimer(endTime); // Mulai timer
+            startVisualTimer(endTime);
         }
-
-    } catch (err) { 
-        console.error("Sync error:", err.message); 
-        statusText.innerText = "Error syncing data.";
-    }
+    } catch (err) { console.error("Sync error:", err.message); }
 }
-
 
 // === FUNGSI UTAMA: Handle Finalisasi ===
 async function handleRoundFinalized(roundId, winnerAddr) {
@@ -2702,20 +2692,25 @@ function showFinalizeButton() {
     finalizeBtn.disabled = false;
 }
 
-  function resetRoundUI() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
+  async function resetRoundUI() { // <-- Tambah 'async'
     players = {};
     totalWeight = ethers.BigNumber.from(0);
     playersArray = []; 
+    
     if (ctx) {
         currentRotation = 0;
         drawDonut(); 
     }
-    updateBetList();
+    
+    await updateBetList(); // <-- [PERBAIKAN] Tambah 'await'
+    
     placeBetBtn.style.display = "block";
     placeBetBtn.disabled = true;
+
     finalizeBtn.style.display = "none";
-    finalizeBtn.innerText = "Finalize Round"; 
+    finalizeBtn.innerText = "FINALIZE ROUND"; 
+    
+    // [PERBAIKAN] Pindahkan ini ke dalam reset agar bersih saat disconnect
     myEthDeposit.innerText = "0";
     myUsdtDeposit.innerText = "0";
   }
@@ -3020,37 +3015,30 @@ function hideWalletModal() {
 }
 
     // Function Disconnect Wallet
-function disconnectWallet() {
+async function disconnectWallet() { // <-- Tambah 'async'
     userAddress = null; provider = null; signer = null;
     walletBtn.innerText = "Connect Wallet";
-    referralBtn.style.display = "none";
-    statusText.innerText = "Wallet not connected";
+    // ... (sisa kode Anda)
     
-    hideWalletModal(); 
-    
-    localStorage.removeItem(AUTO_CONNECT_KEY);
-    
-    if (visualTimer) clearInterval(visualTimer);
     if (faylottoContract) {
         faylottoContract.removeAllListeners();
         faylottoContract = null; 
     }
     
-    resetRoundUI();
-    myEthDeposit.innerText = "0"; 
-    myUsdtDeposit.innerText = "0";
-    winnerList.innerHTML = "";
-    winnerList.appendChild(winnerListPlaceholder);
-
-    // Reset info di modal
+    await resetRoundUI(); // <-- [PERBAIKAN] Tambah 'await'
+    
+    // [PERBAIKAN] Pindahkan reset info wallet ke sini
     walletAddress.innerText = "-";
     ethBalance.innerText = "0";
     usdtBalance.innerText = "0";
+    myEthDeposit.innerText = "0"; // Pastikan ini juga direset
+    myUsdtDeposit.innerText = "0"; // Pastikan ini juga direset
+    winnerList.innerHTML = "";
+    winnerList.appendChild(winnerListPlaceholder);
     
     fetchAndDisplayRoundData();
     fetchAndDisplayWinners();
-    // [FIX] Ganti showToast ke showStatus
-    showStatus("Wallet terputus.", "info");
+    showToast("Wallet disconnected.", "info");
 }
     
 function handleCanvasRedraw() {
