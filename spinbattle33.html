@@ -1150,6 +1150,83 @@
 
     padding-right: 10px; /* Ruang untuk panah */
 }
+
+  /* === [BARU] Toast Notification System === */
+#toast-container {
+    position: fixed;
+    /* [UBAH] Posisi di kanan atas agar tidak tertutup footer */
+    top: 90px; /* Di bawah navbar */
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 320px;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 15px;
+    border-radius: 8px;
+    background: var(--bg-modal, #0d0d1a);
+    border: 1px solid var(--border-color, rgba(120, 0, 255, 0.4));
+    color: #fff;
+    font-family: "Ubuntu", sans-serif;
+    font-size: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    
+    /* Animasi */
+    transform: translateX(120%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.215, 0.610, 0.355, 1);
+    word-break: break-word; /* Mencegah teks panjang merusak layout */
+}
+
+.toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+/* [BARU] Style untuk ikon PNG */
+.toast-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0; /* Mencegah ikon menyusut */
+}
+
+.toast-message {
+    flex-grow: 1;
+    line-height: 1.4;
+}
+
+/* Varian Warna (opsional, tapi bagus) */
+.toast.toast-success {
+    border-left: 4px solid #2ecc71; /* Hijau */
+}
+.toast.toast-error {
+    border-left: 4px solid #e74c3c; /* Merah */
+}
+.toast.toast-info {
+    border-left: 4px solid #3498db; /* Biru */
+}
+
+/* Tombol Close */
+.toast-close-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 5px;
+    margin-left: auto; /* Mendorong tombol ke kanan */
+}
+.toast-close-btn:hover {
+    color: #fff;
+}
+
   
   @media (min-width: 768px) {
   #donutCanvas {
@@ -1420,6 +1497,8 @@
 <audio id="sfx-win" src="winI.mp3" preload="auto"></audio>
 <audio id="sfx-coin" src="coin.mp3" preload="auto"></audio>
 
+<div id="toast-container"></div>
+    
   <footer>
     <div id="footer" class="social-icons">
         <a href="https://x.com/FaylottoXyz" target="_blank"><i class="fa-brands fa-twitter"></i></a>
@@ -1442,7 +1521,8 @@
         </a>
       </span>
     </p>
-  </footer>
+     </footer>
+
       <script>
 // ===========================================
 // === 1. KONFIGURASI KONTRAK ===
@@ -1488,6 +1568,71 @@ let playersArray = [];
 let myCurrentEthDeposit = ethers.BigNumber.from(0);
 let myCurrentUsdtDeposit = ethers.BigNumber.from(0);
 let pendingReferrerNickname = null;
+
+
+// ===========================================
+// === [BARU] FUNGSI TOAST NOTIFICATION ===
+// ===========================================
+function showToast(message, type = 'info') { // Tipe: 'info', 'success', 'error'
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        // Fallback jika container tidak ada
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    
+    // [MODIFIKASI] Tentukan path ikon PNG berdasarkan tipe
+    let iconSrc = 'info.png'; // default (info)
+    if (type === 'success') {
+        iconSrc = 'success.png';
+    } else if (type === 'error') {
+        iconSrc = 'error.png';
+    }
+    
+    // [MODIFIKASI] Ganti <i> dengan <img>
+    toast.innerHTML = `
+        <img src="${iconSrc}" alt="${type}" class="toast-icon">
+        <span class="toast-message">${message}</span>
+        <button class="toast-close-btn">&times;</button>
+    `;
+
+    container.appendChild(toast);
+
+    // Trigger animasi masuk
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+    
+    // Timer untuk hapus otomatis
+    const autoRemoveTimer = setTimeout(() => {
+        removeToast(toast);
+    }, 5000); // 5 detik
+
+    // Hapus jika tombol close diklik
+    const closeBtn = toast.querySelector('.toast-close-btn');
+    closeBtn.addEventListener('click', () => {
+        clearTimeout(autoRemoveTimer);
+        removeToast(toast);
+    });
+}
+
+function removeToast(toast) {
+    toast.classList.remove('show'); // Trigger animasi keluar
+    // Hapus elemen dari DOM setelah animasi selesai
+    toast.addEventListener('transitionend', () => {
+        if (toast.parentElement) {
+            toast.parentElement.removeChild(toast);
+        }
+    }, { once: true });
+}
+// ===========================================
+// === AKHIR FUNGSI TOAST ===
+// ===========================================
+
 
 function getProvider() {
     // Cek apakah user punya wallet (misal MetaMask)
@@ -1586,7 +1731,7 @@ const PLAYER_COLORS = [
                 pendingReferrerNickname = refNick;
 
                 // Opsional: Beri tahu pengguna
-                // alert(`Welcome! You were referred by ${refNick}.`);
+                // showToast(`Welcome! You were referred by ${refNick}.`, 'info');
             }
         });
 
@@ -1659,7 +1804,7 @@ async function switchToBaseSepolia() {
 async function toggleWallet() {
   // Fungsi ini sekarang HANYA menangani KONEKSI
   if (userAddress) return; // Jika sudah terhubung, abaikan
-  if (!window.ethereum) return alert("Please install MetaMask.");
+  if (!window.ethereum) return showToast("Please install MetaMask.", "error");
   
   try {
       provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -1717,7 +1862,7 @@ async function toggleWallet() {
                   // PENTING: Ini akan memunculkan popup transaksi MetaMask
                   const tx = await faylottoContract.setReferralByNickname(pendingReferrerNickname);
                   await tx.wait();
-                  alert(`Successfully referred by ${pendingReferrerNickname}!`);
+                  showToast(`Successfully referred by ${pendingReferrerNickname}!`, "success");
                   pendingReferrerNickname = null; // Clear setelah sukses
                   fetchReferralData(); // Refresh UI
               }
@@ -1734,7 +1879,7 @@ async function toggleWallet() {
       console.error("Failed to connect wallet:", err.message);
       statusText.innerText = "Failed to connect. Check MetaMask network (Sepolia) and contract addresses.";
       provider = null; signer = null; userAddress = null;
-      alert(`Error: ${err.message}`);
+      showToast(`Error: ${err.message}`, "error");
   }
 }
 
@@ -1937,7 +2082,7 @@ async function fetchAndDisplayWinners() {
     
 // Fungsi Helper untuk Like
 async function toggleLike(winnerId) {
-    if (!signer || !faylottoContract) return alert("Please connect wallet first.");
+    if (!signer || !faylottoContract) return showToast("Please connect wallet first.", "error");
     try {
         const tx = await faylottoContract.toggleLikeWinner(winnerId);
         await tx.wait();
@@ -1949,7 +2094,7 @@ async function toggleLike(winnerId) {
 
 // Fungsi Helper untuk Rating
 async function rateWinner(winnerId, stars) {
-    if (!signer || !faylottoContract) return alert("Please connect wallet first.");
+    if (!signer || !faylottoContract) return showToast("Please connect wallet first.", "error");
     try {
         const tx = await faylottoContract.rateWinner(winnerId, stars);
         await tx.wait();
@@ -1961,7 +2106,7 @@ async function rateWinner(winnerId, stars) {
 
     // Kirim Komentar Baru
 async function submitComment(winnerId) {
-    if (!signer) return alert("Connect wallet first.");
+    if (!signer) return showToast("Connect wallet first.", "error");
     const input = document.getElementById(`new-comment-${winnerId}`);
     const text = input.value.trim();
     if (!text) return;
@@ -1982,7 +2127,7 @@ async function submitComment(winnerId) {
         
     } catch (err) {
         console.error(err);
-        alert("Failed to send comment.");
+        showToast("Failed to send comment.", "error");
         input.value = text; // Kembalikan teks asli jika gagal agar user tidak perlu ketik ulang
     } finally {
         input.disabled = false;
@@ -2008,7 +2153,7 @@ async function saveEditComment(wid, cid) {
     if (!signer) return;
     const input = document.getElementById(`edit-input-${wid}-${cid}`);
     const newText = input.value.trim();
-    if (!newText) return alert("Comment cannot be empty.");
+    if (!newText) return showToast("Comment cannot be empty.", "error");
 
     try {
         const tx = await faylottoContract.editCommentOnWinner(wid, cid, newText);
@@ -2016,7 +2161,7 @@ async function saveEditComment(wid, cid) {
         fetchAndRenderComments(wid); // Refresh setelah simpan
     } catch (err) {
         console.error("Edit failed:", err);
-        alert("Failed to edit comment.");
+        showToast("Failed to edit comment.", "error");
     }
 }
 
@@ -2239,7 +2384,7 @@ async function resetAndFetchNewRound() {
 
 // GANTI SELURUH FUNGSI LAMA ANDA DENGAN YANG INI
 async function callFinalizeRound() {
-    if (!signer || !faylottoContract) return alert("Please connect your wallet.");
+    if (!signer || !faylottoContract) return showToast("Please connect your wallet.", "error");
 
     finalizeBtn.disabled = true;
     statusText.innerText = "Sending finalization transaction...";
@@ -2276,7 +2421,7 @@ async function callFinalizeRound() {
         
     } catch (err) {
         console.error("Finalize failed:", err);
-        alert("Finalization failed. See console for details.");
+        showToast("Finalization failed. See console for details.", "error");
         statusText.innerText = "Finalization failed.";
         finalizeBtn.disabled = false; // Biarkan user mencoba lagi jika gagal
     }
@@ -2284,8 +2429,8 @@ async function callFinalizeRound() {
 
 // === FUNGSI MODAL TARUHAN (Bet Modal) ===
 function showBetModal() {
-  if (!signer) return alert("Connect wallet first!");
-  if (isFinalizing) return alert("Round is ending, new bets are closed.");
+  if (!signer) return showToast("Connect wallet first!", "error");
+  if (isFinalizing) return showToast("Round is ending, new bets are closed.", "info");
   
   modalEthBalance.innerText = ethers.utils.formatEther(rawEthBalance || 0);
   modalUsdtBalance.innerText = ethers.utils.formatUnits(rawUsdtBalance || 0, usdtDecimals);
@@ -2315,32 +2460,46 @@ function setAmountByPercent(percent) {
   async function confirmBet() {
   const amountStr = betAmountInput.value;
   const currency = betCurrencySelect.value;
-  if (!amountStr || parseFloat(amountStr) <= 0) return alert("Please enter a valid amount.");
+  if (!amountStr || parseFloat(amountStr) <= 0) return showToast("Please enter a valid amount.", "error");
+  
   confirmBetBtn.disabled = true;
   confirmBetBtn.innerText = "Processing...";
+  
   try {
     let tx;
+    // Memanggil fungsi terpisah Anda
     if (currency === 'ETH') {
       tx = await placeBetETH(amountStr);
     } else {
       tx = await placeBetUSDT(amountStr);
     }
+
     statusText.innerText = `Bet sent! Awaiting confirmation...`;
+    
+    // Tunggu transaksi selesai di blockchain
     await tx.wait();
+    
+    // === [TAMBAHKAN SUARA DI SINI] ===
+    // Dimainkan HANYA jika transaksi sukses
+    playSound('sfx-coin'); 
+    // ================================
+
     statusText.innerText = `Bet confirmed! Good luck.`;
     hideBetModal();
     await updateUserBalances();
     await updateMyDeposits();
+    
   } catch (err) {
     console.error(err);
+    // ... (kode error handling Anda) ...
     const errorMessage = err.reason || err.message || "Transaction failed!";
-    alert(`Error: ${errorMessage}`);
+    showToast(`Error: ${errorMessage}`, "error"); // Ganti alert
     statusText.innerText = "Transaction failed.";
   } finally {
     confirmBetBtn.disabled = false;
     confirmBetBtn.innerText = "Confirm Bet";
   }
-  }
+    }
     
 async function placeBetETH(amountStr) {
   const amountWei = ethers.utils.parseEther(amountStr);
@@ -2388,7 +2547,7 @@ async function placeBetUSDT(amountStr) {
 
 // --- Tampilkan & Sembunyikan Modal Referral ---
 async function showReferralModal() {
-    if (!signer) return alert("Connect wallet first!");
+    if (!signer) return showToast("Connect wallet first!", "error");
     
     // Selalu ambil data terbaru saat modal dibuka
     await fetchReferralData(); 
@@ -2464,18 +2623,18 @@ function updateReferralUI(nick, referrer, rewards, count) {
 // --- Panggil Kontrak: createNickname ---
 async function callCreateNickname() {
     const nick = nicknameInput.value;
-    if (!nick || nick.length < 3) return alert("Nickname must be at least 3 characters.");
+    if (!nick || nick.length < 3) return showToast("Nickname must be at least 3 characters.", "error");
     
     createNicknameBtn.disabled = true;
     createNicknameBtn.innerText = "Processing...";
     try {
         const tx = await faylottoContract.createNickname(nick);
         await tx.wait();
-        alert("Nickname created/updated successfully!");
+        showToast("Nickname created/updated successfully!", "success");
         await fetchReferralData(); // Refresh UI
     } catch (err) {
         console.error("Error creating nickname:", err.message);
-        alert(err.reason || "Failed to create nickname.");
+        showToast(err.reason || "Failed to create nickname.", "error");
     } finally {
         createNicknameBtn.disabled = false;
         createNicknameBtn.innerText = "Create";
@@ -2485,18 +2644,18 @@ async function callCreateNickname() {
 // --- Panggil Kontrak: setReferralByNickname ---
 async function callSetReferrer() {
     const refNick = referrerNicknameInput.value;
-    if (!refNick) return alert("Please enter a referrer's nickname.");
+    if (!refNick) return showToast("Please enter a referrer's nickname.", "error");
     
     setReferrerBtn.disabled = true;
     setReferrerBtn.innerText = "Processing...";
     try {
         const tx = await faylottoContract.setReferralByNickname(refNick);
         await tx.wait();
-        alert("Referrer set successfully!");
+        showToast("Referrer set successfully!", "success");
         await fetchReferralData(); // Refresh UI (akan menyembunyikan section ini)
     } catch (err) {
         console.error("Error setting referrer:", err.message);
-        alert(err.reason || "Failed to set referrer. (Nickname might not exist, or you already have one)");
+        showToast(err.reason || "Failed to set referrer. (Nickname might not exist, or you already have one)", "error");
     } finally {
         setReferrerBtn.disabled = false;
         setReferrerBtn.innerText = "Set Referrer";
@@ -2510,12 +2669,12 @@ async function callClaimRewards() {
     try {
         const tx = await faylottoContract.claimReferralRewards();
         await tx.wait();
-        alert("Rewards claimed successfully!");
+        showToast("Rewards claimed successfully!", "success");
         await fetchReferralData(); // Refresh UI (rewards akan jadi 0)
         await updateUserBalances(); // Refresh saldo dompet
     } catch (err) {
         console.error("Error claiming rewards:", err.message);
-        alert(err.reason || "Failed to claim rewards. (You might have no rewards)");
+        showToast(err.reason || "Failed to claim rewards. (You might have no rewards)", "error");
     } finally {
         // Tombol akan di-set ke disabled oleh fetchReferralData jika saldo 0
         claimRewardsBtn.innerText = "Claim Rewards";
@@ -2929,11 +3088,9 @@ function spinToPlayer(targetPlayer) {
               // JIKA MENANG: Tampilkan layar kemenangan epik!
               showVictoryScreen();
           } else {
-              // JIKA KALAH: Tampilkan alert standar
+              // JIKA KALAH: Tampilkan notifikasi toast
               const winnerName = targetPlayer.addr.slice(0, 6) + "...";
-              // Gunakan showToast jika sudah ada, atau alert biasa
-              // showToast(`Winner is ${winnerName}! Better luck next time.`, 'info');
-              alert(`Winner is ${winnerName}! Better luck next time.`);
+              showToast(`Winner is ${winnerName}! Better luck next time.`, 'info');
           }
             
           // Reset game untuk ronde berikutnya
@@ -3048,7 +3205,7 @@ function playSound(soundId) {
     async function confirmBet() {
   const amountStr = betAmountInput.value;
   const currency = betCurrencySelect.value;
-  if (!amountStr || parseFloat(amountStr) <= 0) return alert("Please enter a valid amount.");
+  if (!amountStr || parseFloat(amountStr) <= 0) return showToast("Please enter a valid amount.", "error");
   
   confirmBetBtn.disabled = true;
   confirmBetBtn.innerText = "Processing...";
@@ -3080,6 +3237,8 @@ function playSound(soundId) {
   } catch (err) {
     console.error(err);
     // ... (kode error handling Anda) ...
+    const errorMessage = err.reason || err.message || "Transaction failed!";
+    showToast(`Error: ${errorMessage}`, "error"); // Ganti alert
     statusText.innerText = "Transaction failed.";
   } finally {
     confirmBetBtn.disabled = false;
@@ -3235,7 +3394,7 @@ function hideProfileModal() {
 // Helper Copy to Clipboard (berguna untuk address)
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text);
-    alert("Address copied: " + text);
+    showToast("Address copied: " + text, "success");
 }
 
     
@@ -3319,11 +3478,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 linkInput.select();
                 linkInput.setSelectionRange(0, 99999); // Dukungan mobile
                 navigator.clipboard.writeText(linkInput.value)
-                    .then(() => alert("Referral link copied to clipboard!"))
+                    .then(() => showToast("Referral link copied to clipboard!", "success"))
                     .catch(() => {
                         // Fallback manual jika navigator gagal
                         document.execCommand('copy');
-                        alert("Referral link copied!");
+                        showToast("Referral link copied!", "success");
                     });
             }
         });
@@ -3355,6 +3514,3 @@ document.querySelectorAll('button').forEach(btn => {
 });
 
 </script>
-
-</body>
-</html>
