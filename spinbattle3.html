@@ -1874,7 +1874,7 @@ function checkAutoConnect() {
 async function fetchAndDisplayWinners() {
     let contractInstance = faylottoContract;
     if (!contractInstance) {
-       if (!provider) provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
+       if (!provider) provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     }
     
@@ -1887,17 +1887,11 @@ async function fetchAndDisplayWinners() {
             return;
         }
 
-        let usdtDecimalsWinner = 6; // Default
-        try { 
-            // Coba dapatkan decimals dari kontrak read-only jika usdtContract (signer) belum ada
-            let usdtReadOnly = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
-            usdtDecimalsWinner = await usdtReadOnly.decimals();
-        } catch (e) {}
+        let usdtDecimalsWinner = 18;
+        try { if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals(); } catch (e) {}
       
         for (const winner of winnersArray) {
             const winnerId = winner.winnerId.toString();
-            // ... (sisa fungsi fetchAndDisplayWinners Anda) ...
-            // (Tidak ada perubahan di dalam loop ini)
             const roundId = winner.roundId.toString();
             const winnerAddr = winner.winner;
             const ethAmtBigNum = winner.rewardETH;
@@ -1943,19 +1937,24 @@ async function fetchAndDisplayWinners() {
             }
             
             // === [PERBAIKAN DIMULAI DI SINI] ===
+
+            // 1. Ambil Nickname Pemenang
             let winnerNickname = null;
             try {
                 winnerNickname = await contractInstance.nicknames(winnerAddr);
             } catch(e) { console.warn("Failed to fetch the winner's nickname", e); }
             
+            // 2. Tentukan Nama Tampilan (Prioritas: You -> Nickname -> Alamat Singkat)
             const displayName = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) 
                                 ? "You" 
                                 : (winnerNickname || shortId);
+
             // =================================
 
             const item = document.createElement("div");
             item.className = "winner-list-item";
           
+            // --- [PERBAIKAN HTML DI SINI] ---
             item.innerHTML = `
               <div class="winner-main-content">
                   <img src="${avatarUrl}" alt="Avatar" 
@@ -2015,7 +2014,6 @@ async function fetchAndDisplayWinners() {
                   </div>
               </div>
             `;
-            // ... (sisa fungsi Anda) ...
             winnerList.appendChild(item);
         }
     } catch (err) {
@@ -2023,6 +2021,7 @@ async function fetchAndDisplayWinners() {
         winnerList.appendChild(winnerListPlaceholder);
     }
 }
+            
             
     
 // ... (Fungsi toggleLike, rateWinner, submitComment, showEditComment, cancelEditComment, saveEditComment) ...
