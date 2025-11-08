@@ -1727,182 +1727,156 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// Fungsi untuk reconnect otomatis dari localStorage
-async function reconnectWallet() {
-  const stored = localStorage.getItem('connectedWallet');
-  if (!stored) return;
+// === [REVISI TOTAL] FUNGSI-FUNGSI WALLET ===
+    // === [BARU] KONFIGURASI JARINGAN & AUTO-CONNECT ===
+const BASE_SEPOLIA_CHAIN_ID = '0x14A34'; // 84532
+const BASE_SEPOLIA_PARAMS = {
+    chainId: BASE_SEPOLIA_CHAIN_ID,
+    chainName: 'Base Sepolia Testnet',
+    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+    rpcUrls: ['https://sepolia.base.org'],
+    blockExplorerUrls: ['https://sepolia.basescan.org']
+};
+const AUTO_CONNECT_KEY = "faylotto_wallet_session"; // Kunci Local Storage
+const AUTO_CONNECT_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 hari
 
-  try {
-    const { address, expiry } = JSON.parse(stored);
-    if (Date.now() > expiry) {
-      localStorage.removeItem('connectedWallet');
-      return;
+/**
+ * [BARU] Fungsi 1: Mencoba mengganti jaringan atau menambahkannya
+ * (Fitur 1 & 2)
+ */
+async function switchOrAddNetwork() {
+    try {
+        // Coba ganti jaringan
+        await provider.send('wallet_switchEthereumChain', [{ chainId: BASE_SEPOLIA_CHAIN_ID }]);
+    } catch (switchError) {
+        // Error code 4902: Jaringan belum ditambahkan ke MetaMask
+        if (switchError.code === 4902) {
+            try {
+                // [FITUR 2] Rekomendasikan/tambahkan RPC baru
+                showToast("Network not found. Adding Base Sepolia...", "info");
+                await provider.send('wallet_addEthereumChain', [BASE_SEPOLIA_PARAMS]);
+            } catch (addError) {
+                console.error("Failed to add network:", addError);
+                throw new Error("Failed to add Base Sepolia network.");
+            }
+        } else {
+            console.error("Failed to switch network:", switchError);
+            throw new Error("Failed to switch network. Please check MetaMask.");
+        }
     }
-
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    const accounts = await provider.listAccounts();
-    if (accounts.includes(address)) {
-      signer = provider.getSigner();
-      userAddress = address;
-
-      // Check chain
-      const network = await provider.getNetwork();
-      if (network.chainId !== 84532) {
-        await switchToBaseSepolia();
-      }
-
-      usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
-      faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
-
-      walletBtn.innerText = "Terhubung";
-      referralBtn.style.display = "block";
-      walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
-      
-      await updateUserBalances();
-      await fetchAndDisplayRoundData();
-      await fetchAndDisplayWinners();
-      await fetchReferralData();
-      setupEventListeners();
-
-      console.log("Wallet reconnected from storage:", userAddress);
-    } else {
-      localStorage.removeItem('connectedWallet');
-    }
-  } catch (err) {
-    console.error("Reconnect failed:", err);
-    localStorage.removeItem('connectedWallet');
-  }
 }
 
-// Fungsi switch jaringan ke Base Sepolia
-async function switchToBaseSepolia() {
-  try {
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: '0x14a34' }], // Hex for 84532
-    });
-  } catch (err) {
-    if (err.code === 4902) { // Chain not added
-      await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [{
-          chainId: '0x14a34',
-          chainName: 'Base Sepolia Testnet',
-          rpcUrls: ['https://sepolia.base.org'],
-          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-          blockExplorerUrls: ['https://sepolia.basescan.org'],
-        }],
-      });
-    } else {
-      throw err;
-    }
-  }
-}
-
-// === FUNGSI UTAMA: Toggle Connect / Disconnect ===
-async function toggleWallet() {
-  if (userAddress) return; // Jika sudah terhubung, abaikan
-  if (!window.ethereum) return alert("Please install MetaMask.");
-
-  try {
-    provider = new ethers.providers.Web3Provider(window.ethereum);
-    await provider.send("eth_requestAccounts", []);
-    signer = provider.getSigner();
-    userAddress = await signer.getAddress();
-
-    // Cek & switch jaringan
-    const network = await provider.getNetwork();
-    if (network.chainId !== 84532) {
-      await switchToBaseSepolia();
-    }
-    console.log("Connected to network:", network.name);
-
-    usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
-    faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
-
-    walletBtn.innerText = "Connect"; // [PERBAIKAN] Teks baru  
-    referralBtn.style.display = "block";   
-    walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);  
+/**
+ * [REVISI TOTAL] Fungsi 2: Fungsi 'toggleWallet' utama
+ * (Sekarang menerima flag 'isAutoConnect')
+ */
+async function toggleWallet(isAutoConnect = false) {
+    if (userAddress) return; 
+    if (!window.ethereum) return showToast("Please install MetaMask.", "error");
     
-    // Signature fitur
-    const localTime = new Date().toLocaleString();
-    const message = `Welcome to Faylotto Spin Battle, Play & Win! (${userAddress}) (${localTime})`;
-    const signature = await signer.signMessage(message);
-    console.log("Signature:", signature);
-    alert(`Signed: ${message}\nSignature: ${signature}`);
+    try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        
+        if (isAutoConnect) {
+            // Coba ambil akun yang ada tanpa popup
+            const accounts = await provider.listAccounts();
+            if (accounts.length === 0) {
+                console.log("Auto-connect failed: No accounts found.");
+                localStorage.removeItem(AUTO_CONNECT_KEY); // Hapus kunci jika gagal
+                return; // Gagal secara diam-diam
+            }
+            signer = provider.getSigner(accounts[0]);
+        } else {
+            // Minta koneksi manual
+            await provider.send("eth_requestAccounts", []);
+            signer = provider.getSigner();
+        }
+        
+        // --- [FITUR 1 & 2] Cek Jaringan ---
+        const network = await provider.getNetwork();
+        if (network.chainId !== 84532) {
+            showToast("Wrong network. Requesting switch to Base Sepolia...", "warning");
+            await switchOrAddNetwork();
+            // Re-inisialisasi provider & signer setelah ganti jaringan
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            signer = provider.getSigner();
+        }
 
-    // Simpan di localStorage (1 bulan = 30 hari)
-    const expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
-    localStorage.setItem('connectedWallet', JSON.stringify({ address: userAddress, expiry }));
+        userAddress = await signer.getAddress(); // Dapatkan alamat HANYA setelah jaringan benar
 
-    await updateUserBalances();  
-    await fetchAndDisplayRoundData();  
-    await fetchAndDisplayWinners();  
-    await fetchReferralData();  
-    setupEventListeners();  
+        // --- [FITUR 3] Tanda Tangan (Signature) ---
+        if (!isAutoConnect) { // Hanya minta tanda tangan saat koneksi manual
+            const localTime = new Date().toLocaleString('id-ID');
+            const message = `Welcome to Faylotto Spin Battle, Play & Win!\n\nUser: ${userAddress}\nTime: ${localTime}`;
+            try {
+                await signer.signMessage(message);
+            } catch (signError) {
+                showToast("Signature rejected. Login cancelled.", "error");
+                // Reset manual karena login dibatalkan
+                provider = null; signer = null; userAddress = null;
+                return; // Hentikan login
+            }
+        }
+        
+        // --- Login Sukses, Lanjutkan ---
+        usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
+        faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-    if (pendingReferrerNickname) {  
-      try {  
-          const currentRef = await faylottoContract.referrerOf(userAddress);  
-          if (currentRef === ethers.constants.AddressZero) {  
-              // User belum punya referrer, tetapkan sekarang  
-              console.log("Setting pending referrer:", pendingReferrerNickname);  
-              // PENTING: Ini akan memunculkan popup transaksi MetaMask  
-              const tx = await faylottoContract.setReferralByNickname(pendingReferrerNickname);  
-              await tx.wait();  
-              alert(`Successfully referred by ${pendingReferrerNickname}!`);  
-              pendingReferrerNickname = null; // Clear setelah sukses  
-              fetchReferralData(); // Refresh UI  
-          }  
-      } catch (e) {  
-          console.warn("Failed to auto-set referrer:", e.message);  
-          // Jangan ganggu user dengan alert error jika gagal (misal nickname salah)  
-      }  
- }  
+        walletBtn.innerText = "Terhubung";
+        referralBtn.style.display = "block"; 
+        walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
+        
+        // [FITUR 4] Simpan koneksi di Local Storage
+        const expiry = new Date().getTime() + AUTO_CONNECT_DURATION;
+        localStorage.setItem(AUTO_CONNECT_KEY, expiry.toString());
+        
+        await updateUserBalances();
+        await fetchAndDisplayRoundData();
+        await fetchAndDisplayWinners();
+        await fetchReferralData();
+        setupEventListeners();
 
-    console.log("Wallet connected successfully:", userAddress);  
-    statusText.innerText = "Click the button to start the Round!.";
+        // Cek referral dari URL (logika Anda yang sudah ada)
+        if (pendingReferrerNickname) {
+            try {
+                const currentRef = await faylottoContract.referrerOf(userAddress);
+                if (currentRef === ethers.constants.AddressZero) {
+                    const tx = await faylottoContract.setReferralByNickname(pendingReferrerNickname);
+                    await tx.wait();
+                    showToast(`Successfully referred by ${pendingReferrerNickname}!`, "success");
+                    pendingReferrerNickname = null;
+                    fetchReferralData();
+                }
+            } catch (e) { console.warn("Failed to auto-set referrer:", e.message); }
+        }
 
-  } catch (err) {
-    console.error("Failed to connect wallet:", err.message);
-    statusText.innerText = "Failed to connect. Check MetaMask network (Sepolia) and contract addresses.";
-    provider = null; signer = null; userAddress = null;
-    alert(`Error: ${err.message}`);
-  }
+        if (!isAutoConnect) {
+            showToast("Wallet Connected!", "success");
+        }
+
+    } catch (err) {
+        console.error("Failed to connect wallet:", err.message);
+        statusText.innerText = "Failed to connect. Check MetaMask.";
+        provider = null; signer = null; userAddress = null;
+        if (!isAutoConnect) {
+            showToast(err.message, "error");
+        }
+    }
 }
 
-function disconnectWallet() {
-  userAddress = null; provider = null; signer = null;
-  walletBtn.innerText = "Connect Wallet";
-  referralBtn.style.display = "none";
-  statusText.innerText = "Wallet not connected";
-
-  hideWalletModal(); // Sembunyikan modal  
-  
-  if (visualTimer) clearInterval(visualTimer);  
-  if (faylottoContract) faylottoContract.removeAllListeners(); // Cek dulu  
-  
-  resetRoundUI();  
-  myEthDeposit.innerText = "0";   
-  myUsdtDeposit.innerText = "0";  
-  winnerList.innerHTML = "";  
-  winnerList.appendChild(winnerListPlaceholder);  
-
-  // Reset info di modal  
-  walletAddress.innerText = "-";  
-  ethBalance.innerText = "0";  
-  usdtBalance.innerText = "0";  
-
-  fetchAndDisplayRoundData();  
-  fetchAndDisplayWinners();
-
-  // Hapus localStorage
-  localStorage.removeItem('connectedWallet');
+/**
+ * [BARU] Fungsi 3: Cek auto-connect saat halaman dimuat
+ */
+function checkAutoConnect() {
+    const expiry = localStorage.getItem(AUTO_CONNECT_KEY);
+    if (expiry && new Date().getTime() < Number(expiry)) {
+        console.log("Auto-connecting wallet...");
+        setTimeout(() => toggleWallet(true), 500); // Panggil dengan flag auto-connect
+    } else {
+        localStorage.removeItem(AUTO_CONNECT_KEY); // Hapus jika sudah kedaluwarsa
+    }
 }
-
-// Panggil reconnect saat load
-reconnectWallet();
-
+    
 // === FUNGSI UTAMA: Ambil Data Pemenang & Fitur Sosial ===
 async function fetchAndDisplayWinners() {
     let contractInstance = faylottoContract;
@@ -3078,7 +3052,39 @@ function hideWalletModal() {
 }
 
     // Function Disconnect Wallet
+    // [REVISI] Fungsi khusus untuk Disconnect
+function disconnectWallet() {
+    userAddress = null; provider = null; signer = null;
+    walletBtn.innerText = "Connect Wallet";
+    referralBtn.style.display = "none";
+    statusText.innerText = "Wallet not connected";
     
+    hideWalletModal(); 
+    
+    // [FITUR 4] Hapus 'remember me' dari Local Storage
+    localStorage.removeItem(AUTO_CONNECT_KEY);
+    
+    if (visualTimer) clearInterval(visualTimer);
+    if (faylottoContract) {
+        faylottoContract.removeAllListeners();
+        faylottoContract = null; 
+    }
+    
+    resetRoundUI();
+    myEthDeposit.innerText = "0"; 
+    myUsdtDeposit.innerText = "0";
+    winnerList.innerHTML = "";
+    winnerList.appendChild(winnerListPlaceholder);
+
+    // Reset info di modal
+    walletAddress.innerText = "-";
+    ethBalance.innerText = "0";
+    usdtBalance.innerText = "0";
+    
+    fetchAndDisplayRoundData();
+    fetchAndDisplayWinners();
+    showToast("Wallet disconnected.", "info");
+}
     
 // [BARU] Fungsi khusus untuk menggambar ulang canvas
 function handleCanvasRedraw() {
