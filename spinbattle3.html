@@ -1368,7 +1368,7 @@
     <center><p>
   <span style="color:#f0f0f0; font-size: 13px;">Note:</span><br>
   <span style="color:#ccba00; font-size: 12px;">
-    Minimum bet is 0.00005 ETH or 0.2 USDT<br>
+    Minimum bet is 0.00005 ETH or 0.5 USDT<br>
     Maximum bet is 0.00256 ETH or 10 USDT<br>
     Maximum bets are 2 per round
   </span>
@@ -2311,21 +2311,13 @@ function setAmountByPercent(percent) {
   betAmountInput.value = ethers.utils.formatUnits(amount, decimals);
 }
 
-// === [GANTI FUNGSI LAMA ANDA DENGAN INI] ===
-
+// === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
 async function confirmBet() {
   const amountStr = betAmountInput.value;
-  // [PERBAIKAN] Membaca dari <select> Anda, bukan tombol toggle
-  const currency = betCurrencySelect.value; 
-  
-  if (!amountStr || parseFloat(amountStr) <= 0) {
-      showToast("Please enter a valid amount.", "error"); // [DIGANTI]
-      return;
-  }
-  
+  const currency = betCurrencySelect.value;
+  if (!amountStr || parseFloat(amountStr) <= 0) return alert("Please enter a valid amount.");
   confirmBetBtn.disabled = true;
   confirmBetBtn.innerText = "Processing...";
-  
   try {
     let tx;
     if (currency === 'ETH') {
@@ -2333,50 +2325,23 @@ async function confirmBet() {
     } else {
       tx = await placeBetUSDT(amountStr);
     }
-    
     statusText.innerText = `Bet sent! Awaiting confirmation...`;
     await tx.wait();
-    
-    // playSound('sfx-coin'); // (Opsional jika Anda punya suara)
-    showToast("Bet confirmed! Good luck.", "success"); // [DIGANTI]
-    
     statusText.innerText = `Bet confirmed! Good luck.`;
     hideBetModal();
     await updateUserBalances();
     await updateMyDeposits();
-
   } catch (err) {
     console.error(err);
-    const errorMessage = err.reason || err.data?.message || err.message || "Transaction failed!";
-    
-    // [PERBAIKAN UTAMA] Mengganti semua 'alert' dengan 'showToast'
-    // Ini akan menangkap error dari placeBetETH dan placeBetUSDT
-    
-    if (errorMessage.includes("Insufficient ETH balance")) {
-        showToast("Error: Insufficient ETH balance.", "error");
-    } else if (errorMessage.includes("Minimum bet is 0.00005 ETH")) {
-        showToast("Error: Minimum bet is 0.00005 ETH.", "error");
-    } else if (errorMessage.includes("Max total deposit (0.00256 ETH)")) {
-        showToast("Error: Max 0.00256 ETH exceeded.", "error");
-    } else if (errorMessage.includes("Insufficient USDT balance")) {
-        showToast("Error: Insufficient USDT balance.", "error");
-    } else if (errorMessage.includes("Minimum bet is 0.2 USDT")) { 
-        showToast("Error: Minimum bet is 0.2 USDT.", "error");
-    } else if (errorMessage.includes("Max total deposit (10 USDT)")) {
-        showToast("Error: Max 10 USDT exceeded.", "error");
-    } else if (errorMessage.includes("Max 2 bets per round")) { // Dari kontrak
-        showToast("Error: Max 2 bets per round.", "error");
-    } else {
-        showToast("Transaction failed. Check console.", "error");
-    }
-    
+    const errorMessage = err.reason || err.message || "Transaction failed!";
+    alert(`Error: ${errorMessage}`);
     statusText.innerText = "Transaction failed.";
   } finally {
     confirmBetBtn.disabled = false;
     confirmBetBtn.innerText = "Confirm Bet";
   }
 }
-    
+
 async function placeBetETH(amountStr) {
   const amountWei = ethers.utils.parseEther(amountStr);
   if (amountWei.gt(rawEthBalance)) throw new Error("Insufficient ETH balance.");
@@ -2396,8 +2361,8 @@ async function placeBetETH(amountStr) {
 async function placeBetUSDT(amountStr) {
   const amountUsdt = ethers.utils.parseUnits(amountStr, usdtDecimals);
   if (amountUsdt.gt(rawUsdtBalance)) throw new Error("Insufficient USDT balance.");
-  const minUsdt = ethers.utils.parseUnits("0.2", usdtDecimals);
-  if (amountUsdt.lt(minUsdt)) throw new Error(`Minimum bet is 0.2 USDT`);
+  const minUsdt = ethers.utils.parseUnits("0.5", usdtDecimals);
+  if (amountUsdt.lt(minUsdt)) throw new Error(`Minimum bet is 0.5 USDT`);
 
   // [CEK BARU] Cek batas maksimal deposit (10 USDT)
   // (Kita asumsikan usdtDecimals sudah 18)
