@@ -214,55 +214,89 @@ for (let i = 0; i < total; i++) {
   
 let spinning = false, currentRotation = 0, animation = null;  
 
-// === ANIMASI FUTURISTIK UNTUK PEMENANG ===
-
-// Efek highlight dengan cahaya neon
+// === ANIMASI FUTURISTIK PEMENANG (VERSI LEBIH HIDUP) ===
 function glowWinnerSector(winnerIndex) {
   const sector = prizes[winnerIndex].path;
   if (!sector) return;
 
-  // Tambahkan filter cahaya glow neon
-  sector.style.filter = "drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 20px #00ffff)";
+  // Tambahkan glow biru elektrik
+  sector.style.filter = "drop-shadow(0 0 25px #00ffff) drop-shadow(0 0 50px #00ffff)";
   sector.style.stroke = "#00ffff";
+  sector.style.strokeWidth = "3";
 
-  // Efek berdenyut lembut (scale naik-turun)
+  // === Efek denyut + getar cepat ===
   gsap.to(sector, {
-    scale: 1.05,
+    scale: 1.08,
+    rotation: "+=1",
     transformOrigin: "50% 50%",
-    duration: 0.8,
+    duration: 0.3,
     repeat: -1,
     yoyo: true,
     ease: "sine.inOut"
   });
 
-  // Efek tambahan kilatan berputar di tepi roda
-  const glowCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  glowCircle.setAttribute("cx", cx);
-  glowCircle.setAttribute("cy", cy);
-  glowCircle.setAttribute("r", radius + 10);
-  glowCircle.setAttribute("stroke", "#00ffff");
-  glowCircle.setAttribute("stroke-width", "3");
-  glowCircle.setAttribute("fill", "none");
-  glowCircle.style.filter = "drop-shadow(0 0 15px #00ffff)";
-  svg.appendChild(glowCircle);
+  // === Efek kilatan cahaya yang menyapu area pemenang ===
+  const lightSweep = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  lightSweep.setAttribute("x", 0);
+  lightSweep.setAttribute("y", 0);
+  lightSweep.setAttribute("width", radius * 2);
+  lightSweep.setAttribute("height", radius * 2);
+  lightSweep.setAttribute("fill", "url(#lightGradient)");
+  lightSweep.style.mixBlendMode = "screen";
+  svg.appendChild(lightSweep);
 
-  // Animasi kilatan futuristik mengelilingi roda
-  gsap.to(glowCircle, {
-    rotation: 360,
-    transformOrigin: "50% 50%",
-    duration: 2,
-    repeat: -1,
-    ease: "none"
+  // Gradient animasi cahaya
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  defs.innerHTML = `
+    <linearGradient id="lightGradient">
+      <stop offset="0%" stop-color="rgba(0,255,255,0)" />
+      <stop offset="50%" stop-color="rgba(0,255,255,0.5)" />
+      <stop offset="100%" stop-color="rgba(0,255,255,0)" />
+    </linearGradient>
+  `;
+  svg.prepend(defs);
+
+  gsap.fromTo(
+    lightSweep,
+    { rotation: 0, transformOrigin: "50% 50%", opacity: 0.4 },
+    {
+      rotation: 360,
+      transformOrigin: "50% 50%",
+      duration: 2,
+      repeat: -1,
+      ease: "none",
+      opacity: 0.7
+    }
+  );
+
+  // === Efek gelombang energi keluar dari tengah ===
+  const energyPulse = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  energyPulse.setAttribute("cx", cx);
+  energyPulse.setAttribute("cy", cy);
+  energyPulse.setAttribute("r", 0);
+  energyPulse.setAttribute("stroke", "#00ffff");
+  energyPulse.setAttribute("stroke-width", "2");
+  energyPulse.setAttribute("fill", "none");
+  svg.appendChild(energyPulse);
+
+  gsap.to(energyPulse, {
+    r: radius + 30,
+    opacity: 0,
+    duration: 1.5,
+    repeat: 3,
+    ease: "power2.out",
+    onComplete: () => energyPulse.remove()
   });
 
-  // Hapus efek setelah beberapa detik (misal 6 detik)
+  // === Hapus efek setelah 6 detik ===
   setTimeout(() => {
     gsap.killTweensOf(sector);
-    gsap.killTweensOf(glowCircle);
-    glowCircle.remove();
+    gsap.killTweensOf(lightSweep);
+    lightSweep.remove();
     sector.style.filter = "";
     sector.style.stroke = "#fff";
-    gsap.to(sector, { scale: 1, duration: 0.3 });
+    sector.style.strokeWidth = "1";
+    gsap.to(sector, { scale: 1, rotation: 0, duration: 0.3 });
   }, 6000);
 }
 
