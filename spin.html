@@ -218,25 +218,148 @@ for (let i = 0; i < total; i++) {
   
 let spinning = false, currentRotation = 0, animation = null;  
   
-async function connectWallet() {  
-  if (!window.ethereum) return alert("🦊 Install MetaMask!");  
-  provider = new ethers.BrowserProvider(window.ethereum);  
-  await provider.send("eth_requestAccounts", []);  
-  signer = await provider.getSigner();  
-  contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);  
-  userAddress = await signer.getAddress();  
-  connectBtn.style.display = "none";  
-  disconnectBtn.style.display = "inline-block";  
-  walletAddressDiv.style.display = "inline-block";  
-  walletAddressDiv.textContent = userAddress.slice(0,6) + "..." + userAddress.slice(-4);  
-}  
-  
-function disconnectWallet() {  
-  provider = signer = contract = userAddress = null;  
-  connectBtn.style.display = "inline-block";  
-  disconnectBtn.style.display = "none";  
-  walletAddressDiv.style.display = "none";  
-}  
+// Base Sepolia constants
+const BASE_SEPOLIA = {
+  chainIdHex: '0x14a34', // 84532
+  chainIdDec: 84532,
+  chainName: 'Base Sepolia',
+  rpcUrls: ['https://sepolia.base.org'],
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  blockExplorerUrls: ['https://sepolia.basescan.org']
+};
+
+// === Fungsi utilitas ===
+function shortAddress(addr) {
+  return addr ? addr.slice(0, 6) + "..." + addr.slice(-4) : "";
+}
+
+function hasEthereum() {
+  return typeof window !== 'undefined' && !!window.ethereum;
+}
+
+function getLocalDateTimeString() {
+  return new Date().toLocaleString();
+}
+
+// === Signature cache ===
+function saveSignature(wallet, signature) {
+  const expires = Date.now() + 7 * 24 * 60 * 60 * 1000; // 7 hari
+  localStorage.setItem('walletSignature', JSON.stringify({ wallet, signature, expires }));
+}
+
+function getSignature() {
+  const data = JSON.parse(localStorage.getItem('walletSignature') || '{}');
+  if (!data.expires || Date.now() > data.expires) {
+    localStorage.removeItem('walletSignature');
+    return null;
+  }
+  return data;
+}
+
+// === Fungsi pastikan jaringan Base Sepolia (otomatis) ===
+async function ensureBaseSepolia() {
+  if (!hasEthereum()) throw new Error("no_ethereum");
+
+  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  if (chainId === BASE_SEPOLIA.chainIdHex) return true;
+
+  try {
+    // Coba switch dulu
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: BASE_SEPOLIA.chainIdHex }]
+    });
+    return true;
+  } catch (err) {
+    if (err.code === 4902) {
+      // Kalau belum ada, tambahkan
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [BASE_SEPOLIA]
+      });
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: BASE_SEPOLIA.chainIdHex }]
+      });
+      return true;
+    } else {
+      throw err;
+    }
+  }
+}
+
+// === Fungsi utama: connect wallet ===
+async function connectWallet() {
+  try {
+    if (!hasEthereum()) {
+      alert("🦊 Silakan instal MetaMask terlebih dahulu.");
+      return;
+    }
+
+    // Otomatis pastikan jaringan Base Sepolia
+    await ensureBaseSepolia();
+
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    const network = await provider.getNetwork();
+    if (network.chainId !== BASE_SEPOLIA.chainIdDec) {
+      console.warn("Jaringan bukan Base Sepolia, mencoba ganti otomatis...");
+      await ensureBaseSepolia();
+    }
+
+    // === Signature otomatis ===
+    const stored = getSignature();
+    let signature;
+    if (stored && stored.wallet.toLowerCase() === userAddress.toLowerCase()) {
+      signature = stored.signature;
+      console.log("🪪 Cached signature:", signature);
+    } else {
+      const message = `welcome ${userAddress} ${getLocalDateTimeString()}`;
+      signature = await signer.signMessage(message);
+      saveSignature(userAddress, signature);
+      console.log("🪪 Signed message:", message);
+    }
+
+    // Inisialisasi kontrak
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+    // Update UI
+    connectBtn.style.display = "none";
+    disconnectBtn.style.display = "inline-block";
+    walletAddressDiv.style.display = "inline-block";
+    walletAddressDiv.textContent = shortAddress(userAddress);
+
+    // Listener otomatis
+    window.ethereum.on('accountsChanged', (accounts) => {
+      if (!accounts.length) disconnectWallet();
+      else {
+        userAddress = accounts[0];
+        walletAddressDiv.textContent = shortAddress(userAddress);
+      }
+    });
+
+    window.ethereum.on('chainChanged', async (chainIdHex) => {
+      if (chainIdHex !== BASE_SEPOLIA.chainIdHex) {
+        console.log("⛓️ Jaringan berubah, mencoba kembali ke Base Sepolia...");
+        await ensureBaseSepolia();
+      }
+    });
+
+  } catch (err) {
+    console.error("connectWallet error:", err);
+  }
+}
+
+// === Fungsi disconnect ===
+function disconnectWallet() {
+  provider = signer = contract = userAddress = null;
+  connectBtn.style.display = "inline-block";
+  disconnectBtn.style.display = "none";
+  walletAddressDiv.style.display = "none";
+                       }
   
 async function spinFromBlockchain() {  
   if (!contract) return alert("⚠️ Connect your wallet first!");  
