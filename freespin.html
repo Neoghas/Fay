@@ -473,60 +473,150 @@ function disconnectWallet() {
   walletAddressDiv.style.display = "none";
 }
   
-async function spinFromBlockchain() {  
-  if (!contract) return alert("⚠️ Connect your wallet first!");  
-  try {  
-    btn.disabled = true;  
-    clickSound.play();  
-    resultText.textContent = "⏳ Waiting for blockchain...";  
-    spinSound.currentTime = 0;  
-    spinSound.play();  
-  
-    const tx = await contract.placeBet({ value: ethers.parseEther("0.000256") });  
-    const receipt = await tx.wait();  
-  
-    // Ambil event BetPlaced  
-    const event = receipt.logs  
-      .map(log => { try { return contract.interface.parseLog(log); } catch { return null; } })  
-      .filter(e => e && e.name === "BetPlaced")[0];  
-  
-    if (!event) throw new Error("No result found.");  
-    const { randomNumber, result } = event.args;  
-  
-    // Sinkron animasi pointer dengan hadiah  
-    let index = prizes.findIndex(p => p.name === result);  
-    if (index === -1) index = 0; // fallback  
-    animateSpin(index, result);  
-  
-  } catch (err) {  
-    console.error(err);  
-    resultText.textContent = "❌ Transaction failed.";  
-    resetButton();  
-  }  
-}  
-  
-function animateSpin(index, resultName) {  
-  if (animation) gsap.killTweensOf(svg);  
-  prizes.forEach(p => p.path.classList.remove("glow"));  
-  const targetSlice = slice * index + slice / 2;  
-  const totalRotation = currentRotation + 12 * 360 + targetSlice;  
-  
-  animation = gsap.fromTo(svg, { rotation: currentRotation }, {  
-    rotation: totalRotation,  
-    duration: 30,  
-    ease: "power3.inOut",  
-    transformOrigin: "center center",  
-    onUpdate: () => currentRotation = gsap.getProperty(svg, "rotation"),  
-    onComplete: () => {  
-      spinSound.pause();  
-      winSound.play();  
-      const prize = prizes[index];  
-      prize.path.classList.add("glow");  
-      resultText.innerHTML = `🎉 You won: <span style="color:gold;font-size:24px;">${resultName}</span> <img src="${prize.icon}" style="width:40px;height:40px;">`;  
-      setTimeout(resetButton, 2000);  
-    }  
-  });  
-}  
+async function spinFromBlockchain({ method = "spinGratis", amount = null } = {}) {
+  // method: "placeBetBabyDoge" | "placeBetDummy" | "spinGratis"
+  if (!contract || !signer) return alert("⚠️ Connect your wallet first!");
+  try {
+    btn.disabled = true;
+    clickSound && clickSound.play();
+    resultText.textContent = "⏳ Waiting for blockchain...";
+    spinSound && (spinSound.currentTime = 0, spinSound.play());
+
+    // helper: build prize amount -> index map (normalize names like "10.000.000" => 10000000)
+    const prizeMap = {};
+    prizes.forEach((p, idx) => {
+      const n = parseInt((p.name || "").toString().replace(/\./g, "").replace(/,/g, ""));
+      if (!Number.isNaN(n)) prizeMap[n] = idx;
+    });
+
+    let tx;
+    if (method === "placeBetBabyDoge") {
+      if (!amount) throw new Error("amount required for placeBetBabyDoge");
+      // Ensure approval: amount should be BigInt or string in token base units
+      if (typeof babyDogeTokenAddress === "undefined" || typeof ERC20_ABI === "undefined") {
+        throw new Error("babyDogeTokenAddress or ERC20_ABI not defined (needed for approve)");
+      }
+      const token = new ethers.Contract(babyDogeTokenAddress, ERC20_ABI, signer);
+      const owner = await signer.getAddress();
+      const allowance = await token.allowance(owner, contract.target ? contract.target : contract.address);
+      // ethers v6 returns BigInt for allowance
+      const amountBN = typeof amount === "bigint" ? amount : BigInt(amount.toString());
+      if (allowance < amountBN) {
+        // approve exact amount (or you can approve max)
+        const approveTx = await token.approve(contract.target ? contract.target : contract.address, amountBN);
+        await approveTx.wait();
+      }
+      tx = await contract.placeBetBabyDoge(amountBN);
+    } else if (method === "placeBetDummy") {
+      tx = await contract.placeBetDummy();
+    } else if (method === "spinGratis") {
+      tx = await contract.spinGratis();
+    } else {
+      throw new Error("Unknown method");
+    }
+
+    const receipt = await tx.wait();
+
+    // parse logs to find known events
+    let parsedEvents = [];
+    for (const log of receipt.logs) {
+      try {
+        const parsed = contract.interface.parseLog(log);
+        parsedEvents.push(parsed);
+      } catch (e) {
+        // not from this contract/interface or not parsable — ignore
+      }
+    }
+
+    // Try to find specific events in parsedEvents
+    const freeWon = parsedEvents.find(e => e.name === "FreeSpinWon");
+    const freeNo = parsedEvents.find(e => e.name === "FreeSpinNoPrize");
+    const betBaby = parsedEvents.find(e => e.name === "BetBabyDoge");
+    const betDummy = parsedEvents.find(e => e.name === "BetDummy");
+    const winnerRecorded = parsedEvents.find(e => e.name === "WinnerRecorded" || e.name === "WinnerRecordedEvent");
+
+    // CASE: Free spin immediate result (FreeSpinWon / FreeSpinNoPrize)
+    if (freeWon) {
+      // Solidity emitted: FreeSpinWon(msg.sender, tier, prizeAmount)
+      const winnerAddr = freeWon.args[0];
+      const tier = BigInt(freeWon.args[1]).toString(); // e.g. "6"
+      const prizeAmountBN = BigInt(freeWon.args[2]); // token units (10**9)
+      // Normalize prize amount to human integer (divide by 1e9 if babyDoge decimals = 9)
+      const prizeHuman = Number(prizeAmountBN / BigInt(10 ** 9));
+      const index = prizeMap[prizeHuman] !== undefined ? prizeMap[prizeHuman] : null;
+      const resultLabel = prizeHuman > 0 ? `${prizeHuman.toLocaleString()} (tier ${tier})` : "No Prize";
+      resultText.textContent = `🎉 Free spin won: ${resultLabel}`;
+      // animateSpin expects index + result string; fallback index 0 if null
+      animateSpin(index !== null ? index : 0, resultLabel);
+      winSound && winSound.play();
+      btn.disabled = false;
+      return;
+    }
+
+    if (freeNo) {
+      resultText.textContent = "😕 Free spin: No prize";
+      // try to animate 'No Prize' sector if exists
+      const idxNo = prizes.findIndex(p => /no prize/i.test(p.name));
+      animateSpin(idxNo !== -1 ? idxNo : 0, "No Prize");
+      btn.disabled = false;
+      return;
+    }
+
+    // CASE: Bet events (these do not immediately decide a winner — finalized later by finalizeRound)
+    if (betBaby || betDummy) {
+      // Show pending state and parse amount / round id
+      const ev = betBaby || betDummy;
+      // For BetBabyDoge emitted: (roundId, sender, amount) ? From snippet: emit BetBabyDoge(currentRoundId, msg.sender, amount);
+      // For BetDummy emitted: (roundId, sender, dummyBetCost)
+      const roundId = ev.args[0] ? ev.args[0].toString() : null;
+      const sender = ev.args[1] ? ev.args[1] : null;
+      const amt = ev.args[2] ? ev.args[2].toString() : null;
+      resultText.textContent = `✅ Bet submitted (round ${roundId || "?"}). Waiting for finalize...`;
+      // Optionally show a placeholder spin animation (e.g., random sector or "pending")
+      const pendingIdx = prizes.findIndex(p => /try again|no prize|try/i.test(p.name.toLowerCase()));
+      animateSpin(pendingIdx !== -1 ? pendingIdx : 0, "Pending");
+      btn.disabled = false;
+      return;
+    }
+
+    // CASE: WinnerRecorded available (if finalizeRound got executed in same tx chain)
+    if (winnerRecorded) {
+      // WinnerRecorded emitted with fields in _recordWinner: (wid, rid, winner, rewardETH, rewardUSDT, rewardBabyDoge, timestamp)
+      const wid = winnerRecorded.args[0] ? winnerRecorded.args[0].toString() : null;
+      const rid = winnerRecorded.args[1] ? winnerRecorded.args[1].toString() : null;
+      const winner = winnerRecorded.args[2] ? winnerRecorded.args[2] : null;
+      const rewardETH = winnerRecorded.args[3] ? winnerRecorded.args[3].toString() : "0";
+      const rewardUSDT = winnerRecorded.args[4] ? winnerRecorded.args[4].toString() : "0";
+      const rewardBaby = winnerRecorded.args[5] ? BigInt(winnerRecorded.args[5]) : BigInt(0);
+
+      // Try to map rewardBaby to a prize index if >0
+      let idx = null;
+      if (rewardBaby > 0) {
+        const human = Number(rewardBaby / BigInt(10 ** 9));
+        idx = prizeMap[human] !== undefined ? prizeMap[human] : null;
+      }
+      const label = `Winner: ${winner} (ETH:${rewardETH}, USDT:${rewardUSDT}, BD:${rewardBaby})`;
+      resultText.textContent = `🏆 Round ${rid} winner: ${winner}`;
+      animateSpin(idx !== null ? idx : 0, label);
+      winSound && winSound.play();
+      btn.disabled = false;
+      return;
+    }
+
+    // No recognized event found: fallback
+    console.warn("No recognizable event found in tx logs", parsedEvents);
+    resultText.textContent = "🔍 Transaction mined but no direct result event.";
+    // fallback animation: spin to random index
+    const idxRnd = Math.floor(Math.random() * prizes.length);
+    animateSpin(idxRnd, "Unknown result");
+    btn.disabled = false;
+
+  } catch (err) {
+    console.error(err);
+    resultText.textContent = "❌ Transaction failed: " + (err && (err.message || err.reason) ? (err.message || err.reason) : err);
+    btn.disabled = false;
+  }
+    }
   
 function resetButton() {  
   btn.disabled = false;  
