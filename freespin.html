@@ -153,10 +153,10 @@
 
   <div class="result" id="resultText">Press SPIN to play</div>
 
-  <div class="info-container">
+    <div class="info-container">
     <div class="info-box">
-      <h3 class="info-box-title">SISA SPIN</h3>
-      <p class="info-box-value" id="spinCountText">2 / 2</p>
+      <h3 class="info-box-title">SPIN TERPAKAI</h3>
+      <p class="info-box-value" id="spinCountText">0 / 2</p>
     </div>
     <div class="info-box">
       <h3 class="info-box-title">SALDO DUMMY (BABYDOGE)</h3>
@@ -404,9 +404,9 @@ async function updateUI() {
   try {
     // 1. Baca sisa spin
     const spins = await contract.spinCounts(userAddress);
-    const spinsLeft = 2 - Number(spins);
-    spinCountText.textContent = `${spinsLeft < 0 ? 0 : spinsLeft} / 2`;
-
+    const spinsUsed = Number(spins); // Langsung ambil jumlah spin terpakai
+    spinCountText.textContent = `${spinsUsed} / 2`; // Tampilkan 0/2, 1/2, atau 2/2
+    
     // 2. Baca saldo dummy (kontrak kita pakai 9 desimal untuk hadiah)
     const balance = await contract.dummyBalances(userAddress);
     dummyBalanceText.textContent = ethers.formatUnits(balance, 9);
@@ -492,7 +492,7 @@ function disconnectWallet() {
   
   // Reset info
   resultText.textContent = "Press SPIN to play";
-  spinCountText.textContent = "2 / 2";
+  spinCountText.textContent = "0 / 2";
   dummyBalanceText.textContent = "0";
 }
   
