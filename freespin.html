@@ -213,6 +213,88 @@ for (let i = 0; i < total; i++) {
 }  
   
 let spinning = false, currentRotation = 0, animation = null;  
+
+// === ANIMASI FUTURISTIK UNTUK PEMENANG ===
+
+// Efek highlight dengan cahaya neon
+function glowWinnerSector(winnerIndex) {
+  const sector = prizes[winnerIndex].path;
+  if (!sector) return;
+
+  // Tambahkan filter cahaya glow neon
+  sector.style.filter = "drop-shadow(0 0 10px #00ffff) drop-shadow(0 0 20px #00ffff)";
+  sector.style.stroke = "#00ffff";
+
+  // Efek berdenyut lembut (scale naik-turun)
+  gsap.to(sector, {
+    scale: 1.05,
+    transformOrigin: "50% 50%",
+    duration: 0.8,
+    repeat: -1,
+    yoyo: true,
+    ease: "sine.inOut"
+  });
+
+  // Efek tambahan kilatan berputar di tepi roda
+  const glowCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  glowCircle.setAttribute("cx", cx);
+  glowCircle.setAttribute("cy", cy);
+  glowCircle.setAttribute("r", radius + 10);
+  glowCircle.setAttribute("stroke", "#00ffff");
+  glowCircle.setAttribute("stroke-width", "3");
+  glowCircle.setAttribute("fill", "none");
+  glowCircle.style.filter = "drop-shadow(0 0 15px #00ffff)";
+  svg.appendChild(glowCircle);
+
+  // Animasi kilatan futuristik mengelilingi roda
+  gsap.to(glowCircle, {
+    rotation: 360,
+    transformOrigin: "50% 50%",
+    duration: 2,
+    repeat: -1,
+    ease: "none"
+  });
+
+  // Hapus efek setelah beberapa detik (misal 6 detik)
+  setTimeout(() => {
+    gsap.killTweensOf(sector);
+    gsap.killTweensOf(glowCircle);
+    glowCircle.remove();
+    sector.style.filter = "";
+    sector.style.stroke = "#fff";
+    gsap.to(sector, { scale: 1, duration: 0.3 });
+  }, 6000);
+}
+
+// === FUNGSI SPIN (contoh integrasi dengan efek di atas) ===
+async function spinWheel() {
+  if (spinning) return;
+  spinning = true;
+  spinSound.play();
+
+  // Pilih pemenang acak
+  const winnerIndex = Math.floor(Math.random() * total);
+  const sliceAngle = 360 / total;
+  const randomExtra = 360 * 5; // 5 putaran ekstra
+  const finalRotation = randomExtra + (360 - (winnerIndex * sliceAngle + sliceAngle / 2));
+
+  // Animasi putaran utama
+  gsap.to(svg, {
+    rotation: finalRotation,
+    duration: 5,
+    ease: "power4.out",
+    onUpdate: () => clickSound.play(),
+    onComplete: () => {
+      spinning = false;
+      winSound.play();
+      const winner = prizes[winnerIndex];
+      resultText.textContent = `🎉 Anda menang: ${winner.name}! 🎉`;
+
+      // Efek futuristik di sektor pemenang
+      glowWinnerSector(winnerIndex);
+    }
+  });
+}
   
 // Base Sepolia constants
 const BASE_SEPOLIA = {
