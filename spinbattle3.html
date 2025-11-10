@@ -2471,74 +2471,6 @@ async function callFinalizeRound() {
     }
 }
 
-// === FUNGSI MODAL TARUHAN (Bet Modal) ===
-function showBetModal() {
-  // ... (Tidak ada perubahan pada fungsi ini) ...
-
-  // --- PERBAIKAN DI SINI ---
-  if (!signer) {
-    showStatus("Connect wallet first!", "error");
-    return;
-  }
-  if (isFinalizing) {
-    // Ganti 'warning' jika Anda sudah membuat ikon/style-nya
-    showStatus("Round is ending, new bets are closed.", "warning"); 
-    return;
-  }
-  // --- AKHIR PERBAIKAN ---
-
-  modalEthBalance.innerText = ethers.formatEther(rawEthBalance || 0); // v6 format
-  modalUsdtBalance.innerText = ethers.formatUnits(rawUsdtBalance || 0, usdtDecimals); // v6 format
-  betAmountInput.value = "";
-  betModalOverlay.classList.add("show");
-  betModal.classList.add("show");
-}
-
-function hideBetModal() {
-  // ... (Tidak ada perubahan pada fungsi ini) ...
-  betModalOverlay.classList.remove("show");
-  betModal.classList.remove("show");
-}
-
-// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
-function setAmountByPercent(percent) {
-  // 1. Ambil mata uang yang dipilih
-  const currency = betCurrencySelect.value;
-  
-  let min, max, decimalsToDisplay;
-
-  // 2. Tentukan batas min/max berdasarkan mata uang
-  if (currency === 'ETH') {
-    min = 0.00005;
-    max = 0.00256;
-    decimalsToDisplay = 8; // ETH butuh presisi desimal lebih tinggi
-  } else { // USDT
-    min = 0.5;
-    max = 10.0;
-    decimalsToDisplay = 2; // USDT cukup 2 desimal
-  }
-
-  let amountToSet;
-
-  // 3. Kalkulasi jumlah berdasarkan persentase
-  if (percent === 0.10) {
-    // Tombol MIN (yang kita set 10%)
-    amountToSet = min;
-  } else if (percent === 1.00) {
-    // Tombol MAX (yang kita set 100%)
-    amountToSet = max;
-  } else {
-    // Tombol 25%, 50%, 75%
-    // Hitung rentang (selisih) antara max dan min
-    const range = max - min;
-    // Hitung nilainya: minimal + (rentang * persentase)
-    amountToSet = min + (range * percent);
-  }
-
-  // 4. Set nilai di input, diformat ke jumlah desimal yang tepat
-  betAmountInput.value = amountToSet.toFixed(decimalsToDisplay);
-}
-
 // === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
 // GANTI 6 FUNGSI ANDA DENGAN INI (SINTAKS v5)
 
@@ -2567,21 +2499,45 @@ function hideBetModal() {
   betModal.classList.remove("show");
 }
 
+// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
 function setAmountByPercent(percent) {
+  // 1. Ambil mata uang yang dipilih
   const currency = betCurrencySelect.value;
-  let balanceToUse, decimals;
-  if (currency === 'ETH') {
-    balanceToUse = rawEthBalance; decimals = 18;
-  } else {
-    balanceToUse = rawUsdtBalance; decimals = usdtDecimals;
-  }
-  if (!balanceToUse) return;
   
-  // --- PERBAIKAN SINTAKS v5 ---
-  // (Menggunakan metode .mul dan .div dari BigNumber v5)
-  const amount = balanceToUse.mul(Math.floor(percent * 1000)).div(1000);
-  betAmountInput.value = ethers.utils.formatUnits(amount, decimals); 
-  // --- AKHIR PERBAIKAN ---
+  let min, max, decimalsToDisplay;
+
+  // 2. Tentukan batas min/max berdasarkan mata uang
+  if (currency === 'ETH') {
+    min = 0.00005;
+    max = 0.00256;
+    decimalsToDisplay = 8; // ETH butuh presisi desimal lebih tinggi
+  } else { // USDT
+    min = 0.5;
+    max = 10.0;
+    decimalsToDisplay = 2; // USDT cukup 2 desimal
+  }
+
+  let amountToSet;
+
+  // 3. Kalkulasi jumlah berdasarkan persentase
+  // 'percent' akan berupa angka seperti 0.10, 0.25, 0.50, 0.75, 1.00
+  
+  if (percent === 0.10) {
+    // Tombol MIN (dari data-percent="0.10")
+    amountToSet = min;
+  } else if (percent === 1.00) {
+    // Tombol MAX (dari data-percent="1.00")
+    amountToSet = max;
+  } else {
+    // Tombol 25%, 50%, 75%
+    // Hitung rentang (selisih) antara max dan min
+    const range = max - min;
+    // Hitung nilainya: minimal + (rentang * persentase)
+    amountToSet = min + (range * percent);
+  }
+
+  // 4. Set nilai di input, diformat ke jumlah desimal yang tepat
+  betAmountInput.value = amountToSet.toFixed(decimalsToDisplay);
 }
 
 // === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
