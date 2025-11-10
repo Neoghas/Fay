@@ -1404,10 +1404,11 @@
 
       </div>
       <div class="percent-buttons">
-        <button class="percent-btn" data-percent="0.10">10%</button>
+        <button class="percent-btn" data-percent="0.10">MIN</button> 
         <button class="percent-btn" data-percent="0.25">25%</button>
         <button class="percent-btn" data-percent="0.50">50%</button>
-        <button class="percent-btn" data-percent="0.57">57%</button>
+        <button class="percent-btn" data-percent="0.75">75%</button>
+        <button class="percent-btn" data-percent="1.00">MAX</button>
       </div>
     </div>
     <div class="modal-footer">
@@ -2499,20 +2500,43 @@ function hideBetModal() {
   betModal.classList.remove("show");
 }
 
+// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
 function setAmountByPercent(percent) {
-  // ... (Tidak ada perubahan pada fungsi ini) ...
+  // 1. Ambil mata uang yang dipilih
   const currency = betCurrencySelect.value;
-  let balanceToUse, decimals;
-  if (currency === 'ETH') {
-    balanceToUse = rawEthBalance; decimals = 18;
-  } else {
-    balanceToUse = rawUsdtBalance; decimals = usdtDecimals;
-  }
-  if (!balanceToUse) return;
   
-  // Gunakan BigInt math untuk v6
-  const amount = (balanceToUse * BigInt(Math.floor(percent * 1000))) / 1000n;
-  betAmountInput.value = ethers.formatUnits(amount, decimals); // v6 format
+  let min, max, decimalsToDisplay;
+
+  // 2. Tentukan batas min/max berdasarkan mata uang
+  if (currency === 'ETH') {
+    min = 0.00005;
+    max = 0.00256;
+    decimalsToDisplay = 8; // ETH butuh presisi desimal lebih tinggi
+  } else { // USDT
+    min = 0.5;
+    max = 10.0;
+    decimalsToDisplay = 2; // USDT cukup 2 desimal
+  }
+
+  let amountToSet;
+
+  // 3. Kalkulasi jumlah berdasarkan persentase
+  if (percent === 0.10) {
+    // Tombol MIN (yang kita set 10%)
+    amountToSet = min;
+  } else if (percent === 1.00) {
+    // Tombol MAX (yang kita set 100%)
+    amountToSet = max;
+  } else {
+    // Tombol 25%, 50%, 75%
+    // Hitung rentang (selisih) antara max dan min
+    const range = max - min;
+    // Hitung nilainya: minimal + (rentang * persentase)
+    amountToSet = min + (range * percent);
+  }
+
+  // 4. Set nilai di input, diformat ke jumlah desimal yang tepat
+  betAmountInput.value = amountToSet.toFixed(decimalsToDisplay);
 }
 
 // === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
