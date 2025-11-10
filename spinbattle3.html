@@ -2516,21 +2516,62 @@ function setAmountByPercent(percent) {
 }
 
 // === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
+// GANTI 6 FUNGSI ANDA DENGAN INI (SINTAKS v5)
+
+function showBetModal() {
+  if (!signer) {
+    showStatus("Connect wallet first!", "error");
+    return;
+  }
+  if (isFinalizing) {
+    showStatus("Round is ending, new bets are closed.", "warning"); 
+    return;
+  }
+
+  // --- PERBAIKAN SINTAKS v5 ---
+  modalEthBalance.innerText = ethers.utils.formatEther(rawEthBalance || 0); 
+  modalUsdtBalance.innerText = ethers.utils.formatUnits(rawUsdtBalance || 0, usdtDecimals); 
+  // --- AKHIR PERBAIKAN ---
+
+  betAmountInput.value = "";
+  betModalOverlay.classList.add("show");
+  betModal.classList.add("show");
+}
+
+function hideBetModal() {
+  betModalOverlay.classList.remove("show");
+  betModal.classList.remove("show");
+}
+
+function setAmountByPercent(percent) {
+  const currency = betCurrencySelect.value;
+  let balanceToUse, decimals;
+  if (currency === 'ETH') {
+    balanceToUse = rawEthBalance; decimals = 18;
+  } else {
+    balanceToUse = rawUsdtBalance; decimals = usdtDecimals;
+  }
+  if (!balanceToUse) return;
+  
+  // --- PERBAIKAN SINTAKS v5 ---
+  // (Menggunakan metode .mul dan .div dari BigNumber v5)
+  const amount = balanceToUse.mul(Math.floor(percent * 1000)).div(1000);
+  betAmountInput.value = ethers.utils.formatUnits(amount, decimals); 
+  // --- AKHIR PERBAIKAN ---
+}
+
+// === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
 async function confirmBet() {
-  // ... (Fungsi ini sudah memanggil playSound('sfx-coin') dengan benar)
   const amountStr = betAmountInput.value;
   const currency = betCurrencySelect.value;
   
-  // 1. Ganti alert() error input
   if (!amountStr || parseFloat(amountStr) <= 0) {
-    showStatus("Please enter a valid amount.", "error"); // atau "warning"
+    showStatus("Please enter a valid amount.", "error"); 
     return;
   }
   
   confirmBetBtn.disabled = true;
   confirmBetBtn.innerText = "Processing...";
-  
-  // 2. Tambahkan toast 'load'
   showStatus("Sending bet transaction...", "load");
 
   try {
@@ -2541,14 +2582,12 @@ async function confirmBet() {
       tx = await placeBetUSDT(amountStr);
     }
     
-    // 3. Tambahkan toast 'load' untuk konfirmasi
-    showStatus("Bet sent! Awaiting confirmation...", "load", 10000); // 10 detik
+    showStatus("Bet sent! Awaiting confirmation...", "load", 10000); 
     statusText.innerText = `Bet sent! Awaiting confirmation...`;
     
     await tx.wait();
     
-    // 4. Tambahkan toast 'success'
-    playSound('sfx-coin'); // Mainkan suara koin
+    playSound('sfx-coin');
     showStatus("Bet confirmed! Good luck.", "success");
     statusText.innerText = `Bet confirmed! Good luck.`;
     
@@ -2558,9 +2597,7 @@ async function confirmBet() {
     
   } catch (err) {
     console.error(err);
-    
-    // 5. Ganti alert() error
-    const errorMessage = err.message || err.reason || "Transaction failed!";
+    const errorMessage = err.reason || err.message || "Transaction failed!";
     showStatus(`Error: ${errorMessage.substring(0, 100)}`, "error");
     statusText.innerText = "Transaction failed.";
     
@@ -2571,47 +2608,48 @@ async function confirmBet() {
 }
 
 async function placeBetETH(amountStr) {
-  // --- PERBAIKAN Ethers v5 ke v6 ---
-  const amountWei = ethers.parseEther(amountStr); // v6
-  if (amountWei > (rawEthBalance || 0n)) throw new Error("Insufficient ETH balance.");
-  const minEth = ethers.parseEther("0.00005"); // v6
-  if (amountWei < minEth) throw new Error("Minimum bet is 0.00005 ETH");
-  const maxEth = ethers.parseEther("0.00256"); // v6
-  const newTotalDeposit = (myCurrentEthDeposit || 0n) + amountWei; // v6
-  if (newTotalDeposit > maxEth) throw new Error("Max total deposit (0.00256 ETH) exceeded.");
+  // --- PERBAIKAN SINTAKS v5 ---
+  const amountWei = ethers.utils.parseEther(amountStr);
+  if (amountWei.gt(rawEthBalance || 0)) throw new Error("Insufficient ETH balance.");
+  const minEth = ethers.utils.parseEther("0.00005");
+  if (amountWei.lt(minEth)) throw new Error("Minimum bet is 0.00005 ETH");
+  const maxEth = ethers.utils.parseEther("0.00256");
+  const newTotalDeposit = (myCurrentEthDeposit || ethers.BigNumber.from(0)).add(amountWei); // v5
+  if (newTotalDeposit.gt(maxEth)) throw new Error("Max total deposit (0.00256 ETH) exceeded.");
+  // --- AKHIR PERBAIKAN ---
   return faylottoContract.placeBetETH({ value: amountWei });
 }
   
 async function placeBetUSDT(amountStr) {
-  // --- PERBAIKAN Ethers v5 ke v6 ---
-  const amountUsdt = ethers.parseUnits(amountStr, usdtDecimals); // v6
-  if (amountUsdt > (rawUsdtBalance || 0n)) throw new Error("Insufficient USDT balance.");
-  const minUsdt = ethers.parseUnits("0.5", usdtDecimals); // v6
-  if (amountUsdt < minUsdt) throw new Error(`Minimum bet is 0.5 USDT`);
-  const maxUsdt = ethers.parseUnits("10", usdtDecimals); // v6
-  const newTotalDeposit = (myCurrentUsdtDeposit || 0n) + amountUsdt; // v6
-  if (newTotalDeposit > maxUsdt) throw new Error("Max total deposit (10 USDT) exceeded.");
+  // --- PERBAIKAN SINTAKS v5 ---
+  const amountUsdt = ethers.utils.parseUnits(amountStr, usdtDecimals);
+  if (amountUsdt.gt(rawUsdtBalance || 0)) throw new Error("Insufficient USDT balance.");
+  const minUsdt = ethers.utils.parseUnits("0.5", usdtDecimals);
+  if (amountUsdt.lt(minUsdt)) throw new Error(`Minimum bet is 0.5 USDT`);
+  const maxUsdt = ethers.utils.parseUnits("10", usdtDecimals); 
+  const newTotalDeposit = (myCurrentUsdtDeposit || ethers.BigNumber.from(0)).add(amountUsdt); // v5
+  if (newTotalDeposit.gt(maxUsdt)) throw new Error("Max total deposit (10 USDT) exceeded.");
   
   const currentAllowance = await usdtContract.allowance(userAddress, FAYLOTTO_ADDRESS);
   
-  if (currentAllowance < amountUsdt) {
-    // --- TAMBAHAN TOAST NOTIFIKASI ---
-    showStatus("Approval needed. Please approve in MetaMask...", "info", 10000); // 10 detik
+  if (currentAllowance.lt(amountUsdt)) {
+    showStatus("Approval needed. Please approve in MetaMask...", "info", 10000); 
     statusText.innerText = "Need approval. Please approve in MetaMask...";
     
-    const approveTx = await usdtContract.approve(FAYLOTTO_ADDRESS, ethers.MaxUint256); // v6
+    const approveTx = await usdtContract.approve(FAYLOTTO_ADDRESS, ethers.constants.MaxUint256); // v5
     
-    showStatus("Confirming approval...", "load", 10000); // 10 detik
+    showStatus("Confirming approval...", "load", 10000); 
     statusText.innerText = "Confirming approval...";
     
     await approveTx.wait();
     
     showStatus("Approval successful! Placing bet...", "success");
     statusText.innerText = "Approval successful! Placing bet...";
-    // --- AKHIR TAMBAHAN ---
   }
+  // --- AKHIR PERBAIKAN ---
   return faylottoContract.placeBetERC20(amountUsdt);
 }
+
 
 // ===========================================
 // === [BARU] FUNGSI-FUNGSI REFERRAL ===
