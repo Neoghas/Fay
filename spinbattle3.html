@@ -2231,58 +2231,47 @@ function setupEventListeners() {
     }
 }
 
-// === [PERBAIKAN BUG UTAMA] ===
 // Menambahkan fungsi `fetchAndDisplayRoundData` yang hilang
 async function fetchAndDisplayRoundData() {
-    // 1. Dapatkan provider (bisa read-only)
-    let contractInstance = faylottoContract;
-    if (!contractInstance) {
-        if (!provider) provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
-        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-    }
-
+    if (!faylottoContract) return;
     try {
-        // 2. Reset UI ronde
-        resetRoundUI();
+        statusText.innerText = "Syncing round data...";
+        currentRoundId = await faylottoContract.currentRoundId();
+        const roundInfo = await faylottoContract.getRoundBasic(currentRoundId);
+        
+        // Reset dan ambil data pemain
+        resetRoundUI(); 
+        const playersList = await faylottoContract.getRoundPlayers(currentRoundId);
+        for (const playerAddress of playersList) {
+            const deposits = await faylottoContract.getPlayerDeposits(currentRoundId, playerAddress);
+            addBetToState(playerAddress, deposits.ethAmount, deposits.erc20Amount, false);
+        }
+        updateBetList();
+        await updateMyDeposits();
 
-        // 3. Ambil data ronde saat ini
-        currentRoundId = await contractInstance.currentRoundId();
-        const round = await contractInstance.getRoundBasic(currentRoundId);
-
-        // 4. Atur Timer
-        currentRoundEndTime = round.endTime.toNumber() * 1000;
+        // === LOGIKA TIMER YANG BENAR (TERSINKRONISASI) ===
+        // Ambil endTime ASLI dari kontrak (dalam milidetik)
+        const contractEndTime = roundInfo.endTime.toNumber() * 1000;
         const now = Date.now();
-        
-        if (now < currentRoundEndTime) {
-            // Ronde masih berjalan
-            statusText.innerText = "Ronde berjalan. Pasang bet Anda!";
-            placeBetBtn.disabled = !signer; // Aktifkan jika signer ada (sudah login)
-            startVisualTimer(currentRoundEndTime);
+        const timeLeft = contractEndTime - now;
+
+        if (timeLeft <= 0) {
+            // Jika waktu habis, langsung tampilkan Finalize (kontrak sudah siap)
+            statusText.innerText = "Round ended. Waiting for finalization...";
+            startVisualTimer(contractEndTime); // Ini akan langsung ke 00:00
         } else {
-            // Ronde sudah selesai, tunggu finalisasi
-            showFinalizeButton();
-            placeBetBtn.disabled = true;
+            // Jika ronde masih berjalan, tampilkan timer
+            statusText.innerText = `Round ${currentRoundId.toString()} is live!`;
+            placeBetBtn.disabled = false;
+            isFinalizing = false;
+            startVisualTimer(contractEndTime); // Mulai timer ASLI
         }
+        // ===============================================
 
-        // 5. Ambil data pemain di ronde ini
-        const playerAddrs = await contractInstance.getRoundPlayers(currentRoundId);
-        if (playerAddrs.length > 0) {
-            // Ambil deposit untuk setiap pemain
-            for (const addr of playerAddrs) {
-                const deposits = await contractInstance.getPlayerDeposits(currentRoundId, addr);
-                // Tambahkan ke state lokal untuk menggambar roda
-                addBetToState(addr, deposits.ethAmount, deposits.erc20Amount, false);
-            }
-        }
-        
-        updateBetList(); // Tampilkan pemain di list
-        if(signer) await updateMyDeposits(); // Update deposit *saya* jika sudah login
-
+        console.log("Round data fetched:", roundInfo);
     } catch (err) {
-        console.error("Gagal mengambil data ronde:", err);
-        statusText.innerText = "Tidak dapat memuat data ronde. Hubungkan wallet.";
-        if (visualTimer) clearInterval(visualTimer);
-        timerText.innerText = "00:00";
+        console.error("Error fetching round data:", err.message);
+        statusText.innerText = "Error syncing data. Please refresh or check console.";
     }
 }
 
