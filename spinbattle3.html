@@ -2443,8 +2443,16 @@ async function placeBetUSDT(amountStr) {
 
 // --- Tampilkan & Sembunyikan Modal Referral ---
 async function showReferralModal() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
-    if (!signer) return alert("Connect wallet first!");
+    // ... (kode Anda untuk mendapatkan elemen modal) ...
+
+    // --- PERBAIKAN DI SINI ---
+    if (!signer) {
+        // Ganti alert() dengan showStatus()
+        showStatus("Connect wallet first!", "error"); // atau "warning"
+        return; // Hentikan fungsi
+    }
+    // --- AKHIR PERBAIKAN ---
+
     await fetchReferralData(); 
     referralModalOverlay.classList.add("show");
     referralModal.classList.add("show");
@@ -2468,6 +2476,11 @@ async function fetchReferralData() {
         updateReferralUI(nick, referrer, rewards, count);
     } catch (err) {
         console.error("Failed fetching referral data:", err);
+        
+        // --- TAMBAHAN DI SINI ---
+        // Tampilkan toast error jika gagal memuat data
+        showStatus("Gagal memuat data referral Anda.", "error");
+        // --- AKHIR TAMBAHAN ---
     }
 }
 
@@ -2503,44 +2516,103 @@ function updateReferralUI(nick, referrer, rewards, count) {
 
 // --- Panggil Kontrak: createNickname ---
 async function callCreateNickname() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
+    // ... (kode Anda untuk mendapatkan nicknameInput dan createNicknameBtn) ...
     const nick = nicknameInput.value;
-    if (!nick || nick.length < 3) return alert("Nickname must be at least 3 characters.");
+    
+    // 1. Ganti alert() error input
+    if (!nick || nick.length < 3) {
+        showStatus("Nickname must be at least 3 characters.", "error"); // atau "warning"
+        return;
+    }
+    
     createNicknameBtn.disabled = true;
     createNicknameBtn.innerText = "Processing...";
+    
+    // 2. Tambahkan toast 'load'
+    showStatus("Sending transaction...", "load");
+    
     try {
         const tx = await faylottoContract.createNickname(nick);
         await tx.wait();
-        alert("Nickname created/updated successfully!");
+        
+        // 3. Ganti alert() sukses
+        showStatus("Nickname created/updated successfully!", "success");
+        
         await fetchReferralData(); 
     } catch (err) {
         console.error("Error creating nickname:", err.message);
-        alert(err.reason || "Failed to create nickname.");
+        
+        // 4. Ganti alert() error + parsing
+        let userMessage = "Failed to create nickname.";
+        // (Pastikan faylottoContract memiliki 'interface' untuk parseError)
+        const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+
+        if (reason) {
+            // Anda bisa tambahkan pengecekan pesan error spesifik dari kontrak di sini
+            // e.g., if (reason.includes("Nickname taken")) { userMessage = "Nickname is already taken."; }
+            userMessage = `Error: ${reason.substring(0, 100)}`;
+        } else if (err.code === 'ACTION_REJECTED') {
+             userMessage = "Transaction rejected by user.";
+        }
+
+        showStatus(userMessage, "error");
+        
     } finally {
         createNicknameBtn.disabled = false;
         createNicknameBtn.innerText = "Create";
     }
 }
-
+    
 // --- Panggil Kontrak: setReferralByNickname ---
 async function callSetReferrer() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
-    // Pastikan elemennya ada sebelum digunakan
+    // ... (kode Anda untuk mendapatkan elemen) ...
     if (!referrerNicknameInput || !setReferrerBtn) return; 
     
     const refNick = referrerNicknameInput.value;
-    if (!refNick) return alert("Please enter a referrer's nickname.");
+    
+    // 1. Ganti alert() error input
+    if (!refNick) {
+        showStatus("Please enter a referrer's nickname.", "error"); // atau "warning"
+        return;
+    }
     
     setReferrerBtn.disabled = true;
     setReferrerBtn.innerText = "Processing...";
+    
+    // 2. Tambahkan toast 'load'
+    showStatus("Sending transaction...", "load");
+    
     try {
         const tx = await faylottoContract.setReferralByNickname(refNick);
         await tx.wait();
-        alert("Referrer set successfully!");
+        
+        // 3. Ganti alert() sukses
+        showStatus("Referrer set successfully!", "success");
+        
         await fetchReferralData(); 
     } catch (err) {
         console.error("Error setting referrer:", err.message);
-        alert(err.reason || "Failed to set referrer. (Nickname might not exist, or you already have one)");
+        
+        // 4. Ganti alert() error
+        let userMessage = "Failed to set referrer.";
+        // (Pastikan faylottoContract memiliki 'interface' untuk parseError)
+        const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+
+        if (reason) {
+             // Coba tebak pesan error dari alert lama Anda
+            if (reason.includes("Nickname might not exist")) {
+                userMessage = "Nickname not found.";
+            } else if (reason.includes("already have one")) {
+                userMessage = "You already have a referrer.";
+            } else {
+                userMessage = `Error: ${reason.substring(0, 100)}`;
+            }
+        } else if (err.code === 'ACTION_REJECTED') {
+             userMessage = "Transaction rejected by user.";
+        }
+
+        showStatus(userMessage, "error");
+        
     } finally {
         setReferrerBtn.disabled = false;
         setReferrerBtn.innerText = "Set Referrer";
@@ -2549,23 +2621,39 @@ async function callSetReferrer() {
 
 // --- Panggil Kontrak: claimReferralRewards ---
 async function callClaimRewards() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
     claimRewardsBtn.disabled = true;
     claimRewardsBtn.innerText = "Claiming...";
+    showStatus("Processing claim transaction...", "load");
+
     try {
         const tx = await faylottoContract.claimReferralRewards();
+        claimRewardsBtn.innerText = "Confirming...";
         await tx.wait();
-        alert("Rewards claimed successfully!");
+        showStatus("Rewards claimed successfully!", "success");
         await fetchReferralData(); 
         await updateUserBalances(); 
+        
     } catch (err) {
         console.error("Error claiming rewards:", err.message);
-        alert(err.reason || "Failed to claim rewards. (You might have no rewards)");
+        let userMessage = "Failed to claim rewards.";
+        const reason = err.reason || (err.data ? contract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+
+        if (reason) {
+            if (reason.includes("No reward to claim")) {
+                userMessage = "You have no rewards to claim.";
+            } else {
+                userMessage = `Error: ${reason.substring(0, 100)}`;
+            }
+        } else if (err.code === 'ACTION_REJECTED') {
+           userMessage = "Transaction rejected by user.";
+        }
+        showStatus(userMessage, "error");
     } finally {
         claimRewardsBtn.innerText = "Claim Rewards";
+        claimRewardsBtn.disabled = false; 
     }
 }
-
+    
 // === FUNGSI HELPER (Tidak berubah) ===
 async function updateUserBalances() {
   // ... (Tidak ada perubahan pada fungsi ini) ...
@@ -2991,8 +3079,9 @@ async function showPlayerProfile(address) {
         document.getElementById('profileNickname').innerText = nickname || "No Nickname Yet";
         document.getElementById('profileRefCount').innerText = refCount.toString();
     } catch (e) {
-        console.error("Gagal load profil:", e);
-        document.getElementById('profileNickname').innerText = "No data, connect wallet first";
+        showStatus("Gagal memuat profil. Silakan hubungkan wallet.", "info"); 
+        document.getElementById('profileNickname').innerText = "Gagal memuat";
+        document.getElementById('profileRefCount').innerText = "N/A";
     }
 }
 
@@ -3165,7 +3254,7 @@ function hideProfileModal() {
 function copyToClipboard(text) {
     // ... (Tidak ada perubahan pada fungsi ini) ...
     navigator.clipboard.writeText(text);
-    alert("Address copied: " + text);
+    showStatus("Address copied: " + text, "success", 3000); // 3000ms = 3 detik
 }
 
 /**
