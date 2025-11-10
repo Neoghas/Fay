@@ -1812,7 +1812,7 @@ async function toggleWallet(isAutoConnect = false) {
         usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
         faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-        walletBtn.innerText = "Terhubung";
+        walletBtn.innerText = "Connected";
         referralBtn.style.display = "block"; 
         walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
         
@@ -2026,71 +2026,166 @@ async function fetchAndDisplayWinners() {
 // ... (Fungsi toggleLike, rateWinner, submitComment, showEditComment, cancelEditComment, saveEditComment) ...
 // ... (Tidak ada perubahan pada fungsi-fungsi ini) ...
 async function toggleLike(winnerId) {
-    if (!signer || !faylottoContract) return alert("Please connect wallet first.");
-    try {
-        const tx = await faylottoContract.toggleLikeWinner(winnerId);
-        await tx.wait();
-        fetchAndDisplayWinners(); // Refresh setelah sukses
-    } catch (err) {
-        console.error("Like failed:", err);
-    }
+  // 1. Ganti alert() dengan showStatus()
+  if (!signer || !faylottoContract) {
+    showStatus("Please connect wallet first.", "error");
+    return;
+  }
+  
+  // 2. Tambahkan toast 'load'
+  showStatus("Processing Like/Unlike...", "load", 3000); // Tampil 3 detik
+
+  try {
+    const tx = await faylottoContract.toggleLikeWinner(winnerId);
+    await tx.wait();
+    
+    // 3. Tambahkan toast 'success' (opsional)
+    // showStatus("Like updated!", "success", 3000);
+    
+    fetchAndDisplayWinners(); // Refresh setelah sukses
+  } catch (err) {
+    console.error("Like failed:", err);
+    
+    // 4. Tambahkan toast 'error'
+    let userMessage = "Like failed.";
+    const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    else if (err.code === 'ACTION_REJECTED') userMessage = "Transaction rejected.";
+    
+    showStatus(userMessage, "error");
+  }
 }
+
 async function rateWinner(winnerId, stars) {
-    if (!signer || !faylottoContract) return alert("Please connect wallet first.");
-    try {
-        const tx = await faylottoContract.rateWinner(winnerId, stars);
-        await tx.wait();
-        fetchAndDisplayWinners(); // Refresh setelah sukses
-    } catch (err) {
-        console.error("Rating failed:", err);
-    }
+  // 1. Ganti alert() dengan showStatus()
+  if (!signer || !faylottoContract) {
+    showStatus("Please connect wallet first.", "error");
+    return;
+  }
+  
+  // 2. Tambahkan toast 'load'
+  showStatus("Sending your rating...", "load");
+
+  try {
+    const tx = await faylottoContract.rateWinner(winnerId, stars);
+    await tx.wait();
+    
+    // 3. Tambahkan toast 'success'
+    showStatus("Rating successfully saved!", "success");
+    
+    fetchAndDisplayWinners(); // Refresh setelah sukses
+  } catch (err) {
+    console.error("Rating failed:", err);
+    
+    // 4. Tambahkan toast 'error'
+    let userMessage = "Rating failed.";
+    const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    else if (err.code === 'ACTION_REJECTED') userMessage = "Transaction rejected.";
+    
+    showStatus(userMessage, "error");
+  }
 }
+
 async function submitComment(winnerId) {
-    if (!signer) return alert("Connect wallet first.");
-    const input = document.getElementById(`new-comment-${winnerId}`);
-    const text = input.value.trim();
-    if (!text) return;
+  // 1. Ganti alert() dengan showStatus()
+  if (!signer) {
+    showStatus("Connect wallet first.", "error");
+    return;
+  }
+  
+  const input = document.getElementById(`new-comment-${winnerId}`);
+  const text = input.value.trim();
+  if (!text) return; // Tidak perlu notifikasi jika hanya kosong
 
-    try {
-        input.disabled = true;
-        const originalValue = input.value;
-        input.value = "Transmitting..."; 
-        const tx = await faylottoContract.addCommentToWinner(winnerId, text);
-        await tx.wait(); 
-        input.value = "";
-        await fetchAndRenderComments(winnerId); // Refresh
-    } catch (err) {
-        console.error(err);
-        alert("Failed to send comment.");
-        input.value = text; 
-    } finally {
-        input.disabled = false;
-    }
+  try {
+    input.disabled = true;
+    const originalValue = input.value;
+    input.value = "Transmitting...";
+    
+    // 2. Tambahkan toast 'load'
+    showStatus("Sending comment...", "load");
+    
+    const tx = await faylottoContract.addCommentToWinner(winnerId, text);
+    await tx.wait();
+    
+    // 3. Tambahkan toast 'success'
+    showStatus("Comment sent!", "success");
+    
+    input.value = "";
+    await fetchAndRenderComments(winnerId); // Refresh
+  } catch (err) {
+    console.error(err);
+    
+    // 4. Ganti alert() dengan showStatus() 'error'
+    let userMessage = "Failed to send comment.";
+    const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    else if (err.code === 'ACTION_REJECTED') userMessage = "Transaction rejected.";
+    
+    showStatus(userMessage, "error");
+    
+    input.value = originalValue; // Kembalikan teks asli jika gagal
+  } finally {
+    input.disabled = false;
+  }
 }
+
 function showEditComment(wid, cid) {
-    document.getElementById(`msg-${wid}-${cid}`).style.display = 'none';
-    document.getElementById(`edit-btn-${wid}-${cid}`).style.display = 'none';
-    document.getElementById(`edit-actions-${wid}-${cid}`).style.display = 'block';
+  // ... (Tidak ada perubahan pada fungsi ini, sudah benar) ...
+  document.getElementById(`msg-${wid}-${cid}`).style.display = 'none';
+  document.getElementById(`edit-btn-${wid}-${cid}`).style.display = 'none';
+  document.getElementById(`edit-actions-${wid}-${cid}`).style.display = 'block';
 }
-function cancelEditComment(wid, cid) {
-    document.getElementById(`msg-${wid}-${cid}`).style.display = 'block';
-    document.getElementById(`edit-btn-${wid}-${cid}`).style.display = 'inline-block';
-    document.getElementById(`edit-actions-${wid}-${cid}`).style.display = 'none';
-}
-async function saveEditComment(wid, cid) {
-    if (!signer) return;
-    const input = document.getElementById(`edit-input-${wid}-${cid}`);
-    const newText = input.value.trim();
-    if (!newText) return alert("Comment cannot be empty.");
 
-    try {
-        const tx = await faylottoContract.editCommentOnWinner(wid, cid, newText);
-        await tx.wait();
-        fetchAndRenderComments(wid); // Refresh setelah simpan
-    } catch (err) {
-        console.error("Edit failed:", err);
-        alert("Failed to edit comment.");
-    }
+function cancelEditComment(wid, cid) {
+  // ... (Tidak ada perubahan pada fungsi ini, sudah benar) ...
+  document.getElementById(`msg-${wid}-${cid}`).style.display = 'block';
+  document.getElementById(`edit-btn-${wid}-${cid}`).style.display = 'inline-block';
+  document.getElementById(`edit-actions-${wid}-${cid}`).style.display = 'none';
+}
+
+async function saveEditComment(wid, cid) {
+  // 1. Tambahkan pengecekan signer
+  if (!signer) {
+      showStatus("Connect wallet first.", "error");
+      return;
+  }
+  
+  const input = document.getElementById(`edit-input-${wid}-${cid}`);
+  const newText = input.value.trim();
+  
+  // 2. Ganti alert() dengan showStatus()
+  if (!newText) {
+    showStatus("Comment cannot be empty.", "error");
+    return;
+  }
+
+  // 3. Tambahkan toast 'load'
+  showStatus("Saving edit...", "load");
+  
+  try {
+    const tx = await faylottoContract.editCommentOnWinner(wid, cid, newText);
+    await tx.wait();
+    
+    // 4. Tambahkan toast 'success'
+    showStatus("Comment updated!", "success");
+    
+    fetchAndRenderComments(wid); // Refresh setelah simpan
+  } catch (err) {
+    console.error("Edit failed:", err);
+    
+    // 5. Ganti alert() dengan showStatus() 'error'
+    let userMessage = "Failed to edit comment.";
+    const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    else if (err.code === 'ACTION_REJECTED') userMessage = "Transaction rejected.";
+    
+    showStatus(userMessage, "error");
+  }
+  // 'finally' block tidak diperlukan di sini karena
+  // 'fetchAndRenderComments' akan menggambar ulang UI
+  // dan 'cancelEditComment' akan dipanggil secara manual jika gagal.
 }
 
 
@@ -2270,8 +2365,8 @@ async function fetchAndDisplayRoundData() {
 
         console.log("Round data fetched:", roundInfo);
     } catch (err) {
-        console.error("Error fetching round data:", err.message);
-        statusText.innerText = "Error syncing data. Please refresh or check console.";
+        console.error("Failed fetching round data:", err.message);
+        statusText.innerText = "Failed syncing data. Please refresh or check console.";
     }
 }
 
@@ -2311,16 +2406,36 @@ async function resetAndFetchNewRound() {
 
 // GANTI SELURUH FUNGSI LAMA ANDA DENGAN YANG INI
 async function callFinalizeRound() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
-    if (!signer || !faylottoContract) return alert("Please connect your wallet.");
+    // ... (kode Anda untuk mendapatkan finalizeBtn, statusText, dll) ...
+    
+    // 1. Ganti alert() dengan showStatus()
+    if (!signer || !faylottoContract) {
+        showStatus("Please connect your wallet.", "error"); // atau "warning"
+        return;
+    }
+    
     finalizeBtn.disabled = true;
     statusText.innerText = "Sending finalization transaction...";
+    
+    // 2. Tambahkan toast 'load'
+    showStatus("Sending finalization transaction...", "load");
+
     try {
         const tx = await faylottoContract.finalizeRound(currentRoundId);
+        
+        // 3. Tambahkan toast 'load' untuk konfirmasi
         statusText.innerText = "Finalizing... awaiting confirmation.";
+        // (Durasi panjang agar tidak hilang saat menunggu)
+        showStatus("Finalizing... awaiting confirmation.", "load", 15000); // 15 detik
+
         const receipt = await tx.wait(); 
+        
+        // 4. Tambahkan toast 'success'
+        showStatus("Round finalized successfully!", "success", 3000); // 3 detik
+
         console.log("Finalize transaction confirmed.", receipt);
         const event = receipt.events?.find(e => e.event === 'WinnerRecorded');
+        
         if (event) {
             const roundId = event.args[1]; 
             const winnerAddr = event.args[2];
@@ -2336,7 +2451,20 @@ async function callFinalizeRound() {
         }
     } catch (err) {
         console.error("Finalize failed:", err);
-        alert("Finalization failed. See console for details.");
+        
+        // 5. Ganti alert() error dengan showStatus() 'error' + parsing
+        let userMessage = "Finalization failed.";
+        // (Pastikan 'faylottoContract' memiliki 'interface' untuk parseError)
+        const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+        
+        if (reason) {
+            userMessage = `Error: ${reason.substring(0, 100)}`;
+        } else if (err.code === 'ACTION_REJECTED') {
+            userMessage = "Transaction rejected by user.";
+        }
+        
+        showStatus(userMessage, "error");
+        
         statusText.innerText = "Finalization failed.";
         finalizeBtn.disabled = false; 
     }
@@ -2345,19 +2473,32 @@ async function callFinalizeRound() {
 // === FUNGSI MODAL TARUHAN (Bet Modal) ===
 function showBetModal() {
   // ... (Tidak ada perubahan pada fungsi ini) ...
-  if (!signer) return alert("Connect wallet first!");
-  if (isFinalizing) return alert("Round is ending, new bets are closed.");
-  modalEthBalance.innerText = ethers.utils.formatEther(rawEthBalance || 0);
-  modalUsdtBalance.innerText = ethers.utils.formatUnits(rawUsdtBalance || 0, usdtDecimals);
+
+  // --- PERBAIKAN DI SINI ---
+  if (!signer) {
+    showStatus("Connect wallet first!", "error");
+    return;
+  }
+  if (isFinalizing) {
+    // Ganti 'warning' jika Anda sudah membuat ikon/style-nya
+    showStatus("Round is ending, new bets are closed.", "warning"); 
+    return;
+  }
+  // --- AKHIR PERBAIKAN ---
+
+  modalEthBalance.innerText = ethers.formatEther(rawEthBalance || 0); // v6 format
+  modalUsdtBalance.innerText = ethers.formatUnits(rawUsdtBalance || 0, usdtDecimals); // v6 format
   betAmountInput.value = "";
   betModalOverlay.classList.add("show");
   betModal.classList.add("show");
 }
+
 function hideBetModal() {
   // ... (Tidak ada perubahan pada fungsi ini) ...
   betModalOverlay.classList.remove("show");
   betModal.classList.remove("show");
 }
+
 function setAmountByPercent(percent) {
   // ... (Tidak ada perubahan pada fungsi ini) ...
   const currency = betCurrencySelect.value;
@@ -2368,19 +2509,30 @@ function setAmountByPercent(percent) {
     balanceToUse = rawUsdtBalance; decimals = usdtDecimals;
   }
   if (!balanceToUse) return;
-  const amount = balanceToUse.mul(Math.floor(percent * 1000)).div(1000);
-  betAmountInput.value = ethers.utils.formatUnits(amount, decimals);
+  
+  // Gunakan BigInt math untuk v6
+  const amount = (balanceToUse * BigInt(Math.floor(percent * 1000))) / 1000n;
+  betAmountInput.value = ethers.formatUnits(amount, decimals); // v6 format
 }
 
 // === FUNGSI MODAL: Konfirmasi & Kirim Transaksi ===
 async function confirmBet() {
-  // ... (Tidak ada perubahan pada fungsi ini) ...
-  // (Fungsi ini sudah memanggil playSound('sfx-coin') dengan benar)
+  // ... (Fungsi ini sudah memanggil playSound('sfx-coin') dengan benar)
   const amountStr = betAmountInput.value;
   const currency = betCurrencySelect.value;
-  if (!amountStr || parseFloat(amountStr) <= 0) return alert("Please enter a valid amount.");
+  
+  // 1. Ganti alert() error input
+  if (!amountStr || parseFloat(amountStr) <= 0) {
+    showStatus("Please enter a valid amount.", "error"); // atau "warning"
+    return;
+  }
+  
   confirmBetBtn.disabled = true;
   confirmBetBtn.innerText = "Processing...";
+  
+  // 2. Tambahkan toast 'load'
+  showStatus("Sending bet transaction...", "load");
+
   try {
     let tx;
     if (currency === 'ETH') {
@@ -2388,18 +2540,30 @@ async function confirmBet() {
     } else {
       tx = await placeBetUSDT(amountStr);
     }
+    
+    // 3. Tambahkan toast 'load' untuk konfirmasi
+    showStatus("Bet sent! Awaiting confirmation...", "load", 10000); // 10 detik
     statusText.innerText = `Bet sent! Awaiting confirmation...`;
+    
     await tx.wait();
+    
+    // 4. Tambahkan toast 'success'
     playSound('sfx-coin'); // Mainkan suara koin
+    showStatus("Bet confirmed! Good luck.", "success");
     statusText.innerText = `Bet confirmed! Good luck.`;
+    
     hideBetModal();
     await updateUserBalances();
     await updateMyDeposits();
+    
   } catch (err) {
     console.error(err);
-    const errorMessage = err.reason || err.message || "Transaction failed!";
-    alert(`Error: ${errorMessage}`);
+    
+    // 5. Ganti alert() error
+    const errorMessage = err.message || err.reason || "Transaction failed!";
+    showStatus(`Error: ${errorMessage.substring(0, 100)}`, "error");
     statusText.innerText = "Transaction failed.";
+    
   } finally {
     confirmBetBtn.disabled = false;
     confirmBetBtn.innerText = "Confirm Bet";
@@ -2407,32 +2571,44 @@ async function confirmBet() {
 }
 
 async function placeBetETH(amountStr) {
-  // ... (Tidak ada perubahan pada fungsi ini) ...
-  const amountWei = ethers.utils.parseEther(amountStr);
-  if (amountWei.gt(rawEthBalance)) throw new Error("Insufficient ETH balance.");
-  const minEth = ethers.utils.parseEther("0.00005");
-  if (amountWei.lt(minEth)) throw new Error("Minimum bet is 0.00005 ETH");
-  const maxEth = ethers.utils.parseEther("0.00256");
-  const newTotalDeposit = myCurrentEthDeposit.add(amountWei);
-  if (newTotalDeposit.gt(maxEth)) throw new Error("Max total deposit (0.00256 ETH) exceeded.");
+  // --- PERBAIKAN Ethers v5 ke v6 ---
+  const amountWei = ethers.parseEther(amountStr); // v6
+  if (amountWei > (rawEthBalance || 0n)) throw new Error("Insufficient ETH balance.");
+  const minEth = ethers.parseEther("0.00005"); // v6
+  if (amountWei < minEth) throw new Error("Minimum bet is 0.00005 ETH");
+  const maxEth = ethers.parseEther("0.00256"); // v6
+  const newTotalDeposit = (myCurrentEthDeposit || 0n) + amountWei; // v6
+  if (newTotalDeposit > maxEth) throw new Error("Max total deposit (0.00256 ETH) exceeded.");
   return faylottoContract.placeBetETH({ value: amountWei });
 }
   
 async function placeBetUSDT(amountStr) {
-  // ... (Tidak ada perubahan pada fungsi ini) ...
-  const amountUsdt = ethers.utils.parseUnits(amountStr, usdtDecimals);
-  if (amountUsdt.gt(rawUsdtBalance)) throw new Error("Insufficient USDT balance.");
-  const minUsdt = ethers.utils.parseUnits("0.5", usdtDecimals);
-  if (amountUsdt.lt(minUsdt)) throw new Error(`Minimum bet is 0.5 USDT`);
-  const maxUsdt = ethers.utils.parseUnits("10", usdtDecimals); 
-  const newTotalDeposit = myCurrentUsdtDeposit.add(amountUsdt);
-  if (newTotalDeposit.gt(maxUsdt)) throw new Error("Max total deposit (10 USDT) exceeded.");
+  // --- PERBAIKAN Ethers v5 ke v6 ---
+  const amountUsdt = ethers.parseUnits(amountStr, usdtDecimals); // v6
+  if (amountUsdt > (rawUsdtBalance || 0n)) throw new Error("Insufficient USDT balance.");
+  const minUsdt = ethers.parseUnits("0.5", usdtDecimals); // v6
+  if (amountUsdt < minUsdt) throw new Error(`Minimum bet is 0.5 USDT`);
+  const maxUsdt = ethers.parseUnits("10", usdtDecimals); // v6
+  const newTotalDeposit = (myCurrentUsdtDeposit || 0n) + amountUsdt; // v6
+  if (newTotalDeposit > maxUsdt) throw new Error("Max total deposit (10 USDT) exceeded.");
+  
   const currentAllowance = await usdtContract.allowance(userAddress, FAYLOTTO_ADDRESS);
-  if (currentAllowance.lt(amountUsdt)) {
+  
+  if (currentAllowance < amountUsdt) {
+    // --- TAMBAHAN TOAST NOTIFIKASI ---
+    showStatus("Approval needed. Please approve in MetaMask...", "info", 10000); // 10 detik
     statusText.innerText = "Need approval. Please approve in MetaMask...";
-    const approveTx = await usdtContract.approve(FAYLOTTO_ADDRESS, ethers.constants.MaxUint256);
+    
+    const approveTx = await usdtContract.approve(FAYLOTTO_ADDRESS, ethers.MaxUint256); // v6
+    
+    showStatus("Confirming approval...", "load", 10000); // 10 detik
+    statusText.innerText = "Confirming approval...";
+    
     await approveTx.wait();
+    
+    showStatus("Approval successful! Placing bet...", "success");
     statusText.innerText = "Approval successful! Placing bet...";
+    // --- AKHIR TAMBAHAN ---
   }
   return faylottoContract.placeBetERC20(amountUsdt);
 }
