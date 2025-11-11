@@ -175,54 +175,130 @@
       display: none; /* Sembunyi sampai connect */
   }
 
-  /* Mengganti style .wallet-info lama agar sesuai di dalam modal */
-  #walletInfo {
+  /* === [GANTI TOTAL] Style untuk Modal Wallet Info === */
+
+/* Mengatur modal-body #walletInfo */
+#walletInfo {
     font-size: 14px;
     line-height: 1.6;
     color: #ccc;
-  }
-  #walletInfo p { margin: 8px 0; }
-  #walletInfo span { color: var(--cyan-main); font-weight: bold; }
-  #walletInfo hr {
-      border: none;
-      height: 1px;
-      background-color: var(--border-color);
-      margin: 12px 0;
-  }
+    gap: 0 !important; 
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+#walletInfo hr {
+    border: none; height: 1px;
+    background-color: var(--border-color);
+    margin: 12px 0;
+}
 
-  /* [BARU] Style untuk tombol Disconnect */
-  .modal-btn-disconnect {
-      background: linear-gradient(90deg, var(--pink-main), var(--red-main));
-      box-shadow: 0 0 20px var(--pink-main);
-  }
-  .modal-btn-disconnect:hover {
-      box-shadow: 0 0 25px var(--red-main);
-  }
+/* Kotak Total Aset */
+.total-assets-container {
+    padding: 10px 15px;
+    background: linear-gradient(90deg, rgba(98, 0, 255, 0.2), rgba(0, 255, 255, 0.2));
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    text-align: center;
+    margin-bottom: 20px; 
+}
+.total-assets-label {
+    display: block; font-size: 13px; color: #ccc;
+    text-transform: uppercase; letter-spacing: 1px;
+}
+.total-assets-value {
+    display: block; font-size: 24px; font-weight: bold;
+    color: #fff; text-shadow: 0 0 10px var(--cyan-main);
+    margin-top: 5px;
+}
 
-  /* === [PERBAIKAN] Memindahkan Modal Wallet ke Pojok Kanan Atas === */
+/* Grup Saldo (Saldo + Nilai USD) */
+.balance-group {
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(120, 0, 255, 0.1);
+}
+.balance-group:last-of-type {
+    border-bottom: none; 
+    margin-bottom: -10px;
+}
+.balance-group .info-line {
+    border-bottom: none; 
+    padding-bottom: 0;
+}
 
+/* Teks Nilai USD */
+.usd-value {
+    font-size: 12px;
+    color: #888;
+    margin: -5px 0 8px 0;
+    padding-left: 34px; /* Sesuaikan agar sejajar dengan teks label */
+    font-family: 'Courier Prime', monospace;
+}
+
+/* Baris Info (Label & Nilai) */
+.info-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 5px; 
+}
+.info-label {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Jarak ikon & teks */
+    font-size: 13px;
+    color: #aaa;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+.info-label .fa-solid {
+    width: 16px; text-align: center;
+    color: var(--cyan-main); font-size: 14px;
+}
+.reward-icon {
+    width: 18px; /* Ukuran ikon di baris */
+    height: 18px;
+}
+.info-value {
+    color: var(--cyan-main);
+    font-weight: bold;
+    font-family: 'Courier Prime', monospace;
+    font-size: 15px;
+}
+#walletAddress {
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px dashed rgba(0, 255, 255, 0.5);
+}
+#walletAddress:hover {
+    color: #fff;
+    border-bottom-color: var(--cyan-main);
+}
+
+/* Style untuk tombol Disconnect */
+.modal-btn-disconnect {
+    background: linear-gradient(90deg, var(--pink-main), var(--red-main));
+    box-shadow: 0 0 20px var(--pink-main);
+}
+.modal-btn-disconnect:hover {
+    box-shadow: 0 0 25px var(--red-main);
+}
+
+/* Memindahkan Modal Wallet ke Pojok Kanan Atas */
 #wallet-modal {
-    /* 1. Hapus pemusatan dari class .modal */
-    top: 65px;  /* (Tombol 20px + Jarak 45px) */
+    top: 65px;
     left: auto;
     right: 25px;
-    
-    /* 2. Hapus transform pemusatan & scaling */
     transform: none;
-
-    /* 3. Atur ulang animasi 'show/hide' agar muncul dari atas (bukan zoom) */
     opacity: 0;
     transform: translateY(-10px);
     transition: all 0.3s ease;
 }
-
-/* 4. Ganti animasi .modal.show */
 #wallet-modal.show {
     transform: translateY(0);
     opacity: 1;
 }
 
-/* 5. Hapus latar belakang gelap HANYA untuk modal ini */
+/* Hapus latar belakang gelap HANYA untuk modal ini */
 #wallet-modal-overlay.show {
      background: transparent;
      backdrop-filter: none;
@@ -1289,23 +1365,59 @@
    </nav>
 
   <div class="modal-overlay" id="wallet-modal-overlay"></div>
-  <div class="modal" id="wallet-modal">
+<div class="modal" id="wallet-modal">
     <div class="modal-header">
       <h2>Wallet Info</h2>
       <button class="modal-close-btn" id="wallet-modal-close-btn">&times;</button>
     </div>
+    
     <div class="modal-body" id="walletInfo"> 
-      <p>Address: <span id="walletAddress">-</span></p>
-      <p><img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance (ETH): <span id="ethBalance">0</span></p>
-      <p><img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance (USDT): <span id="usdtBalance">0</span></p>
-      <hr/>
-      <p><img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (ETH): <span id="myEthDeposit">0</span></p>
-      <p><img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (USDT): <span id="myUsdtDeposit">0</span></p>
+    
+      <div class="total-assets-container">
+          <span class="total-assets-label">Total Estimated Assets</span>
+          <span class="total-assets-value" id="totalAssetValue">≈ $0.00 USD</span>
+      </div>
+
+      <div class="balance-group">
+          <div class="info-line">
+              <span class="info-label">
+                  <img src="eth.svg" class="reward-icon" alt="ETH"> Balance (ETH)
+              </span>
+              <span class="info-value" id="ethBalance">0</span>
+          </div>
+          <p class="usd-value" id="ethValue">≈ $0.00 USD</p>
+      </div>
+
+      <div class="balance-group">
+          <div class="info-line">
+              <span class="info-label">
+                  <img src="usdt.svg" class="reward-icon" alt="USDT"> Balance (USDT)
+              </span>
+              <span class="info-value" id="usdtBalance">0</span>
+          </div>
+          <p class="usd-value" id="usdtValue">≈ $0.00 USD</p>
+      </div>
+      
+      <hr/> 
+
+      <div class="info-line">
+          <span class="info-label">
+              <img src="eth.svg" class="reward-icon" alt="ETH"> My Deposits (ETH)
+          </span>
+          <span class="info-value" id="myEthDeposit">0</span>
+      </div>
+      <div class="info-line">
+          <span class="info-label">
+              <img src="usdt.svg" class="reward-icon" alt="USDT"> My Deposits (USDT)
+          </span>
+          <span class="info-value" id="myUsdtDeposit">0</span>
+      </div>
     </div>
+    
     <div class="modal-footer">
       <button id="disconnectBtn" class="modal-btn modal-btn-disconnect">Disconnect</button>
     </div>
-  </div>
+</div>
 
   <section id="hero-section">
     <div class="hero-static-bg"></div>
@@ -1619,7 +1731,8 @@ let playersArray = [];
 let myCurrentEthDeposit = ethers.BigNumber.from(0);
 let myCurrentUsdtDeposit = ethers.BigNumber.from(0);
 let pendingReferrerNickname = null;
-
+let tokenPrices = { eth: 0, usdt: 1.0 };
+    
 function getProvider() {
     // Cek apakah user punya wallet (misal MetaMask)
     if (window.ethereum) {
@@ -1867,6 +1980,25 @@ function checkAutoConnect() {
         setTimeout(() => toggleWallet(true), 500); // Panggil dengan flag auto-connect
     } else {
         localStorage.removeItem(AUTO_CONNECT_KEY); // Hapus jika sudah kedaluwarsa
+    }
+}
+
+// [BARU] Fungsi untuk mengambil harga Mainnet dari CoinGecko
+async function fetchTokenPrices() {
+    // PENTING: Ini HANYA akan berfungsi untuk token MAINNET
+    const apiURL = 'https://api.coingecko.com/api/v3/simple/price?ids=ethereum,tether&vs_currencies=usd';
+    
+    try {
+        const response = await fetch(apiURL);
+        if (!response.ok) throw new Error("CoinGecko API request failed");
+        const data = await response.json();
+        
+        if (data.ethereum) tokenPrices.eth = data.ethereum.usd;
+        if (data.tether) tokenPrices.usdt = data.tether.usd;
+        
+        console.log("Token prices updated:", tokenPrices);
+    } catch (e) {
+        console.warn("Could not fetch real-time prices. Using default.", e.message);
     }
 }
     
@@ -2848,19 +2980,48 @@ async function callClaimRewards() {
     }
 }
     
-// === FUNGSI HELPER (Tidak berubah) ===
+// [REVISI TOTAL] Fungsi ini sekarang menghitung TOTAL ASET
 async function updateUserBalances() {
-  // ... (Tidak ada perubahan pada fungsi ini) ...
   if (!provider || !userAddress || !usdtContract) return;
+  
+  const totalAssetValueEl = document.getElementById('totalAssetValue');
+
   try {
+    // 1. Ambil Saldo
     rawEthBalance = await provider.getBalance(userAddress);
-    ethBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
     usdtDecimals = await usdtContract.decimals();
     rawUsdtBalance = await usdtContract.balanceOf(userAddress);
-    usdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
+    
+    // 2. Format Angka Saldo
+    const ethAmount = parseFloat(ethers.utils.formatEther(rawEthBalance));
+    const usdtAmount = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals));
+
+    // 3. Tampilkan Saldo di UI
+    ethBalance.innerText = ethAmount.toFixed(5);
+    usdtBalance.innerText = usdtAmount.toFixed(2);
+
+    // 4. Hitung Nilai USD
+    const ethValue = ethAmount * tokenPrices.eth;
+    const usdtValue = usdtAmount * tokenPrices.usdt;
+    
+    // [BARU] Hitung Total
+    const totalValue = ethValue + usdtValue;
+
+    // 5. Tampilkan Nilai USD
+    document.getElementById('ethValue').innerText = `≈ $${ethValue.toFixed(2)} USD`;
+    document.getElementById('usdtValue').innerText = `≈ $${usdtValue.toFixed(2)} USD`;
+    
+    // [BARU] Tampilkan Total
+    totalAssetValueEl.innerText = `≈ $${totalValue.toFixed(2)} USD`;
+
   } catch (err) { 
-    console.error("Failed fetching balances:", err.message);
-    usdtBalance.innerText = "Failed";
+    console.error("Error fetching balances:", err.message);
+    // Reset semua nilai jika error
+    usdtBalance.innerText = "Error";
+    ethBalance.innerText = "Error";
+    document.getElementById('ethValue').innerText = "≈ $--- USD";
+    document.getElementById('usdtValue').innerText = "≈ $--- USD";
+    totalAssetValueEl.innerText = "≈ $--- USD"; 
   }
 }
 
@@ -3519,6 +3680,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 3. Panggil Data Awal SEGERA (Tanpa Menunggu Wallet)
     // [FIX] Ini adalah perbaikan untuk bug "tombol tidak aktif"
+    fetchTokenPrices();
     fetchAndDisplayRoundData(); // <-- FUNGSI YANG HILANG SEKARANG ADA
     fetchAndDisplayWinners();
     fetchAndRenderLeaderboard(); // Panggil leaderboard saat load
