@@ -19,6 +19,7 @@
     font-family: "Ubuntu", sans-serif;
     overflow-x: hidden;
     margin: 0;
+    min-height: 100vh; /* Tambah ini untuk full height */
   }
 
   /* === GLASS EFFECT === */
@@ -41,7 +42,6 @@
     top: 0;
     left: 0;
     z-index: 50;
-    box-sizing: border-box; /* Tambahan untuk padding */
   }
   .navbar-logo img {
     height: 42px;
@@ -63,16 +63,29 @@
     box-shadow: 0 0 15px rgba(0,180,216,0.6);
   }
 
+  .wallet-controls {
+    position: absolute; top: 25px; right: 25px;
+    display: flex; flex-direction: row; gap: 10px;
+  }
+  .wallet-btn {
+    background: linear-gradient(145deg, #00b4d8, #0077b6);
+    border: none; border-radius: 10px; color: #fff;
+    font-weight: bold; padding: 10px 18px; cursor: pointer; transition: 0.2s;
+  }
+  .wallet-btn:hover { transform: scale(1.05); }
+  .wallet-address {
+    background: #222; border-radius: 10px; padding: 10px 16px;
+    font-size: 14px; font-weight: bold; color: #0ff; border: 1px solid #0ff;
+  }
+
   /* === HERO SECTION === */
   .hero {
     text-align: center;
     margin-top: 120px;
+    max-width: 600px;
     padding: 30px 20px;
     border-radius: 20px;
-    /* --- PERBAIKAN SIMETRIS 1 --- */
-    width: 90%;
-    max-width: 500px; /* Diubah dari 600px */
-    box-sizing: border-box;
+    width: 90%; /* Tambah ini untuk simetri mobile */
   }
   .hero h1 {
     font-size: 34px;
@@ -91,6 +104,9 @@
     width: 350px;
     height: 350px;
     margin-top: 30px;
+    display: flex; /* Tambah flex untuk center */
+    justify-content: center;
+    align-items: center;
   }
   svg { width: 100%; height: 100%; display: block; }
   #centerBtn {
@@ -114,16 +130,7 @@
 
   /* === INFO BOX === */
   .result { margin-top: 30px; font-size: 20px; text-align: center; }
-  .info-container { 
-    display: flex; 
-    gap: 15px; 
-    margin-top: 20px; 
-    flex-wrap: wrap; 
-    justify-content: center; 
-    /* --- PERBAIKAN SIMETRIS 2 --- */
-    width: 90%;
-    max-width: 500px;
-  }
+  .info-container { display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
   .info-box {
     background: rgba(255,255,255,0.06);
     border: 1px solid rgba(0,180,216,0.3);
@@ -131,6 +138,8 @@
     padding: 12px 25px;
     text-align: center;
     box-shadow: 0 0 10px rgba(0,180,216,0.2);
+    min-width: 150px; /* Tambah min-width untuk simetri */
+    flex: 1; /* Buat sama lebar */
   }
   .info-box-title { font-size: 12px; color: #00b4d8; margin: 0; }
   .info-box-value { font-size: 24px; font-weight: bold; color: #fff; margin: 5px 0 0; }
@@ -144,7 +153,6 @@
     padding: 25px;
     margin-top: 35px;
     box-shadow: 0 0 30px rgba(0,180,216,0.2);
-    box-sizing: border-box;
   }
   .referral-header {
     text-align: center;
@@ -159,32 +167,6 @@
     padding: 15px;
     margin-bottom: 15px;
   }
-  .ref-info { font-size: 14px; line-height: 1.6; }
-  .ref-info span { color: #0ff; font-weight: bold; }
-  .ref-info img { vertical-align: middle; margin-right: 5px; } /* Atur ikon */
-  .ref-info hr { border-color: rgba(0,180,216,0.3); margin: 10px 0; }
-
-  /* --- PERBAIKAN SIMETRIS 3 (Style Input) --- */
-  .ref-section input[type="text"] {
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 180, 216, 0.5);
-    background: rgba(0, 0, 0, 0.3);
-    color: #fff;
-    box-sizing: border-box; /* Wajib ada */
-    margin-bottom: 10px;
-  }
-  .ref-section input[type="text"]:focus {
-    outline: none;
-    border-color: #00b4d8;
-    box-shadow: 0 0 10px rgba(0,180,216,0.5);
-  }
-  .ref-section input[type="text"][readonly] {
-    cursor: pointer;
-    background: rgba(0, 0, 0, 0.5);
-  }
-  
   .ref-btn {
     background: linear-gradient(145deg, #00b4d8, #0077b6);
     border: none; border-radius: 10px; color: #fff;
@@ -195,7 +177,7 @@
 
   /* === FOOTER === */
   footer {
-    margin-top: 60px;
+    margin-top: auto; /* Push ke bawah */
     width: 100%;
     padding: 20px 0;
     text-align: center;
@@ -218,10 +200,8 @@
   }
 
   @media (min-width: 768px) {
-    .wheel-container { 
-      width: 500px; 
-      height: 500px; 
-    }
+    .wheel-container { width: 500px; height: 500px; }
+    .info-container { flex-wrap: nowrap; } /* Tidak wrap di desktop */
   }
 </style>
 
@@ -232,7 +212,11 @@
     <div class="navbar-logo">
       <img src="logo.svg" alt="Faylotto Logo">
     </div>
-    <button id="connectBtn">Connect Wallet</button>
+    <div class="wallet-controls">
+    <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
+    <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
+    <div id="walletAddress" class="wallet-address" style="display:none;">-</div>
+    </div>
   </div>
 
   <!-- === HERO SECTION === -->
