@@ -1,1058 +1,213 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Faylotto Spin Battle</title>
-<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indigo Border Animation Showcase</title>
 <style>
-  :root {
-    --purple-main: #6200ff;
-    --purple-light: #6c00ff;
-    --purple-dark: #1a0040;
-    --blue-main: #00b3ff;
-    --pink-main: #ff00e6;
-    --cyan-main: #00ffff;
-    --red-main: #c0392b;
-    --bg-dark-1: #0b0b12;
-    --bg-dark-2: #000;
-    --bg-modal: #0d0d1a;
-    --border-color: rgba(120, 0, 255, 0.4);
-  }
-  body {
-  margin: 0;
-  min-height: 100vh; /* Gunakan min-height, bukan height fix */
-  background: radial-gradient(circle at center, var(--bg-dark-1) 0%, var(--bg-dark-2) 100%);
-  font-family: "Ubuntu", sans-serif;
-  color: #fff;
+body {
+  background: radial-gradient(circle at center, #0a0a0f, #000);
+  color: white;
+  font-family: "Poppins", sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* justify-content: center; Hapus ini agar konten mulai dari atas */
-  padding: 20px 0; /* Beri sedikit ruang atas bawah */
-  overflow-x: hidden; /* Hanya sembunyikan scroll horizontal jika perlu */
-  overflow-y: auto; /* Izinkan scroll vertikal */
-  }
-
-/* === HERO SECTION STYLES (SIMPLE) === */
-#hero-section {
-    position: relative;
-    width: 100%;
-    min-height: 20vh; /* Tinggi sesuai permintaan */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    padding-top: 80px;
-    padding-bottom: 40px;
-    background: var(--bg-dark-2);
-    border-bottom: 1px solid rgba(120, 0, 255, 0.2); /* Garis pemisah halus di bawah */
+  justify-content: start;
+  padding-top: 60px;
+  gap: 30px;
+  min-height: 100vh;
 }
 
-/* Latar Belakang Statis yang Ringan */
-.hero-static-bg {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 0;
-    opacity: 0.4;
-    /* Pola grid halus statis */
-    background-image: 
-        linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
-    background-size: 30px 30px;
-}
-
-/* Konten Hero (Box Title) */
-.hero-content {
-    position: relative; z-index: 1;
-    text-align: center; max-width: 800px; padding: 30px;
-    background: rgba(10, 10, 25, 0.5); /* Latar sedikit lebih gelap */
-    backdrop-filter: blur(5px); /* Blur ringan */
-    border-radius: 15px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* Bayangan agar menonjol */
-}
-
-.hero-title {
-    background: #000;
-    font-size: 2rem; font-weight: 700; margin: 0 0 15px 0;
-    font-family: "Ubuntu", sans-serif;
-    letter-spacing: 2px; line-height: 1.1;
-}
-.hero-title .highlight-text {
-    background: linear-gradient(90deg, #03a9f4, #f441a5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-    display: block;
-}
-.hero-subtitle {
-    font-size: 1.1rem; color: #ccc; margin: 0 auto 30px auto;
-    max-width: 600px; line-height: 1.5;
-}
-
-/* Tombol CTA */
-.hero-cta-container { display: inline-block; cursor: pointer; }
-.play-now-btn {
-    background: linear-gradient(90deg, var(--pink-main), var(--blue-main)); color: #ffffff; /* Warna solid langsung */
-    border: none; padding: 12px 35px;
-    font-size: 16px; font-weight: bold; letter-spacing: 1px;
-    border-radius: 12px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
-    display: flex; align-items: center; gap: 8px;
-}
-.play-now-btn:hover {
-    background: linear-gradient(90deg, var(--purple-main), var(--blue-main));
-    transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(0, 255, 255, 0.4);
-}
-.arrow-icon { font-size: 1.2em; }
-
-/* Responsif Ponsel */
-@media (max-width: 768px) {
-    .hero-title { font-size: 2.2rem; }
-    .hero-subtitle { font-size: 1rem; }
-    .hero-content {
-        width: 90%;
-        padding: 20px;
-        margin: 0 auto; /* Tambahkan ini agar simetris di tengah */
-        box-sizing: border-box; /* Pastikan padding tidak menambah lebar total */
-    }
-}
-
-  /* Mode PC (layar besar) */
-@media (min-width: 1024px) {
-  #hero-section {
-    min-height: 5vh; /* lebih pendek di PC */
-    padding-top: 60px;
-    padding-bottom: 20px;
-  }
-}
-
-  .app-body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    width: 100%;
-  }
-  .lists-wrapper {
-      display: flex;
-      flex-direction: row;
-      gap: 20px;
-      margin-top: 20px;
-      width: 90%;
-      max-width: 820px;
-  }
-
-  /* === [DIUBAH] Wallet Buttons Container === */
-  .wallet-container {
-    position: fixed;
-    top: 20px;
-    right: 25px;
-    display: flex;
-    gap: 10px;
-    z-index: 1001;
-  }
-  .wallet-btn, .referral-btn {
-    background: linear-gradient(90deg, var(--purple-main), var(--blue-main));
-    border: none; border-radius: 12px; color: white;
-    font-size: 14px; font-weight: bold; padding: 10px 20px;
-    cursor: pointer; text-transform: uppercase;
-    box-shadow: 0 0 15px var(--blue-main);
-    transition: all 0.3s ease;
-  }
-  .wallet-btn:hover, .referral-btn:hover { 
-      box-shadow: 0 0 25px var(--pink-main); 
-      transform: scale(1.05); 
-  }
-  
-  /* [BARU] Tombol Referral */
-  .referral-btn {
-      background: linear-gradient(90deg, var(--pink-main), var(--blue-main));
-      display: none; /* Sembunyi sampai connect */
-  }
-
-  /* Mengganti style .wallet-info lama agar sesuai di dalam modal */
-  #walletInfo {
-    font-size: 14px;
-    line-height: 1.6;
-    color: #ccc;
-  }
-  #walletInfo p { margin: 8px 0; }
-  #walletInfo span { color: var(--cyan-main); font-weight: bold; }
-  #walletInfo hr {
-      border: none;
-      height: 1px;
-      background-color: var(--border-color);
-      margin: 12px 0;
-  }
-
-  /* [BARU] Style untuk tombol Disconnect */
-  .modal-btn-disconnect {
-      background: linear-gradient(90deg, var(--pink-main), var(--red-main));
-      box-shadow: 0 0 20px var(--pink-main);
-  }
-  .modal-btn-disconnect:hover {
-      box-shadow: 0 0 25px var(--red-main);
-  }
-
-  /* === [PERBAIKAN] Memindahkan Modal Wallet ke Pojok Kanan Atas === */
-
-#wallet-modal {
-    /* 1. Hapus pemusatan dari class .modal */
-    top: 65px;  /* (Tombol 20px + Jarak 45px) */
-    left: auto;
-    right: 25px;
-    
-    /* 2. Hapus transform pemusatan & scaling */
-    transform: none;
-
-    /* 3. Atur ulang animasi 'show/hide' agar muncul dari atas (bukan zoom) */
-    opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-}
-
-/* 4. Ganti animasi .modal.show */
-#wallet-modal.show {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-/* 5. Hapus latar belakang gelap HANYA untuk modal ini */
-#wallet-modal-overlay.show {
-     background: transparent;
-     backdrop-filter: none;
-}
-
-  /* === Controls (Tidak Berubah) === */
-  .controls {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    width: 250px; 
-  }
-  .main-btn {
-    border: none;
-    border-radius: 12px;
-    color: white;
-    font-size: 16px;
-    font-weight: bold;
-    padding: 12px 30px;
-    cursor: pointer;
-    text-transform: uppercase;
-    transition: all 0.3s ease;
-    width: 100%;
-  }
-  #placeBetBtn {
-    background: linear-gradient(90deg, var(--blue-main), var(--pink-main));
-    box-shadow: 0 0 20px var(--blue-main);
-  }
-  #placeBetBtn:hover { box-shadow: 0 0 25px var(--pink-main); transform: scale(1.05); }
-  #finalizeBtn {
-    background: linear-gradient(90deg, var(--pink-main), var(--blue-main));
-    box-shadow: 0 0 20px var(--pink-main);
-    display: none;
-  }
-  #finalizeBtn:hover { box-shadow: 0 0 25px var(--red-main); transform: scale(1.05); }
-  .main-btn:disabled {
-    background: #555;
-    box-shadow: none;
-    transform: none;
-    cursor: not-allowed;
-  }
-  .status {
-    font-size: 13px;
-    margin-top: 8px;
-    color: var(--blue-main);
-    min-height: 1.2em;
-    text-align: center;
-    max-width: 320px;
-  }
-  .timer {
-      font-size: 16px;
-      font-weight: bold;
-      color: var(--cyan-main);
-      margin-top: 10px;
-      height: 20px;
-  }
-
-  /* === Bet & Winner Lists (Tidak Berubah) === */
-  .list-container {
-    width: 100%;
-    max-width: 400px;
-    height: 150px;
-    background: rgba(10, 10, 20, 0.5);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 12px;
-    box-sizing: border-box;
-    overflow-y: auto;
-    flex: 1;
-  }
-  .list-container h3 {
-    margin: 0 0 10px 0; font-size: 14px;
-    color: var(--blue-main); text-align: center;
-    text-transform: uppercase;
-  }
-  .bet-list-item, .winner-list-item {
-    background: rgba(20, 20, 40, 0.7);
-    border-radius: 4px; padding: 8px 10px;
-    margin-bottom: 6px; font-size: 12px;
-  }
-  .bet-list-item {
-    display: flex; justify-content: space-between;
-    align-items: center;
-  }
-  .bet-list-item .player-id { font-weight: bold; color: var(--cyan-main); }
-  .bet-list-item .player-bets { text-align: right; color: #eee; }
-  .winner-list-item .winner-id {
-    font-weight: bold;
-    color: var(--cyan-main);
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-  }
-  .winner-list-item .winner-id span {
-      font-weight: normal;
-      color: #aaa;
-  }
-  .winner-list-item .prize-line {
-      font-size: 11px;
-      color: #eee;
-  }
-  #bet-list-placeholder, #winner-list-placeholder {
-    text-align: center; font-size: 13px;
-    color: #888; padding-top: 20px;
-  }
-
-  /* === Modal Base (Digunakan oleh Bet & Referral) === */
-  .modal-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(5px);
-    z-index: 999; display: none; opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-  .modal { /* [DIUBAH] Nama kelas generik */
-    position: fixed; top: 50%; left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    width: 90%; max-width: 380px;
-    background: var(--bg-modal);
-    border: 2px solid var(--border-color);
-    border-radius: 16px;
-    box-shadow: 0 0 40px rgba(180, 0, 255, 0.3);
-    z-index: 1000; display: none; opacity: 0;
-    transition: all 0.3s ease;
-  }
-  .modal-overlay.show, .modal.show { display: block; opacity: 1; }
-  .modal.show { transform: translate(-50%, -50%) scale(1); }
-  .modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid rgba(120, 0, 255, 0.2);
-  }
-  .modal-header h2 { margin: 0; font-size: 20px; color: var(--blue-main); }
-  .modal-close-btn {
-    font-size: 28px; font-weight: bold; color: #fff;
-    cursor: pointer; line-height: 1; background: none; border: none;
-  }
-  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-  .balance-display, .limits-display { font-size: 13px; color: #999; line-height: 1.5; }
-  .limits-display p { margin: 2px 0; }
-  .balance-display span, .limits-display span { font-weight: bold; color: var(--cyan-main); }
-  .input-group { display: flex; gap: 10px; }
-  .input-group input, .input-group select {
-    background: #06060c;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    color: #fff;
-    font-family: "Ubuntu", sans-serif;
-    font-size: 16px;
-    padding: 10px 12px;
-  }
-  .input-group input { flex-grow: 1; width: 65%; }
-  .input-group select { width: 35%; }
-  .percent-buttons { display: flex; justify-content: space-between; gap: 8px; }
-  .percent-btn {
-    flex: 1; background: rgba(120, 0, 255, 0.2);
-    border: 1px solid var(--border-color);
-    border-radius: 8px; color: #fff;
-    padding: 8px 10px; font-size: 13px;
-    cursor: pointer; transition: background 0.2s ease;
-  }
-  .percent-btn:hover { background: rgba(120, 0, 255, 0.4); }
-  .modal-footer { padding: 20px; border-top: 1px solid rgba(120, 0, 255, 0.2); }
-  
-  /* Tombol di footer modal */
-  .modal-btn {
-    width: 100%;
-    background: linear-gradient(90deg, var(--blue-main), var(--pink-main));
-    border: none; border-radius: 12px; color: white;
-    font-size: 16px; font-weight: bold; padding: 12px 30px;
-    cursor: pointer; text-transform: uppercase;
-    box-shadow: 0 0 20px var(--blue-main);
-    transition: all 0.3s ease;
-  }
-  .modal-btn:hover { box-shadow: 0 0 25px var(--pink-main); transform: scale(1.02); }
-  .modal-btn:disabled {
-    background: #555; color: #999;
-    box-shadow: none; transform: none; cursor: not-allowed;
-  }
-  
-  /* [BARU] Style khusus untuk Referral Modal */
-  .ref-section {
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(120, 0, 255, 0.1);
-  }
-  .ref-section:last-child { border-bottom: none; }
-  .ref-section h3 {
-      font-size: 16px;
-      color: var(--cyan-main);
-      margin: 0 0 10px 0;
-  }
-  .ref-info {
-      font-size: 14px;
-      color: #ccc;
-      line-height: 1.6;
-  }
-  .ref-info span {
-      color: #fff;
-      font-weight: bold;
-  }
-  .ref-section .input-group {
-      margin-bottom: 10px;
-  }
-  
-  @media (max-width: 840px) {
-    .lists-wrapper {
-        flex-direction: column;
-    }
-  }
-
-  /* === Donut Wheel Section === */
-.donut-wrap {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  justify-content: center;
-  margin-top: 12px;
-  flex-wrap: wrap;
+button {
+  font-size: 16px;
+  font-weight: bold;
+  padding: 15px 40px;
+  color: white;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
   position: relative;
+  overflow: hidden;
+  transition: 0.3s ease;
 }
 
-#donutCanvas {
-  background: linear-gradient(90deg, #03a9f4, #f441a5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  border-radius: 50%;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-}
-
-.donut-pointer {
+/* ========= 1. Spin Border ========= */
+.btn1::before {
+  content: "";
   position: absolute;
-  top: 15px; /* Sesuaikan sedikit agar pas di atas donut */
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 15px solid transparent;
-  border-right: 15px solid transparent;
-  border-top: 30px solid var(--blue-main); 
-  z-index: 10;
-  filter: drop-shadow(0 -2px 5px rgba(0, 179, 255, 0.7)); 
+  inset: 0;
+  padding: 2px;
+  border-radius: 12px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(75, 0, 130, 0.9),
+    rgba(138, 43, 226, 0.4),
+    rgba(75, 0, 130, 0)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin 3s linear infinite;
+}
+.btn1:hover { transform: scale(1.05); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ========= 2. Breathing Glow ========= */
+.btn2 {
+  border: 2px solid rgba(75, 0, 130, 0.7);
+  box-shadow: 0 0 15px rgba(75, 0, 130, 0.6);
+  animation: breathe 2s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 15px rgba(75, 0, 130, 0.6); }
+  50% { box-shadow: 0 0 30px rgba(138, 43, 226, 0.9); }
 }
 
-  @media (min-width: 768px) {
-  .list-container {
-    max-height: 400px; /* Tinggi maksimal lebih besar di PC */
-    /* Atau gunakan height tetap jika ingin selalu tinggi: */
-    /* height: 400px; */
-  }
-  }
-  
-  /* === Style Khusus Modal Referral === */
-
-/* Body modal agar lebih rapi */
-#referral-modal .modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 20px; /* Jarak antar section */
-    padding-bottom: 10px; /* Sedikit jarak sebelum footer */
+/* ========= 3. Indigo Pulse ========= */
+.btn3::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  border: 2px solid indigo;
+  animation: pulse 1.8s infinite;
+}
+@keyframes pulse {
+  0% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0.6; transform: scale(1); }
 }
 
-/* Section dalam referral */
-.ref-section {
-    padding-bottom: 15px;
-    border-bottom: 1px solid rgba(120, 0, 255, 0.2); /* Garis pemisah lebih terlihat */
+/* ========= 4. Sliding Indigo Border ========= */
+.btn4::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: linear-gradient(90deg, indigo, transparent, indigo);
+  background-size: 200% 100%;
+  animation: slide 2s linear infinite;
+}
+@keyframes slide {
+  0% { background-position: 0 0; }
+  100% { background-position: 200% 0; }
 }
 
-.ref-section:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
+/* ========= 5. Neon Flicker ========= */
+.btn5 {
+  border: 2px solid indigo;
+  box-shadow: 0 0 15px rgba(75, 0, 130, 0.8);
+  animation: flicker 2s infinite;
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.8; filter: brightness(1.5); }
+  70% { opacity: 0.6; filter: brightness(2); }
 }
 
-.ref-section h3 {
-    font-size: 15px;
-    color: var(--cyan-main);
-    margin: 0 0 10px 0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+/* ========= 6. Orbit Gradient Border ========= */
+.btn6::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: 12px;
+  background: conic-gradient(
+    from 90deg,
+    indigo,
+    violet,
+    rgba(75,0,130,0),
+    indigo
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  animation: orbit 4s linear infinite;
+}
+@keyframes orbit { to { transform: rotate(360deg); } }
+
+/* ========= 7. Ripple Hover ========= */
+.btn7 {
+  border: 2px solid indigo;
+  overflow: hidden;
+}
+.btn7::after {
+  content: "";
+  position: absolute;
+  width: 20px; height: 20px;
+  background: indigo;
+  border-radius: 50%;
+  transform: scale(0);
+  opacity: 0.5;
+  transition: transform 0.5s, opacity 0.5s;
+}
+.btn7:hover::after {
+  transform: scale(15);
+  opacity: 0;
 }
 
-/* Kotak info (My Info, Rewards) */
-.ref-info {
-    background: rgba(0, 0, 0, 0.2);
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 13px;
-    color: #ccc;
-    line-height: 1.6;
+/* ========= 8. Gradient Sweep ========= */
+.btn8::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  background: linear-gradient(135deg, indigo, violet, transparent);
+  background-size: 200%;
+  animation: sweep 3s linear infinite;
+}
+@keyframes sweep {
+  0% { background-position: 0 0; }
+  100% { background-position: 200% 200%; }
 }
 
-.ref-info span {
-    color: #fff;
-    font-weight: bold;
+/* ========= 9. Outline Fade ========= */
+.btn9 {
+  border: 2px solid indigo;
+  animation: fadeOutline 3s infinite;
+}
+@keyframes fadeOutline {
+  0%, 100% { border-color: rgba(75,0,130,0.4); }
+  50% { border-color: rgba(138,43,226,0.9); }
 }
 
-/* Input khusus link referral agar terlihat beda */
-#referralLinkInput {
-    width: 100%;
-    background: rgba(0, 255, 255, 0.1);
-    border-color: var(--cyan-main);
-    color: var(--cyan-main);
-    font-size: 12px;
-    cursor: pointer;
+/* ========= 10. Rotating Glow Ring ========= */
+.btn10 {
+  position: relative;
+  z-index: 0;
 }
-
-  #nicknameInput {
-    width: 100%;
-    background: rgba(0, 255, 255, 0.1);
-    border-color: var(--cyan-main);
-    color: #fff;
-    font-size: 15px;
-
-  }
-
-/* Footer khusus untuk tombol Claim */
-#referral-modal .modal-footer {
-    padding: 15px 20px;
-    border-top: 1px solid rgba(120, 0, 255, 0.2);
-    background: rgba(0, 0, 0, 0.2); /* Sedikit lebih gelap */
+.btn10::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border-radius: 15px;
+  background: conic-gradient(indigo, violet, indigo, transparent);
+  z-index: -1;
+  animation: spin 3s linear infinite;
 }
-
-/* Tombol Claim memenuhi lebar */
-#claimRewardsBtn, #createNicknameBtn, #copyReferralBtn {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-}
-
-/* === Cyberpunk Data Box Style (Revisi Layout) === */
-
-/* Container utama untuk info referral */
-.ref-info {
-    display: flex;
-    flex-wrap: wrap; /* Agar bisa turun ke baris baru */
-    gap: 10px; /* Jarak antar kotak */
-    margin-bottom: 15px;
-}
-
-/* Kotak data individual */
-.ref-data-box {
-    flex: 1 1 45%; /* Default: ambil ~50% lebar (2 kolom) */
-    background: linear-gradient(135deg, rgba(10, 10, 30, 0.9), rgba(5, 5, 16, 0.8));
-    border: 1px solid rgba(0, 255, 255, 0.3);
-    border-left: 3px solid var(--cyan-main); /* Aksen kiri */
-    padding: 10px;
-    border-radius: 4px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-}
-
-/* Kotak lebar penuh untuk Total Referrals */
-.ref-data-box.full-width {
-    flex: 1 1 100%;
-    border-left-color: var(--pink-main); /* Aksen warna beda untuk total */
-}
-
-/* Label data (misal: "Nickname:") */
-.ref-label {
-    display: block;
-    font-size: 10px;
-    color: #88aaff;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-    font-family: 'Courier Prime', monospace;
-}
-
-/* Nilai data (misal: "Contoh", "0.000") */
-.ref-value {
-    display: block;
-    font-size: 14px;
-    font-weight: bold;
-    color: #fff;
-    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis; /* Titik-titik jika terlalu panjang */
-}
-
-/* Efek scanline halus di setiap kotak */
-.ref-data-box::after {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 255, 255, 0.05) 3px,
-        rgba(0, 255, 255, 0.05) 4px
-    );
-    pointer-events: none;
-    opacity: 0.3;
-}
-
-  /* === [BARU] Gaya Komentar Futuristik (Terminal) === */
-
-/* Container terminal utama */
-.comments-terminal {
-    background: rgba(0, 0, 0, 0.8); /* Latar lebih gelap agar teks terminal terbaca */
-    border: 1px solid var(--purple-main);
-    border-radius: 6px;
-    padding: 10px;
-    font-family: 'Courier Prime', monospace; /* Font monospace penting untuk gaya terminal */
-    font-size: 12px;
-    box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.5);
-    max-height: 300px; /* Batasi tinggi agar tidak terlalu panjang */
-    overflow-y: auto; /* Scroll jika komentar banyak */
-}
-
-/* Header terminal (misal: > LOG FOR WINNER...) */
-.terminal-header {
-    color: var(--cyan-main);
-    border-bottom: 1px dashed var(--purple-main);
-    padding-bottom: 4px;
-    margin-bottom: 10px;
-    font-size: 10px; 
-    opacity: 0.8;
-    letter-spacing: 1px;
-}
-
-/* Blok satu komentar individu */
-.comment-log {
-    margin-bottom: 12px;
-    padding-left: 8px;
-    border-left: 2px solid var(--blue-main); /* Indikator garis di kiri */
-}
-
-/* Metadata komentar (Nickname, Waktu, Wallet) */
-.log-meta { 
-    color: #888; 
-    font-size: 10px; 
-    margin-bottom: 2px; 
-}
-.log-nickname { 
-    color: var(--pink-main); /* Nickname warna pink neon */
-    font-weight: bold; 
-}
-.log-wallet { 
-    color: #555; 
-}
-
-/* Isi pesan komentar */
-.log-message { 
-    color: #eee; 
-    line-height: 1.4; 
-    white-space: pre-wrap; /* Agar enter/baris baru terbaca */
-}
-
-/* Input gaya terminal */
-.terminal-input {
-    flex-grow: 1; /* Mengisi sisa ruang */
-    background: rgba(0,0,0,0.3);
-    border: none; 
-    border-bottom: 1px solid var(--cyan-main);
-    color: var(--cyan-main);
-    font-family: 'Courier Prime', monospace;
-    padding: 4px 6px; 
-    outline: none;
-    font-size: 12px;
-}
-.terminal-input::placeholder {
-    color: rgba(0, 255, 255, 0.3);
-}
-
-/* Tombol gaya terminal ([ SEND ], [ EDIT LOG ], dll) */
-.terminal-btn {
-    background: rgba(0, 255, 255, 0.1);
-    border: 1px solid var(--cyan-main);
-    color: var(--cyan-main); 
-    padding: 3px 8px; 
-    font-size: 10px;
-    cursor: pointer; 
-    font-family: 'Courier Prime', monospace;
-    transition: all 0.2s ease;
-}
-.terminal-btn:hover { 
-    background: var(--cyan-main); 
-    color: #000; /* Teks jadi hitam saat hover agar kontras */
-}
-
-  .log-message { 
-    /* ... */
-    white-space: pre-wrap; /* Ini yang membuat baris baru (enter) terlihat */
-  }
-
-/* === [BARU] Navbar Glassmorphism === */
-.navbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 70px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 30px;
-    box-sizing: border-box;
-    z-index: 1000;
-
-    /* Efek Glassmorphism */
-    background: rgba(10, 10, 25, 0.6); /* Latar belakang transparan gelap */
-    backdrop-filter: blur(12px); /* Efek blur di belakangnya */
-    border-bottom: 1px solid rgba(120, 0, 255, 0.3); /* Garis batas halus */
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3); /* Bayangan lembut */
-}
-
-.navbar-logo {
-    font-family: "Ubuntu", sans-serif;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    /* Anda bisa menambahkan <img> di sini jika punya file logo */
-}
-
-.navbar-actions {
-    display: flex;
-    gap: 15px;
-    align-items: center;
-}
-
-/* Hapus style .wallet-container yang lama karena sudah tidak dipakai */
-/* .wallet-container { ... }  <-- HAPUS INI */
-
-/* Sesuaikan posisi modal wallet agar pas di bawah navbar */
-#wallet-modal {
-    top: 80px; /* 70px navbar + 10px jarak */
-    right: 25px;
-    /* ... (sisa style modal tetap sama) ... */
-}
-
-  /* ===== Minimal Footer Style ===== */
-  footer {
-        text-align: center;
-        margin-top: 20px;
-        padding: 10px;
-        background: #000; /* Warna gelap */
-        color: #ddd; /* Warna teks */
-        font-size: 12px;
-    }
-
-    .social-icons {
-        margin-bottom: 10px;
-    }
-
-    .social-icons a {
-    background: rgba(255, 255, 255, 0.2); /* Transparan seperti kaca */
-    border-radius: 10px; /* Agar sedikit membulat */
-    padding: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: white; /* Warna ikon */
-    font-size: 15px;
-    margin: 0 5px;
-    text-decoration: none;
-    transition: transform 0.5s ease, text-shadow 0.5s ease, box-shadow 0.5s ease;
-    box-shadow: 0 0 10px rgba(0, 0, 255, 0.6); /* Cahaya biru */
-    backdrop-filter: blur(10px); /* Efek blur kaca */
-}
-
-/* Efek saat hover */
-.social-icons a:hover {
-    color: #1a88ff; /* Warna biru neon */
-    text-shadow: 0 0 10px #1a88ff, 0 0 20px #1a88ff, 0 0 30px #1a88ff; /* Glow lebih intens */
-    box-shadow: 0 0 20px rgba(0, 0, 255, 1), 0 0 30px rgba(0, 0, 255, 0.8); /* Shadow lebih terang */
-    transform: rotate(360deg); /* Efek berputar */
+.btn10::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 12px;
+  background: #0a0a0f;
+  z-index: 1;
 }
 </style>
 </head>
-
 <body>
-   <nav class="navbar">
-      <div class="navbar-logo">
-    <img src="logo.svg" alt="Faylotto Logo" style="height: 40px; margin-right: 10px;">
-    <span style="font-weight:bold; font-size:20px; color:var(--cyan-main);"></span></div>
-      <div class="navbar-actions">
-          <button class="referral-btn" id="referralBtn">Referral</button>
-          <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
-      </div>
-   </nav>
-
-  <div class="modal-overlay" id="wallet-modal-overlay"></div>
-  <div class="modal" id="wallet-modal">
-    <div class="modal-header">
-      <h2>Wallet Info</h2>
-      <button class="modal-close-btn" id="wallet-modal-close-btn">&times;</button>
-    </div>
-    <div class="modal-body" id="walletInfo"> 
-      <p>Address: <span id="walletAddress">-</span></p>
-      <p>Balance (ETH): <span id="ethBalance">0</span></p>
-      <p>Balance (USDT): <span id="usdtBalance">0</span></p>
-      <hr/>
-      <p>My Deposits (ETH): <span id="myEthDeposit">0</span></p>
-      <p>My Deposits (USDT): <span id="myUsdtDeposit">0</span></p>
-    </div>
-    <div class="modal-footer">
-      <button id="disconnectBtn" class="modal-btn modal-btn-disconnect">Disconnect</button>
-    </div>
-  </div>
-
-  <section id="hero-section">
-    <div class="hero-static-bg"></div>
-    
-    <div class="hero-content">
-        <h2 class="hero-title">
-         <span class="highlight-text">Faylotto Spin Battle</span></h2>
-        <p class="hero-subtitle">
-            Putar roda keberuntungan pertarungan di jaringan terdesentralisasi. Adil, transparan, dan otomatis.
-        </p>
-        
-        <div class="hero-cta-container" onclick="document.querySelector('.app-body').scrollIntoView({behavior: 'smooth'})">
-            <button class="play-now-btn">
-                PLAY NOW! <span class="arrow-icon">↓</span>
-            </button>
-        </div>
-    </div>
-  </section>
-
-  <div class="app-body" style="margin-top: 80px;"> 
-      
-      </div>
-
-    <div class="donut-wrap">
-        <div class="donut-pointer"></div>
-        <canvas id="donutCanvas" width="360" height="360"></canvas>
-    </div>
-
-    <div class="controls">
-      <button id="placeBetBtn" class="main-btn">Place Bet</button>
-      <button id="finalizeBtn" class="main-btn">Finalize Round</button>
-      <div class="status" id="statusText">Wallet not connected</div>
-      <div class="timer" id="timerText"></div>
-    </div>
-    
-    <div class="lists-wrapper">
-      <div id="bet-list-container" class="list-container">
-          <h3>Current Round Bets</h3>
-          <div id="bet-list">
-              <p id="bet-list-placeholder">No bets placed yet in this round.</p>
-          </div>
-      </div>
-      
-      <div id="winner-list-container" class="list-container">
-          <h3>Recent Winners</h3>
-          <div id="winner-list">
-              <p id="winner-list-placeholder">No winners yet.</p>
-          </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="bet-modal-overlay"></div>
-  <div class="modal" id="bet-modal">
-    <div class="modal-header">
-      <h2>Place Your Bet</h2>
-      <button class="modal-close-btn" id="bet-modal-close-btn">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="balance-display">
-        <p>Your Balance:<br/>
-          <span id="modalEthBalance">0</span> ETH<br/>
-          <span id="modalUsdtBalance">0</span> USDT
-        </p>
-      </div>
-      <div class="limits-display"> <p>Mins: <span>0.00005 ETH</span> / <span>0.5 USDT</span></p>
-        <p>Max Total: <span>0.00256 ETH</span> / <span>10 USDT</span></p>
-        <p>Max Bets: <span>2 per round</span></p>
-      </div>
-      <div class="input-group">
-        <input type="number" id="betAmountInput" placeholder="Custom Amount">
-        <select id="betCurrencySelect">
-          <option value="ETH">ETH</option>
-          <option value="USDT">USDT</option>
-        </select>
-      </div>
-      <div class="percent-buttons">
-        <button class="percent-btn" data-percent="0.10">10%</button>
-        <button class="percent-btn" data-percent="0.25">25%</button>
-        <button class="percent-btn" data-percent="0.50">50%</button>
-        <button class="percent-btn" data-percent="0.57">57%</button>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button id="confirmBetBtn" class="modal-btn">Confirm Bet</button>
-    </div>
-  </div>
-  
-  <div class="modal-overlay" id="referral-modal-overlay"></div>
-
-<div class="modal" id="referral-modal">
-
-    <div class="modal-header">
-
-        <h2>Referral System</h2>
-
-        <button class="modal-close-btn" id="referral-modal-close-btn">&times;</button>
-
-    </div>
-
-
-
-    <div class="ref-section">
-
-    <h3>My Info</h3>
-
-    <div class="ref-info">
-
-        <div class="ref-data-box">
-
-            <span class="ref-label">Nickname:</span>
-
-            <span class="ref-value" id="myNickname">-</span>
-
-        </div>
-
-        <div class="ref-data-box">
-
-            <span class="ref-label">Referrer:</span>
-
-            <span class="ref-value" id="myReferrer">-</span>
-
-        </div>
-
-    </div>
-
-    </div>
-
-
-
-        <div class="ref-section">
-
-            <h3>Create Nickname to Get Referral Link</h3>
-
-            <div class="input-group">
-
-                <input type="text" id="nicknameInput" placeholder="Enter your nickname">
-
-            </div>
-
-            <button id="createNicknameBtn" class="modal-btn">Create Nickname</button>
-
-        </div>
-
-
-
-        <div class="ref-section" id="referralLinkSection" style="display: none;">
-
-            <h3>Your Referral Link</h3>
-
-            <div class="input-group">
-
-                <input type="text" id="referralLinkInput" readonly style="cursor: pointer;">
-
-            </div>
-
-            <br><button id="copyReferralBtn" class="modal-btn">Copy Link</button>
-
-        </div>
-
-
-
-        <div class="ref-section">
-
-    <h3>My Rewards</h3>
-
-    <div class="ref-info">
-
-        <div class="ref-data-box">
-
-            <span class="ref-label">ETH Reward:</span>
-
-            <span class="ref-value" id="ethRewards">0</span>
-
-        </div>
-
-        <div class="ref-data-box">
-
-            <span class="ref-label">USDT Reward:</span>
-
-            <span class="ref-value" id="usdtRewards">0</span>
-
-        </div>
-
-        <div class="ref-data-box full-width" style="display: flex; justify-content: space-between; align-items: center;">
-
-             <span class="ref-label" style="margin:0; font-size: 12px;">Total Referrals:</span>
-
-             <span class="ref-value" id="referralCount" style="font-size: 18px; color: var(--pink-main);">0</span>
-
-        </div>
-
-    </div>
-
-        </div>
-
-
-
-    <div class="modal-footer">
-
-        <button id="claimRewardsBtn" class="modal-btn">Claim Rewards</button>
-
-    </div>
-
-</div>
-
-</div>
-
-  <footer>
-    <div id="footer" class="social-icons">
-        <a href="https://x.com/FaylottoXyz" target="_blank"><i class="fa-brands fa-twitter"></i></a>
-        <a href="https://t.me/FaylottoXyz" target="_blank"><i class="fa-brands fa-telegram"></i></a>
-        <a href="https://t.me/Faylotto" target="_blank"><i class="fa-brands fa-telegram"></i></a>
-        <a href="https://discord.gg/6uMYTdCZwJ" target="_blank"><i class="fa-brands fa-discord"></i></a>
-        <a href="https://facebook.com/Faylotto" target="_blank"><i class="fa-brands fa-facebook"></i></a>
-    </div>
-    <p>
-      © Powered By Faylotto.
-      <span>
-        <a href="https://docs.faylotto.xyz/policy/AllRightsReserved" style="color: #007bff; text-decoration: none;" target="_blank">
-          <span id="year"></span> All rights reserved. 
-        </a>
-      </span>
-      Play responsibly.
-      <span>
-        <a href="privacypolicy" style="color: #007bff; text-decoration: none;" target="_blank">
-          Privacy Policy.
-        </a>
-      </span>
-    </p>
-  </footer>
+  <h1>🎨 Indigo Border Animation Showcase</h1>
+  <button class="btn1">Spin Border</button>
+  <button class="btn2">Breathing Glow</button>
+  <button class="btn3">Indigo Pulse</button>
+  <button class="btn4">Sliding Border</button>
+  <button class="btn5">Neon Flicker</button>
+  <button class="btn6">Orbit Gradient</button>
+  <button class="btn7">Ripple Hover</button>
+  <button class="btn8">Gradient Sweep</button>
+  <button class="btn9">Outline Fade</button>
+  <button class="btn10">Rotating Glow Ring</button>
 </body>
-  </html>
+</html>
