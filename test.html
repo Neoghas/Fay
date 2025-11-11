@@ -32,6 +32,27 @@ button {
   transition: 0.3s ease;
 }
 
+/* ========= 1. Spin Border ========= */
+.btn1::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: 12px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(75, 0, 130, 0.9),
+    rgba(138, 43, 226, 0.4),
+    rgba(75, 0, 130, 0)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: spin 3s linear infinite;
+}
+.btn1:hover { transform: scale(1.05); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ========= 2. Breathing Glow ========= */
 .btn2 {
   border: 2px solid rgba(75, 0, 130, 0.7);
@@ -41,6 +62,21 @@ button {
 @keyframes breathe {
   0%, 100% { box-shadow: 0 0 15px rgba(75, 0, 130, 0.6); }
   50% { box-shadow: 0 0 30px rgba(138, 43, 226, 0.9); }
+}
+
+/* ========= 3. Indigo Pulse ========= */
+.btn3::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  border: 2px solid indigo;
+  animation: pulse 1.8s infinite;
+}
+@keyframes pulse {
+  0% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0.6; transform: scale(1); }
 }
 
 /* ========= 4. Sliding Indigo Border ========= */
@@ -57,6 +93,18 @@ button {
 @keyframes slide {
   0% { background-position: 0 0; }
   100% { background-position: 200% 0; }
+}
+
+/* ========= 5. Neon Flicker ========= */
+.btn5 {
+  border: 2px solid indigo;
+  box-shadow: 0 0 15px rgba(75, 0, 130, 0.8);
+  animation: flicker 2s infinite;
+}
+@keyframes flicker {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.8; filter: brightness(1.5); }
+  70% { opacity: 0.6; filter: brightness(2); }
 }
 
 /* ========= 6. Orbit Gradient Border ========= */
@@ -99,163 +147,71 @@ button {
   opacity: 0;
 }
 
-/* ========= 8. Gradient Sweep ========= */
-.btn8::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  border: 2px solid transparent;
-  background: linear-gradient(135deg, indigo, violet, transparent);
-  background-size: 200%;
-  animation: sweep 3s linear infinite;
-}
-@keyframes sweep {
-  0% { background-position: 0 0; }
-  100% { background-position: 200% 200%; }
-}
-
-/* ========= 9. Outline Fade ========= */
-.btn9 {
-  border: 2px solid indigo;
-  animation: fadeOutline 3s infinite;
-}
-@keyframes fadeOutline {
-  0%, 100% { border-color: rgba(75,0,130,0.4); }
-  50% { border-color: rgba(138,43,226,0.9); }
-}
-
-/* ========= 10. Rotating Glow Ring ========= */
+/* Tombol Rotating Glow Ring */
 .btn10 {
   position: relative;
-  z-index: 0;
+  padding: 15px 40px;
+  border: none;
+  border-radius: 12px;
+  color: #fff;
+  background: #0b0e17;
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  z-index: 1;
+  overflow: hidden;
 }
+
 .btn10::before {
   content: "";
   position: absolute;
   inset: -3px;
   border-radius: 15px;
-  background: background: linear-gradient(90deg, #03a9f4, #f441a5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  z-index: -1;
-  animation: spin 2s linear infinite;
+  background: conic-gradient(indigo, violet, indigo, transparent);
+  z-index: 0;
+  animation: spin 3s linear infinite;
+  opacity: 0.9;
 }
+
 .btn10::after {
   content: "";
   position: absolute;
   inset: 2px;
   border-radius: 12px;
   background: #0a0a0f;
-  z-index: 1;
+  z-index: 0;
 }
 
-  .glow-btn {
+.btn10 span {
   position: relative;
-  padding: 15px 40px;
-  border: none;
-  border-radius: 12px;
-  background: #0b0e17;
-  color: #fff;
-  font-size: 1.1rem;
-  letter-spacing: 1px;
-  cursor: pointer;
-  overflow: hidden;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  z-index: 2; /* teks berada di atas pseudo-element */
 }
 
-.glow-btn::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  padding: 2px;
-  background: conic-gradient(
-    from 0deg,
-    rgba(75, 0, 130, 0.9),
-    rgba(138, 43, 226, 0.5),
-    rgba(75, 0, 130, 0),
-    rgba(75, 0, 130, 0.9)
-  );
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box, 
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: spinBorder 4s linear infinite;
-}
-
-.glow-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(75, 0, 130, 0.6);
-}
-
-.glow-btn:hover::before {
-  animation-duration: 1.5s; /* berputar lebih cepat */
-  background: conic-gradient(
-    from 0deg,
-    rgba(106, 13, 173, 1),
-    rgba(186, 85, 211, 0.7),
-    rgba(106, 13, 173, 0.3),
-    rgba(106, 13, 173, 1)
-  );
-}
-
-@keyframes spinBorder {
-  to {
-    transform: rotate(360deg);
-  }
-}
-  /* Hover Magic ✨ */
-.btn10:hover {
-  transform: scale(1.07);
-  box-shadow: 0 0 25px rgba(100, 0, 200, 0.5),
-              0 0 40px rgba(75, 0, 130, 0.3);
-  transition: all 0.3s ease;
-}
-
-.btn10:hover::before {
-  animation: spin 1.8s linear infinite;
-  background: conic-gradient(
-    from 0deg,
-    rgba(90, 0, 255, 1),
-    rgba(180, 100, 255, 0.8),
-    rgba(120, 0, 255, 0.4),
-    rgba(90, 0, 255, 1)
-  );
-  filter: blur(1px);
-}
-
-.btn10:hover span {
-  color: #caa8ff;
-  text-shadow: 0 0 10px rgba(150, 90, 255, 0.8);
-}
-
-/* Efek tambahan pulse lembut */
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 20px rgba(120, 0, 255, 0.2); }
-  50% { box-shadow: 0 0 30px rgba(160, 60, 255, 0.4); }
-}
-
+/* Hover efek biar tambah hidup */
 .btn10:hover {
-  animation: pulse 2s infinite ease-in-out;
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba(75, 0, 130, 0.6);
+  transition: all 0.3s ease;
 }
 </style>
 </head>
 <body>
   <h1>🎨 Indigo Border Animation Showcase</h1>
+  <button class="btn1">Spin Border</button>
   <button class="btn2">Breathing Glow</button>
+  <button class="btn3">Indigo Pulse</button>
   <button class="btn4">Sliding Border</button>
+  <button class="btn5">Neon Flicker</button>
   <button class="btn6">Orbit Gradient</button>
   <button class="btn7">Ripple Hover</button>
   <button class="btn8">Gradient Sweep</button>
   <button class="btn9">Outline Fade</button>
-  <button class="btn10"><span>Glow Ring</span></button>
+  <button class="btn10">Rotating Glow Ring</button>
 </body>
 </html>
