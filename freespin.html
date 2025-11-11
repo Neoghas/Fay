@@ -4,267 +4,252 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Faylotto Free Spin</title>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.6.4/dist/ethers.umd.min.js"></script>
-
 <style>
-/* ============================
-   GLOBAL STYLE
-============================ */
-body {
-  background: radial-gradient(circle, #111 0%, #000 100%);
-  margin: 0;
-  color: #fff;
-  font-family: "Ubuntu", sans-serif;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
+  body {
+    background: radial-gradient(circle, #111 0%, #000 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh; /* Diubah agar bisa di-scroll jika perlu */
+    height: auto;
+    color: #fff;
+    font-family: "Ubuntu", sans-serif;
+    overflow-x: hidden;
+    padding: 20px 0; /* Memberi padding atas/bawah */
+  }
 
-/* ============================
-   NAVBAR
-============================ */
-.navbar {
-  width: 100%;
-  padding: 15px 25px;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(8px);
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 50;
-}
+  /* Kontrol Wallet */
+  .wallet-controls {
+    position: absolute;
+    top: 25px;
+    right: 25px;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+  }
+  .wallet-btn {
+    background: linear-gradient(145deg, #00b4d8, #0077b6);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: bold;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .wallet-btn:hover { transform: scale(1.05); }
+  .wallet-address {
+    background: #222;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #0ff;
+    border: 1px solid #0ff;
+  }
 
-.navbar-title {
-  font-size: 20px;
-  font-weight: bold;
-  letter-spacing: 1px;
-}
+  /* Roda */
+  .wheel-container {
+    position: relative;
+    width: 350px;
+    height: 350px;
+    margin-top: 60px; /* Beri ruang dari atas */
+  }
+  svg { width: 100%; height: 100%; display: block; }
+  #centerBtn {
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 85px; height: 85px; border-radius: 50%;
+    background: linear-gradient(145deg, #FFD700, #FFA500);
+    color: black; font-weight: bold; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(255, 215, 0, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+    border: 3px solid #fff;
+    transition: all 0.2s ease;
+    z-index: 15;
+  }
+  #centerBtn:hover { transform: translate(-50%, -50%) scale(1.05); }
+  #centerBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .result {
+    margin-top: 30px;
+    font-size: 20px;
+    text-align: center;
+    transition: all 0.5s ease;
+    min-height: 30px;
+  }
 
-/* Wallet button dipindah ke navbar */
-.wallet-controls {
-  display: flex;
-  flex-direction: row;
-  gap: 10px;
-}
+  /* Info Saldo */
+  .info-container { display: flex; gap: 15px; margin-top: 20px; }
+  .info-box {
+    background: #222;
+    border: 1px solid #0077b6;
+    border-radius: 10px;
+    padding: 10px 20px;
+  }
+  .info-box-title { font-size: 12px; color: #00b4d8; margin: 0; }
+  .info-box-value { font-size: 24px; font-weight: bold; color: #fff; margin: 5px 0 0; }
+  .pointer {
+      position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 25px solid gold;
+      z-index: 10;
+      filter: drop-shadow(0 0 5px gold);
+  }
 
-.wallet-btn {
-  background: linear-gradient(145deg, #00b4d8, #0077b6);
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-weight: bold;
-  padding: 10px 18px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-.wallet-btn:hover {
-  transform: scale(1.05);
-  background: linear-gradient(145deg, #48cae4, #0096c7);
-}
-.wallet-address {
-  background: #222;
-  border-radius: 10px;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: bold;
-  color: #0ff;
-  border: 1px solid #0ff;
-}
+  /* --- REVISI: CSS UNTUK REFERRAL (NON-MODAL) --- */
+  .referral-container {
+    background: #1a1a1a;
+    border: 1px solid #00b4d8;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    padding: 20px;
+    margin-top: 30px; /* Jarak dari atas */
+    box-shadow: 0 0 30px rgba(0, 180, 216, 0.5);
+  }
+  .referral-header {
+    text-align: center;
+    color: #00b4d8;
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #0077b6;
+  }
 
-.navbar-logo img {
-  height: 40px;
-  width: auto;
-  object-fit: contain;
-  user-select: none;
-}
-
-/* ============================
-   HERO SECTION
-============================ */
-.hero {
-  margin-top: 120px;
-  text-align: center;
-  padding: 20px;
-}
-.hero h1 {
-  font-size: 32px;
-  margin-bottom: 10px;
-}
-.hero p {
-  color: #ccc;
-  margin-top: 0;
-}
-
-/* ============================
-   WHEEL SPIN SECTION
-============================ */
-.wheel-container {
-  position: relative;
-  width: 350px;
-  height: 350px;
-  margin-top: 30px;
-}
-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.pointer {
-  position: absolute;
-  top: -5px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 0; 
-  height: 0;
-  border-left: 15px solid transparent;
-  border-right: 15px solid transparent;
-  border-top: 25px solid gold;
-  z-index: 10;
-  filter: drop-shadow(0 0 5px gold);
-}
-
-#centerBtn {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 85px;
-  height: 85px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #FFD700, #FFA500);
-  color: black;
-  font-weight: bold;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 
-    0 8px 25px rgba(255, 215, 0, 0.6),
-    inset 0 2px 4px rgba(255, 255, 255, 0.3);
-  border: 3px solid #fff;
-  transition: all 0.2s ease;
-  z-index: 15;
-}
-#centerBtn:hover {
-  transform: translate(-50%, -50%) scale(1.05);
-}
-#centerBtn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.result {
-  margin-top: 30px;
-  font-size: 20px;
-  text-align: center;
-  min-height: 30px;
-}
-
-/* ============================
-   INFO BOX
-============================ */
-.info-container {
-  display: flex;
-  gap: 15px;
-  margin-top: 20px;
-}
-.info-box {
-  background: #222;
-  border: 1px solid #0077b6;
-  border-radius: 10px;
-  padding: 10px 20px;
-}
-.info-box-title {
-  font-size: 12px;
-  color: #00b4d8;
-  margin: 0;
-}
-.info-box-value {
-  font-size: 24px;
-  font-weight: bold;
-  margin-top: 5px;
-}
-
-/* ============================
-   FOOTER
-============================ */
-.footer {
-  margin-top: 50px;
-  padding: 20px;
-  text-align: center;
-  color: #888;
-  font-size: 13px;
-}
+  /* CSS Konten (dari HTML Anda) */
+  .ref-section {
+    background: #222;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  .ref-section h3 { margin-top: 0; color: #00b4d8; }
+  .ref-info { font-size: 14px; line-height: 1.6; }
+  .ref-info span { color: #0ff; font-weight: bold; }
+  .input-group { display: flex; }
+  .input-group input {
+    flex-grow: 1;
+    background: #111;
+    border: 1px solid #0077b6;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+  }
+  .ref-btn { /* REVISI: ganti nama dari .modal-btn */
+    background: linear-gradient(145deg, #00b4d8, #0077b6);
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: bold;
+    padding: 10px 18px;
+    cursor: pointer;
+    transition: 0.2s;
+    width: 100%;
+  }
+  .ref-btn:hover {
+    transform: scale(1.02);
+  }
+  .ref-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 </style>
 </head>
 
 <body>
-
-<!-- ✅ NAVBAR -->
-<div class="navbar">
-  <div class="navbar-logo">
-  <img src="logo.svg" alt="Faylotto Logo">
-  </div>
   <div class="wallet-controls">
     <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
     <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
     <div id="walletAddress" class="wallet-address" style="display:none;">-</div>
   </div>
-</div>
 
-<!-- ✅ HERO -->
-<div class="hero">
-  <h1>Faylotto Free Spin</h1>
-  <p>Dapatkan kesempatan menang hadiah gratis setiap hari!</p>
-</div>
-
-<!-- ✅ WHEEL -->
-<div class="wheel-container">
-  <div class="pointer"></div>
-  <svg id="wheel" viewBox="0 0 500 500"></svg>
-  <div id="centerBtn">FREE<br>SPIN</div>
-</div>
-
-<div class="result" id="resultText">Press SPIN to play</div>
-
-<div class="info-container">
-  <div class="info-box">
-    <h3 class="info-box-title">SPIN TERPAKAI</h3>
-    <p class="info-box-value" id="spinCountText">0 / 2</p>
+  <div class="wheel-container">
+    <div class="pointer"></div>
+    <svg id="wheel" viewBox="0 0 500 500"></svg>
+    <div id="centerBtn">FREE<br>SPIN</div>
   </div>
-  <div class="info-box">
-    <h3 class="info-box-title">SALDO DUMMY (BABYDOGE)</h3>
-    <p class="info-box-value" id="dummyBalanceText">0</p>
+
+  <div class="result" id="resultText">Press SPIN to play</div>
+
+  <div class="info-container">
+    <div class="info-box">
+      <h3 class="info-box-title">SPIN TERPAKAI</h3>
+      <p class="info-box-value" id="spinCountText">0 / 2</p>
+    </div>
+    <div class="info-box">
+      <h3 class="info-box-title">SALDO FREE (BABYDOGE)</h3>
+      <p class="info-box-value" id="freeBalanceText">0</p>
+    </div>
   </div>
-</div>
 
-<!-- ✅ Audio -->
-<audio id="clickSound" src="click.mp3" preload="auto"></audio>
-<audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
-<audio id="winSound" src="win.mp3" preload="auto"></audio>
+  <div class="referral-container">
+    <h2 class="referral-header">Referral System</h2>
 
-<!-- ✅ FOOTER -->
-<div class="footer">
-  © 2025 Faylotto — All rights reserved.
-</div>
+    <div class="ref-section">
+        <h3>My Info</h3>
+        <div class="ref-info">
+            My Nickname: <span id="myNickname">-</span><br/>
+            My Referrer: <span id="myReferrer">-</span>
+        </div>
+    </div>
+    
+    <div class="ref-section">
+        <h3>Create/Update Nickname</h3>
+        <div class="input-group">
+            <input type="text" id="nicknameInput" placeholder="Enter 3+ character nickname">
+        </div>
+        <br>
+        <button id="createNicknameBtn" class="ref-btn">Create / Update</button>
+    </div>
+
+    <div class="ref-section" id="referralLinkSection" style="display: none;">
+          <h3>Your Referral Link</h3>
+          <div class="input-group">
+              <input type="text" id="referralLinkInput" readonly style="cursor: pointer;">
+          </div>
+          <br><button id="copyReferralBtn" class="ref-btn">Copy Link</button>
+    </div>
+    
+    <div class="ref-section">
+      <h3>My Rewards</h3>
+      <div class="ref-info">
+          <img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+          ETH Rewards: <span id="ethRewards">0</span><br/>
+
+          <img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+          USDT Rewards: <span id="usdtRewards">0</span><br/>
+          
+          <img src="babydoge.png" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+          BabyDoge Rewards: <span id="babyDogeRewards">0</span><br/>
+
+          <hr style="border-color: #0077b6; margin: 10px 0;">
+
+          <img src="ref.png" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+          Total Referrals: <span id="referralCount">0</span>
+      </div>
+      <br>
+      <button id="claimRewardsBtn" class="ref-btn">Claim Rewards</button>
+    </div>
+  </div>
+  <audio id="clickSound" src="click.mp3" preload="auto"></audio>
+  <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
+  <audio id="winSound" src="win.mp3" preload="auto"></audio>
+
 
 <script>
-// === 1. INTEGRASI: KONFIGURASI KONTRAK ===
-// Ganti dengan alamat kontrak Anda yang sudah di-deploy
+// === 1. KONFIGURASI KONTRAK ===
+// Ganti dengan alamat kontrak V4 (Free) Anda yang sudah di-deploy
 const FAYLOTTO_ADDRESS = "0x10A57Be049bFF9bF84CBC952B73979c9cDb946Fe"; 
 
-// ABI minimal yang diperlukan untuk halaman ini
+// REVISI: ABI dikosongkan sesuai permintaan Anda
 const FAYLOTTO_ABI = [{"inputs":[{"internalType":"address","name":"_usdtToken","type":"address"},{"internalType":"address","name":"_babyDogeToken","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetBabyDoge","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetDummy","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetETH","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetUSDT","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"FreeSpinNoPrize","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"prizeTier","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FreeSpinWon","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"usdtAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"babyDogeAmount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardUSDT","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardBabyDoge","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardUSDT","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardBabyDoge","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_BETS_PER_PLAYER","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_BABYDOGE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_ETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_USDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_BET_BABYDOGE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawBabyDoge","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawUSDT","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"babyDogeToken","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"dummyBalances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dummyBetCost","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"usdtAmount","type":"uint256"},{"internalType":"uint256","name":"babyDogeAmount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"usdtReward","type":"uint256"},{"internalType":"uint256","name":"babyDogeReward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalUSDT","type":"uint256"},{"internalType":"uint256","name":"totalBabyDoge","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"isFreeSpinPaused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pauseFreeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetBabyDoge","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetDummy","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"ethValue","type":"uint256"}],"name":"placeBetETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetUSDT","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"quotaTier1","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier2","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier3","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier4","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier5","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier6","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier7","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsBabyDoge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsUSDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setBabyDoge","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"cost","type":"uint256"}],"name":"setDummyBetCost","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setUSDT","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"spinCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinFree","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpauseFreeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"usdtToken","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardUSDT","type":"uint256"},{"internalType":"uint256","name":"rewardBabyDoge","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardUSDT","type":"uint256"},{"internalType":"uint256","name":"rewardBabyDoge","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
-  
+
+
 // === Variabel Global (Kode Anda) ===
 let provider, signer, contract, userAddress;  
 const btn = document.getElementById("centerBtn");  
@@ -277,23 +262,37 @@ const spinSound = document.getElementById("spinSound");
 const winSound = document.getElementById("winSound");  
 const svg = document.getElementById("wheel");
 
-// INTEGRASI: Variabel UI baru
+// Variabel UI (nama diganti ke freeBalanceText)
 const spinCountText = document.getElementById("spinCountText");
-const dummyBalanceText = document.getElementById("dummyBalanceText");
+const freeBalanceText = document.getElementById("freeBalanceText");
+
+// REVISI: DOM Elemen untuk Referral
+const myNickname = document.getElementById("myNickname");
+const myReferrer = document.getElementById("myReferrer");
+const nicknameInput = document.getElementById("nicknameInput");
+const createNicknameBtn = document.getElementById("createNicknameBtn");
+const referralLinkSection = document.getElementById("referralLinkSection");
+const referralLinkInput = document.getElementById("referralLinkInput");
+const copyReferralBtn = document.getElementById("copyReferralBtn");
+const ethRewards = document.getElementById("ethRewards");
+const usdtRewards = document.getElementById("usdtRewards");
+const babyDogeRewards = document.getElementById("babyDogeRewards");
+const referralCount = document.getElementById("referralCount");
+const claimRewardsBtn = document.getElementById("claimRewardsBtn");
   
-// === 2. INTEGRASI: PETA HADIAH ===
-// Kita petakan 'tier' dari kontrak ke irisan roda visual
+// === 2. PETA HADIAH (Sesuai Revisi V4 - 9 Tier) ===
 const prizes = [  
-  { name: "10.000.000", icon: "bb.svg", tier: 6 }, // Tier 6 (Diff 1)
-  { name: "5.000.000", icon: "bb.svg", tier: 1 }, // Tier 1 (Diff 6)
-  { name: "8.500.000", icon: "bb.svg", tier: 4 }, // Tier 4 (Diff 3)
-  { name: "No Prize", icon: "no.png", tier: 0 },   // '0' = No Prize
-  { name: "9.000.000", icon: "bb.svg", tier: 5 }, // Tier 5 (Diff 2)
-  { name: "1.000.000", icon: "bb.svg", tier: 7 }, // Tier 7 (Tambahan) & Tier 8 (TryAgain)
-  { name: "6.500.000", icon: "bb.svg", tier: 2 }, // Tier 2 (Diff 5)
-  { name: "7.500.000", icon: "bb.svg", tier: 3 }, // Tier 3 (Diff 4)
-  { name: "Try again", icon: "again.png", tier: 0 } // '0' = No Prize
-];  
+  { name: "10.000.000", icon: "bb.svg", tier: 9 }, // Tier 9 (Diff 1)
+  { name: "250.000",   icon: "bb.svg", tier: 1 }, // Tier 1 (Diff 9)
+  { name: "5.000.000",   icon: "bb.svg", tier: 7 }, // Tier 7 (Diff 3)
+  { name: "500.000",   icon: "bb.svg", tier: 2 }, // Tier 2 (Diff 8)
+  { name: "3.000.000",   icon: "bb.svg", tier: 5 }, // Tier 5 (Diff 5)
+  { name: "1.000.000",   icon: "bb.svg", tier: 3 }, // Tier 3 (Diff 7)
+  { name: "6.000.000",   icon: "bb.svg", tier: 8 }, // Tier 8 (Diff 2)
+  { name: "4.000.000",   icon: "bb.svg", tier: 6 }, // Tier 6 (Diff 4)
+  { name: "2.000.000",   icon: "bb.svg", tier: 4 }  // Tier 4 (Diff 6)
+];
+// (Urutan di roda ini bisa Anda ubah-ubah, yang penting 'tier' nya benar)
   
 const colors = [  
   "#FFB703","#FB8500","#219EBC","#8ECAE6","#FF69B4","#90EE90",  
@@ -310,17 +309,14 @@ for (let i = 0; i < total; i++) {
   const y1 = cy + radius * Math.sin(startAngle);  
   const x2 = cx + radius * Math.cos(endAngle);  
   const y2 = cy + radius * Math.sin(endAngle);  
-  
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");  
   path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);  
   path.setAttribute("fill", colors[i]);  
   path.setAttribute("stroke", "#fff");  
   path.setAttribute("stroke-width", "2");  
   svg.appendChild(path);  
-  prizes[i].path = path; // Simpan referensi path
-  
+  prizes[i].path = path;
   const angle = (i + 0.5) * slice - 90;  
-  
   const img = document.createElementNS("http://www.w3.org/2000/svg", "image");  
   const imgX = cx + radius * 0.55 * Math.cos(angle * Math.PI / 180) - 20;  
   const imgY = cy + radius * 0.55 * Math.sin(angle * Math.PI / 180) - 20;  
@@ -330,7 +326,6 @@ for (let i = 0; i < total; i++) {
   img.setAttribute("width", "40");  
   img.setAttribute("height", "40");  
   svg.appendChild(img);  
-  
   const text = document.createElementNS("http://www.w3.org/2000/svg", "text");  
   const textX = cx + radius * 0.8 * Math.cos(angle * Math.PI / 180);  
   const textY = cy + radius * 0.8 * Math.sin(angle * Math.PI / 180);  
@@ -341,7 +336,6 @@ for (let i = 0; i < total; i++) {
   text.setAttribute("font-weight", "bold");  
   text.setAttribute("text-anchor", "middle");  
   text.setAttribute("alignment-baseline", "middle");  
-  // Rotasi teks disesuaikan agar lurus
   text.setAttribute("transform", `rotate(${angle + 90}, ${textX}, ${textY})`);  
   text.textContent = prizes[i].name;  
   svg.appendChild(text);  
@@ -351,7 +345,6 @@ let spinning = false, currentRotation = 0;
 
 // === Animasi Futuristik (Kode Anda - tidak perlu diubah) ===
 function glowWinnerSector(winnerIndex) {
-  // ... (Kode GSAP Anda yang canggih tetap di sini) ...
   const sector = prizes[winnerIndex].path;
   if (!sector) return;
   sector.style.filter = "drop-shadow(0 0 25px #00ffff) drop-shadow(0 0 50px #00ffff)";
@@ -361,24 +354,21 @@ function glowWinnerSector(winnerIndex) {
     scale: 1.08, rotation: "+=1", transformOrigin: "50% 50%",
     duration: 0.3, repeat: -1, yoyo: true, ease: "sine.inOut"
   });
-  // ... (dan sisa kode glowWinnerSector Anda) ...
-  // (Pembersih timeout 6 detik Anda juga bagus)
   setTimeout(() => {
     gsap.killTweensOf(sector);
     sector.style.filter = "";
     sector.style.stroke = "#fff";
-    sector.style.strokeWidth = "2"; // kembali ke default svg
+    sector.style.strokeWidth = "2";
     gsap.to(sector, { scale: 1, rotation: 0, duration: 0.3 });
   }, 6000);
 }
 
-// === 3. INTEGRASI: FUNGSI SPIN (Diganti total) ===
+// === 3. FUNGSI SPIN (Logika V4 "Free") ===
 async function spinFromBlockchain() {
   if (spinning || !contract) {
     resultText.textContent = "Harap hubungkan wallet dulu.";
     return;
   }
-  
   spinning = true;
   btn.disabled = true;
   btn.textContent = "WAIT...";
@@ -386,44 +376,34 @@ async function spinFromBlockchain() {
   spinSound.play();
 
   try {
-    // 1. Panggil `spinFree` di smart contract
+    // 1. Panggil `spinFree`
     const tx = await contract.spinFree();
     resultText.textContent = "Menunggu konfirmasi blockchain...";
 
-    // 2. Tunggu transaksi selesai
+    // 2. Tunggu transaksi
     const receipt = await tx.wait();
 
-    // 3. Cari event di receipt untuk tahu hasilnya
+    // 3. Cari event (Hanya 'FreeSpinWon', 'NoPrize' sudah dihapus)
     const { prizeTier, prizeAmount } = parseReceiptForPrize(receipt);
     
-    // 4. Petakan hasil (Tier) ke irisan roda (Index)
+    // 4. Petakan Tier ke Index Roda
     const winnerIndex = getTargetSlice(prizeTier);
     const winner = prizes[winnerIndex];
 
-    // 5. Hitung rotasi untuk GSAP
+    // 5. Hitung rotasi
     const sliceAngle = 360 / total;
-    const randomExtra = 360 * 5; // 5 putaran ekstra
-    // Dibalik agar mendarat di pointer (atas)
+    const randomExtra = 360 * 5; 
     const finalRotation = randomExtra + (360 - (winnerIndex * sliceAngle) - (sliceAngle / 2));
 
-    // Animasi putaran utama
+    // Animasi putaran
     gsap.to(svg, {
-      rotation: `+=${finalRotation}`, // Rotasi relatif dari posisi sekarang
-      duration: 30,
+      rotation: `+=${finalRotation}`, 
+      duration: 5,
       ease: "power4.out",
-      onUpdate: () => {
-        // (opsional) mainkan clickSound di sini jika mau
-        // clickSound.play();
-      },
       onComplete: () => {
-        if (prizeTier > 0) {
-          winSound.play();
-          resultText.textContent = `🎉 Anda menang: ${winner.name} BabyDoge! 🎉`;
-          glowWinnerSector(winnerIndex); // Panggil efek glow
-        } else {
-          resultText.textContent = "No Prize... Coba lagi di ronde utama!";
-          glowWinnerSector(winnerIndex); // Tetap glow di "No Prize"
-        }
+        winSound.play();
+        resultText.textContent = `🎉 Anda menang: ${winner.name} BabyDoge! 🎉`;
+        glowWinnerSector(winnerIndex);
         
         resetButton();
         updateUI(); // Update saldo & sisa spin
@@ -432,14 +412,14 @@ async function spinFromBlockchain() {
 
   } catch (err) {
     console.error("Spin failed:", err);
-    resultText.textContent = "Spin Gagal! (Ditolak atau kuota habis)";
+    resultText.textContent = "Spin Gagal! (Ditolak, kuota habis, atau event dijeda)";
     resetButton();
   }
 }
 
-// === 4. INTEGRASI: FUNGSI HELPER BARU ===
+// === 4. FUNGSI HELPER (Update untuk V4 "Free") ===
 
-// Helper untuk membaca event dari receipt
+// Helper baca event (Hanya FreeSpinWon)
 function parseReceiptForPrize(receipt) {
   const iface = new ethers.Interface(FAYLOTTO_ABI);
   for (const log of receipt.logs) {
@@ -451,119 +431,140 @@ function parseReceiptForPrize(receipt) {
           prizeAmount: parsedLog.args.prizeAmount
         };
       }
-      if (parsedLog.name === "FreeSpinNoPrize") {
-        return { prizeTier: 0, prizeAmount: 0 };
-      }
     } catch (e) { /* Abaikan log lain */ }
   }
-  return { prizeTier: 0, prizeAmount: 0 }; // Default jika tidak ada event
+  // Fallback (seharusnya tidak terjadi, tapi jika ya, default ke Tier 1)
+  return { prizeTier: 1, prizeAmount: 250000 * (10**9) }; 
 }
 
-// Helper untuk memetakan TIER KONTRAK ke INDEX RODA
+// Helper petakan TIER KONTRAK (1-9) ke INDEX RODA
 function getTargetSlice(prizeTier) {
-  let visualTier = prizeTier;
-  
-  // Kontrak kita: Tier 8 (dari 40% try again) adalah 1 Juta.
-  // Kita petakan ke irisan visual Tier 7 (yang juga 1 Juta).
-  if (visualTier === 8) {
-    visualTier = 7;
-  }
-
-  // Cari semua irisan di roda yang cocok dengan tier
+  const visualTier = prizeTier;
   const matchingSlices = [];
   for (let i = 0; i < prizes.length; i++) {
     if (prizes[i].tier === visualTier) {
       matchingSlices.push(i);
     }
   }
-
-  // Jika ada beberapa (misal "No Prize"), pilih acak salah satunya
   if (matchingSlices.length > 0) {
     const randomIndex = Math.floor(Math.random() * matchingSlices.length);
     return matchingSlices[randomIndex];
   }
-
-  // Fallback (seharusnya tidak terjadi)
-  return 3; // Index dari "No Prize"
+  return 1; // Fallback ke index Tier 1 (250k)
 }
 
-// Helper untuk update saldo & sisa spin
+// Helper update UI (Termasuk Referral)
 async function updateUI() {
   if (!contract) return;
   try {
-    // 1. Baca sisa spin
-    const spins = await contract.spinCounts(userAddress);
-    const spinsUsed = Number(spins); // Langsung ambil jumlah spin terpakai
-    spinCountText.textContent = `${spinsUsed} / 2`; // Tampilkan 0/2, 1/2, atau 2/2
+    // 1. Baca data spin & saldo
+    const [spins, balance] = await Promise.all([
+      contract.spinCounts(userAddress),
+      contract.freeBalances(userAddress) // REVISI: dummyBalances -> freeBalances
+    ]);
     
-    // 2. Baca saldo dummy (kontrak kita pakai 9 desimal untuk hadiah)
-    const balance = await contract.dummyBalances(userAddress);
-    dummyBalanceText.textContent = ethers.formatUnits(balance, 9);
+    const spinsUsed = Number(spins);
+    spinCountText.textContent = `${spinsUsed} / 2`;
+    freeBalanceText.textContent = ethers.formatUnits(balance, 9); // Asumsi 9 desimal
+
+    // 2. Baca data referral
+    const [
+      nick, 
+      referrerAddr, 
+      rewards, 
+      count
+    ] = await Promise.all([
+      contract.nicknames(userAddress),
+      contract.referrerOf(userAddress),
+      contract.getReferralRewards(userAddress),
+      contract.getReferralCount(userAddress)
+    ]);
+
+    // Tampilkan Info Dasar
+    myNickname.textContent = nick || "-";
+    myReferrer.textContent = referrerAddr === ethers.ZeroAddress ? "-" : shortAddress(referrerAddr);
+    referralCount.textContent = count.toString();
+
+    // Tampilkan Link jika punya nickname
+    if (nick) {
+      const link = `${window.location.origin}${window.location.pathname}?ref=${nick}`;
+      referralLinkInput.value = link;
+      referralLinkSection.style.display = "block";
+    } else {
+      referralLinkSection.style.display = "none";
+    }
+
+    // Tampilkan Rewards
+    ethRewards.textContent = ethers.formatEther(rewards.ethReward);
+    usdtRewards.textContent = ethers.formatUnits(rewards.usdtReward, 18); // Asumsi USDT 18 desimal
+    babyDogeRewards.textContent = ethers.formatUnits(rewards.babyDogeReward, 9); // Asumsi BabyDoge 9 desimal
     
+    // Cek tombol claim
+    const totalRewards = rewards.ethReward + rewards.usdtReward + rewards.babyDogeReward;
+    claimRewardsBtn.disabled = totalRewards === 0n;
+
   } catch (err) {
     console.error("Error updating UI:", err);
   }
 }
   
-// === 5. FUNGSI BAWAAN ANDA (Di-update) ===
+// === 5. FUNGSI LOGIKA (Update & Tambahan) ===
 
-// Base Sepolia (Kode Anda)
+// --- Fungsi Jaringan & Wallet (Kode Anda) ---
 const BASE_SEPOLIA = {
   chainIdHex: '0x14a34', chainIdDec: 84532, chainName: 'Base Sepolia',
   rpcUrls: ['https://sepolia.base.org'],
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
   blockExplorerUrls: ['https://sepolia.basescan.org']
 };
-
-// Fungsi utilitas (Kode Anda)
 function shortAddress(addr) { return addr ? addr.slice(0, 6) + "..." + addr.slice(-4) : ""; }
 function hasEthereum() { return typeof window !== 'undefined' && !!window.ethereum; }
 function getLocalDateTimeString() { return new Date().toLocaleString(); }
 function saveSignature(wallet, signature) { /* ... (Kode Anda) ... */ }
 function getSignature() { /* ... (Kode Anda) ... */ }
 async function ensureBaseSepolia() { /* ... (Kode Anda) ... */ }
+// --- Akhir Fungsi Jaringan & Wallet ---
 
-// === Fungsi utama: connect wallet (DI-UPDATE) ===
+
+// === Fungsi connectWallet (DI-UPDATE) ===
 async function connectWallet() {
   try {
     if (!hasEthereum()) {
       alert("🦊 Silakan instal MetaMask terlebih dahulu.");
       return;
     }
-
-    await ensureBaseSepolia(); // Kode Anda
+    await ensureBaseSepolia(); 
 
     provider = new ethers.BrowserProvider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     signer = await provider.getSigner();
     userAddress = await signer.getAddress();
 
-    // ... (Logika signature Anda) ...
+    // ... (Logika signature Anda tetap) ...
 
-    // === INTEGRASI: Inisialisasi Kontrak ===
+    // Inisialisasi Kontrak
     contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-    // Update UI (Kode Anda)
+    // Update UI
     connectBtn.style.display = "none";
     disconnectBtn.style.display = "inline-block";
     walletAddressDiv.style.display = "inline-block";
     walletAddressDiv.textContent = shortAddress(userAddress);
 
-    // === INTEGRASI: Panggil updateUI() ===
+    // Panggil updateUI() untuk mengisi semua data (spin & referral)
     await updateUI();
     resultText.textContent = "Wallet terhubung! Silakan spin.";
+
+    // Cek jika ada parameter ?ref= di URL
+    await handleReferralOnLoad();
 
     // Listener (Kode Anda)
     window.ethereum.on('accountsChanged', (accounts) => {
       if (!accounts.length) disconnectWallet();
-      else {
-        userAddress = accounts[0];
-        walletAddressDiv.textContent = shortAddress(userAddress);
-        connectWallet(); // Hubungkan ulang untuk user baru
-      }
+      else connectWallet(); // Konek ulang total
     });
     window.ethereum.on('chainChanged', (chainIdHex) => {
-      if (chainIdHex !== BASE_SEPOLIA.chainIdHex) connectWallet(); // Paksa konek ulang
+      if (chainIdHex !== BASE_SEPOLIA.chainIdHex) connectWallet(); // Konek ulang total
     });
 
   } catch (err) {
@@ -579,10 +580,19 @@ function disconnectWallet() {
   disconnectBtn.style.display = "none";
   walletAddressDiv.style.display = "none";
   
-  // Reset info
+  // Reset info spin
   resultText.textContent = "Press SPIN to play";
   spinCountText.textContent = "0 / 2";
-  dummyBalanceText.textContent = "0";
+  freeBalanceText.textContent = "0"; // REVISI: dummy -> free
+
+  // Reset info referral
+  myNickname.textContent = "-";
+  myReferrer.textContent = "-";
+  referralCount.textContent = "0";
+  ethRewards.textContent = "0";
+  usdtRewards.textContent = "0";
+  babyDogeRewards.textContent = "0";
+  referralLinkSection.style.display = "none";
 }
   
 function resetButton() {  
@@ -590,14 +600,93 @@ function resetButton() {
   btn.disabled = false;  
   btn.textContent = "FREE SPIN";  
   spinSound.pause();
-  spinSound.currentTime = 0; // Reset audio
+  spinSound.currentTime = 0;
 }  
+
+// --- INTEGRASI REFERRAL: FUNGSI-FUNGSI BARU ---
+
+// Cek URL untuk ?ref=
+async function handleReferralOnLoad() {
+  const params = new URLSearchParams(window.location.search);
+  const refNickname = params.get('ref');
+  if (refNickname && contract) {
+    try {
+      // Coba daftarkan referrer secara otomatis
+      resultText.textContent = `Mencoba mendaftarkan referrer: ${refNickname}...`;
+      const tx = await contract.setReferralByNickname(refNickname);
+      await tx.wait();
+      resultText.textContent = `Referrer ${refNickname} berhasil didaftarkan!`;
+      await updateUI(); // Update tampilan My Referrer
+    } catch (err) {
+      // Gagal (mungkin sudah punya referrer, atau nickname salah)
+      console.warn("Gagal set referrer:", err.message);
+      resultText.textContent = "Wallet terhubung! Silakan spin."; // Kembalikan ke normal
+    }
+  }
+}
+
+// Buat Nickname
+async function handleCreateNickname() {
+  if (!contract) return;
+  const nick = nicknameInput.value;
+  if (nick.length < 3) {
+    alert("Nickname harus minimal 3 karakter.");
+    return;
+  }
   
-// === Event Listeners (Kode Anda) ===
+  createNicknameBtn.disabled = true;
+  createNicknameBtn.textContent = "Waiting...";
+  try {
+    const tx = await contract.createNickname(nick);
+    await tx.wait();
+    alert("Nickname berhasil dibuat!");
+    await updateUI(); // Refresh semua info referral
+  } catch (err) {
+    console.error("Gagal buat nickname:", err);
+    alert("Gagal membuat nickname. (Mungkin sudah diambil?)");
+  }
+  createNicknameBtn.disabled = false;
+  createNicknameBtn.textContent = "Create / Update";
+}
+
+// Klaim Hadiah
+async function handleClaimRewards() {
+  if (!contract) return;
+  
+  claimRewardsBtn.disabled = true;
+  claimRewardsBtn.textContent = "Waiting...";
+  try {
+    const tx = await contract.claimReferralRewards();
+    await tx.wait();
+    alert("Rewards berhasil diklaim!");
+    await updateUI(); // Refresh rewards
+  } catch (err) {
+    console.error("Gagal klaim:", err);
+    alert("Gagal klaim rewards. (Mungkin tidak ada rewards?)");
+  }
+  claimRewardsBtn.textContent = "Claim Rewards";
+  // updateUI() akan otomatis disable tombol jika rewards jadi 0
+}
+
+// Salin Link
+function handleCopyLink() {
+  referralLinkInput.select();
+  document.execCommand("copy");
+  alert("Link referral disalin!");
+}
+  
+// === Event Listeners ===
 connectBtn.addEventListener("click", connectWallet);  
 disconnectBtn.addEventListener("click", disconnectWallet);  
 btn.addEventListener("click", spinFromBlockchain);
+
+// REVISI: Listener baru untuk referral
+createNicknameBtn.addEventListener("click", handleCreateNickname);
+claimRewardsBtn.addEventListener("click", handleClaimRewards);
+copyReferralBtn.addEventListener("click", handleCopyLink);
+referralLinkInput.addEventListener("click", handleCopyLink); // Klik input untuk copy
+
 </script>
 
 </body>
-</html>
+   </html>
