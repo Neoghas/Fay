@@ -1735,15 +1735,15 @@ async function switchOrAddNetwork() {
         if (switchError.code === 4902) {
             try {
                 // 2. [FITUR 1] Jika belum ada, paksa tambahkan RPC
-                showStatus("Jaringan tidak ditemukan. Menambahkan Base Sepolia...", "wolf");
+                showStatus("Network not found. Adding Sepolia Base...", "wolf");
                 await provider.send('wallet_addEthereumChain', [BASE_SEPOLIA_PARAMS]);
             } catch (addError) {
-                console.error("Gagal menambahkan jaringan:", addError);
-                throw new Error("Gagal menambahkan jaringan Base Sepolia.");
+                console.error("Failed to add network:", addError);
+                throw new Error("Failed to add Sepolia Base network.");
             }
         } else {
-            console.error("Gagal mengganti jaringan:", switchError);
-            throw new Error("Gagal ganti jaringan. Silakan cek MetaMask.");
+            console.error("Failed to change network:", switchError);
+            throw new Error("Failed to change network. Please check your EVM wallet.");
         }
     }
 }
@@ -1757,7 +1757,7 @@ async function switchOrAddNetwork() {
 async function toggleWallet(isAutoConnect = false) {
     if (userAddress) return; 
     // [FIX] Ganti showToast ke showStatus
-    if (!window.ethereum) return showStatus("Silakan install MetaMask.", "error");
+    if (!window.ethereum) return showStatus("Please install a wallet that supports EVM. Or Metamask.", "wolf");
     
     try {
         provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -1766,7 +1766,7 @@ async function toggleWallet(isAutoConnect = false) {
             // Coba ambil akun yang ada tanpa popup
             const accounts = await provider.listAccounts();
             if (accounts.length === 0) {
-                console.log("Auto-connect gagal: Tidak ada akun.");
+                console.log("Auto-connect failed: No account.");
                 localStorage.removeItem(AUTO_CONNECT_KEY); // Hapus kunci jika gagal
                 return; // Gagal secara diam-diam
             }
@@ -1781,7 +1781,7 @@ async function toggleWallet(isAutoConnect = false) {
         const network = await provider.getNetwork();
         if (network.chainId !== 84532) { // 84532 adalah Chain ID Base Sepolia
             // [FIX] Ganti showToast ke showStatus
-            showStatus("Jaringan salah. Meminta ganti ke Base Sepolia...", "warning");
+            showStatus("Wrong Network. Requesting to switch to Sepolia Base...", "warning");
             await switchOrAddNetwork();
             
             // Re-inisialisasi provider & signer SETELAH ganti jaringan
@@ -1802,7 +1802,7 @@ async function toggleWallet(isAutoConnect = false) {
                 await signer.signMessage(message);
             } catch (signError) {
                 // [FIX] Ganti showToast ke showStatus
-                showStatus("Tanda tangan ditolak. Login dibatalkan.", "error");
+                showStatus("You refused the signature, login was cancelled.", "error");
                 // Reset manual karena login dibatalkan
                 provider = null; signer = null; userAddress = null;
                 return; // Hentikan login
@@ -1834,16 +1834,16 @@ async function toggleWallet(isAutoConnect = false) {
                     const tx = await faylottoContract.setReferralByNickname(pendingReferrerNickname);
                     await tx.wait();
                     // [FIX] Ganti showToast ke showStatus
-                    showStatus(`Berhasil direferensikan oleh ${pendingReferrerNickname}!`, "success");
+                    showStatus(`You have been successfully referred by ${pendingReferrerNickname}!`, "success");
                     pendingReferrerNickname = null;
                     fetchReferralData();
                 }
-            } catch (e) { console.warn("Gagal auto-set referrer:", e.message); }
+            } catch (e) { console.warn("Failed to auto-set referrer:", e.message); }
         }
 
         if (!isAutoConnect) {
             // [FIX] Ganti showToast ke showStatus
-            showStatus("Wallet Terhubung!", "success");
+            showStatus("Wallet connected successfully!", "success");
         }
 
     } catch (err) {
