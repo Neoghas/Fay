@@ -2980,13 +2980,27 @@ async function callClaimRewards() {
     }
 }
     
-// [REVISI TOTAL] Fungsi ini sekarang menghitung TOTAL ASET
+// [REVISI TOTAL] Fungsi ini sekarang mengambil elemen DOM dengan aman
 async function updateUserBalances() {
   if (!provider || !userAddress || !usdtContract) return;
   
+  // [PERBAIKAN] Ambil elemen DOM DI DALAM fungsi, bukan dari global
   const totalAssetValueEl = document.getElementById('totalAssetValue');
+  const ethBalanceEl = document.getElementById('ethBalance');
+  const usdtBalanceEl = document.getElementById('usdtBalance');
+  const ethValueEl = document.getElementById('ethValue');
+  const usdtValueEl = document.getElementById('usdtValue');
+
+  // Cek cepat jika ada elemen yang hilang (mencegah error)
+  if (!totalAssetValueEl || !ethBalanceEl || !usdtBalanceEl || !ethValueEl || !usdtValueEl) {
+      console.error("Elemen DOM Info Wallet tidak ditemukan. Cek HTML ID.");
+      return;
+  }
 
   try {
+    // [PERBAIKAN] Panggil fetchTokenPrices DI SINI agar harga selalu update
+    await fetchTokenPrices(); 
+
     // 1. Ambil Saldo
     rawEthBalance = await provider.getBalance(userAddress);
     usdtDecimals = await usdtContract.decimals();
@@ -2997,33 +3011,34 @@ async function updateUserBalances() {
     const usdtAmount = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals));
 
     // 3. Tampilkan Saldo di UI
-    ethBalance.innerText = ethAmount.toFixed(5);
-    usdtBalance.innerText = usdtAmount.toFixed(2);
+    ethBalanceEl.innerText = ethAmount.toFixed(5);
+    usdtBalanceEl.innerText = usdtAmount.toFixed(2);
 
     // 4. Hitung Nilai USD
     const ethValue = ethAmount * tokenPrices.eth;
     const usdtValue = usdtAmount * tokenPrices.usdt;
     
-    // [BARU] Hitung Total
+    // Hitung Total
     const totalValue = ethValue + usdtValue;
 
     // 5. Tampilkan Nilai USD
-    document.getElementById('ethValue').innerText = `≈ $${ethValue.toFixed(2)} USD`;
-    document.getElementById('usdtValue').innerText = `≈ $${usdtValue.toFixed(2)} USD`;
+    ethValueEl.innerText = `≈ $${ethValue.toFixed(2)} USD`;
+    usdtValueEl.innerText = `≈ $${usdtValue.toFixed(2)} USD`;
     
-    // [BARU] Tampilkan Total
+    // Tampilkan Total
     totalAssetValueEl.innerText = `≈ $${totalValue.toFixed(2)} USD`;
 
   } catch (err) { 
     console.error("Error fetching balances:", err.message);
     // Reset semua nilai jika error
-    usdtBalance.innerText = "Error";
-    ethBalance.innerText = "Error";
-    document.getElementById('ethValue').innerText = "≈ $--- USD";
-    document.getElementById('usdtValue').innerText = "≈ $--- USD";
+    usdtBalanceEl.innerText = "Error";
+    ethBalanceEl.innerText = "Error";
+    ethValueEl.innerText = "≈ $--- USD";
+    usdtValueEl.innerText = "≈ $--- USD";
     totalAssetValueEl.innerText = "≈ $--- USD"; 
   }
 }
+
 
   async function updateMyDeposits() {
     // ... (Tidak ada perubahan pada fungsi ini) ...
@@ -3680,7 +3695,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 3. Panggil Data Awal SEGERA (Tanpa Menunggu Wallet)
     // [FIX] Ini adalah perbaikan untuk bug "tombol tidak aktif"
-    fetchTokenPrices();
+    
     fetchAndDisplayRoundData(); // <-- FUNGSI YANG HILANG SEKARANG ADA
     fetchAndDisplayWinners();
     fetchAndRenderLeaderboard(); // Panggil leaderboard saat load
