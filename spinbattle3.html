@@ -1813,7 +1813,7 @@ async function toggleWallet(isAutoConnect = false) {
         usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
         faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-        walletBtn.innerText = "Connected";
+        walletBtn.innerText = "Dashboard";
         referralBtn.style.display = "block"; 
         walletAddress.innerText = userAddress.slice(0,6) + "..." + userAddress.slice(-4);
         
@@ -2029,7 +2029,7 @@ async function fetchAndDisplayWinners() {
 async function toggleLike(winnerId) {
   // 1. Ganti alert() dengan showStatus()
   if (!signer || !faylottoContract) {
-    showStatus("Please connect wallet first.", "error");
+    showStatus("Please connect wallet first.", "warning");
     return;
   }
   
@@ -2060,7 +2060,7 @@ async function toggleLike(winnerId) {
 async function rateWinner(winnerId, stars) {
   // 1. Ganti alert() dengan showStatus()
   if (!signer || !faylottoContract) {
-    showStatus("Please connect wallet first.", "error");
+    showStatus("Please connect wallet first.", "warning");
     return;
   }
   
@@ -2091,7 +2091,7 @@ async function rateWinner(winnerId, stars) {
 async function submitComment(winnerId) {
   // 1. Ganti alert() dengan showStatus()
   if (!signer) {
-    showStatus("Connect wallet first.", "error");
+    showStatus("Connect wallet first.", "warning");
     return;
   }
   
@@ -2149,7 +2149,7 @@ function cancelEditComment(wid, cid) {
 async function saveEditComment(wid, cid) {
   // 1. Tambahkan pengecekan signer
   if (!signer) {
-      showStatus("Connect wallet first.", "error");
+      showStatus("Connect wallet first.", "warning");
       return;
   }
   
@@ -2158,7 +2158,7 @@ async function saveEditComment(wid, cid) {
   
   // 2. Ganti alert() dengan showStatus()
   if (!newText) {
-    showStatus("Comment cannot be empty.", "error");
+    showStatus("Comment cannot be empty.", "warning");
     return;
   }
 
@@ -2411,7 +2411,7 @@ async function callFinalizeRound() {
     
     // 1. Ganti alert() dengan showStatus()
     if (!signer || !faylottoContract) {
-        showStatus("Please connect your wallet.", "error"); // atau "warning"
+        showStatus("Please connect your wallet.", "warning"); // atau "warning"
         return;
     }
     
@@ -2432,7 +2432,7 @@ async function callFinalizeRound() {
         const receipt = await tx.wait(); 
         
         // 4. Tambahkan toast 'success'
-        showStatus("Round finalized successfully!", "success", 3000); // 3 detik
+        showStatus("Round finalized successfully!", "success", 10000); // 3 detik
 
         console.log("Finalize transaction confirmed.", receipt);
         const event = receipt.events?.find(e => e.event === 'WinnerRecorded');
@@ -2476,7 +2476,7 @@ async function callFinalizeRound() {
 
 function showBetModal() {
   if (!signer) {
-    showStatus("Connect wallet first!", "error");
+    showStatus("Connect wallet first!", "wolf");
     return;
   }
   if (isFinalizing) {
@@ -2642,7 +2642,7 @@ async function showReferralModal() {
     // --- PERBAIKAN DI SINI ---
     if (!signer) {
         // Ganti alert() dengan showStatus()
-        showStatus("Connect wallet first!", "error"); // atau "warning"
+        showStatus("Connect wallet first!", "warning"); // atau "warning"
         return; // Hentikan fungsi
     }
     // --- AKHIR PERBAIKAN ---
@@ -2673,7 +2673,7 @@ async function fetchReferralData() {
         
         // --- TAMBAHAN DI SINI ---
         // Tampilkan toast error jika gagal memuat data
-        showStatus("Gagal memuat data referral Anda.", "error");
+        showStatus("Failed to load your referral data.", "error");
         // --- AKHIR TAMBAHAN ---
     }
 }
@@ -2715,7 +2715,7 @@ async function callCreateNickname() {
     
     // 1. Ganti alert() error input
     if (!nick || nick.length < 3) {
-        showStatus("Nickname must be at least 3 characters.", "error"); // atau "warning"
+        showStatus("Nickname must be at least 3 characters.", "warning"); // atau "warning"
         return;
     }
     
@@ -2766,7 +2766,7 @@ async function callSetReferrer() {
     
     // 1. Ganti alert() error input
     if (!refNick) {
-        showStatus("Please enter a referrer's nickname.", "error"); // atau "warning"
+        showStatus("Please enter a referrer's nickname.", "warning"); // atau "warning"
         return;
     }
     
@@ -3190,7 +3190,7 @@ function spinToPlayer(targetPlayer) {
           } else {
               const winnerName = targetPlayer.addr.slice(0, 6) + "...";
               // [FIX] Ganti alert ke showStatus
-              showStatus(`Pemenangnya adalah ${winnerName}! Coba lagi nanti.`, 'info');
+              showStatus(`The winner is ${winnerName}! Try again later.`, 'info');
           }
           resetAndFetchNewRound(); 
           resolveAnimation(); 
@@ -3243,7 +3243,7 @@ function disconnectWallet() {
     fetchAndDisplayRoundData();
     fetchAndDisplayWinners();
     // [FIX] Ganti showToast ke showStatus
-    showStatus("Wallet terputus.", "info");
+    showStatus("Wallet disconnected.", "info");
 }
     
 function handleCanvasRedraw() {
@@ -3273,8 +3273,8 @@ async function showPlayerProfile(address) {
         document.getElementById('profileNickname').innerText = nickname || "No Nickname Yet";
         document.getElementById('profileRefCount').innerText = refCount.toString();
     } catch (e) {
-        showStatus("Gagal memuat profil. Silakan hubungkan wallet.", "info"); 
-        document.getElementById('profileNickname').innerText = "Gagal memuat";
+        showStatus("Failed to load profile. Please connect your wallet.", "warning"); 
+        document.getElementById('profileNickname').innerText = "Failed to load";
         document.getElementById('profileRefCount').innerText = "N/A";
     }
 }
@@ -3433,7 +3433,7 @@ async function fetchAndRenderLeaderboard() {
 
     } catch (err) {
         console.error("Leaderboard error:", err);
-        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>FAILED TO LOAD DATA.</div>";
+        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>Failed To Load Data.</div>";
     }
   }
     
