@@ -990,28 +990,28 @@ async function loadInitialHistory() {
   allHistoryLoaded = false;
   historyPage = 0;
   userHistory = [];
-  historyListContainer.innerHTML = ''; 
+  // Jangan bersihkan HTML jika sudah ada isinya, 
+  // tambahkan loader saja
   historyLoader.style.display = 'block'; 
 
   try {
-    // --- PERBAIKAN: Batasi jangkauan query ---
-    // 1. Dapatkan nomor blok saat ini
+    // --- PERBAIKAN: Jangkauan diperkecil lagi ---
     const currentBlock = await provider.getBlockNumber();
     
-    // 2. Tentukan blok awal (1 juta blok terakhir)
-    // Ini mencegah RPC node dari timeout
-    const fromBlock = Math.max(0, currentBlock - 1000000); 
+    // Cari HANYA 250,000 blok terakhir (sangat ringan)
+    const fromBlock = Math.max(0, currentBlock - 250000); 
     
-    // 3. Filter event HANYA dari 1 juta blok terakhir
     const filter = contract.filters.FreeSpinWon(userAddress);
     const events = await contract.queryFilter(filter, fromBlock, 'latest'); 
     // --- AKHIR PERBAIKAN ---
     
-    // (Logika sisa tetap sama)
     userHistory = events.map(e => ({
       amount: e.args.amount,
       tier: Number(e.args.prizeTier)
     })).reverse(); 
+
+    // Bersihkan HANYA jika memuat ulang
+    historyListContainer.innerHTML = ''; 
 
     if (userHistory.length === 0) {
       historyListContainer.innerHTML = '<p style="text-align:center; color: #aaa;">Anda belum pernah memenangkan spin.</p>';
@@ -1022,12 +1022,13 @@ async function loadInitialHistory() {
 
   } catch (err) {
     console.error("Gagal memuat riwayat:", err);
-    historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat.</p>';
+    historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. (Node Timeout)</p>';
   } finally {
     isLoadingHistory = false;
     historyLoader.style.display = 'none';
   }
 }
+
   
 // 2. Dipanggil oleh scroll listener
 function handleHistoryScroll() {
