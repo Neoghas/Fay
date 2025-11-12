@@ -901,7 +901,7 @@ function handleCopyLink() {
   }
 }
 
-// --- RIWAYAT: FUNGSI-FUNGSI BARU (Versi Cepat tanpa Timestamp) ---
+// --- RIWAYAT: FUNGSI-FUNGSI BARU ---
 
 async function loadInitialHistory() {
   if (isLoadingHistory || !contract) return; 
@@ -914,7 +914,6 @@ async function loadInitialHistory() {
 
   try {
     const currentBlock = await provider.getBlockNumber();
-    // PERBAIKAN: Jangkauan lebih ringan
     const fromBlock = Math.max(0, currentBlock - 250000); 
     
     const filter = contract.filters.FreeSpinWon(userAddress);
@@ -924,7 +923,7 @@ async function loadInitialHistory() {
       amount: e.args.amount,
       tier: Number(e.args.prizeTier)
     })).reverse(); 
-
+    
     if (userHistory.length === 0) {
       historyListContainer.innerHTML = '<p style="text-align:center; color: #aaa;">Anda belum pernah memenangkan spin.</p>';
       allHistoryLoaded = true;
@@ -968,11 +967,10 @@ function appendHistoryPage() {
   let html = '';
   
   for (const event of pageEvents) {
-    // PERBAIKAN: Kontrak V3 'spinFree' menggunakan 18 desimal
     const amountStr = ethers.formatUnits(event.amount, 18);
     
     html += `
-      <div class-="history-item">
+      <div class="history-item">
         <div class="history-item-prize">
           Menang: <span>${amountStr}</span> BabyDoge
         </div>
