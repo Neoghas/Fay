@@ -339,12 +339,6 @@
   </div>
 
   <div class="result" id="resultText">Press SPIN to play</div>
-  <br>
-  <div class="history-list-container" id="historyListContainer">
-    <div id="historyLoader">
-      <div class="loader-spinner"></div>
-    </div>
-  </div>
   
   <div class="info-container">
   <div class="info-box">
@@ -364,7 +358,6 @@
   <img src="bb.svg" alt="Balance Icon" class="info-icon">
   <span id="dummyBalanceText">0</span>
     </p>
-  </div>
   </div>
 
   <!-- REFERRAL SYSTEM -->
@@ -945,119 +938,6 @@ function handleCopyLink() {
   }
 }
 
-// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
-async function loadInitialHistory() {
-  if (isLoadingHistory || !contract) return; 
-  isLoadingHistory = true;
-  allHistoryLoaded = false;
-  historyPage = 0;
-  userHistory = [];
-  historyListContainer.innerHTML = ''; 
-  historyLoader.style.display = 'block'; 
-  
-  try {
-    const filter = contract.filters.FreeSpinWon(userAddress);
-    
-    // --- PERBAIKAN DI SINI ---
-    const currentBlock = await provider.getBlockNumber();
-    // Kita patuhi batas node 100.000 blok
-    // Kita hanya ambil 99.999 blok terakhir agar aman
-    const fromBlock = Math.max(0, currentBlock - 99999); 
-    const events = await contract.queryFilter(filter, fromBlock, 'latest');
-    // --- AKHIR PERBAIKAN ---
-
-    console.log("Events ditemukan:", events.length);
-    
-    // (Logika ini sudah benar, tidak mengambil timestamp)
-    userHistory = events.map(e => ({
-      amount: e.args.amount,
-      tier: Number(e.args.prizeTier)
-    })).reverse(); 
-    
-    if (userHistory.length === 0) {
-      historyListContainer.innerHTML = '<p style="text-align:center; color: #aaa;">Belum ada riwayat kemenangan spin. Coba spin sekarang!</p>';
-      allHistoryLoaded = true;
-      console.log("Tidak ada riwayat kemenangan.");
-    } else {
-      appendHistoryPage(); // Tampilkan halaman pertama
-      console.log("Riwayat dimuat:", userHistory);
-    }
-
-  } catch (err) {
-    console.error("Gagal memuat riwayat:", err);
-    // Tampilkan pesan error yang lebih spesifik
-    if (err.message.includes("max block range")) {
-        historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat: Node RPC menolak permintaan (terlalu berat).</p>';
-    } else {
-        historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. Error: ' + err.message + '</p>';
-    }
-  } finally {
-    isLoadingHistory = false;
-    historyLoader.style.display = 'none';
-  }
-}
-
-  
-function handleHistoryScroll() {
-const el = historyListContainer;
-if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
-appendHistoryPage();
-}
-}
-
-// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
-function appendHistoryPage() {
-  if (isLoadingHistory || allHistoryLoaded) return;
-
-  isLoadingHistory = true;
-  historyLoader.style.display = 'block'; 
-  
-  const start = historyPage * HISTORY_PAGE_SIZE;
-  const end = start + HISTORY_PAGE_SIZE;
-
-  if (start >= userHistory.length) {
-    allHistoryLoaded = true;
-    historyLoader.style.display = 'none';
-    isLoadingHistory = false;
-    return;
-  }
-
-  const pageEvents = userHistory.slice(start, end);
-  let html = '';
-  
-  for (const event of pageEvents) {
-    // PERBAIKAN: Kontrak V3 Anda (spinFree) menggunakan 18 desimal
-    const amountStr = ethers.formatUnits(event.amount, 18); 
-    
-    // --- PERBAIKAN: HAPUS TIMESTAMP ---
-    // const date = new Date(event.timestamp * 1000); // HAPUS
-    // const dateStr = date.toLocaleString('id-ID'); // HAPUS
-    // --- AKHIR PERBAIKAN ---
-
-    html += `
-      <div class="history-item">
-        <div class="history-item-prize">
-          Menang: <span>${amountStr}</span> BabyDoge
-        </div>
-        <div class="history-item-info">
-          (Dari Hadiah Tier ${event.tier})
-        </div>
-        </div>
-    `;
-  }
-  
-  // Masukkan HTML sebelum loader
-  historyLoader.insertAdjacentHTML('beforebegin', html);
-  historyPage++;
-  isLoadingHistory = false;
-  
-  // Sembunyikan loader jika sudah semua
-  if (historyPage * HISTORY_PAGE_SIZE >= userHistory.length) {
-      allHistoryLoaded = true;
-      historyLoader.style.display = 'none';
-  }
-}
-  
 // === Event Listeners ===
 connectBtn.addEventListener("click", connectWallet);  
 disconnectBtn.addEventListener("click", disconnectWallet);  
