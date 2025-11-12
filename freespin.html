@@ -902,6 +902,7 @@ function handleCopyLink() {
 }
 
 // --- RIWAYAT: FUNGSI-FUNGSI BARU ---
+
 async function loadInitialHistory() {
   if (isLoadingHistory || !contract) return; 
   isLoadingHistory = true;
@@ -913,10 +914,13 @@ async function loadInitialHistory() {
   
   try {
     const filter = contract.filters.FreeSpinWon(userAddress);
-    // PERBAIKAN: Batasi query ke 10000 block terakhir untuk efisiensi
+    // PERBAIKAN: Perluas jangkauan block untuk events lama
     const currentBlock = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, currentBlock - 10000);
+    const fromBlock = 0; // Mulai dari block 0 untuk ambil semua
     const events = await contract.queryFilter(filter, fromBlock, 'latest');
+    
+    // Tambah log debug
+    console.log("Events ditemukan:", events.length);
     
     // Langsung format dan urutkan (terbaru dulu)
     userHistory = events.map(e => ({
@@ -925,15 +929,18 @@ async function loadInitialHistory() {
     })).reverse(); 
     
     if (userHistory.length === 0) {
-      historyListContainer.innerHTML = '<p style="text-align:center; color: #aaa;">Anda belum pernah memenangkan spin.</p>';
+      // PERBAIKAN: Pastikan pesan muncul dan ganti teks agar lebih jelas
+      historyListContainer.innerHTML = '<p style="text-align:center; color: #aaa;">Belum ada riwayat kemenangan spin. Coba spin sekarang!</p>';
       allHistoryLoaded = true;
+      console.log("Tidak ada riwayat kemenangan.");
     } else {
       appendHistoryPage(); // Tampilkan halaman pertama
+      console.log("Riwayat dimuat:", userHistory);
     }
 
   } catch (err) {
     console.error("Gagal memuat riwayat:", err);
-    historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. Coba refresh.</p>';
+    historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. Error: ' + err.message + '</p>';
   } finally {
     isLoadingHistory = false;
     historyLoader.style.display = 'none';
@@ -970,7 +977,7 @@ function appendHistoryPage() {
   let html = '';
   
   for (const event of pageEvents) {
-    const amountStr = ethers.formatUnits(event.amount, 18); // PERBAIKAN: Desimal 18 sesuai kontrak
+    const amountStr = ethers.formatUnits(event.amount, 18); // PERBAIKAN: Ubah ke 18 sesuai kontrak V3 baru
     
     html += `
       <div class="history-item">
@@ -985,7 +992,8 @@ function appendHistoryPage() {
   }
   
   // Masukkan HTML sebelum loader
-  historyLoader.insertAdjacentHTML('beforebegin', html);
+  // PERBAIKAN: Gunakan append untuk tambah ke akhir (bukan beforebegin, karena infinite scroll ke bawah)
+  historyListContainer.insertAdjacentHTML('beforeend', html);
   historyPage++;
   isLoadingHistory = false;
   
