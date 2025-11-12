@@ -522,12 +522,12 @@ async function spinFromBlockchain() {
   btn.disabled = true;
   btn.textContent = "WAIT...";
   resultText.textContent = "Mengirim transaksi...";
-  spinSound.play();
 
   try {
     const tx = await contract.spinFree();
     resultText.textContent = "Menunggu konfirmasi blockchain...";
     const receipt = await tx.wait();
+    spinSound.play();
 
     const { prizeTier, prizeAmount } = parseReceiptForPrize(receipt);
     const winnerIndex = getTargetSlice(prizeTier);
@@ -542,7 +542,7 @@ async function spinFromBlockchain() {
 
     gsap.to(svg, {
       rotation: `+=${finalRotation}`, 
-      duration: 5, // Durasi 5 detik
+      duration: 35, // Durasi 5 detik
       ease: "power4.out",
       onComplete: () => {
         if (prizeTier > 0) {
