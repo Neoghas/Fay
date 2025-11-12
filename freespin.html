@@ -540,7 +540,7 @@ async function spinFromBlockchain() {
     const winner = prizes[winnerIndex];
 
     const sliceAngle = 360 / total;
-    const randomExtra = 360 * 5; 
+    const randomExtra = 360 * 8; 
     const finalRotation = randomExtra + (360 - (winnerIndex * sliceAngle) - (sliceAngle / 2));
 
     gsap.to(svg, {
@@ -901,8 +901,7 @@ function handleCopyLink() {
   }
 }
 
-// --- RIWAYAT: FUNGSI-FUNGSI BARU ---
-
+// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
 async function loadInitialHistory() {
   if (isLoadingHistory || !contract) return; 
   isLoadingHistory = true;
@@ -914,21 +913,24 @@ async function loadInitialHistory() {
   
   try {
     const filter = contract.filters.FreeSpinWon(userAddress);
-    // PERBAIKAN: Batasi query ke block deployment kontrak (33578603) ke latest
-    const fromBlock = 33578603; // Block creation kontrak Anda
-    const events = await contract.queryFilter(filter, fromBlock, 'latest');
     
-    // Tambah log debug
+    // --- PERBAIKAN DI SINI ---
+    const currentBlock = await provider.getBlockNumber();
+    // Kita patuhi batas node 100.000 blok
+    // Kita hanya ambil 99.999 blok terakhir agar aman
+    const fromBlock = Math.max(0, currentBlock - 99999); 
+    const events = await contract.queryFilter(filter, fromBlock, 'latest');
+    // --- AKHIR PERBAIKAN ---
+
     console.log("Events ditemukan:", events.length);
     
-    // Langsung format dan urutkan (terbaru dulu)
+    // (Logika ini sudah benar, tidak mengambil timestamp)
     userHistory = events.map(e => ({
       amount: e.args.amount,
       tier: Number(e.args.prizeTier)
     })).reverse(); 
     
     if (userHistory.length === 0) {
-      // PERBAIKAN: Pastikan pesan muncul dan ganti teks agar lebih jelas
       historyListContainer.innerHTML = '<p style="text-align:center; color: #aaa;">Belum ada riwayat kemenangan spin. Coba spin sekarang!</p>';
       allHistoryLoaded = true;
       console.log("Tidak ada riwayat kemenangan.");
@@ -939,7 +941,12 @@ async function loadInitialHistory() {
 
   } catch (err) {
     console.error("Gagal memuat riwayat:", err);
-    historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. Error: ' + err.message + '</p>';
+    // Tampilkan pesan error yang lebih spesifik
+    if (err.message.includes("max block range")) {
+        historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat: Node RPC menolak permintaan (terlalu berat).</p>';
+    } else {
+        historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. Error: ' + err.message + '</p>';
+    }
   } finally {
     isLoadingHistory = false;
     historyLoader.style.display = 'none';
@@ -947,15 +954,14 @@ async function loadInitialHistory() {
 }
 
   
-// 2. Dipanggil oleh scroll listener
 function handleHistoryScroll() {
-  const el = historyListContainer;
-  // Cek jika jarak ke bawah kurang dari 50px
-  if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
-    appendHistoryPage();
-  }
+const el = historyListContainer;
+if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
+appendHistoryPage();
+}
 }
 
+// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
 function appendHistoryPage() {
   if (isLoadingHistory || allHistoryLoaded) return;
 
@@ -976,8 +982,14 @@ function appendHistoryPage() {
   let html = '';
   
   for (const event of pageEvents) {
-    const amountStr = ethers.formatUnits(event.amount, 18); // PERBAIKAN: Ubah ke 18 sesuai kontrak V3 baru
+    // PERBAIKAN: Kontrak V3 Anda (spinFree) menggunakan 18 desimal
+    const amountStr = ethers.formatUnits(event.amount, 18); 
     
+    // --- PERBAIKAN: HAPUS TIMESTAMP ---
+    // const date = new Date(event.timestamp * 1000); // HAPUS
+    // const dateStr = date.toLocaleString('id-ID'); // HAPUS
+    // --- AKHIR PERBAIKAN ---
+
     html += `
       <div class="history-item">
         <div class="history-item-prize">
@@ -991,8 +1003,7 @@ function appendHistoryPage() {
   }
   
   // Masukkan HTML sebelum loader
-  // PERBAIKAN: Gunakan append untuk tambah ke akhir (bukan beforebegin, karena infinite scroll ke bawah)
-  historyListContainer.insertAdjacentHTML('beforeend', html);
+  historyLoader.insertAdjacentHTML('beforebegin', html);
   historyPage++;
   isLoadingHistory = false;
   
