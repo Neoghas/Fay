@@ -597,22 +597,30 @@ async function spinFromBlockchain() {
     const winner = prizes[winnerIndex];
 
     const sliceAngle = 360 / total;
-    const randomExtra = 360 * 8; 
-    const finalRotation = randomExtra + (360 - (winnerIndex * sliceAngle) - (sliceAngle / 2));
+    const randomExtra = 360 * 15; // Dibuat 8 putaran agar lebih intens
+    const landingRotation = (360 - (winnerIndex * sliceAngle) - (sliceAngle / 2));
+    
+    // --- PERBAIKAN BUG DIMULAI DI SINI ---
+    
+    // 1. Hitung rotasi baru dari rotasi saat ini
+    const finalRotation = currentRotation + randomExtra + landingRotation;
 
     gsap.to(svg, {
-      rotation: `+=${finalRotation}`, 
-      duration: 35, // Durasi 5 detik
-      ease: "power4.out",
+      rotation: finalRotation, // 2. Hapus "+=" (gunakan rotasi absolut)
+      duration: 5, // Durasi 5 detik
+      ease: "expo.inOut",
       onComplete: () => {
-        // PERBAIKAN: Kontrak V3 "Pasti Menang", tidak perlu cek
         winSound.play();
         resultText.textContent = `🎉 Anda menang: ${winner.name} BabyDoge! 🎉`;
         glowWinnerSector(winnerIndex);
         resetButton();
         updateUI();
+        
+        // 3. Simpan rotasi terakhir (penting untuk spin berikutnya)
+        currentRotation = finalRotation; 
       }
     });
+    // --- AKHIR PERBAIKAN ---
 
   } catch (err) {
     console.error("Spin Gagal:", err);
