@@ -732,7 +732,7 @@ async function ensureBaseSepolia() {
   }
 }
 
-// Ganti fungsi connectWallet() Anda dengan ini:
+// GANTI SELURUH FUNGSI INI
 async function connectWallet() {
   try {
     if (!hasEthereum()) {
@@ -758,35 +758,21 @@ async function connectWallet() {
     contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
     connectBtn.style.display = "none";
-    // (Tombol disconnect & alamat Anda akan dibuat dinamis oleh kode di bawah)
-    
-    // --- RIWAYAT: Inisialisasi DOM & Listener ---
-    // (Kita gabungkan dengan pembuatan tombol disconnect)
-    if (!disconnectBtn) {
-        disconnectBtn = document.createElement("button");
-        disconnectBtn.id = "disconnectBtn";
-        disconnectBtn.className = "wallet-btn"; // REVISI: Gunakan .wallet-btn
-        disconnectBtn.textContent = "Disconnect";
-        disconnectBtn.addEventListener("click", disconnectWallet);
-        navbarControls.appendChild(disconnectBtn);
-    }
-    if (!walletAddressDiv) {
-        walletAddressDiv = document.createElement("div");
-        walletAddressDiv.id = "walletAddress";
-        walletAddressDiv.className = "wallet-address";
-        navbarControls.appendChild(walletAddressDiv);
-    }
+    disconnectBtn.style.display = "inline-block";
+    walletAddressDiv.style.display = "inline-block";
     walletAddressDiv.textContent = shortAddress(userAddress);
 
-    // Inisialisasi elemen riwayat
+    // --- PERBAIKAN: INISIALISASI RIWAYAT ---
     historyListContainer = document.getElementById("historyListContainer");
     historyLoader = document.getElementById("historyLoader");
     
+    // Hapus listener lama jika ada (untuk mencegah double)
+    historyListContainer.removeEventListener("scroll", handleHistoryScroll);
     // Tambahkan listener scroll ke kontainer riwayat
     historyListContainer.addEventListener("scroll", handleHistoryScroll);
-    // --- AKHIR PERUBAHAN ---
+    // --- AKHIR PERBAIKAN ---
 
-    await updateUI();
+    await updateUI(); // Ini akan memicu loadInitialHistory
     resultText.textContent = "Wallet terhubung! Silakan spin.";
 
     await handleReferralOnLoad();
@@ -808,17 +794,15 @@ async function connectWallet() {
     resultText.textContent = "Koneksi wallet gagal.";
     disconnectWallet();
   }
-}
+      }
+  
 
-// Ganti fungsi disconnectWallet() Anda dengan ini:
+// GANTI SELURUH FUNGSI INI
 function disconnectWallet() {
   provider = signer = contract = userAddress = null;
   connectBtn.style.display = "inline-block";
-  
-  if (disconnectBtn) disconnectBtn.remove();
-  if (walletAddressDiv) walletAddressDiv.remove();
-  disconnectBtn = null;
-  walletAddressDiv = null;
+  disconnectBtn.style.display = "none";
+  walletAddressDiv.style.display = "none";
   
   resultText.textContent = "Press SPIN to play";
   spinCountText.textContent = "0 / 2";
@@ -826,9 +810,14 @@ function disconnectWallet() {
 
   myNickname.textContent = "-";
   myReferrer.textContent = "-";
-  // ... (sisa reset referral Anda) ...
+  referralCount.textContent = "0";
+  ethRewards.textContent = "0";
+  usdtRewards.textContent = "0";
+  babyDogeRewards.textContent = "0";
+  referralLinkSection.style.display = "none";
+  nicknameInput.value = "";
 
-  // --- RIWAYAT: Pembersihan ---
+  // --- PERBAIKAN: Pembersihan Riwayat ---
   if (historyListContainer) {
     historyListContainer.removeEventListener("scroll", handleHistoryScroll);
     historyListContainer.innerHTML = ""; // Kosongkan riwayat
@@ -837,8 +826,9 @@ function disconnectWallet() {
   historyPage = 0;
   isLoadingHistory = false;
   allHistoryLoaded = false;
-  // --- AKHIR PEMBERSIHAN ---
+  // --- AKHIR PERBAIKAN ---
 }
+  
   
 function resetButton() {  
   spinning = false;
@@ -926,15 +916,14 @@ function handleCopyLink() {
   }
 }
 
-  // Ganti fungsi updateUI() Anda dengan ini:
+  // GANTI SELURUH FUNGSI INI
 async function updateUI() {
   if (!contract) return;
   
-  // Tampilkan 'Loading...'
   spinCountText.textContent = "...";
   dummyBalanceText.textContent = "...";
   myNickname.textContent = "...";
-  // ... (sisa loading text Anda) ...
+  myReferrer.textContent = "...";
 
   try {
     // 1. Baca data spin & saldo
@@ -955,23 +944,42 @@ async function updateUI() {
       contract.getReferralCount(userAddress)
     ]);
 
-    // ... (sisa logika update referral Anda) ...
     myNickname.textContent = nick || "-";
     myReferrer.textContent = referrerAddr === ethers.ZeroAddress ? "-" : shortAddress(referrerAddr);
-    // ...dll...
+    referralCount.textContent = count.toString();
 
-    // --- RIWAYAT: Muat riwayat SETELAH UI utama di-load ---
+    if (nick) {
+      const link = `${window.location.origin}${window.location.pathname}?ref=${nick}`;
+      referralLinkInput.value = link;
+      referralLinkSection.style.display = "block";
+    } else {
+      referralLinkSection.style.display = "none";
+    }
+
+    ethRewards.textContent = ethers.formatEther(rewards.ethReward);
+    usdtRewards.textContent = ethers.formatUnits(rewards.usdtReward, 18); 
+    babyDogeRewards.textContent = ethers.formatUnits(rewards.babyDogeReward, 18);
+    
+    const totalRewards = rewards.ethReward + rewards.usdtReward + rewards.babyDogeReward;
+    claimRewardsBtn.disabled = totalRewards === 0n;
+
+    // --- PERBAIKAN: Pemicu Pemuatan Riwayat ---
+    // (Hanya muat jika belum pernah dimuat)
     if (userHistory.length === 0 && !isLoadingHistory) {
       loadInitialHistory();
     }
-    // --- AKHIR TAMBAHAN ---
+    // --- AKHIR PERBAIKAN ---
 
   } catch (err) {
     console.error("Error updating UI:", err);
     resultText.textContent = "Gagal memuat data. Coba refresh.";
-    // ... (sisa error handling Anda) ...
+    spinCountText.textContent = "0 / 2";
+    dummyBalanceText.textContent = "0";
+    myNickname.textContent = "-";
+    myReferrer.textContent = "-";
   }
 }
+  
 
 // --- RIWAYAT: FUNGSI-FUNGSI BARU ---
 
