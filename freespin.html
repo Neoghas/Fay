@@ -983,7 +983,7 @@ async function updateUI() {
 
 // --- RIWAYAT: FUNGSI-FUNGSI BARU ---
 
-// 1. Dipanggil oleh updateUI() saat pertama kali konek
+// GANTI FUNGSI LAMA DENGAN YANG INI
 async function loadInitialHistory() {
   if (isLoadingHistory || !contract) return; 
   isLoadingHistory = true;
@@ -997,28 +997,13 @@ async function loadInitialHistory() {
     const filter = contract.filters.FreeSpinWon(userAddress);
     const events = await contract.queryFilter(filter, 0, 'latest');
     
-    // --- REVISI DI SINI ---
-    // Kita perlu mengambil timestamp blok untuk setiap event
-    // Ini adalah operasi async, jadi kita gunakan Promise.all
-    const historyPromises = events.map(async (e) => {
-      try {
-        const block = await e.getBlock(); // Ambil data blok
-        return {
-          amount: e.args.amount,
-          tier: Number(e.args.prizeTier),
-          timestamp: block.timestamp // Simpan UNIX timestamp
-        };
-      } catch (err) {
-        console.error("Gagal mengambil blok untuk event:", err);
-        return null; // Abaikan event jika blok gagal diambil
-      }
-    });
-
-    // Tunggu semua data (termasuk timestamp) selesai diambil
-    const results = await Promise.all(historyPromises);
-    
-    // Filter event yang gagal dan urutkan (terbaru dulu)
-    userHistory = results.filter(item => item !== null).reverse(); 
+    // --- REVISI: Logika getBlock() DIHAPUS ---
+    // Langsung format dan urutkan (terbaru dulu)
+    userHistory = events.map(e => ({
+      amount: e.args.amount,
+      tier: Number(e.args.prizeTier)
+      // timestamp DIHAPUS
+    })).reverse(); 
     // --- AKHIR REVISI ---
 
     if (userHistory.length === 0) {
@@ -1036,6 +1021,7 @@ async function loadInitialHistory() {
     historyLoader.style.display = 'none';
   }
 }
+
   
 // 2. Dipanggil oleh scroll listener
 function handleHistoryScroll() {
@@ -1046,7 +1032,7 @@ function handleHistoryScroll() {
   }
 }
 
-// 3. Menampilkan item ke UI (Paginasi)
+// GANTI FUNGSI LAMA DENGAN YANG INI
 function appendHistoryPage() {
   if (isLoadingHistory || allHistoryLoaded) return;
 
@@ -1065,57 +1051,34 @@ function appendHistoryPage() {
 
   const pageEvents = userHistory.slice(start, end);
   let html = '';
-
   
   for (const event of pageEvents) {
-
-    // Kontrak V3 (spinFree) Anda menggunakan 9 desimal
-
     const amountStr = ethers.formatUnits(event.amount, 9);
-
     
-
-    // --- TAMBAHAN DI SINI ---
-
-    // Format timestamp (UNIX) menjadi tanggal yang bisa dibaca
-
-    const date = new Date(event.timestamp * 1000);
-
-    // Format ke 'id-ID' (mis: 11/11/2025 19.30.00)
-
-    const dateStr = date.toLocaleString('id-ID'); 
-
-    // --- AKHIR TAMBAHAN ---
-
-    
-
+    // --- REVISI: Hapus logika timestamp ---
     html += `
-
       <div class="history-item">
-
         <div class="history-item-prize">
-
           Menang: <span>${amountStr}</span> BabyDoge
-
         </div>
-
         <div class="history-item-info">
-
           (Dari Hadiah Tier ${event.tier})
-
         </div>
-
-        <div class="history-item-info" style="margin-top: 5px; color: #888;">
-
-          ${dateStr}
-
         </div>
-
-      </div>
-
     `;
-
+    // --- AKHIR REVISI ---
   }
+  
+  historyLoader.insertAdjacentHTML('beforebegin', html);
+  historyPage++;
+  isLoadingHistory = false;
+  
+  if (historyPage * HISTORY_PAGE_SIZE >= userHistory.length) {
+      allHistoryLoaded = true;
+      historyLoader.style.display = 'none';
+  }
+}
+
 
   // Masukkan HTML sebelum loader
   historyLoader.insertAdjacentHTML('beforebegin', html);
