@@ -136,64 +136,19 @@
     transition: all 0.5s ease; min-height: 30px;
   }
 
-  .info-container {
-  display: flex;
-  gap: 15px;
-  margin-top: 20px;
-  width: 90%;
-  max-width: 500px; /* Sesuaikan dengan lebar referral box */
-}
-
-/* Kotak Individual: (Box 1 dan Box 2) */
-.info-box {
-  background: #222;
-  border: 1px solid #0077b6;
-  border-radius: 10px;
-  padding: 10px 20px;
-  
-  /* Ini akan membuat kedua box sama lebar */
-  flex-grow: 1;
-  flex-basis: 0;
-
-  /* Ini menumpuk Judul di atas Nilai */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-}
-
-/* Judul (mis: "Spin Quota") */
-.info-box-title {
-  font-size: 12px;
-  color: #00b4d8;
-  margin: 0;
-  font-weight: bold;
-}
-
-/* Kontainer untuk [Icon] + [Nilai] */
-.info-box-value {
-  display: flex;
-  align-items: center;
-  gap: 8px; /* Jarak antara ikon dan angka */
-  font-size: 20px;
-  font-weight: bold;
-  color: #ccc;
-  margin: 0; /* Hapus margin default jika ada <p> */
-}
-
-/* Ikon di dalam box */
-.info-icon {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-}
-    
-    .pointer {
+  .info-container { display: flex; gap: 15px; margin-top: 20px; }
+  .info-box {
+    background: #222; border: 1px solid #0077b6; border-radius: 10px;
+    padding: 10px 20px;
+  }
+  .info-box-title { font-size: 12px; color: #00b4d8; margin: 0; }
+  .info-box-value { font-size: 24px; font-weight: bold; color: #fff; margin: 5px 0 0; }
+  .pointer {
       position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
       width: 0; height: 0; max-width: 450px;
       border-left: 15px solid transparent; border-right: 15px solid transparent;
       border-top: 25px solid gold; z-index: 10;
-      filter: drop-shadow(0 0 5px green);
+      filter: drop-shadow(0 0 5px gold);
   }
     
   /* === REFERRAL BOX === */
@@ -350,26 +305,24 @@
   </div>
 
   <div class="result" id="resultText">Press SPIN to play</div>
+  <br>
+  <div class="history-list-container" id="historyListContainer">
+    <div id="historyLoader">
+      <div class="loader-spinner"></div>
+    </div>
+  </div>
   
   <div class="info-container">
-
-  <div class="info-box">
-    <h3 class="info-box-title">Spin Quota:</h3>
-    <div class="info-box-value">
-      <img src="win.png" alt="Spin Icon" class="info-icon">
-      <span id="spinCountText">0 / 2</span>
+    <div class="info-box">
+      <h3 class="info-box-title">SPIN TERPAKAI</h3>
+      <p class="info-box-value" id="spinCountText">0 / 2</p>
+    </div>
+    <div class="info-box">
+      <h3 class="info-box-title">SALDO DUMMY (BABYDOGE)</h3>
+      <p class="info-box-value" id="dummyBalanceText">0</p>
     </div>
   </div>
 
-  <div class="info-box">
-    <h3 class="info-box-title">Balance BabyDoge:</h3>
-    <div class="info-box-value">
-      <img src="bb.svg" alt="Balance Icon" class="info-icon">
-      <span id="dummyBalanceText">0</span>
-    </div>
-  </div>
-  </div>
-  
   <!-- REFERRAL SYSTEM -->
   <div class="referral-container">
     <h2 class="referral-header">Referral System</h2>
@@ -429,25 +382,25 @@
     <div class="footer-text">© 2025 Faylotto. All rights reserved.</div>
   </footer>
 
-  <script>
+<script>
 // === 1. KONFIGURASI KONTRAK ===
 
-// !!! PENTING: ISI DENGAN ALAMAT KONTRAK V3 BARU ANDA
-const FAYLOTTO_ADDRESS = "0x610a4cd49D9ca1d6d8d816A12EFc02A57f215268"; 
+// PERBAIKAN BUG: Menggunakan alamat KONTRAK LAMA Anda
+const FAYLOTTO_ADDRESS = "0x10A57Be049bFF9bF84CBC952B73979c9cDb946Fe"; 
 
-const FAYLOTTO_ABI = ;
+// PERBAIKAN BUG: Menggunakan ABI KONTRAK LAMA Anda
+const FAYLOTTO_ABI = [];
 
 // === Variabel Global ===
 let provider, signer, contract, userAddress;
-let userHistory = [];
+// --- RIWAYAT: Variabel Global Baru ---
+let userHistory = []; // Cache untuk event
 let historyPage = 0;
 let isLoadingHistory = false;
 let allHistoryLoaded = false;
-let historyListContainer;
-let historyLoader;
-const HISTORY_PAGE_SIZE = 20;
-
-// === Elemen DOM Roda & Hasil ===
+let historyListContainer; // Akan diisi saat connect
+let historyLoader; // Akan diisi saat connect
+const HISTORY_PAGE_SIZE = 20; // Muat 20 item per 'halaman'
 const btn = document.getElementById("centerBtn");  
 const connectBtn = document.getElementById("connectBtn");  
 const disconnectBtn = document.getElementById("disconnectBtn");  
@@ -457,14 +410,12 @@ const clickSound = document.getElementById("clickSound");
 const spinSound = document.getElementById("spinSound");  
 const winSound = document.getElementById("winSound");  
 const svg = document.getElementById("wheel");
+
+// PERBAIKAN BUG: Menggunakan ID "dummyBalanceText"
 const spinCountText = document.getElementById("spinCountText");
+const dummyBalanceText = document.getElementById("dummyBalanceText"); 
 
-// PERBAIKAN: Mengganti nama DUMMY menjadi FREE
-const freeBalanceText = document.getElementById("dummyBalanceText"); // ID HTML tetap, variabel JS ganti
-document.getElementById("dummyBalanceText").previousElementSibling.textContent = "Balance BabyDoge:";
-
-
-// === Elemen DOM Referral ===
+// === Variabel Referral ===
 const myNickname = document.getElementById("myNickname");
 const myReferrer = document.getElementById("myReferrer");
 const nicknameInput = document.getElementById("nicknameInput");
@@ -478,17 +429,18 @@ const babyDogeRewards = document.getElementById("babyDogeRewards");
 const referralCount = document.getElementById("referralCount");
 const claimRewardsBtn = document.getElementById("claimRewardsBtn");
   
-// === 2. PETA HADIAH (Sesuai Kontrak V3 "Free") ===
+// === 2. PETA HADIAH (Sesuai Kontrak V3 "Dummy") ===
+// (Tier 1-7, plus 8 untuk Try Again, 0 untuk No Prize)
 const prizes = [  
-  { name: "10.000.000", icon: "bb.svg", tier: 9 }, // Tier 9
-  { name: "2.000.000", icon: "bb.svg", tier: 4 }, // Tier 4
-  { name: "5.000.000", icon: "bb.svg", tier: 7 }, // Tier 7
-  { name: "500.000", icon: "bb.svg", tier: 2 },   // Tier 2
-  { name: "6.000.000", icon: "bb.svg", tier: 8 }, // Tier 8
-  { name: "1.000.000", icon: "bb.svg", tier: 3 }, // Tier 3
-  { name: "3.000.000", icon: "bb.svg", tier: 5 }, // Tier 5
-  { name: "4.000.000", icon: "bb.svg", tier: 6 }, // Tier 6
-  { name: "250.000", icon: "bb.svg", tier: 1 }    // Tier 1 (Fallback)
+  { name: "10.000.000", icon: "bb.svg", tier: 6 }, // Tier 6
+  { name: "5.000.000", icon: "bb.svg", tier: 1 }, // Tier 1
+  { name: "8.500.000", icon: "bb.svg", tier: 4 }, // Tier 4
+  { name: "No Prize", icon: "no.png", tier: 0 },   // '0' = No Prize
+  { name: "9.000.000", icon: "bb.svg", tier: 5 }, // Tier 5
+  { name: "1.000.000", icon: "bb.svg", tier: 7 }, // Tier 7 (dan Tier 8)
+  { name: "6.500.000", icon: "bb.svg", tier: 2 }, // Tier 2
+  { name: "7.500.000", icon: "bb.svg", tier: 3 }, // Tier 3
+  { name: "Try again", icon: "again.png", tier: 0 } // '0' = No Prize
 ];
   
 const colors = [  
@@ -498,16 +450,16 @@ const colors = [
   
 const radius = 240, cx = 250, cy = 250, total = prizes.length, slice = 360 / total;  
   
-// === Fungsi Render Roda ===
+// === Render Roda (Kode Anda) ===
 function renderWheel() {
-  svg.innerHTML = ''; // Bersihkan roda lama
+  svg.innerHTML = ''; // Clear dulu jika redraw
   for (let i = 0; i < total; i++) {  
     const startAngle = (i * slice - 90) * Math.PI / 180;  
     const endAngle = ((i + 1) * slice - 90) * Math.PI / 180;  
     const x1 = cx + radius * Math.cos(startAngle);  
     const y1 = cy + radius * Math.sin(startAngle);  
     const x2 = cx + radius * Math.cos(endAngle);  
-    const y2 = cy + radius * Math.sin(endAngle);
+    const y2 = cy + radius * Math.sin(endAngle);  
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");  
     path.setAttribute("d", `M ${cx} ${cy} L ${x1} ${y1} A ${radius} ${radius} 0 0 1 ${x2} ${y2} Z`);  
     path.setAttribute("fill", colors[i]);  
@@ -540,10 +492,8 @@ function renderWheel() {
     svg.appendChild(text);  
   }  
 }
-  
-let spinning = false, currentRotation = 0;  
 
-// === Fungsi Animasi Glow ===
+// === Animasi Glow (Kode Anda) ===
 function glowWinnerSector(winnerIndex) {
   if (winnerIndex < 0 || winnerIndex >= prizes.length) return;
   const sector = prizes[winnerIndex].path;
@@ -564,7 +514,7 @@ function glowWinnerSector(winnerIndex) {
   }, 6000);
 }
 
-// === 3. FUNGSI SPIN (Logika V3 "Free") ===
+// === 3. FUNGSI SPIN (Logika V3 "Dummy") ===
 async function spinFromBlockchain() {
   if (spinning || !contract) {
     resultText.textContent = "Harap hubungkan wallet dulu.";
@@ -574,13 +524,14 @@ async function spinFromBlockchain() {
   btn.disabled = true;
   btn.textContent = "WAIT...";
   resultText.textContent = "Mengirim transaksi...";
-  
+  spinSound.play();
+
   try {
     const tx = await contract.spinFree();
     resultText.textContent = "Menunggu konfirmasi blockchain...";
-    spinSound.play();
     const receipt = await tx.wait();
 
+    // PERBAIKAN BUG: Memanggil parseReceipt V3
     const { prizeTier, prizeAmount } = parseReceiptForPrize(receipt);
     const winnerIndex = getTargetSlice(prizeTier);
     
@@ -589,18 +540,25 @@ async function spinFromBlockchain() {
     const winner = prizes[winnerIndex];
 
     const sliceAngle = 360 / total;
-    const randomExtra = 360 * 8; 
+    const randomExtra = 360 * 5; 
     const finalRotation = randomExtra + (360 - (winnerIndex * sliceAngle) - (sliceAngle / 2));
 
     gsap.to(svg, {
       rotation: `+=${finalRotation}`, 
-      duration: 35, // Durasi 5 detik
+      duration: 35,
       ease: "power4.out",
       onComplete: () => {
-        // PERBAIKAN: Kontrak V3 "Pasti Menang", tidak perlu cek
-        winSound.play();
-        resultText.textContent = `🎉 Anda menang: ${winner.name} BabyDoge! 🎉`;
-        glowWinnerSector(winnerIndex);
+        // PERBAIKAN BUG: Menambahkan cek if (prizeTier > 0)
+        if (prizeTier > 0) {
+          winSound.play();
+          resultText.textContent = `🎉 Anda menang: ${winner.name} BabyDoge! 🎉`;
+          glowWinnerSector(winnerIndex);
+        } else {
+          // Kalah (No Prize / Try Again)
+          resultText.textContent = "Oops! Coba lagi nanti.";
+          glowWinnerSector(winnerIndex);
+        }
+        
         resetButton();
         updateUI();
       }
@@ -622,20 +580,19 @@ async function spinFromBlockchain() {
   }
 }
 
-// === 4. FUNGSI HELPER (Logika V3 "Free") ===
+// === 4. FUNGSI HELPER (Logika V3 "Dummy") ===
 
-// PERBAIKAN: Hanya mencari 'FreeSpinWon'
+// PERBAIKAN BUG: Menggunakan logika V3 (dengan FreeSpinNoPrize)
 function parseReceiptForPrize(receipt) {
-  if (FAYLOTTO_ABI.length === 0) {
-      console.error("ABI WRONG!");
-      return { prizeTier: 1, prizeAmount: 0 };
-  }
   const iface = new ethers.Interface(FAYLOTTO_ABI);
   
+  // Cek kedua event
   const wonEvent = iface.getEvent("FreeSpinWon");
-  if (!wonEvent) {
-      console.error("ABI Error: Event 'FreeSpinWon' tidak ditemukan!");
-      return { prizeTier: 1, prizeAmount: 0 }; 
+  const noPrizeEvent = iface.getEvent("FreeSpinNoPrize");
+
+  if (!wonEvent || !noPrizeEvent) {
+      console.error("ABI Error: Event 'FreeSpinWon' atau 'FreeSpinNoPrize' tidak ditemukan!");
+      return { prizeTier: 0, prizeAmount: 0 }; // Fallback aman
   }
   
   for (const log of receipt.logs) {
@@ -647,17 +604,24 @@ function parseReceiptForPrize(receipt) {
           prizeAmount: parsedLog.args.amount
         };
       }
-      // 'FreeSpinNoPrize' sudah tidak ada
+      if (parsedLog.name === "FreeSpinNoPrize") {
+        return { prizeTier: 0, prizeAmount: 0 }; // Kalah
+      }
     } catch (e) { /* Abaikan log lain */ }
   }
+  // Jika tidak ada event (seharusnya tidak mungkin)
   console.error("Logic Error: Tidak ada event spin yang ditemukan.");
-  // Default ke Tier 1 (hadiah hiburan)
-  return { prizeTier: 1, prizeAmount: 250000 * (10**18) }; 
+  return { prizeTier: 0, prizeAmount: 0 }; 
 }
 
-// PERBAIKAN: Memetakan Tier 1-9
+// PERBAIKAN BUG: Menggunakan logika V3 (Tier 0-8)
 function getTargetSlice(prizeTier) {
   const visualTier = prizeTier;
+  // Kontrak V3: Tier 8 adalah 1M (dari Try Again), Tier 7 juga 1M.
+  // Kita gabungkan keduanya ke visual Tier 7
+  if (visualTier === 8) {
+    visualTier = 7; 
+  }
 
   const matchingSlices = [];
   for (let i = 0; i < prizes.length; i++) {
@@ -671,36 +635,34 @@ function getTargetSlice(prizeTier) {
   }
   
   console.error(`Error: Tier ${prizeTier} dari kontrak tidak ada di roda!`);
-  return 8; // Fallback ke index Tier 1 (250k)
+  return -1; // Fallback untuk error
 }
 
-// PERBAIKAN: Memanggil 'freeBalances' dan desimal 18
+// PERBAIKAN BUG: Menggunakan `dummyBalances`
 async function updateUI() {
   if (!contract) return;
   
   spinCountText.textContent = "...";
-  freeBalanceText.textContent = "...";
+  dummyBalanceText.textContent = "...";
   myNickname.textContent = "...";
   myReferrer.textContent = "...";
 
   try {
     const [spins, balance] = await Promise.all([
       contract.spinCounts(userAddress),
-      contract.freeBalances(userAddress) // <-- PERBAIKAN: 'freeBalances'
+      contract.dummyBalances(userAddress) // Sesuai V3
     ]);
     
     const spinsUsed = Number(spins);
     spinCountText.textContent = `${spinsUsed} / 2`;
-    // PERBAIKAN: Kontrak V3 'spinFree' menggunakan 18 desimal
-    freeBalanceText.textContent = ethers.formatUnits(balance, 18); 
+    // Kontrak V3 Anda (spinFree) menggunakan 10**9 untuk desimal
+    dummyBalanceText.textContent = ethers.formatUnits(balance, 9); 
 
-    const [nick, referrerAddr, rewards, count, usdtDecimals, babyDogeDecimals] = await Promise.all([
+    const [nick, referrerAddr, rewards, count] = await Promise.all([
       contract.nicknames(userAddress),
       contract.referrerOf(userAddress),
       contract.getReferralRewards(userAddress),
-      contract.getReferralCount(userAddress),
-      contract.usdtDecimals(), // Ambil desimal USDT
-      contract.babyDogeDecimals() // Ambil desimal BabyDoge
+      contract.getReferralCount(userAddress)
     ]);
 
     myNickname.textContent = nick || "-";
@@ -716,27 +678,34 @@ async function updateUI() {
     }
 
     ethRewards.textContent = ethers.formatEther(rewards.ethReward);
-    usdtRewards.textContent = ethers.formatUnits(rewards.usdtReward, usdtDecimals); 
-    babyDogeRewards.textContent = ethers.formatUnits(rewards.babyDogeReward, babyDogeDecimals);
+    // PERBAIKAN BUG: Kontrak Anda mengasumsikan 18 desimal untuk USDT (MAX_BET_USDT = 10 ether)
+    usdtRewards.textContent = ethers.formatUnits(rewards.usdtReward, 18); 
+    // PERBAIKAN BUG: Kontrak V3 Anda mengasumsikan 18 desimal untuk BabyDoge (MIN/MAX_BET)
+    // TAPI spinFree menggunakan 10**9. Kita harus konsisten.
+    // Mari kita asumsikan desimal reward referral juga 18 (karena desimal bet 18)
+    babyDogeRewards.textContent = ethers.formatUnits(rewards.babyDogeReward, 18);
     
     const totalRewards = rewards.ethReward + rewards.usdtReward + rewards.babyDogeReward;
     claimRewardsBtn.disabled = totalRewards === 0n;
 
+    // --- PERBAIKAN: Pemicu Pemuatan Riwayat ---
+    // (Hanya muat jika belum pernah dimuat)
     if (userHistory.length === 0 && !isLoadingHistory) {
       loadInitialHistory();
     }
+    // --- AKHIR PERBAIKAN ---
 
   } catch (err) {
     console.error("Error updating UI:", err);
     resultText.textContent = "Gagal memuat data. Coba refresh.";
     spinCountText.textContent = "0 / 2";
-    freeBalanceText.textContent = "0";
+    dummyBalanceText.textContent = "0";
     myNickname.textContent = "-";
     myReferrer.textContent = "-";
   }
 }
   
-// === 5. FUNGSI LOGIKA (Jaringan & Wallet) ===
+// === 5. FUNGSI LOGIKA (Update & Tambahan) ===
 
 const BASE_SEPOLIA = {
   chainIdHex: '0x14a34', chainIdDec: 84532, chainName: 'Base Sepolia',
@@ -771,7 +740,7 @@ async function ensureBaseSepolia() {
   }
 }
 
-// PERBAIKAN: Fungsi connectWallet disesuaikan dengan HTML
+// GANTI SELURUH FUNGSI INI
 async function connectWallet() {
   try {
     if (!hasEthereum()) {
@@ -793,24 +762,25 @@ async function connectWallet() {
          alert("Developer Error: Alamat Kontrak tidak valid atau belum diisi.");
          return;
     }
-    if (FAYLOTTO_ABI.length === 0) {
-        alert("Developer Error: FAYLOTTO_ABI kosong. Harap isi ABI kontrak.");
-        return;
-    }
 
     contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-    // PERBAIKAN: Gunakan tombol yang ada di HTML
     connectBtn.style.display = "none";
     disconnectBtn.style.display = "inline-block";
     walletAddressDiv.style.display = "inline-block";
     walletAddressDiv.textContent = shortAddress(userAddress);
 
+    // --- PERBAIKAN: INISIALISASI RIWAYAT ---
     historyListContainer = document.getElementById("historyListContainer");
     historyLoader = document.getElementById("historyLoader");
+    
+    // Hapus listener lama jika ada (untuk mencegah double)
+    historyListContainer.removeEventListener("scroll", handleHistoryScroll);
+    // Tambahkan listener scroll ke kontainer riwayat
     historyListContainer.addEventListener("scroll", handleHistoryScroll);
+    // --- AKHIR PERBAIKAN ---
 
-    await updateUI(); 
+    await updateUI(); // Ini akan memicu loadInitialHistory
     resultText.textContent = "Wallet terhubung! Silakan spin.";
 
     await handleReferralOnLoad();
@@ -832,9 +802,10 @@ async function connectWallet() {
     resultText.textContent = "Koneksi wallet gagal.";
     disconnectWallet();
   }
-}
+      }
   
-// PERBAIKAN: Fungsi disconnectWallet disesuaikan dengan HTML
+
+// GANTI SELURUH FUNGSI INI
 function disconnectWallet() {
   provider = signer = contract = userAddress = null;
   connectBtn.style.display = "inline-block";
@@ -843,7 +814,7 @@ function disconnectWallet() {
   
   resultText.textContent = "Press SPIN to play";
   spinCountText.textContent = "0 / 2";
-  freeBalanceText.textContent = "0"; // PERBAIKAN: dummy -> free
+  dummyBalanceText.textContent = "0";
 
   myNickname.textContent = "-";
   myReferrer.textContent = "-";
@@ -854,15 +825,18 @@ function disconnectWallet() {
   referralLinkSection.style.display = "none";
   nicknameInput.value = "";
 
+  // --- PERBAIKAN: Pembersihan Riwayat ---
   if (historyListContainer) {
     historyListContainer.removeEventListener("scroll", handleHistoryScroll);
-    historyListContainer.innerHTML = ""; 
+    historyListContainer.innerHTML = ""; // Kosongkan riwayat
   }
   userHistory = [];
   historyPage = 0;
   isLoadingHistory = false;
   allHistoryLoaded = false;
+  // --- AKHIR PERBAIKAN ---
 }
+  
   
 function resetButton() {  
   spinning = false;
@@ -871,8 +845,6 @@ function resetButton() {
   spinSound.pause();
   spinSound.currentTime = 0;
 }  
-
-// === Fungsi Referral (Sesuai Kontrak V3) ===
 
 async function handleReferralOnLoad() {
   const params = new URLSearchParams(window.location.search);
@@ -884,6 +856,7 @@ async function handleReferralOnLoad() {
         console.log("Pengguna sudah punya referrer.");
         return; 
     }
+
     try {
       resultText.textContent = `Mendaftarkan referrer: ${refNickname}...`;
       const tx = await contract.setReferralByNickname(refNickname);
@@ -951,8 +924,77 @@ function handleCopyLink() {
   }
 }
 
-// --- RIWAYAT: FUNGSI-FUNGSI BARU (Versi Cepat tanpa Timestamp) ---
+  // GANTI SELURUH FUNGSI INI
+async function updateUI() {
+  if (!contract) return;
+  
+  spinCountText.textContent = "...";
+  dummyBalanceText.textContent = "...";
+  myNickname.textContent = "...";
+  myReferrer.textContent = "...";
 
+  try {
+    const [spins, balance] = await Promise.all([
+      contract.spinCounts(userAddress),
+      contract.dummyBalances(userAddress) // Sesuai V3
+    ]);
+    
+    const spinsUsed = Number(spins);
+    spinCountText.textContent = `${spinsUsed} / 2`;
+    // Kontrak V3 Anda (spinFree) menggunakan 10**9 untuk desimal
+    dummyBalanceText.textContent = ethers.formatUnits(balance, 9); 
+
+    const [nick, referrerAddr, rewards, count] = await Promise.all([
+      contract.nicknames(userAddress),
+      contract.referrerOf(userAddress),
+      contract.getReferralRewards(userAddress),
+      contract.getReferralCount(userAddress)
+    ]);
+
+    myNickname.textContent = nick || "-";
+    myReferrer.textContent = referrerAddr === ethers.ZeroAddress ? "-" : shortAddress(referrerAddr);
+    referralCount.textContent = count.toString();
+
+    if (nick) {
+      const link = `${window.location.origin}${window.location.pathname}?ref=${nick}`;
+      referralLinkInput.value = link;
+      referralLinkSection.style.display = "block";
+    } else {
+      referralLinkSection.style.display = "none";
+    }
+
+    ethRewards.textContent = ethers.formatEther(rewards.ethReward);
+    // PERBAIKAN BUG: Kontrak Anda mengasumsikan 18 desimal untuk USDT (MAX_BET_USDT = 10 ether)
+    usdtRewards.textContent = ethers.formatUnits(rewards.usdtReward, 18); 
+    // PERBAIKAN BUG: Kontrak V3 Anda mengasumsikan 18 desimal untuk BabyDoge (MIN/MAX_BET)
+    // TAPI spinFree menggunakan 10**9. Kita harus konsisten.
+    // Mari kita asumsikan desimal reward referral juga 18 (karena desimal bet 18)
+    babyDogeRewards.textContent = ethers.formatUnits(rewards.babyDogeReward, 18);
+    
+    const totalRewards = rewards.ethReward + rewards.usdtReward + rewards.babyDogeReward;
+    claimRewardsBtn.disabled = totalRewards === 0n;
+
+    // --- PERBAIKAN: Pemicu Pemuatan Riwayat ---
+    // (Hanya muat jika belum pernah dimuat)
+    if (userHistory.length === 0 && !isLoadingHistory) {
+      loadInitialHistory();
+    }
+    // --- AKHIR PERBAIKAN ---
+
+  } catch (err) {
+    console.error("Error updating UI:", err);
+    resultText.textContent = "Gagal memuat data. Coba refresh.";
+    spinCountText.textContent = "0 / 2";
+    dummyBalanceText.textContent = "0";
+    myNickname.textContent = "-";
+    myReferrer.textContent = "-";
+  }
+}
+  
+
+// --- RIWAYAT: FUNGSI-FUNGSI BARU ---
+
+// GANTI FUNGSI LAMA DENGAN YANG INI
 async function loadInitialHistory() {
   if (isLoadingHistory || !contract) return; 
   isLoadingHistory = true;
@@ -961,43 +1003,47 @@ async function loadInitialHistory() {
   userHistory = [];
   historyListContainer.innerHTML = ''; 
   historyLoader.style.display = 'block'; 
-
+  
   try {
-    // Batasi jangkauan query ke 99,999 blok terakhir (aman)
-    const currentBlock = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, currentBlock - 99999); 
-    
     const filter = contract.filters.FreeSpinWon(userAddress);
+    // PERBAIKAN: Batasi query ke 10000 block terakhir untuk efisiensi
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - 10000);
     const events = await contract.queryFilter(filter, fromBlock, 'latest');
     
+    // Langsung format dan urutkan (terbaru dulu)
     userHistory = events.map(e => ({
       amount: e.args.amount,
       tier: Number(e.args.prizeTier)
     })).reverse(); 
-
+    
     if (userHistory.length === 0) {
       historyListContainer.innerHTML = '<p style="text-align:center; color: #aaa;">Anda belum pernah memenangkan spin.</p>';
       allHistoryLoaded = true;
     } else {
-      appendHistoryPage(); 
+      appendHistoryPage(); // Tampilkan halaman pertama
     }
 
   } catch (err) {
     console.error("Gagal memuat riwayat:", err);
-    historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. (Node Timeout)</p>';
+    historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. Coba refresh.</p>';
   } finally {
     isLoadingHistory = false;
     historyLoader.style.display = 'none';
   }
 }
 
+  
+// 2. Dipanggil oleh scroll listener
 function handleHistoryScroll() {
   const el = historyListContainer;
+  // Cek jika jarak ke bawah kurang dari 50px
   if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
     appendHistoryPage();
   }
 }
 
+// GANTI FUNGSI LAMA DENGAN YANG INI
 function appendHistoryPage() {
   if (isLoadingHistory || allHistoryLoaded) return;
 
@@ -1018,8 +1064,7 @@ function appendHistoryPage() {
   let html = '';
   
   for (const event of pageEvents) {
-    // PERBAIKAN: Kontrak V3 'spinFree' menggunakan 18 desimal
-    const amountStr = ethers.formatUnits(event.amount, 18);
+    const amountStr = ethers.formatUnits(event.amount, 9);
     
     html += `
       <div class="history-item">
@@ -1029,14 +1074,16 @@ function appendHistoryPage() {
         <div class="history-item-info">
           (Dari Hadiah Tier ${event.tier})
         </div>
-      </div>
+        </div>
     `;
   }
   
+  // Masukkan HTML sebelum loader
   historyLoader.insertAdjacentHTML('beforebegin', html);
   historyPage++;
   isLoadingHistory = false;
   
+  // Sembunyikan loader jika sudah semua
   if (historyPage * HISTORY_PAGE_SIZE >= userHistory.length) {
       allHistoryLoaded = true;
       historyLoader.style.display = 'none';
@@ -1052,11 +1099,12 @@ claimRewardsBtn.addEventListener("click", handleClaimRewards);
 copyReferralBtn.addEventListener("click", handleCopyLink);
 referralLinkInput.addEventListener("click", handleCopyLink); 
 
-// Panggil renderWheel saat DOM dimuat
+// PERBAIKAN: Redraw wheel saat load/resize/focus
 document.addEventListener('DOMContentLoaded', renderWheel);
 window.addEventListener('resize', renderWheel);
+window.addEventListener('focus', renderWheel);
 
 </script>
 
-</head>
-</html>
+</body>
+  </html>
