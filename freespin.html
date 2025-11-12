@@ -914,9 +914,8 @@ async function loadInitialHistory() {
   
   try {
     const filter = contract.filters.FreeSpinWon(userAddress);
-    // PERBAIKAN: Perluas jangkauan block untuk events lama
-    const currentBlock = await provider.getBlockNumber();
-    const fromBlock = 0; // Mulai dari block 0 untuk ambil semua
+    // PERBAIKAN: Batasi query ke block deployment kontrak (33578603) ke latest
+    const fromBlock = 33578603; // Block creation kontrak Anda
     const events = await contract.queryFilter(filter, fromBlock, 'latest');
     
     // Tambah log debug
