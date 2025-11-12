@@ -994,17 +994,24 @@ async function loadInitialHistory() {
   historyLoader.style.display = 'block'; 
 
   try {
-    const filter = contract.filters.FreeSpinWon(userAddress);
-    const events = await contract.queryFilter(filter, 0, 'latest');
+    // --- PERBAIKAN: Batasi jangkauan query ---
+    // 1. Dapatkan nomor blok saat ini
+    const currentBlock = await provider.getBlockNumber();
     
-    // --- REVISI: Logika getBlock() DIHAPUS ---
-    // Langsung format dan urutkan (terbaru dulu)
+    // 2. Tentukan blok awal (1 juta blok terakhir)
+    // Ini mencegah RPC node dari timeout
+    const fromBlock = Math.max(0, currentBlock - 1000000); 
+    
+    // 3. Filter event HANYA dari 1 juta blok terakhir
+    const filter = contract.filters.FreeSpinWon(userAddress);
+    const events = await contract.queryFilter(filter, fromBlock, 'latest'); 
+    // --- AKHIR PERBAIKAN ---
+    
+    // (Logika sisa tetap sama)
     userHistory = events.map(e => ({
       amount: e.args.amount,
       tier: Number(e.args.prizeTier)
-      // timestamp DIHAPUS
     })).reverse(); 
-    // --- AKHIR REVISI ---
 
     if (userHistory.length === 0) {
       historyListContainer.innerHTML = '<p style="text-align:center; color: #aaa;">Anda belum pernah memenangkan spin.</p>';
@@ -1021,7 +1028,6 @@ async function loadInitialHistory() {
     historyLoader.style.display = 'none';
   }
 }
-
   
 // 2. Dipanggil oleh scroll listener
 function handleHistoryScroll() {
