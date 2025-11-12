@@ -902,7 +902,6 @@ function handleCopyLink() {
 }
 
 // --- RIWAYAT: FUNGSI-FUNGSI BARU ---
-
 async function loadInitialHistory() {
   if (isLoadingHistory || !contract) return; 
   isLoadingHistory = true;
@@ -911,14 +910,15 @@ async function loadInitialHistory() {
   userHistory = [];
   historyListContainer.innerHTML = ''; 
   historyLoader.style.display = 'block'; 
-
+  
   try {
-    const currentBlock = await provider.getBlockNumber();
-    const fromBlock = Math.max(0, currentBlock - 250000); 
-    
     const filter = contract.filters.FreeSpinWon(userAddress);
+    // PERBAIKAN: Batasi query ke 10000 block terakhir untuk efisiensi
+    const currentBlock = await provider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - 10000);
     const events = await contract.queryFilter(filter, fromBlock, 'latest');
     
+    // Langsung format dan urutkan (terbaru dulu)
     userHistory = events.map(e => ({
       amount: e.args.amount,
       tier: Number(e.args.prizeTier)
@@ -928,20 +928,23 @@ async function loadInitialHistory() {
       historyListContainer.innerHTML = '<p style="text-align:center; color: #aaa;">Anda belum pernah memenangkan spin.</p>';
       allHistoryLoaded = true;
     } else {
-      appendHistoryPage(); 
+      appendHistoryPage(); // Tampilkan halaman pertama
     }
 
   } catch (err) {
     console.error("Gagal memuat riwayat:", err);
-    historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. (Node Timeout)</p>';
+    historyListContainer.innerHTML = '<p style="text-align:center; color: #f88;">Gagal memuat riwayat. Coba refresh.</p>';
   } finally {
     isLoadingHistory = false;
     historyLoader.style.display = 'none';
   }
 }
 
+  
+// 2. Dipanggil oleh scroll listener
 function handleHistoryScroll() {
   const el = historyListContainer;
+  // Cek jika jarak ke bawah kurang dari 50px
   if (el.scrollHeight - el.scrollTop - el.clientHeight < 50) {
     appendHistoryPage();
   }
@@ -967,7 +970,7 @@ function appendHistoryPage() {
   let html = '';
   
   for (const event of pageEvents) {
-    const amountStr = ethers.formatUnits(event.amount, 18);
+    const amountStr = ethers.formatUnits(event.amount, 9);
     
     html += `
       <div class="history-item">
@@ -977,14 +980,16 @@ function appendHistoryPage() {
         <div class="history-item-info">
           (Dari Hadiah Tier ${event.tier})
         </div>
-      </div>
+        </div>
     `;
   }
   
+  // Masukkan HTML sebelum loader
   historyLoader.insertAdjacentHTML('beforebegin', html);
   historyPage++;
   isLoadingHistory = false;
   
+  // Sembunyikan loader jika sudah semua
   if (historyPage * HISTORY_PAGE_SIZE >= userHistory.length) {
       allHistoryLoaded = true;
       historyLoader.style.display = 'none';
