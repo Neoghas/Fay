@@ -340,6 +340,144 @@ h1, h2, h3 {
   margin: 0 auto;
 }
 
+.btn-rec {
+  --width: 140px;
+  --height: 60px;
+  --padding: 6px;
+  --border-radius: 30px;
+  --dot-size: 12px;
+  --btn-color: #202020;
+  --hue: 140deg; /* 🔸 Hijau gelap elegan */
+  --animation-duration: 1.5s;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--width);
+  height: var(--height);
+  border-radius: var(--border-radius);
+  border: none;
+  background-color: #00000008;
+
+  box-shadow:
+    1px 1px 2px 0 #0f0d,
+    2px 2px 2px #0001 inset,
+    2px 2px 8px #0002 inset;
+
+  transition: box-shadow 50ms linear;
+  perspective: 150px;
+  user-select: none;
+  z-index: 1;
+}
+
+.btnrec {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  gap: 0.25em;
+  padding: 0 var(--height) 0 calc(var(--padding) * 4);
+  width: calc(100% - 2 * var(--padding));
+  height: calc(100% - 2 * var(--padding));
+  border-radius: calc(var(--border-radius) - var(--padding));
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(#fff2, #0001), var(--btn-color);
+  box-shadow:
+    0 2px 1px #00000010,
+    0 4px 2px #00000010,
+    0 8px 4px #00000010;
+  transition:
+    transform 0.25s cubic-bezier(0.25, 1.5, 0.5, 2.2),
+    box-shadow 0.25s cubic-bezier(0.25, 1.5, 0.5, 1),
+    filter 0.3s cubic-bezier(0.25, 1.5, 0.5, 1);
+}
+
+.btn-txt {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: "Ubuntu", sans-serif;
+  color: #ccc;
+  letter-spacing: 1px;
+  transition: color 0.3s ease;
+}
+
+.dot {
+  position: absolute;
+  top: calc(50% - var(--dot-size) / 2);
+  right: calc(var(--height) / 2 - var(--padding) / 2);
+  width: var(--dot-size);
+  aspect-ratio: 1/1;
+  border-radius: 50%;
+  background-color: hsla(var(--hue), 30%, 30%, 0.4);
+  border: 1px solid hsla(var(--hue), 50%, 50%, 0.6);
+  box-shadow:
+    0 0 5px 1px hsla(var(--hue), 60%, 45%, 0.6),
+    0 0 12px 4px hsla(var(--hue), 70%, 40%, 0.3);
+  z-index: 3;
+  transition: transform 0.3s ease;
+}
+
+.dot::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background-color: #0000;
+  box-shadow:
+    0 0 12px 2px hsla(var(--hue), 70%, 40%, 0.5),
+    0 0 25px 10px hsla(var(--hue), 70%, 40%, 0.4),
+    0 0 60px 15px hsla(var(--hue), 80%, 50%, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* 🌟 Hover efek lembut + teks bersinar */
+.btnrec:hover .btn-txt {
+  color: #fff;
+  text-shadow: 0 0 10px hsla(var(--hue), 80%, 60%, 0.8);
+}
+.btnrec:hover .dot {
+  transform: scale(1.15);
+}
+.btnrec:hover .dot::after {
+  opacity: 1;
+}
+
+/* 🔁 Denyut halus otomatis */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+  }
+}
+
+.btnrec:hover {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+/* Fokus = animasi nyala */
+@keyframes bg-anim {
+  0%, 100% { background-color: hsla(var(--hue), 50%, 50%, 0); }
+  50% { background-color: hsla(var(--hue), 100%, 50%, 1); }
+}
+@keyframes opacity-anim {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+.btnrec:focus .dot {
+  animation: bg-anim var(--animation-duration) ease-in-out infinite;
+}
+.btnrec:focus .dot::after {
+  animation: opacity-anim var(--animation-duration) ease-in-out infinite;
+}
+    
+
 /* === RESPONSIVE === */
   @media (min-width: 768px) {
     .wheel-container { width: 500px; height: 500px; }
@@ -388,7 +526,13 @@ h1, h2, h3 {
   <section class="hero">
     <h2>Faylotto Decentralized Betting Web3 Social</h2>
     <h3>Spin & Win Rewards!</h3>
-    <h5>Spin your wheel of fortune and win exciting BabyDoge prizes. Start playing now for free!</h5>
+    <h5>Spin your wheel of fortune and win exciting BabyDoge prizes. Start playing now for free!</h5><br><br>
+    <center><div class="btn-rec">
+  <a href="#spinCountText" class="btnrec">
+    <span class="btn-txt">Play Now!</span>
+    <div class="dot"></div>
+  </a>
+    </div></center>
   </section>
 
   <!-- WHEEL -->
