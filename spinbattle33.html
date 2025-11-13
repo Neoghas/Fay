@@ -2401,64 +2401,64 @@ function updateBetList() {
 }
 
 // --- (Data Ronde V3: Tambah BabyDoge & Pool USD) ---
-    async function fetchAndDisplayRoundData() {
-        let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-        if(!contract) return;
-        
-        try {
-            statusText.innerText = "Syncing round data...";
-            if (currentEthPrice === 0) await fetchTokenPrices(); 
+    // GANTI FUNGSI LAMA ANDA DENGAN YANG INI
+async function fetchAndDisplayRoundData() {
+    let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    if (!contract) return;
 
-            currentRoundId = await contract.currentRoundId();
-            const roundInfo = await contract.getRoundBasic(currentRoundId);
-            
-            resetRoundUI(); 
-            
-            const playersList = await contract.getRoundPlayers(currentRoundId);
-            for (const playerAddress of playersList) {
-                const deposits = await contract.getPlayerDeposits(currentRoundId, playerAddress);
-                // Kirim semua 4 nilai (termasuk bobot)
-                addBetToState(playerAddress, deposits.ethAmount, deposits.usdtAmount, deposits.babyDogeAmount, deposits.usdWeight, false);
-            }
-            updateBetList();
-            if(userAddress) await updateMyDeposits();
+    try {
+        statusText.innerText = "Syncing round data...";
+        if (currentEthPrice === 0) await fetchTokenPrices();
 
-            // Tampilkan Total Pool
-            const ethPool = parseFloat(ethers.utils.formatEther(roundInfo[5]));
-            const usdtPool = parseFloat(ethers.utils.formatUnits(roundInfo[6], usdtDecimals));
-            const babyPool = parseFloat(ethers.utils.formatUnits(roundInfo[7], babyDogeDecimals));
-            
-            const totalUsd = usdtPool + (ethPool * currentEthPrice) + (babyPool * currentBabyDogePrice);
-            
-            // Periksa apakah elemen ada sebelum mengatur innerText
-            const poolUsdValue = document.getElementById('pool-usd-value');
-            if (poolUsdValue) poolUsdValue.innerText = "$" + totalUsd.toFixed(2);
-            
-            const poolEthTotal = document.getElementById('pool-eth-total');
-            if (poolEthTotal) poolEthTotal.innerText = ethPool.toFixed(4) + " ETH";
-            
-            const poolUsdtTotal = document.getElementById('pool-usdt-total');
-            if (poolUsdtTotal) poolUsdtTotal.innerText = usdtPool.toFixed(2) + " USDT";
+        currentRoundId = await contract.currentRoundId();
+        const roundInfo = await contract.getRoundBasic(currentRoundId);
 
-            // Timer
-            const contractEndTime = roundInfo[2].toNumber() * 1000;
-            startVisualTimer(contractEndTime); // Memulai timer
+        resetRoundUI();
 
-            // Status
-            if (Date.now() < contractEndTime) {
-                statusText.innerText = `Round ${currentRoundId.toString()} is live!`;
-                if(signer) placeBetBtn.disabled = false;
-                isFinalizing = false;
-            } else {
-                 statusText.innerText = "Round ended. Waiting for finalization...";
-                 showFinalizeButton();
-            }
-
-        } catch (err) {
-            console.error("Failed fetching round data:", err.message);
-            statusText.innerText = "Failed syncing data. Please refresh.";
+        const playersList = await contract.getRoundPlayers(currentRoundId);
+        for (const playerAddress of playersList) {
+            const deposits = await contract.getPlayerDeposits(currentRoundId, playerAddress);
+            addBetToState(playerAddress, deposits.ethAmount, deposits.usdtAmount, deposits.babyDogeAmount, deposits.usdWeight, false);
         }
-          }
+        updateBetList();
+        if (userAddress) await updateMyDeposits();
+
+        // Tampilkan Total Pool (Cek null)
+        const ethPool = parseFloat(ethers.utils.formatEther(roundInfo[5]));
+        const usdtPool = parseFloat(ethers.utils.formatUnits(roundInfo[6], usdtDecimals));
+        const babyPool = parseFloat(ethers.utils.formatUnits(roundInfo[7], babyDogeDecimals));
+        const totalUsd = usdtPool + (ethPool * currentEthPrice) + (babyPool * currentBabyDogePrice);
+        
+        const poolUsdValue = document.getElementById('pool-usd-value');
+        if (poolUsdValue) poolUsdValue.innerText = "$" + totalUsd.toFixed(2);
+        const poolEthTotal = document.getElementById('pool-eth-total');
+        if (poolEthTotal) poolEthTotal.innerText = ethPool.toFixed(4) + " ETH";
+        const poolUsdtTotal = document.getElementById('pool-usdt-total');
+        if (poolUsdtTotal) poolUsdtTotal.innerText = usdtPool.toFixed(2) + " USDT";
+
+        // Timer
+        const contractEndTime = roundInfo[2].toNumber() * 1000;
+        startVisualTimer(contractEndTime); // Memulai timer
+
+        // Status
+        if (Date.now() < contractEndTime) {
+            statusText.innerText = `Round ${currentRoundId.toString()} is live!`;
+            if (signer) placeBetBtn.disabled = false;
+            isFinalizing = false;
+        } else {
+            statusText.innerText = "Round ended. Waiting for finalization...";
+            
+            // [PERBAIKAN] HAPUS 'isFinalizing = true;' DARI SINI
+            // Biarkan showFinalizeButton yang menanganinya
+            
+            showFinalizeButton();
+        }
+
+    } catch (err) {
+        console.error("Failed fetching round data:", err.message);
+        statusText.innerText = "Failed syncing data. Please refresh.";
+    }
+}
     
 
 
