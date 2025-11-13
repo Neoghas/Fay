@@ -450,36 +450,38 @@
   }
 
   /* === Donut Wheel Section === */
+/* GANTI CSS DONUT WRAP DAN CANVAS ANDA DENGAN INI */
 .donut-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 400px; /* Batas maksimal agar tidak terlalu besar di PC */
+  aspect-ratio: 1 / 1; /* Memastikan selalu kotak sempurna */
+  margin: 20px auto;
   display: flex;
-  gap: 16px;
   align-items: center;
   justify-content: center;
-  margin-top: 12px;
-  flex-wrap: wrap;
-  position: relative;
 }
 
 #donutCanvas {
-  background: linear-gradient(90deg, #03a9f4, #f441a5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  border-radius: 50%;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  height: 100%;
+  display: block;
+  /* Hapus border atau shadow jika mengganggu */
 }
 
 .donut-pointer {
   position: absolute;
-  top: 15px; /* Sesuaikan sedikit agar pas di atas donut */
+  top: -10px; /* Sesuaikan posisi panah */
   left: 50%;
   transform: translateX(-50%);
-  width: 0;
-  height: 0;
+  z-index: 10;
+  /* Pastikan panah punya ukuran */
+  width: 0; 
+  height: 0; 
   border-left: 15px solid transparent;
   border-right: 15px solid transparent;
-  border-top: 30px solid var(--blue-main); 
-  z-index: 10;
-  filter: drop-shadow(0 -2px 5px rgba(0, 179, 255, 0.7)); 
+  border-top: 30px solid var(--cyan-main);
+  filter: drop-shadow(0 0 5px var(--cyan-main));
 }
 
   /* === [BARU] Style untuk Fitur Sosial === */
@@ -2987,13 +2989,21 @@ function showFinalizeButton() {
         if(myBabyDogeDeposit) myBabyDogeDeposit.innerText = "0";
     }
     // [FIX 2] Fungsi drawDonut di-upgrade untuk menampilkan teks
-function drawDonut(rotationDeg = currentRotation) {
-    if (!ctx) return;
-    ctx.clearRect(0, 0, cw, ch);
-    ctx.save();
-    ctx.translate(cx, cy); // 1. Pindah ke tengah
-    ctx.rotate(rotationDeg * Math.PI / 180); // 2. Rotasi wheel
-
+   function drawDonut(rotationDeg = currentRotation) {
+  if(!ctx) return;
+  
+  // Bersihkan seluruh area canvas
+  ctx.clearRect(0, 0, cw, ch);
+  
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rotationDeg * Math.PI / 180);
+  ctx.translate(-cx, -cy);
+  
+  // Gunakan outerR dan innerR global (yang sudah dihitung oleh resizeCanvas)
+  // JANGAN pakai angka manual seperti 140 atau 80 di sini.
+  
+  // ... (Sisa kode drawDonut Anda sama seperti sebelumnya) ...
     // Jika tidak ada player, gambar wheel default
 if (!playersArray || playersArray.length === 0) {
     const gradient = ctx.createRadialGradient(0, 0, innerR, 0, 0, outerR); // <-- Ganti cx, cy menjadi 0,0
@@ -3627,6 +3637,65 @@ innerR = displayWidth * 0.20; // <-- [PERBAIKAN] Angka ini dinaikkan dari 100
         });
     }
 
+     // ==========================================
+// PERBAIKAN STABILITAS RODA (CANVAS)
+// ==========================================
+
+function initResponsiveCanvas() {
+    const canvas = document.getElementById('donutCanvas');
+    const container = document.querySelector('.donut-wrap');
+    
+    if (!canvas || !container) return;
+
+    ctx = canvas.getContext('2d');
+
+    // Fungsi untuk mengatur ukuran canvas secara dinamis
+    function resizeCanvas() {
+        // 1. Ambil lebar container saat ini
+        const boxWidth = container.clientWidth;
+        
+        // 2. Atur resolusi internal canvas (agar tajam di HP retina)
+        canvas.width = boxWidth;
+        canvas.height = boxWidth; // Buat kotak sempurna
+
+        // 3. Update variabel global
+        cw = canvas.width;
+        ch = canvas.height;
+        cx = cw / 2;
+        cy = ch / 2;
+
+        // 4. ATUR RADIUS SECARA RELATIF (KUNCI STABILITAS)
+        // Radius luar = 40% dari lebar canvas
+        // Radius dalam = 25% dari lebar canvas
+        outerR = cw * 0.4; 
+        innerR = cw * 0.25;
+
+        // 5. Gambar ulang segera
+        drawDonut(currentRotation);
+    }
+
+    // Panggil saat pertama kali load
+    resizeCanvas();
+
+    // Panggil setiap kali layar diubah ukurannya
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Panggil saat orientasi HP berubah (Potrait/Landscape)
+    window.addEventListener('orientationchange', () => {
+        setTimeout(resizeCanvas, 100);
+    });
+}
+
+// PANGGIL FUNGSI INI DI DALAM DOMContentLoaded
+document.addEventListener("DOMContentLoaded", () => {
+    // ... (kode inisialisasi wallet dll biarkan saja) ...
+
+    // INSIALISASI KANVAS BARU
+    initResponsiveCanvas();
+    
+    // ... (sisa kode event listener Anda) ...
+});
+
      // Tambahkan suara klik ke semua tombol
     document.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', () => playSound('sfx-click'));
@@ -3639,12 +3708,4 @@ innerR = displayWidth * 0.20; // <-- [PERBAIKAN] Angka ini dinaikkan dari 100
     window.addEventListener("focus", handleCanvasRedraw);
 
 });
-
-// [PERBAIKAN 3] Hapus seluruh blok DOMContentLoaded kedua yang duplikat
-/*
-document.addEventListener("DOMContentLoaded", () => {
-    ... (BLOK INI SAYA HAPUS) ...
-});
-*/
-
   </script>
