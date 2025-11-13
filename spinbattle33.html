@@ -1814,97 +1814,7 @@ async function toggleWallet(isAutoConnect = false) {
     }
     
 // === FUNGSI UTAMA: Ambil Data Pemenang & Fitur Sosial ===
-async function fetchAndDisplayWinners() {
-    let contractInstance = faylottoContract;
-    if (!contractInstance) {
-       if (!provider) provider = new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
-       contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-    }
-    
-    try {
-        winnerList.innerHTML = "";
-        const winnersArray = await contractInstance.getWinners(10); 
-        
-        if (winnersArray.length === 0) {
-            winnerList.appendChild(winnerListPlaceholder);
-            return;
-        }
 
-        let usdtDecimalsWinner = 18;
-        try { if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals(); } catch (e) {}
-      
-        for (const winner of winnersArray) {
-            const winnerId = winner.winnerId.toString();
-            const roundId = winner.roundId.toString();
-            const winnerAddr = winner.winner;
-            const ethAmtBigNum = winner.rewardETH;
-            const usdtAmtBigNum = winner.rewardERC20;
-            const ethAmt = parseFloat(ethers.utils.formatEther(ethAmtBigNum)).toFixed(4);
-            const usdtAmt = parseFloat(ethers.utils.formatUnits(usdtAmtBigNum, usdtDecimalsWinner)).toFixed(2);
-            const date = new Date(winner.timestamp.toNumber() * 1000).toLocaleString();
-            const shortId = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) ? "You" : (winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4));
-            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700&size=40`;
-
-            // --- LOGIKA Ikon Aset ---
-            let assetIconsHtml = '';
-            const hasEthReward = ethAmtBigNum.gt(0);
-            const hasUsdtReward = usdtAmtBigNum.gt(0);
-
-            if (hasEthReward || hasUsdtReward) {
-                assetIconsHtml += '<div class="asset-icon-group">';
-                if (hasEthReward) {
-                    assetIconsHtml += `<img src="${ETH_LOGO_PATH}" alt="ETH" class="asset-icon">`;
-                }
-                if (hasUsdtReward) {
-                    assetIconsHtml += `<img src="${USDT_LOGO_PATH}" alt="USDT" class="asset-icon">`;
-                }
-                assetIconsHtml += '</div>';
-            }
-
-            // --- AMBIL DATA SOSIAL ---
-            let likes = 0, ratingCount = 0, commentCount = 0;
-            let isLikedByMe = false, myRating = 0;
-
-            try {
-                likes = (await contractInstance.getLikeCount(winnerId)).toNumber();
-                ratingCount = (await contractInstance.getRatingCountForWinner(winnerId)).toNumber();
-                commentCount = (await contractInstance.getCommentCountForWinner(winnerId)).toNumber();
-            } catch (e) { console.warn("Failed to retrieve social public data", e); }
-
-            if (userAddress && faylottoContract) { 
-                try {
-                    const signedContract = faylottoContract.connect(signer);
-                    isLikedByMe = await signedContract.liked(winnerId, userAddress);
-                    myRating = await signedContract.ratings(winnerId, userAddress);
-                } catch (e) { }
-            }
-            
-            // === [PERBAIKAN DIMULAI DI SINI] ===
-
-            // 1. Ambil Nickname Pemenang
-            let winnerNickname = null;
-            try {
-                winnerNickname = await contractInstance.nicknames(winnerAddr);
-            } catch(e) { console.warn("Failed to fetch the winner's nickname", e); }
-            
-            // 2. Tentukan Nama Tampilan (Prioritas: You -> Nickname -> Alamat Singkat)
-            const displayName = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) 
-                                ? "You" 
-                                : (winnerNickname || shortId);
-
-            // =================================
-
-            const item = document.createElement("div");
-            item.className = "winner-list-item";
-          
-            // --- [PERBAIKAN HTML DI SINI] ---
-            item.innerHTML = `
-              <div class="winner-main-content">
-                  <img src="${avatarUrl}" alt="Avatar" 
-                       class="winner-avatar-small"
-                       onclick="showPlayerProfile('${winnerAddr}')">              
-
-                  <div class="winner-info-text">
                       <div class="winner-id" style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <span>Round: #${roundId}</span>  
                         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">        
@@ -1926,6 +1836,7 @@ async function fetchAndDisplayWinners() {
                              ${hasUsdtReward ? usdtAmt + ' USDT' : ''}
                       </div><br>
                   </div>
+
 // === FUNGSI UTAMA: Ambil Data Pemenang & Fitur Sosial (V3 DIPERBAIKI) ===
 async function fetchAndDisplayWinners() {
     let contractInstance = faylottoContract;
@@ -2085,10 +1996,7 @@ async function fetchAndDisplayWinners() {
         winnerList.appendChild(winnerListPlaceholder);
     }
 }
-            
-            
     
-// ... (Fungsi toggleLike, rateWinner, submitComment, showEditComment, cancelEditComment, saveEditComment) ...
 // ... (Tidak ada perubahan pada fungsi-fungsi ini) ...
 async function toggleLike(winnerId) {
   // 1. Ganti alert() dengan showStatus()
