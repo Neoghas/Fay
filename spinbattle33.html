@@ -1813,7 +1813,7 @@ async function toggleWallet(isAutoConnect = false) {
         }
     }
     
-// === FUNGSI UTAMA: Ambil Data Pemenang & Fitur Sosial ===
+// === FUNGSI UTAMA: Ambil Data Pemenang & Fitur Sosial (V3 DIPERBAIKI) ===
 async function fetchAndDisplayWinners() {
     let contractInstance = faylottoContract;
     if (!contractInstance) {
@@ -1823,6 +1823,8 @@ async function fetchAndDisplayWinners() {
     
     try {
         winnerList.innerHTML = "";
+        
+        // [FIX] Memanggil fungsi getWinners() yang HILANG (lihat Langkah 3)
         const winnersArray = await contractInstance.getWinners(10); 
         
         if (winnersArray.length === 0) {
@@ -1830,33 +1832,47 @@ async function fetchAndDisplayWinners() {
             return;
         }
 
-        let usdtDecimalsWinner = 18;
-        try { if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals(); } catch (e) {}
+        let usdtDecimalsWinner = 6; // Default
+        let babyDecimalsWinner = 18; // Default
+        try { 
+            if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals(); 
+            if (babyDogeContract) babyDecimalsWinner = await babyDogeContract.decimals();
+        } catch (e) {}
       
         for (const winner of winnersArray) {
             const winnerId = winner.winnerId.toString();
             const roundId = winner.roundId.toString();
             const winnerAddr = winner.winner;
+            
+            // [FIX V3] Mengambil reward V3
             const ethAmtBigNum = winner.rewardETH;
-            const usdtAmtBigNum = winner.rewardERC20;
+            const usdtAmtBigNum = winner.rewardUSDT;
+            const babyDogeAmtBigNum = winner.rewardBabyDoge; // BARU
+            
             const ethAmt = parseFloat(ethers.utils.formatEther(ethAmtBigNum)).toFixed(4);
             const usdtAmt = parseFloat(ethers.utils.formatUnits(usdtAmtBigNum, usdtDecimalsWinner)).toFixed(2);
+            const babyDogeAmt = parseFloat(ethers.utils.formatUnits(babyDogeAmtBigNum, babyDecimalsWinner)).toFixed(0); // BARU
+
             const date = new Date(winner.timestamp.toNumber() * 1000).toLocaleString();
             const shortId = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) ? "You" : (winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4));
             const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700&size=40`;
 
-            // --- LOGIKA Ikon Aset ---
+            // [FIX V3] Logika Ikon Aset V3
             let assetIconsHtml = '';
             const hasEthReward = ethAmtBigNum.gt(0);
             const hasUsdtReward = usdtAmtBigNum.gt(0);
+            const hasBabyDogeReward = babyDogeAmtBigNum.gt(0); // BARU
 
-            if (hasEthReward || hasUsdtReward) {
+            if (hasEthReward || hasUsdtReward || hasBabyDogeReward) {
                 assetIconsHtml += '<div class="asset-icon-group">';
                 if (hasEthReward) {
                     assetIconsHtml += `<img src="${ETH_LOGO_PATH}" alt="ETH" class="asset-icon">`;
                 }
                 if (hasUsdtReward) {
                     assetIconsHtml += `<img src="${USDT_LOGO_PATH}" alt="USDT" class="asset-icon">`;
+                }
+                if (hasBabyDogeReward) {
+                    assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" alt="BabyDoge" class="asset-icon">`;
                 }
                 assetIconsHtml += '</div>';
             }
@@ -1879,25 +1895,18 @@ async function fetchAndDisplayWinners() {
                 } catch (e) { }
             }
             
-            // === [PERBAIKAN DIMULAI DI SINI] ===
-
-            // 1. Ambil Nickname Pemenang
             let winnerNickname = null;
             try {
                 winnerNickname = await contractInstance.nicknames(winnerAddr);
             } catch(e) { console.warn("Failed to fetch the winner's nickname", e); }
             
-            // 2. Tentukan Nama Tampilan (Prioritas: You -> Nickname -> Alamat Singkat)
             const displayName = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) 
                                 ? "You" 
                                 : (winnerNickname || shortId);
 
-            // =================================
-
             const item = document.createElement("div");
             item.className = "winner-list-item";
           
-            // --- [PERBAIKAN HTML DI SINI] ---
             item.innerHTML = `
               <div class="winner-main-content">
                   <img src="${avatarUrl}" alt="Avatar" 
@@ -1909,9 +1918,7 @@ async function fetchAndDisplayWinners() {
                         <span>Round: #${roundId}</span>  
                         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">        
                         <small style="color: #888; font-size: 10px;">${date}</small>
-        
                         ${assetIconsHtml} 
-
                      </div>
                  </div>
 
@@ -1921,32 +1928,33 @@ async function fetchAndDisplayWinners() {
                       </div><br>
 
                       <div class="prize-line" style="color: #00dd00; font-weight: bold; font-size:15px;">
-                         Prize Amount: ${hasEthReward ? ethAmt + ' ETH' : ''} 
-                             ${(hasEthReward && hasUsdtReward) ? ' + ' : ''}
-                             ${hasUsdtReward ? usdtAmt + ' USDT' : ''}
+                         Prize Amount: 
+                         ${hasEthReward ? ethAmt + ' ETH' : ''} 
+                         ${(hasEthReward && (hasUsdtReward || hasBabyDogeReward)) ? ' + ' : ''}
+                         ${hasUsdtReward ? usdtAmt + ' USDT' : ''}
+                         ${(hasUsdtReward && hasBabyDogeReward) ? ' + ' : ''}
+                         ${hasBabyDogeReward ? babyDogeAmt + ' BabyDoge' : ''}
                       </div><br>
                   </div>
               </div>
-
               <div class="winner-social" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(120,0,255,0.2); display:flex; justify-content:space-between; align-items:center;">
                   <button class="like-btn" style="background:none; border:none; cursor:pointer; color: ${isLikedByMe ? '#ff00e6' : '#888'}; font-size:14px; display:flex; align-items:center; gap:4px;" onclick="toggleLike(${winnerId})"><img src="like.svg" style="width:25px; height:25px; vertical-align:middle;"><span style="color:#ff00e6">Like (${likes})</span>
                   </button>
                   <div style="display:flex; align-items:center; gap:6px;">
                       <div class="rating-stars">
                          ${[5, 4, 3, 2, 1].map(i => `
-    <span class="star-icon ${i <= myRating ? 'active' : ''}" onclick="rateWinner(${winnerId}, ${i})"></span>
-`).join('')}
+                            <span class="star-icon ${i <= myRating ? 'active' : ''}" onclick="rateWinner(${winnerId}, ${i})"></span>
+                         `).join('')}
                       </div>
                       <span style="font-size: 12px; color: #888;">(${ratingCount})</span>
                   </div>
                   <button class="terminal-btn" id="comm-btn-${winnerId}" 
-        style="background:none; border:none; color:var(--cyan-main); font-size:14px; cursor:pointer; display:flex; align-items:center; gap:5px;" 
-        onclick="toggleComments(${winnerId}, '${winnerAddr}')">
-    <img src="comment.svg" style="width:25px; height:25px; vertical-align:middle;">Log
-    <span>(${commentCount})</span>
-</button>
+                        style="background:none; border:none; color:var(--cyan-main); font-size:14px; cursor:pointer; display:flex; align-items:center; gap:5px;" 
+                        onclick="toggleComments(${winnerId}, '${winnerAddr}')">
+                    <img src="comment.svg" style="width:25px; height:25px; vertical-align:middle;">Log
+                    <span>(${commentCount})</span>
+                  </button>
               </div>
-
               <div class="comments-terminal" id="terminal-${winnerId}" style="display: none; margin-top: 10px;">
                   <div class="terminal-header">> Log For Winner: ${winnerAddr.slice(0,10)}...</div>
                   <div class="comments-list"></div>
@@ -1963,11 +1971,9 @@ async function fetchAndDisplayWinners() {
         console.error("Failed fetching winners:", err.message);
         winnerList.appendChild(winnerListPlaceholder);
     }
-}
-            
-            
-    
-// ... (Fungsi toggleLike, rateWinner, submitComment, showEditComment, cancelEditComment, saveEditComment) ...
+        }
+
+
 // ... (Tidak ada perubahan pada fungsi-fungsi ini) ...
 async function toggleLike(winnerId) {
   // 1. Ganti alert() dengan showStatus()
@@ -2226,40 +2232,62 @@ function toggleComments(winnerId, winnerAddr) {
     }
 }
 
-// === FUNGSI UTAMA: Memulai Event Listener ===
+// === FUNGSI UTAMA: Memulai Event Listener (V3 DIPERBAIKI) ===
 function setupEventListeners() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
     let contractToListen = faylottoContract;
     if (!contractToListen && provider) {
          contractToListen = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     }
     if (!contractToListen) return; 
+    
     contractToListen.removeAllListeners(); 
-    contractToListen.on("BetETH", (roundId, player, amount) => {
+    
+    console.log("Setting up V3 listeners..."); // Debug
+
+    // [FIX 1] Mendengarkan event 'BetNative' (bukan BetETH)
+    contractToListen.on("BetNative", (roundId, player, amount, usdWeight) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            addBetToState(player, amount, ethers.BigNumber.from(0), true);
+            // Memanggil addBetToState versi V3
+            addBetToState(player, amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, true);
             updateBetList();
             if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
-    contractToListen.on("BetERC20", (roundId, player, amount) => {
+
+    // [FIX 2] Mendengarkan event 'BetUSDT' (bukan BetERC20)
+    contractToListen.on("BetUSDT", (roundId, player, amount, usdWeight) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            addBetToState(player, ethers.BigNumber.from(0), amount, true);
+            // Memanggil addBetToState versi V3
+            addBetToState(player, ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), usdWeight, true);
             updateBetList();
             if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
-    contractToListen.on("WinnerRecorded", (winnerId, roundId, winner, rewardETH, rewardERC20, timestamp) => {
-        console.log("Event WinnerRecorded received from blockchain:", roundId.toString(), winner);
+
+    // [FIX 3] Mendengarkan event 'BetBabyDoge' (bukan BetERC20)
+    contractToListen.on("BetBabyDoge", (roundId, player, amount, usdWeight) => {
+        if (currentRoundId && roundId.eq(currentRoundId)) {
+            // Memanggil addBetToState versi V3
+            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, usdWeight, true);
+            updateBetList();
+            if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
+        }
+    });
+
+    // [FIX 4] 'WinnerRecorded' versi V3 memiliki 7 argumen (bukan 6)
+    contractToListen.on("WinnerRecorded", (winnerId, roundId, winner, rewardETH, rewardUSDT, rewardBabyDoge, timestamp) => {
+        console.log("Event WinnerRecorded V3 received:", roundId.toString(), winner);
         if (currentRoundId && roundId.eq(currentRoundId)) {
             if (!isSpinning) {
                  console.log("Starting auto spin for passive users!");
+                 // handleRoundFinalized hanya butuh roundId dan winner
                  handleRoundFinalized(roundId, winner);
             } else {
                  console.log("While spinning, event is ignored (prevents double spins).");
             }
         }
     });
+    
     if (userAddress) {
         contractToListen.on("NicknameCreated", (user) => {
             if (user.toLowerCase() === userAddress.toLowerCase()) fetchReferralData();
