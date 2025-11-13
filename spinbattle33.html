@@ -2347,40 +2347,62 @@ function toggleComments(winnerId, winnerAddr) {
     }
 }
 
-// === FUNGSI UTAMA: Memulai Event Listener ===
+// === FUNGSI UTAMA: Memulai Event Listener (V3 DIPERBAIKI) ===
 function setupEventListeners() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
     let contractToListen = faylottoContract;
     if (!contractToListen && provider) {
          contractToListen = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     }
     if (!contractToListen) return; 
+    
     contractToListen.removeAllListeners(); 
-    contractToListen.on("BetETH", (roundId, player, amount) => {
+    
+    console.log("Setting up V3 listeners..."); // Debug
+
+    // [FIX 1] Mendengarkan event 'BetNative' (bukan BetETH)
+    contractToListen.on("BetNative", (roundId, player, amount, usdWeight) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            addBetToState(player, amount, ethers.BigNumber.from(0), true);
+            // Memanggil addBetToState versi V3
+            addBetToState(player, amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, true);
             updateBetList();
             if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
-    contractToListen.on("BetERC20", (roundId, player, amount) => {
+
+    // [FIX 2] Mendengarkan event 'BetUSDT' (bukan BetERC20)
+    contractToListen.on("BetUSDT", (roundId, player, amount, usdWeight) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            addBetToState(player, ethers.BigNumber.from(0), amount, true);
+            // Memanggil addBetToState versi V3
+            addBetToState(player, ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), usdWeight, true);
             updateBetList();
             if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
         }
     });
-    contractToListen.on("WinnerRecorded", (winnerId, roundId, winner, rewardETH, rewardERC20, timestamp) => {
-        console.log("Event WinnerRecorded received from blockchain:", roundId.toString(), winner);
+
+    // [FIX 3] Mendengarkan event 'BetBabyDoge' (bukan BetERC20)
+    contractToListen.on("BetBabyDoge", (roundId, player, amount, usdWeight) => {
+        if (currentRoundId && roundId.eq(currentRoundId)) {
+            // Memanggil addBetToState versi V3
+            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, usdWeight, true);
+            updateBetList();
+            if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
+        }
+    });
+
+    // [FIX 4] 'WinnerRecorded' versi V3 memiliki 7 argumen (bukan 6)
+    contractToListen.on("WinnerRecorded", (winnerId, roundId, winner, rewardETH, rewardUSDT, rewardBabyDoge, timestamp) => {
+        console.log("Event WinnerRecorded V3 received:", roundId.toString(), winner);
         if (currentRoundId && roundId.eq(currentRoundId)) {
             if (!isSpinning) {
                  console.log("Starting auto spin for passive users!");
+                 // handleRoundFinalized hanya butuh roundId dan winner
                  handleRoundFinalized(roundId, winner);
             } else {
                  console.log("While spinning, event is ignored (prevents double spins).");
             }
         }
     });
+    
     if (userAddress) {
         contractToListen.on("NicknameCreated", (user) => {
             if (user.toLowerCase() === userAddress.toLowerCase()) fetchReferralData();
