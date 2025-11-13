@@ -8,56 +8,10 @@
     // 4. INITIALIZATION & WALLET (V3)
     // ==================================================================
 
-    document.addEventListener("DOMContentLoaded", () => {
-        console.log("🚀 Faylotto V3 Initializing...");
-        
-        const canvas = document.getElementById('donutCanvas');
-        if (canvas) { 
-            ctx = canvas.getContext('2d');
-            cw = canvas.width; ch = canvas.height;
-            cx = cw / 2; cy = ch / 2;
-            drawDonut(); 
-        }
-
-        // Init Provider Read-Only
-        provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
-        faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-        usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
-        babyDogeContract = new ethers.Contract(BABYDOGE_ADDRESS, ERC20_ABI, provider);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const refNick = urlParams.get('ref');
-        if (refNick) {
-            pendingReferrerNickname = refNick;
-            showStatus(`Referral code ${refNick} detected!`, "info");
-        }
-
-        // Muat Data Awal
-        fetchTokenPrices();
-        fetchAndDisplayRoundData();
-        fetchAndDisplayWinners();
-        fetchAndRenderLeaderboard();
-        checkAutoConnect();
-
-        // Setup Listeners
-        setupEventListeners();
-        
-        // Atur tahun di footer
-        document.getElementById("year").textContent = new Date().getFullYear();
-    });
     
-    // --- (Helper PFP - Tidak Berubah) ---
-    function getDeterministicPfpUrl(address) {
-        const hash = parseInt(address.slice(-1), 16);
-        const index = hash % TOTAL_PFP_IMAGES;
-        return `${PFP_IMAGE_PATH}pfp-${index}.png`;
-    }
+        
     
-    // --- (Helper Audio - Tidak Berubah) ---
-    function playSound(soundId) {
-        const audio = document.getElementById(soundId);
-        if (audio) { audio.currentTime = 0; audio.play().catch(e => {}); }
-    }
+    
 
     // ==================================================================
     // 5. LOGIKA GAME (V3)
@@ -66,138 +20,8 @@
     
     // --- (Fungsi Helper Lainnya - Salin dari file lama Anda) ---
     // (PENTING: Pastikan semua fungsi helper lainnya sudah ada di sini)
-    function showFinalizeButton() {
-        if (isFinalizing) return;
-        isFinalizing = true; 
-        const playerCount = Object.keys(players).length;
-        if (playerCount > 0) {
-            statusText.innerText = "Round Ended! Click 'Finalize' to pick a winner.";
-            finalizeBtn.innerText = "Finalize Round"; 
-        } else {
-            statusText.innerText = "Round Ended! Click 'Start Now' to begin a new round.";
-            finalizeBtn.innerText = "Start Round"; 
-        }
-        placeBetBtn.disabled = true;
-        placeBetBtn.style.display = "none";
-        finalizeBtn.style.display = "block";
-        finalizeBtn.disabled = false;
-    }
-    function resetRoundUI() {
-        players = {};
-        totalWeight = ethers.BigNumber.from(0);
-        playersArray = []; 
-        if (ctx) {
-            currentRotation = 0;
-            drawDonut(); 
-        }
-        updateBetList();
-        
-        // Reset tampilan pool
-        document.getElementById('pool-usd-value').innerText = "$...";
-        document.getElementById('pool-eth-total').innerText = "... ETH";
-        document.getElementById('pool-usdt-total').innerText = "... USDT";
-        
-        placeBetBtn.style.display = "block";
-        placeBetBtn.disabled = true;
-        finalizeBtn.style.display = "none";
-        finalizeBtn.innerText = "Finalize Round"; 
-        if(myEthDeposit) myEthDeposit.innerText = "0";
-        if(myUsdtDeposit) myUsdtDeposit.innerText = "0";
-        if(myBabyDogeDeposit) myBabyDogeDeposit.innerText = "0";
-    }
-    function drawDonut(rotationDeg = currentRotation) {
-      if(!ctx) return;
-      ctx.clearRect(0,0,cw,ch);
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(rotationDeg * Math.PI / 180);
-      ctx.translate(-cx, -cy);
-      ctx.beginPath();
-      ctx.arc(cx, cy, outerR + 6, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(255,255,255,0.01)';
-      ctx.fill();
-      if (!playersArray || playersArray.length === 0) {
-        const gradient = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-        gradient.addColorStop(0, '#ff00e6');    
-        gradient.addColorStop(0.7, '#6200ff');  
-        gradient.addColorStop(1, '#0b0b12');    
-        ctx.beginPath();
-        ctx.arc(cx, cy, outerR, 0, Math.PI*2);
-        ctx.fillStyle = gradient;
-        ctx.fill();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(cx, cy, innerR, 0, Math.PI*2);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.restore();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '14px Ubuntu'; 
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('No bets yet', cx, cy);
-        return;
-      }
-      for (let i=0;i<playersArray.length;i++){
-        const p = playersArray[i];
-        const sa = p.startAngle;
-        const ea = p.endAngle;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, outerR, sa, ea, false);
-        ctx.closePath();
-        ctx.fillStyle = p.color;
-        ctx.fill();
-      }
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.arc(cx, cy, innerR, 0, Math.PI*2);
-      ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-      ctx.lineWidth = 1;
-      for (let i=0;i<playersArray.length;i++){
-        const p = playersArray[i];
-        ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(p.startAngle) * (innerR+2), cy + Math.sin(p.startAngle) * (innerR+2));
-        ctx.lineTo(cx + Math.cos(p.startAngle) * outerR, cy + Math.sin(p.startAngle) * outerR);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-    if (!CanvasRenderingContext2D.prototype.roundRect) {
-      CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
-        if (w<2*r) r=w/2; if (h<2*r) r=h/2;
-        this.beginPath(); this.moveTo(x+r,y);
-        this.arcTo(x+w,y,x+w,y+h,r); this.arcTo(x+w,y+h,x,y+h,r);
-        this.arcTo(x,y+h,x,y,r); this.arcTo(x,y,x+w,y,r);
-        this.closePath(); this.fill();
-      };
-    }
-    function rebuildPlayersArrayAndDraw() {
-        playersArray = []; 
-        const playerKeys = Object.keys(players);
-        for (const key of playerKeys) {
-            playersArray.push({
-                addr: players[key].id,
-                weight: players[key].weight, // Gunakan bobot USD dari V3
-                color: players[key].color
-            });
-        }
-        let currentAngle = 0;
-        const totalW = totalWeight; // totalUsdWeight dari V3
-        for (const p of playersArray) {
-            p.startAngle = currentAngle;
-            let percentage = 0;
-            if (totalW.gt(0)) {
-                // Konversi BigNumber ke number untuk kalkulasi JS
-                percentage = (p.weight.mul(1000000).div(totalW).toNumber()) / 1000000.0;
-            }
-            p.endAngle = currentAngle + (percentage * Math.PI * 2);
-            currentAngle = p.endAngle;
-        }
-        drawDonut();
-    }
+    
+    
 
 
     // (Fungsi lain... rateWinner, dll,
