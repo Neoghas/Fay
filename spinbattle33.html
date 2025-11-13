@@ -2451,7 +2451,6 @@ function updateBetList() {
                 isFinalizing = false;
             } else {
                  statusText.innerText = "Round ended. Waiting for finalization...";
-                 isFinalizing = true;
                  showFinalizeButton();
             }
 
@@ -2895,21 +2894,26 @@ function hideBetModal() {
   }
   
 function showFinalizeButton() {
-        if (isFinalizing) return;
-        isFinalizing = true; 
-        const playerCount = Object.keys(players).length;
-        if (playerCount > 0) {
-            statusText.innerText = "Round Ended! Click 'Finalize' to pick a winner.";
-            finalizeBtn.innerText = "Finalize Round"; 
-        } else {
-            statusText.innerText = "Round Ended! Click 'Start Now' to begin a new round.";
-            finalizeBtn.innerText = "Start Round"; 
-        }
-        placeBetBtn.disabled = true;
-        placeBetBtn.style.display = "none";
-        finalizeBtn.style.display = "block";
-        finalizeBtn.disabled = false;
+    // [FIX 1] Logika dipindahkan ke sini
+    if (isFinalizing) return;
+    isFinalizing = true; 
+    
+    const playerCount = Object.keys(players).length;
+    
+    if (playerCount > 0) {
+        // [FIX 2] Teks tombol diubah sesuai permintaan Anda
+        statusText.innerText = "Round Ended! Click 'Spin Now!' to pick a winner.";
+        finalizeBtn.innerText = "SPIN NOW!"; 
+    } else {
+        statusText.innerText = "Round Ended! Click 'Start Now' to begin a new round.";
+        finalizeBtn.innerText = "Start Round"; 
     }
+    
+    placeBetBtn.disabled = true;
+    placeBetBtn.style.display = "none";
+    finalizeBtn.style.display = "block";
+    finalizeBtn.disabled = false;
+}
 
   function resetRoundUI() {
         players = {};
@@ -2939,65 +2943,95 @@ function showFinalizeButton() {
         if(myUsdtDeposit) myUsdtDeposit.innerText = "0";
         if(myBabyDogeDeposit) myBabyDogeDeposit.innerText = "0";
     }
-    function drawDonut(rotationDeg = currentRotation) {
-      if(!ctx) return;
-      ctx.clearRect(0,0,cw,ch);
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(rotationDeg * Math.PI / 180);
-      ctx.translate(-cx, -cy);
-      ctx.beginPath();
-      ctx.arc(cx, cy, outerR + 6, 0, Math.PI*2);
-      ctx.fillStyle = 'rgba(255,255,255,0.01)';
-      ctx.fill();
-      if (!playersArray || playersArray.length === 0) {
+    // [FIX 2] Fungsi drawDonut di-upgrade untuk menampilkan teks
+function drawDonut(rotationDeg = currentRotation) {
+    if (!ctx) return;
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.save();
+    ctx.translate(cx, cy); // 1. Pindah ke tengah
+    ctx.rotate(rotationDeg * Math.PI / 180); // 2. Rotasi wheel
+
+    // Jika tidak ada player, gambar wheel default
+    if (!playersArray || playersArray.length === 0) {
         const gradient = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
         gradient.addColorStop(0, '#ff00e6');    
         gradient.addColorStop(0.7, '#6200ff');  
         gradient.addColorStop(1, '#0b0b12');    
         ctx.beginPath();
-        ctx.arc(cx, cy, outerR, 0, Math.PI*2);
+        ctx.arc(0, 0, outerR, 0, Math.PI * 2); // (cx, cy) sekarang (0, 0)
         ctx.fillStyle = gradient;
         ctx.fill();
         ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
-        ctx.arc(cx, cy, innerR, 0, Math.PI*2);
+        ctx.arc(0, 0, innerR, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalCompositeOperation = 'source-over';
-        ctx.restore();
+        ctx.restore(); // Hapus rotasi
+        
+        // Gambar teks "No bets yet" di tengah
         ctx.fillStyle = '#ffffff';
         ctx.font = '14px Ubuntu'; 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('No bets yet', cx, cy);
         return;
-      }
-      for (let i=0;i<playersArray.length;i++){
+    }
+
+    // 3. Loop 1: Gambar segmen warna
+    for (let i = 0; i < playersArray.length; i++) {
         const p = playersArray[i];
         const sa = p.startAngle;
         const ea = p.endAngle;
         ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, outerR, sa, ea, false);
+        ctx.moveTo(0, 0); // (cx, cy) sekarang (0, 0)
+        ctx.arc(0, 0, outerR, sa, ea, false);
         ctx.closePath();
         ctx.fillStyle = p.color;
         ctx.fill();
-      }
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.arc(cx, cy, innerR, 0, Math.PI*2);
-      ctx.fill();
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-      ctx.lineWidth = 1;
-      for (let i=0;i<playersArray.length;i++){
+    }
+
+    // 4. Potong lingkaran tengah
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 5. Loop 2 [FIX 2]: Gambar Teks dan Garis Pemisah
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 10px Ubuntu";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    for (let i = 0; i < playersArray.length; i++) {
         const p = playersArray[i];
+        const midAngle = (p.startAngle + p.endAngle) / 2;
+        
+        // Tentukan radius (jarak) untuk teks
+        const textRadius = innerR + (outerR - innerR) / 2.5; // Sedikit ke dalam
+
+        // 5a. Gambar garis pemisah
         ctx.beginPath();
-        ctx.moveTo(cx + Math.cos(p.startAngle) * (innerR+2), cy + Math.sin(p.startAngle) * (innerR+2));
-        ctx.lineTo(cx + Math.cos(p.startAngle) * outerR, cy + Math.sin(p.startAngle) * outerR);
+        ctx.moveTo(Math.cos(p.startAngle) * (innerR + 2), Math.sin(p.startAngle) * (innerR + 2));
+        ctx.lineTo(Math.cos(p.startAngle) * outerR, Math.sin(p.startAngle) * outerR);
         ctx.stroke();
-      }
-      ctx.restore();
+
+        // 5b. [BARU] Gambar teks
+        ctx.save(); // Simpan state (hanya rotasi wheel)
+        
+        // Rotasi canvas ke tengah segmen
+        ctx.rotate(midAngle); 
+        
+        // Tulis teks di posisi (radius, 0)
+        const shortAddr = p.addr.slice(0, 4) + "..." + p.addr.slice(-3);
+        ctx.fillText(shortAddr, textRadius, 0); 
+        
+        ctx.restore(); // Hapus rotasi segmen (kembali ke rotasi wheel)
+    }
+
+    ctx.restore(); // Hapus rotasi wheel utama
     }
     if (!CanvasRenderingContext2D.prototype.roundRect) {
       CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
