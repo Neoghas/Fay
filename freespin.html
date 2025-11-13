@@ -476,6 +476,88 @@ h1, h2, h3 {
 .btnrec:focus .dot::after {
   animation: opacity-anim var(--animation-duration) ease-in-out infinite;
 }
+
+    /* === FAQ CYBERPUNK STYLE === */
+.faq-section {
+  width: 90%;
+  max-width: 700px;
+  margin: 60px auto;
+  background: rgba(10, 10, 20, 0.6);
+  border: 2px solid #6600ff;
+  border-radius: 20px;
+  box-shadow: 0 0 25px rgba(122, 95, 255, 0.3);
+  padding: 25px;
+  backdrop-filter: blur(10px);
+}
+
+.faq-title {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 25px;
+  background: linear-gradient(90deg, #03a9f4, #f441a5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 15px rgba(0,180,216,0.7);
+}
+
+.faq-item {
+  margin-bottom: 15px;
+  border: 1px solid #1f004c;
+  border-radius: 10px;
+  overflow: hidden;
+  background: linear-gradient(145deg, rgba(30,30,50,0.9), rgba(10,10,25,0.8));
+  box-shadow: 0 0 10px rgba(100, 0, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.faq-item:hover {
+  box-shadow: 0 0 20px rgba(244,65,165,0.4);
+}
+
+.faq-question {
+  width: 100%;
+  background: none;
+  border: none;
+  color: #00d4ff;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: left;
+  padding: 15px 20px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.faq-question::after {
+  content: "+";
+  position: absolute;
+  right: 20px;
+  font-size: 20px;
+  color: #f441a5;
+  transition: transform 0.3s ease;
+}
+
+.faq-item.active .faq-question::after {
+  transform: rotate(45deg);
+}
+
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  background: rgba(0,0,0,0.3);
+  color: #ccc;
+  font-size: 15px;
+  line-height: 1.6;
+  padding: 0 20px;
+  border-top: 1px solid #330066;
+  transition: max-height 0.4s ease, padding 0.3s ease;
+}
+
+.faq-item.active .faq-answer {
+  max-height: 200px;
+  padding: 15px 20px;
+}
     
 
 /* === RESPONSIVE === */
@@ -619,6 +701,41 @@ h1, h2, h3 {
     </div>
   </div>
   </div>
+
+  <section class="faq-section">
+  <h2 class="faq-title">❓ FAQ — Pertanyaan Umum</h2>
+  <div class="faq-container">
+    <div class="faq-item">
+      <button class="faq-question">Apa itu Faylotto Free Spin?</button>
+      <div class="faq-answer">Faylotto Free Spin adalah permainan berbasis blockchain di mana Anda bisa mendapatkan hadiah gratis hanya dengan menghubungkan wallet.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">Apakah saya perlu membayar untuk spin?</button>
+      <div class="faq-answer">Tidak, Anda mendapat spin gratis setiap hari. Namun Anda bisa meningkatkan peluang dengan referral aktif.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">Bagaimana cara mendapatkan referral bonus?</button>
+      <div class="faq-answer">Gunakan tautan referral unik Anda dan bagikan ke teman. Setiap pengguna baru yang bergabung memberi Anda tambahan quota spin.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">Apakah hadiah dikirim langsung ke wallet?</button>
+      <div class="faq-answer">Ya, semua hadiah dikirim otomatis ke alamat wallet yang terhubung setelah spin berakhir.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">Apakah Faylotto aman?</button>
+      <div class="faq-answer">Faylotto menggunakan smart contract publik di jaringan Base Sepolia dan audit internal untuk menjaga transparansi.</div>
+    </div>
+
+    <div class="faq-item">
+      <button class="faq-question">Token apa yang digunakan untuk reward?</button>
+      <div class="faq-answer">Hadiah dapat berupa ETH testnet atau token USDT testnet tergantung event aktif pada saat itu.</div>
+    </div>
+  </div>
+  </section>
 
   <audio id="clickSound" src="click.mp3" preload="auto"></audio>
   <audio id="spinSound" src="spin.mp3" preload="auto" loop></audio>
@@ -1269,6 +1386,22 @@ referralLinkInput.addEventListener("click", handleCopyLink);
 // Panggil renderWheel saat DOM dimuat
 document.addEventListener('DOMContentLoaded', renderWheel);
 window.addEventListener('resize', renderWheel);
+
+document.querySelectorAll(".faq-question").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const item = btn.parentElement;
+    const isActive = item.classList.contains("active");
+
+    // Tutup semua item
+    document.querySelectorAll(".faq-item").forEach(el => el.classList.remove("active"));
+
+    // Jika bukan yang aktif sebelumnya, buka yang diklik
+    if (!isActive) {
+      item.classList.add("active");
+      gsap.fromTo(item.querySelector(".faq-answer"), {opacity: 0, y: -10}, {opacity: 1, y: 0, duration: 0.4});
+    }
+  });
+});
 
 </script>
 
