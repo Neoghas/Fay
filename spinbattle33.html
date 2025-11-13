@@ -2495,34 +2495,27 @@ async function resetAndFetchNewRound() {
     await fetchAndDisplayRoundData(); 
 }
 
-// GANTI SELURUH FUNGSI LAMA ANDA DENGAN YANG INI
+// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
 async function callFinalizeRound() {
-    // ... (kode Anda untuk mendapatkan finalizeBtn, statusText, dll) ...
-    
-    // 1. Ganti alert() dengan showStatus()
     if (!signer || !faylottoContract) {
-        showStatus("Please connect your wallet.", "warning"); // atau "warning"
+        showStatus("Please connect your wallet.", "warning");
         return;
     }
     
+    // 1. Tombol "SPIN NOW!" dinonaktifkan saat mengirim
     finalizeBtn.disabled = true;
     statusText.innerText = "Sending finalization transaction...";
-    
-    // 2. Tambahkan toast 'load'
     showStatus("Sending finalization transaction...", "load");
 
     try {
         const tx = await faylottoContract.finalizeRound(currentRoundId);
         
-        // 3. Tambahkan toast 'load' untuk konfirmasi
         statusText.innerText = "Finalizing... awaiting confirmation.";
-        // (Durasi panjang agar tidak hilang saat menunggu)
-        showStatus("Finalizing... awaiting confirmation.", "load", 15000); // 15 detik
+        showStatus("Finalizing... awaiting confirmation.", "load", 15000); 
 
         const receipt = await tx.wait(); 
         
-        // 4. Tambahkan toast 'success'
-        showStatus("Round finalized successfully!", "success", 10000); // 3 detik
+        showStatus("Round finalized successfully!", "success", 10000); 
 
         console.log("Finalize transaction confirmed.", receipt);
         const event = receipt.events?.find(e => e.event === 'WinnerRecorded');
@@ -2543,24 +2536,35 @@ async function callFinalizeRound() {
     } catch (err) {
         console.error("Finalize failed:", err);
         
-        // 5. Ganti alert() error dengan showStatus() 'error' + parsing
         let userMessage = "Finalization failed.";
-        // (Pastikan 'faylottoContract' memiliki 'interface' untuk parseError)
         const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
-        
         if (reason) {
             userMessage = `Error: ${reason.substring(0, 100)}`;
         } else if (err.code === 'ACTION_REJECTED') {
             userMessage = "Transaction rejected by user.";
         }
-        
         showStatus(userMessage, "error");
         
-        statusText.innerText = "Finalization failed.";
-        finalizeBtn.disabled = false; 
+        // [PERBAIKAN DIMULAI DI SINI]
+        // Ini adalah perbaikan untuk bug "Finalization Failed"
+        
+        // 1. Atur teks status
+        statusText.innerText = "Finalization failed. Please try again.";
+        
+        // 2. Sembunyikan tombol "PLACE BET" (yang seharusnya tidak muncul)
+        placeBetBtn.style.display = "none";
+            
+        // 3. Tampilkan dan aktifkan kembali tombol "SPIN NOW!"
+        finalizeBtn.style.display = "block";
+        finalizeBtn.disabled = false;
+        finalizeBtn.innerText = "SPIN NOW!"; // Pastikan teksnya benar
+            
+        // 4. Reset flag 'isFinalizing' agar tombol bisa ditekan lagi
+        isFinalizing = false;
+        // [PERBAIKAN SELESAI]
     }
 }
-
+    
 // --- (Modal Bet V3: Tambah BabyDoge) ---
     function showBetModal() {
       if (!signer) return showStatus("Connect wallet first!", "error");
