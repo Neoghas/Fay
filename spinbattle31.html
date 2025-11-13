@@ -264,7 +264,7 @@ body {
   <audio id="sfx-coin" src="coin.mp3"></audio>
 
 <script>
-// ==========================================
+    // ==========================================
 // 1. KONFIGURASI & KONSTANTA (V4)
 // ==========================================
 const BASE_SEPOLIA_ID = 84532; // Chain ID (Decimal)
@@ -727,7 +727,56 @@ async function callFinalizeRound() {
 // Event Listeners (V3 Fix)
 function setupEventListeners() {
     if (!faylottoContract) return;
+    faylottoContract.removeAllListeners();
+
+    faylottoContract.on("BetNative", () => { fetchAndDisplayRoundData(); });
+    faylottoContract.on("BetUSDT", () => { fetchAndDisplayRoundData(); });
+    faylottoContract.on("BetBabyDoge", () => { fetchAndDisplayRoundData(); });
     
+    faylottoContract.on("WinnerRecorded", (wid, rid, winner) => {
+        if (rid.eq(currentRoundId) && !isSpinning) {
+            isSpinning = true;
+            spinWheelGSAP(winner);
+        }
+    });
+}
+
+// Helpers UI
+function updateBetList() {
+    const list = document.getElementById("bet-list");
+    list.innerHTML = "";
+    if(playersArray.length === 0) { list.innerHTML = "<p>No Bets</p>"; return; }
+    playersArray.forEach(p => {
+        const div = document.createElement("div");
+        div.className = "bet-list-item";
+        div.innerHTML = `<span>${p.id.slice(0,6)}...</span><span>${parseFloat(ethers.utils.formatEther(p.weight)).toFixed(2)} Weight</span>`;
+        div.style.borderLeft = `3px solid ${p.color}`;
+        list.appendChild(div);
+    });
+}
+
+function fetchAndDisplayWinners() {
+    // Implementasi getWinners Anda sebelumnya
+    // Panggil getWinners dari kontrak, loop, dan render ke winner-list
+    // (Disederhanakan untuk brevity, pakai logika V3 Anda yang sudah fix)
+}
+
+function fetchLeaderboard() {
+    // Logic leaderboard V3
+}
+
+function playSound(id) { document.getElementById(id).currentTime=0; document.getElementById(id).play().catch(()=>{}); }
+function showModal() { document.getElementById("walletModalOverlay").classList.add("show"); fetchBalances(); }
+function hideModal() { document.getElementById("walletModalOverlay").classList.remove("show"); }
+function showVictoryScreen() { document.getElementById("victory-overlay").classList.add("show"); }
+function hideVictoryScreen() { document.getElementById("victory-overlay").classList.remove("show"); }
+function resetRoundUI() {
+    isSpinning = false; isFinalizing = false;
+    players = {}; playersArray = [];
+    drawSVGWheel();
+    fetchAndDisplayRoundData();
+    document.getElementById("pool-usd-value").innerText = "$...";
+            }
 </script>
 
   <script src="app.js"></script>
