@@ -2484,15 +2484,33 @@ async function handleRoundFinalized(roundId, winnerAddr) {
     await spinToPlayer(targetPlayer); 
 }
   
-// === FUNGSI UTAMA: Reset & Ambil Ronde Baru ===
+// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
 async function resetAndFetchNewRound() {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
     console.log("Reset for new round...");
     isSpinning = false;
-    isFinalizing = false;
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    await fetchAndDisplayWinners(); 
-    await fetchAndDisplayRoundData(); 
+    isFinalizing = false; // <-- Ini penting untuk ronde baru
+    
+    // Beri jeda 3 detik agar user bisa melihat status "WINNER!"
+    await new Promise(resolve => setTimeout(resolve, 3000)); 
+    
+    try {
+        // [PERBAIKAN] Coba update daftar pemenang, 
+        // tapi jangan biarkan error di sini menghentikan reset UI.
+        await fetchAndDisplayWinners(); 
+    } catch (e) {
+        console.error("Failed to update winner list, but proceeding to new round:", e);
+        // Jangan hentikan proses, lanjutkan saja
+    }
+
+    // [PERBAIKAN] SELALU jalankan fetchAndDisplayRoundData()
+    // Fungsi inilah yang me-reset tombol kembali ke "PLACE BET"
+    // dan memulai ronde baru.
+    try {
+        await fetchAndDisplayRoundData();
+    } catch (e) {
+        console.error("CRITICAL: Failed to fetch new round data.", e);
+        statusText.innerText = "Error loading new round. Please refresh.";
+    }
 }
 
 // GANTI FUNGSI LAMA ANDA DENGAN YANG INI
