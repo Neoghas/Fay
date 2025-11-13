@@ -1333,7 +1333,7 @@
     
     <div class="donut-wrap">
         <div class="donut-pointer"></div>
-        <canvas id="donutCanvas" width="360" height="360"></canvas>
+        <canvas id="donutCanvas"></canvas>
     </div>
 
     <div class="controls">
@@ -1611,7 +1611,7 @@
     let players = {};
     let totalWeight = ethers.BigNumber.from(0);
     let ctx, cw, ch, cx, cy;
-    let outerR = 140, innerR = 80, currentRotation = 0;
+    let outerR, innerR, currentRotation = 0;
     let playersArray = [];
     let myCurrentEthDeposit = ethers.BigNumber.from(0);
     let myCurrentUsdtDeposit = ethers.BigNumber.from(0);
@@ -3464,12 +3464,43 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("🚀 Faylotto V3 Initializing...");
         
         const canvas = document.getElementById('donutCanvas');
-        if (canvas) { 
-            ctx = canvas.getContext('2d');
-            cw = canvas.width; ch = canvas.height;
-            cx = cw / 2; cy = ch / 2;
-            drawDonut(); 
-        }
+if (canvas) {
+    ctx = canvas.getContext('2d');
+
+    // [FIX TAJAM] 1. Baca ukuran CSS (bisa 360px di HP, atau 550px di desktop)
+    const rect = canvas.getBoundingClientRect();
+    const displayWidth = rect.width;
+    const displayHeight = rect.height;
+
+    // [FIX TAJAM] 2. Dapatkan rasio pixel device (misal 2x untuk Retina)
+    const dpr = window.devicePixelRatio || 1;
+
+    // [FIX TAJAM] 3. Set resolusi bitmap (ukuran file) kanvas
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+
+    // [FIX TAJAM] 4. Set ukuran CSS (tampilan) agar sesuai
+    // Ini "mengecilkan" gambar 720px ke 360px, membuatnya tajam
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+
+    // [FIX TAJAM] 5. Scale context. 
+    // Semua gambar (garis, teks) akan dikali 2 secara otomatis
+    ctx.scale(dpr, dpr);
+
+    // Set global (cx, cy) berdasarkan UKURAN CSS (bukan bitmap)
+    cw = displayWidth;
+    ch = displayHeight;
+    cx = cw / 2; // misal 180 (dari 360 / 2)
+    cy = ch / 2; // misal 180 (dari 360 / 2)
+
+    // [FIX RESPONSIVE] Buat radius menjadi RELATIF
+    // (Ini menggantikan global state yang kita hapus di Langkah 2)
+    outerR = (displayWidth / 2) - 40; // misal: 180 - 40 = 140
+    innerR = (displayWidth / 2) - 100; // misal: 180 - 100 = 80
+
+    drawDonut(); 
+}
 
     // 2. Cek Link Referral dari URL
     // (Ini adalah logika dari DOMContentLoaded Anda yang error di baris 297)
