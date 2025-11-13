@@ -3036,50 +3036,56 @@ function showFinalizeButton() {
         if(myBabyDogeDeposit) myBabyDogeDeposit.innerText = "0";
     }
     // [FIX 2] Fungsi drawDonut di-upgrade untuk menampilkan teks
-   function drawDonut(rotationDeg = currentRotation) {
-  if(!ctx) return;
-  
-  // Bersihkan seluruh area canvas
-  ctx.clearRect(0, 0, cw, ch);
-  
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(rotationDeg * Math.PI / 180);
-  ctx.translate(-cx, -cy);
-  
-  // Gunakan outerR dan innerR global (yang sudah dihitung oleh resizeCanvas)
-  // JANGAN pakai angka manual seperti 140 atau 80 di sini.
-  
-  // ... (Sisa kode drawDonut Anda sama seperti sebelumnya) ...
-    // Jika tidak ada player, gambar wheel default
-if (!playersArray || playersArray.length === 0) {
-    const gradient = ctx.createRadialGradient(0, 0, innerR, 0, 0, outerR); // <-- Ganti cx, cy menjadi 0,0
-    gradient.addColorStop(0, '#ff00e6');    // Pink
-    gradient.addColorStop(0.7, '#6200ff');  // Ungu
-    gradient.addColorStop(1, '#0b0b12');    // Hampir hitam (untuk tepi)
+   // GANTI FUNGSI LAMA ANDA DENGAN YANG INI
+function drawDonut(rotationDeg = currentRotation) {
+    if (!ctx) return;
 
-    ctx.beginPath();
-    ctx.arc(0, 0, outerR, 0, Math.PI * 2); // (cx, cy) sekarang (0, 0) karena sudah translate
-    ctx.fillStyle = gradient;
-    ctx.fill();
+    // Bersihkan seluruh area canvas (Gunakan cw dan ch asli)
+    ctx.clearRect(0, 0, cw, ch);
+
+    ctx.save();
     
-    // Potong lingkaran tengah (inner circle) agar menjadi bentuk donat
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.arc(0, 0, innerR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalCompositeOperation = 'source-over'; // Kembalikan mode komposit
+    // [FIX 1] Pindahkan titik pusat ke tengah (cx, cy)
+    ctx.translate(cx, cy);
+    
+    // [FIX 2] Terapkan rotasi
+    ctx.rotate(rotationDeg * Math.PI / 180);
+    
+    // [FIX 3] JANGAN translate kembali ke (0,0). 
+    // Sekarang, (0,0) adalah titik tengah canvas.
 
-    ctx.restore(); // Hapus rotasi dan translasi
+    // Jika tidak ada player, gambar wheel default
+    if (!playersArray || playersArray.length === 0) {
+        // Gambar gradien dari (0,0) [titik tengah baru]
+        const gradient = ctx.createRadialGradient(0, 0, innerR, 0, 0, outerR); 
+        gradient.addColorStop(0, '#ff00e6');    // Pink
+        gradient.addColorStop(0.7, '#6200ff');  // Ungu
+        gradient.addColorStop(1, '#0b0b12');    // Tepi gelap
 
-    // Gambar teks "No bets yet" di tengah (gunakan cx, cy asli)
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '14px Ubuntu'; 
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('No bets yet', cx, cy);
-    return;
-}
+        ctx.beginPath();
+        // [FIX 4] Gambar arc di (0,0) [titik tengah baru]
+        ctx.arc(0, 0, outerR, 0, Math.PI * 2); 
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Potong lingkaran tengah (inner circle)
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath();
+        // [FIX 5] Potong lubang di (0,0) [titik tengah baru]
+        ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalCompositeOperation = 'source-over'; // Kembalikan mode
+
+        ctx.restore(); // Hapus rotasi dan translasi
+
+        // Gambar teks "No bets yet" di tengah (gunakan cx, cy asli)
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 16px Ubuntu'; // Font sedikit lebih besar
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('No bets yet', cx, cy); // Teks tetap digambar di koordinat asli
+        return;
+    }
 
     // 3. Loop 1: Gambar segmen warna
     for (let i = 0; i < playersArray.length; i++) {
@@ -3087,8 +3093,8 @@ if (!playersArray || playersArray.length === 0) {
         const sa = p.startAngle;
         const ea = p.endAngle;
         ctx.beginPath();
-        ctx.moveTo(0, 0); // (cx, cy) sekarang (0, 0)
-        ctx.arc(0, 0, outerR, sa, ea, false);
+        ctx.moveTo(0, 0); // [FIX 6] Mulai dari (0,0) [titik tengah baru]
+        ctx.arc(0, 0, outerR, sa, ea, false); // [FIX 7] Gambar arc di (0,0)
         ctx.closePath();
         ctx.fillStyle = p.color;
         ctx.fill();
@@ -3097,13 +3103,13 @@ if (!playersArray || playersArray.length === 0) {
     // 4. Potong lingkaran tengah
     ctx.globalCompositeOperation = 'destination-out';
     ctx.beginPath();
-    ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+    ctx.arc(0, 0, innerR, 0, Math.PI * 2); // [FIX 8] Potong lubang di (0,0)
     ctx.fill();
 
-    // 5. Loop 2 [FIX 2]: Gambar Teks dan Garis Pemisah
+    // 5. Loop 2: Gambar Teks dan Garis Pemisah
     ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; // Garis lebih gelap agar terlihat
+    ctx.lineWidth = 2; // Garis lebih tebal
     ctx.fillStyle = "#FFFFFF";
     ctx.font = "bold 10px Ubuntu";
     ctx.textAlign = "center";
@@ -3114,15 +3120,16 @@ if (!playersArray || playersArray.length === 0) {
         const midAngle = (p.startAngle + p.endAngle) / 2;
         
         // Tentukan radius (jarak) untuk teks
-        const textRadius = innerR + (outerR - innerR) / 2.5; // Sedikit ke dalam
+        const textRadius = innerR + (outerR - innerR) / 2.5; 
 
         // 5a. Gambar garis pemisah
         ctx.beginPath();
+        // [FIX 9] Gambar garis dari lubang dalam ke luar
         ctx.moveTo(Math.cos(p.startAngle) * (innerR + 2), Math.sin(p.startAngle) * (innerR + 2));
         ctx.lineTo(Math.cos(p.startAngle) * outerR, Math.sin(p.startAngle) * outerR);
         ctx.stroke();
 
-        // 5b. [BARU] Gambar teks
+        // 5b. Gambar teks
         ctx.save(); // Simpan state (hanya rotasi wheel)
         
         // Rotasi canvas ke tengah segmen
@@ -3137,6 +3144,7 @@ if (!playersArray || playersArray.length === 0) {
 
     ctx.restore(); // Hapus rotasi wheel utama
     }
+    
     if (!CanvasRenderingContext2D.prototype.roundRect) {
       CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
         if (w<2*r) r=w/2; if (h<2*r) r=h/2;
