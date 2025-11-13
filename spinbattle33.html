@@ -3140,4 +3140,282 @@ function stopVictoryConfetti() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
     
- // --- (Fungsi Leaderboard V3: Tambah BabyDoge
+// --- (Fungsi Leaderboard V3: Tambah BabyDoge) ---
+    async function fetchAndRenderLeaderboard() {
+        const list = leaderboardList;
+        if (!list) return;
+        let providerToUse = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+        let contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerToUse);
+        try {
+            let usdtDecimalsLB = 6, babyDecimalsLB = 18; // Default
+            try {
+                usdtDecimalsLB = await (new ethers.Contract(USDT_ADDRESS, ERC20_ABI, providerToUse)).decimals();
+                babyDecimalsLB = await (new ethers.Contract(BABYDOGE_ADDRESS, ERC20_ABI, providerToUse)).decimals();
+            } catch (e) {}
+
+            const currentBlock = await providerToUse.getBlockNumber();
+            const fromBlock = Math.max(0, currentBlock - 500000); 
+            
+            const filter = contract.filters.WinnerRecorded();
+            const logs = await contract.queryFilter(filter, fromBlock, "latest");
+
+            const stats = {};
+            logs.forEach(log => {
+                const { winner, rewardETH, rewardUSDT, rewardBabyDoge } = log.args;
+                if (!stats[winner]) {
+                    stats[winner] = { 
+                        wins: 0, 
+                        totalEth: ethers.BigNumber.from(0),
+                        totalUsdt: ethers.BigNumber.from(0),
+                        totalBabyDoge: ethers.BigNumber.from(0) 
+                    };
+                }
+                stats[winner].wins += 1;
+                stats[winner].totalEth = stats[winner].totalEth.add(rewardETH);
+                stats[winner].totalUsdt = stats[winner].totalUsdt.add(rewardUSDT);
+                stats[winner].totalBabyDoge = stats[winner].totalBabyDoge.add(rewardBabyDoge);
+            });
+
+            const sortedLeaderboard = Object.entries(stats)
+                .map(([addr, data]) => ({ addr, ...data }))
+                .sort((a, b) => b.wins - a.wins) 
+                .slice(0, 10); 
+
+            if (sortedLeaderboard.length === 0) {
+                list.innerHTML = "<div class 'lb-loading' style='animation:none;'>NO DATA YET.</div>";
+                return;
+            }
+
+            list.innerHTML = ""; 
+            sortedLeaderboard.forEach((player, index) => {
+                const rank = index + 1;
+                const shortAddr = player.addr.slice(0, 6) + "..." + player.addr.slice(-4);
+                const ethTotal = parseFloat(ethers.utils.formatEther(player.totalEth)).toFixed(4);
+                const usdtTotal = parseFloat(ethers.utils.formatUnits(player.totalUsdt, usdtDecimalsLB)).toFixed(2);
+                const babyTotal = parseFloat(ethers.utils.formatUnits(player.totalBabyDoge, babyDecimalsLB)).toFixed(0); 
+                
+                const isMe = userAddress && player.addr.toLowerCase() === userAddress.toLowerCase();
+                const displayName = isMe ? "YOU" : shortAddr;
+
+                // Perbarui HTML Leaderboard untuk V3
+                list.innerHTML += `
+                    <div class="lb-item rank-${rank}" style="${isMe ? 'color:var(--cyan-main);' : ''}">
+                        <div class="lb-rank">#${rank}</div>
+                        <div style="cursor:pointer;" onclick="showPlayerProfile('${player.addr}')">${displayName}</div>
+                        <div>${player.wins}</div>
+                        <div>${ethTotal} ETH</div>
+                        <div>
+                            ${usdtTotal} USDT
+                            <br><small style="color:#aaa">${babyTotal} BabyDoge</small>
+                        </div> 
+                    </div>
+                `;
+            });
+        } catch (err) {
+            console.error("Leaderboard error:", err);
+            list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>FAILED TO LOAD. RPC TIMEOUT.</div>";
+        }
+    }
+    
+// Fungsi Tutup Modal Profil
+function hideProfileModal() {
+    // ... (Tidak ada perubahan pada fungsi ini) ...
+    document.getElementById('profile-modal').classList.remove('show');
+    document.getElementById('profile-modal-overlay').classList.remove('show');
+}
+
+// Helper Copy to Clipboard (berguna untuk address)
+function copyToClipboard(text) {
+    // ... (Tidak ada perubahan pada fungsi ini) ...
+    navigator.clipboard.writeText(text);
+    showStatus("Address copied: " + text, "success", 3000); // 3000ms = 3 detik
+}
+
+// --- (Toast Notification - Tidak Berubah) ---
+    function showStatus(message, type = 'info', duration = 10000) { 
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        let iconName = 'info-icon.svg'; 
+        if (type === 'success') iconName = 'success.svg';
+        else if (type === 'error') iconName = 'error.svg';
+        else if (type === 'load') iconName = 'load.svg';
+        else if (type === 'warning') iconName = 'warning.svg';
+        else if (type === 'spin') iconName = 'spin.svg';
+        else if (type === 'wolf') iconName = 'wolf.svg';
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        const icon = document.createElement('img');
+        icon.src = `${iconName}`; 
+        icon.alt = "status icon";
+        const text = document.createElement('span');
+        text.textContent = message;
+        const closeButton = document.createElement('button');
+        closeButton.className = 'toast-close-btn';
+        closeButton.innerHTML = '&times;'; 
+        toast.appendChild(icon);
+        toast.appendChild(text);
+        toast.appendChild(closeButton);
+        function removeToast() {
+          toast.classList.remove('show');
+          toast.classList.add('hide');
+          toast.addEventListener('transitionend', () => {
+            if (toast.parentNode === container) {
+                container.removeChild(toast);
+            }
+          }, { once: true });
+        }
+        const hideTimeout = setTimeout(removeToast, duration);
+        closeButton.onclick = () => {
+          clearTimeout(hideTimeout); 
+          removeToast(); 
+        };
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.classList.add('show');
+        }, 10); 
+    }
+
+
+// === 4. Inisialisasi & Event Listeners (LENGKAP & DIPERBAIKI) ===
+
+document.addEventListener("DOMContentLoaded", () => {
+        console.log("🚀 Faylotto V3 Initializing...");
+        
+        const canvas = document.getElementById('donutCanvas');
+        if (canvas) { 
+            ctx = canvas.getContext('2d');
+            cw = canvas.width; ch = canvas.height;
+            cx = cw / 2; cy = ch / 2;
+            drawDonut(); 
+        }
+
+    // 2. Cek Link Referral dari URL
+    // (Ini adalah logika dari DOMContentLoaded Anda yang error di baris 297)
+    const urlParams = new URLSearchParams(window.location.search);
+    const refNick = urlParams.get('ref');
+    if (refNick) {
+        console.log("🔗 Referral detected:", refNick);
+        pendingReferrerNickname = refNick;
+    }
+
+    // 3. Panggil Data Awal SEGERA (Tanpa Menunggu Wallet)
+    // [FIX] Ini adalah perbaikan untuk bug "tombol tidak aktif"
+    fetchAndDisplayRoundData(); // <-- FUNGSI YANG HILANG SEKARANG ADA
+    fetchAndDisplayWinners();
+    fetchAndRenderLeaderboard(); // Panggil leaderboard saat load
+    checkAutoConnect(); // Coba auto-connect
+
+    // -------------------------------------------------
+    // 4. Pasang Semua Event Listeners
+    // -------------------------------------------------
+
+    // Listener Tombol Utama
+    walletBtn.addEventListener("click", () => {
+        if (!userAddress) toggleWallet(); else showWalletModal();
+    });
+    placeBetBtn.addEventListener("click", showBetModal);
+    finalizeBtn.addEventListener("click", callFinalizeRound);
+
+    // Listener Modal Profil
+    const profileCloseBtn = document.getElementById('profile-modal-close-btn');
+    if (profileCloseBtn) profileCloseBtn.addEventListener('click', hideProfileModal);
+    const profileOverlay = document.getElementById('profile-modal-overlay');
+    if (profileOverlay) profileOverlay.addEventListener('click', hideProfileModal);
+
+    // Listener Modal Bet
+    betModalCloseBtn.addEventListener("click", hideBetModal);
+    betModalOverlay.addEventListener("click", hideBetModal);
+    confirmBetBtn.addEventListener("click", confirmBet);
+    percentButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            const percent = parseFloat(button.dataset.percent);
+            setAmountByPercent(percent);
+        });
+    });
+
+    // Listener Modal Referral
+    if (referralBtn) referralBtn.addEventListener("click", showReferralModal);
+    if (referralModalCloseBtn) referralModalCloseBtn.addEventListener("click", hideReferralModal);
+    if (referralModalOverlay) referralModalOverlay.addEventListener("click", hideReferralModal);
+    if (createNicknameBtn) createNicknameBtn.addEventListener("click", callCreateNickname);
+    // [FIX] Tambahkan cek null untuk elemen yang mungkin tidak ada
+    if (setReferrerBtn) setReferrerBtn.addEventListener("click", callSetReferrer);
+    if (claimRewardsBtn) claimRewardsBtn.addEventListener("click", callClaimRewards);
+
+    // Listener Modal Wallet
+    if (walletModalCloseBtn) walletModalCloseBtn.addEventListener("click", hideWalletModal);
+    if (walletModalOverlay) walletModalOverlay.addEventListener("click", hideWalletModal);
+    if (disconnectBtn) disconnectBtn.addEventListener("click", disconnectWallet);
+
+// Init Provider Read-Only
+        provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
+        faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+        usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
+        babyDogeContract = new ethers.Contract(BABYDOGE_ADDRESS, ERC20_ABI, provider);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const refNick = urlParams.get('ref');
+        if (refNick) {
+            pendingReferrerNickname = refNick;
+            showStatus(`Referral code ${refNick} detected!`, "info");
+        }
+
+        // Muat Data Awal
+        fetchTokenPrices();
+        fetchAndDisplayRoundData();
+        fetchAndDisplayWinners();
+        fetchAndRenderLeaderboard();
+        checkAutoConnect();
+
+        // Setup Listeners
+        setupEventListeners();
+        
+        // Atur tahun di footer
+        document.getElementById("year").textContent = new Date().getFullYear();
+    });
+
+    // Listener Copy Referral
+    const copyBtn = document.getElementById("copyReferralBtn");
+    if (copyBtn) {
+        copyBtn.addEventListener("click", () => {
+            const linkInput = document.getElementById("referralLinkInput");
+            if (linkInput) {
+                linkInput.select();
+                linkInput.setSelectionRange(0, 99999); 
+                navigator.clipboard.writeText(linkInput.value)
+                    .then(() => showStatus("Link referral disalin!", "success")) // [FIX] Ganti alert ke showStatus
+                    .catch(() => {
+                        document.execCommand('copy');
+                        showStatus("Link referral disalin!", "success"); // [FIX] Ganti alert ke showStatus
+                    });
+            }
+        });
+    }
+
+    // Listener ganti ikon di modal bet
+    const currencySelect = document.getElementById('betCurrencySelect');
+    const currencyIcon = document.getElementById('currency-icon');
+    if (currencySelect && currencyIcon) {
+        currencySelect.addEventListener('change', (e) => {
+            const selectedIconPath = e.target.options[e.target.selectedIndex].dataset.icon;
+            if (selectedIconPath) {
+                currencyIcon.src = selectedIconPath;
+            }
+        });
+    }
+
+     // Tambahkan suara klik ke semua tombol
+    document.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => playSound('sfx-click'));
+    });
+
+    // Listener Perbaikan Canvas & Tab
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === 'visible') handleCanvasRedraw();
+    });
+    window.addEventListener("focus", handleCanvasRedraw);
+
+});
+ </script>
+</body>
+</html>
