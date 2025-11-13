@@ -2628,7 +2628,10 @@ function hideBetModal() {
       const amountStr = betAmountInput.value;
       const currency = betCurrencySelect.value;
       
-      if (!amountStr || parseFloat(amountStr) <= 0) return showStatus("Please enter a valid amount.", "error");
+      if (!amountStr || parseFloat(amountStr) <= 0) {
+          showStatus("Please enter a valid amount.", "warning");
+          return;
+      }
       
       confirmBetBtn.disabled = true;
       confirmBetBtn.innerText = "Processing...";
@@ -2660,15 +2663,34 @@ function hideBetModal() {
         // updateMyDeposits() akan dipanggil oleh event listener
         
       } catch (err) {
-        console.error(err);
-        const errorMessage = err.reason || (err.data ? faylottoContract.interface.parseError(err.data)?.args[0] : null) || err.message || "Transaction failed!";
-        showStatus(`Failed: ${errorMessage.substring(0, 100)}`, "error");
-        statusText.innerText = "Transaction failed.";
+        // [PERBAIKAN DI SINI]
+        // Ini adalah blok 'catch' yang benar untuk 'confirmBet'.
+        // Blok ini TIDAK menghentikan timer atau mengganti tombol.
+        console.error("Bet failed:", err);
+        
+        let errorMessage = "Transaction failed!";
+        if (err.code === 'ACTION_REJECTED') {
+            errorMessage = "User rejected transaction.";
+        } else {
+            const reason = err.reason || (err.data ? faylottoContract.interface.parseError(err.data)?.args[0] : null) || err.message;
+            if (reason) {
+                errorMessage = `Failed: ${reason.substring(0, 100)}`;
+            }
+        }
+
+        showStatus(errorMessage, "error");
+        
+        // Mengatur statusText ke error yang relevan, BUKAN error finalisasi
+        statusText.innerText = "Transaction failed. Please try again.";
+        
       } finally {
+        // [PERBAIKAN DI SINI]
+        // Selalu pastikan tombol 'Confirm Bet' aktif kembali
         confirmBetBtn.disabled = false;
         confirmBetBtn.innerText = "Confirm Bet";
       }
     }
+    
 
 // --- (Helper Betting V3: Fungsi Baru) ---
     async function placeBetNative(amountStr) {
