@@ -899,9 +899,8 @@ async function spinFromBlockchain() {
   try {
     const tx = await contract.spinFree();
     resultText.textContent = "Menunggu konfirmasi blockchain...";
-    spinSound.play();
     const receipt = await tx.wait();
-
+    spinSound.play(); 
     const { prizeTier, prizeAmount } = parseReceiptForPrize(receipt);
     const winnerIndex = getTargetSlice(prizeTier);
     
@@ -909,31 +908,52 @@ async function spinFromBlockchain() {
     
     const winner = prizes[winnerIndex];
 
+    // --- PERHITUNGAN MATEMATIKA PRESISI (FIX POINTER NGACO) ---
     const sliceAngle = 360 / total;
-    const randomExtra = 360 * 15; // Dibuat 8 putaran agar lebih intens
-    const landingRotation = (360 - (winnerIndex * sliceAngle) - (sliceAngle / 2));
     
-    // --- PERBAIKAN BUG DIMULAI DI SINI ---
+    // 1. Hitung posisi roda saat ini (0-360 derajat)
+    const currentPosition = currentRotation % 360;
     
-    // 1. Hitung rotasi baru dari rotasi saat ini
-    const finalRotation = currentRotation + randomExtra + landingRotation;
+    // 2. Hitung target posisi pemenang (0-360 derajat)
+    const targetPosition = (360 - (winnerIndex * sliceAngle) - (sliceAngle / 2));
+    
+    // 3. Hitung JARAK yang harus ditempuh dari posisi sekarang ke target
+    let distance = targetPosition - currentPosition;
+    // Jika jarak negatif, tambahkan 360 agar berputar ke depan (searah jarum jam)
+    if (distance < 0) {
+        distance += 360;
+    }
+    
+    // 4. Tambahkan putaran ekstra (Misal: 10 putaran penuh)
+    const extraSpins = 360 * 10; 
+    
+    // 5. Total rotasi absolut baru
+    const finalRotation = currentRotation + distance + extraSpins;
+    // -----------------------------------------------------------
 
     gsap.to(svg, {
-      rotation: finalRotation, // 2. Hapus "+=" (gunakan rotasi absolut)
-      duration: 35, // Durasi 5 detik
-      ease: "expo.inOut",
+      rotation: finalRotation, 
+      duration: 35, // Durasi 8 detik (pas untuk 10 putaran)
+      ease: "expo.inOut", // Efek 'Ngebut' dramatis di tengah
       onComplete: () => {
         winSound.play();
         resultText.textContent = `🎉 Anda menang: ${winner.name} BabyDoge! 🎉`;
         glowWinnerSector(winnerIndex);
         resetButton();
+        
+        // Update UI Langsung
         updateUI();
         
-        // 3. Simpan rotasi terakhir (penting untuk spin berikutnya)
+        // Update UI LAGI setelah 3 detik (Mengatasi lag node RPC)
+        setTimeout(() => {
+            console.log("Re-checking balance...");
+            updateUI();
+        }, 3000);
+        
+        // Simpan posisi terakhir untuk spin berikutnya
         currentRotation = finalRotation; 
       }
     });
-    // --- AKHIR PERBAIKAN ---
 
   } catch (err) {
     console.error("Spin Gagal:", err);
@@ -948,8 +968,11 @@ async function spinFromBlockchain() {
     }
     resultText.textContent = errorMsg;
     resetButton();
+    // Tetap update UI jika gagal untuk memastikan status tombol/saldo benar
+    updateUI();
   }
 }
+    
 
 // === 4. FUNGSI HELPER (Logika V3 "Free") ===
 
