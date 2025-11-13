@@ -513,6 +513,87 @@ h1, h2, h3 {
   max-height: 200px;
   padding: 15px 20px;
 }
+
+/* === MODAL STYLE === */
+.modal {
+  display: none; /* Sembunyi by default */
+  position: fixed; 
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.7);
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background: #1a1a1a;
+  border: 1px solid #00b4d8;
+  border-radius: 15px;
+  width: 90%;
+  max-width: 450px;
+  margin: 15% auto;
+  padding: 25px;
+  box-shadow: 0 0 30px rgba(0, 180, 216, 0.5);
+  position: relative;
+}
+
+.close-btn {
+  color: #aaa;
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.close-btn:hover,
+.close-btn:focus {
+  color: #fff;
+  text-decoration: none;
+}
+
+.modal-content h3 {
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 25px;
+  font-size: 22px;
+}
+
+.modal-info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #333;
+  font-size: 14px;
+}
+.modal-info-item:last-of-type {
+  border-bottom: none;
+}
+.modal-info-item span {
+  color: #ccc;
+}
+.modal-info-item strong {
+  color: #00b4d8;
+  word-break: break-all; /* Agar alamat wallet tidak luber */
+  text-align: right;
+  max-width: 60%;
+}
+
+.modal-disconnect-btn {
+  width: 100%;
+  margin-top: 25px;
+  background: #aa0000; /* Warna merah untuk disconnect */
+  border-color: #ff4444;
+  color: #fff;
+  -webkit-text-fill-color: #fff; /* Override gradient text */
+}
+.modal-disconnect-btn:hover {
+  background: #ff0000;
+  border-color: #fff;
+}
     
 
 /* === RESPONSIVE === */
@@ -555,8 +636,6 @@ h1, h2, h3 {
       <img src="logo.svg" alt="Logo">
     </div>
     <button id="connectBtn" class="wallet-btn">Connect Wallet</button>
-    <button id="disconnectBtn" class="wallet-btn" style="display:none;">Disconnect</button>
-    <div id="walletAddress" class="wallet-address" style="display:none;">-</div>
   </div>
 
   <!-- HERO -->
@@ -651,6 +730,35 @@ h1, h2, h3 {
   </div>
   </div>
 
+  <div id="walletModal" class="modal">
+    <div class="modal-content">
+      <span id="modalCloseBtn" class="close-btn">&times;</span>
+      <h3>Wallet Info</h3>
+      
+      <div class="modal-info-item">
+        <span>Alamat Wallet:</span>
+        <strong id="modalWalletAddress">-</strong>
+      </div>
+      
+      <div class="modal-info-item">
+        <span>Nickname:</span>
+        <strong id="modalNickname">-</strong>
+      </div>
+      
+      <div class="modal-info-item">
+        <span>Saldo ETH (Wallet):</span>
+        <strong id="modalEthBalance">0</strong>
+      </div>
+      
+      <div class="modal-info-item">
+        <span>Saldo Free BabyDoge (Game):</span>
+        <strong id="modalFreeBalance">0</strong>
+      </div>
+      
+      <button id="modalDisconnectBtn" class="ref-btn modal-disconnect-btn">Disconnect</button>
+    </div>
+  </div>
+
   <section class="faq-section">
   <h2 class="faq-title">❓ FAQ — Pertanyaan Umum</h2>
   <div class="faq-container">
@@ -733,6 +841,14 @@ const spinSound = document.getElementById("spinSound");
 const winSound = document.getElementById("winSound");  
 const svg = document.getElementById("wheel");
 const spinCountText = document.getElementById("spinCountText");
+// === Elemen DOM Modal ===
+const walletModal = document.getElementById("walletModal");
+const modalCloseBtn = document.getElementById("modalCloseBtn");
+const modalWalletAddress = document.getElementById("modalWalletAddress");
+const modalNickname = document.getElementById("modalNickname");
+const modalEthBalance = document.getElementById("modalEthBalance");
+const modalFreeBalance = document.getElementById("modalFreeBalance");
+const modalDisconnectBtn = document.getElementById("modalDisconnectBtn");
 
 // PERBAIKAN: Mengganti nama DUMMY menjadi FREE
 const freeBalanceText = document.getElementById("dummyBalanceText"); // ID HTML tetap, variabel JS ganti
@@ -1108,17 +1224,14 @@ async function connectWallet() {
 
     contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
 
-    // PERBAIKAN: Gunakan tombol yang ada di HTML
-    connectBtn.style.display = "none";
-    disconnectBtn.style.display = "inline-block";
-    walletAddressDiv.style.display = "inline-block";
-    walletAddressDiv.textContent = shortAddress(userAddress);
-
-    // PERBAIKAN: Kode ini merujuk ke elemen HTML dan fungsi yang tidak ada (historyListContainer, historyLoader, handleHistoryScroll)
-    // Ini akan menyebabkan error saat 'Connect Wallet' diklik.
-    // historyListContainer = document.getElementById("historyListContainer");
-    // historyLoader = document.getElementById("historyLoader");
-    // historyListContainer.addEventListener("scroll", handleHistoryScroll);
+    // === PERUBAHAN LOGIKA ===
+    // 1. Ubah tombol "Connect" menjadi tombol "Info Wallet"
+    connectBtn.textContent = shortAddress(userAddress); 
+    
+    // 2. Hapus listener lama (connect) dan tambahkan listener baru (open modal)
+    connectBtn.removeEventListener("click", connectWallet);
+    connectBtn.addEventListener("click", openWalletModal);
+    // === AKHIR PERUBAHAN ===
 
     await updateUI(); 
     resultText.textContent = "Wallet terhubung! Silakan spin.";
@@ -1140,20 +1253,27 @@ async function connectWallet() {
   } catch (err) {
     console.error("connectWallet error:", err);
     resultText.textContent = "Koneksi wallet gagal.";
-    disconnectWallet();
+    disconnectWallet(); // Pastikan disconnect membersihkan state
   }
 }
-  
-// PERBAIKAN: Fungsi disconnectWallet disesuaikan dengan HTML
+    
+  // PERBAIKAN: Fungsi disconnectWallet disesuaikan dengan HTML
 function disconnectWallet() {
+  closeWalletModal(); // Tutup modal jika sedang terbuka
   provider = signer = contract = userAddress = null;
-  connectBtn.style.display = "inline-block";
-  disconnectBtn.style.display = "none";
-  walletAddressDiv.style.display = "none";
+  
+  // === PERUBAHAN LOGIKA ===
+  // 1. Kembalikan tombol "Info Wallet" menjadi "Connect Wallet"
+  connectBtn.textContent = "Connect Wallet";
+  
+  // 2. Hapus listener (open modal) dan kembalikan listener (connect)
+  connectBtn.removeEventListener("click", openWalletModal);
+  connectBtn.addEventListener("click", connectWallet);
+  // === AKHIR PERUBAHAN ===
   
   resultText.textContent = "Press SPIN to play";
   spinCountText.textContent = "0 / 2";
-  freeBalanceText.textContent = "0"; // PERBAIKAN: dummy -> free
+  freeBalanceText.textContent = "0";
 
   myNickname.textContent = "-";
   myReferrer.textContent = "-";
@@ -1163,17 +1283,6 @@ function disconnectWallet() {
   babyDogeRewards.textContent = "0";
   referralLinkSection.style.display = "none";
   nicknameInput.value = "";
-
-  // PERBAIKAN: Kode ini aman karena sudah ada 'if' check
-  // let historyListContainer = document.getElementById("historyListContainer"); // Ini seharusnya didefinisikan secara global
-  // if (historyListContainer) {
-  //   historyListContainer.removeEventListener("scroll", handleHistoryScroll);
-  //   historyListContainer.innerHTML = ""; 
-  // }
-  // userHistory = [];
-  // historyPage = 0;
-  // isLoadingHistory = false;
-  // allHistoryLoaded = false;
 }
   
 function resetButton() {  
@@ -1263,20 +1372,41 @@ function handleCopyLink() {
   }
 }
   
-// PERBAIKAN: Ini adalah BLOK KODE RUSAK yang menyebabkan error fatal.
-// Blok ini merujuk ke variabel 'historyLoader' dan 'html' yang tidak ada.
-/*
-  historyLoader.insertAdjacentHTML('beforebegin', html);
-  historyPage++;
-  isLoadingHistory = false;
-  
-  if (historyPage * HISTORY_PAGE_SIZE >= userHistory.length) {
-      allHistoryLoaded = true;
-      historyLoader.style.display = 'none';
+// === FUNGSI MODAL BARU ===
+async function openWalletModal() {
+  if (!provider || !contract || !userAddress) return;
+
+  // Set loading state
+  modalWalletAddress.textContent = "Memuat...";
+  modalNickname.textContent = "Memuat...";
+  modalEthBalance.textContent = "Memuat...";
+  modalFreeBalance.textContent = "Memuat...";
+  walletModal.style.display = "block";
+
+  try {
+    // Ambil data terbaru secara bersamaan
+    const [ethBalance, nick, freeBalance] = await Promise.all([
+      provider.getBalance(userAddress),
+      contract.nicknames(userAddress),
+      contract.freeBalances(userAddress)
+    ]);
+
+    // Isi modal dengan data
+    modalWalletAddress.textContent = userAddress;
+    modalNickname.textContent = nick || "- (Belum dibuat)";
+    modalEthBalance.textContent = ethers.formatEther(ethBalance);
+    modalFreeBalance.textContent = ethers.formatUnits(freeBalance, 18);
+
+  } catch (err) {
+    console.error("Gagal memuat info wallet:", err);
+    modalWalletAddress.textContent = "Gagal memuat data.";
+    // ... (set error untuk field lain)
   }
-} // <- Ini juga '}' ekstra yang salah
-*/
-// AKHIR BLOK RUSAK
+}
+
+function closeWalletModal() {
+  walletModal.style.display = "none";
+}
   
 // === Event Listeners ===
 connectBtn.addEventListener("click", connectWallet);  
@@ -1299,6 +1429,17 @@ document.querySelectorAll(".faq-question").forEach(btn => {
     // Tutup semua item
     document.querySelectorAll(".faq-item").forEach(el => el.classList.remove("active"));
 
+    // Listener Modal
+modalCloseBtn.addEventListener("click", closeWalletModal);
+modalDisconnectBtn.addEventListener("click", disconnectWallet);
+
+// Tutup modal jika klik di luar area konten
+window.addEventListener("click", (event) => {
+  if (event.target == walletModal) {
+    closeWalletModal();
+  }
+});
+    
     // Jika bukan yang aktif sebelumnya, buka yang diklik
     if (!isActive) {
       item.classList.add("active");
