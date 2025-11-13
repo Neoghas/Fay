@@ -2298,6 +2298,108 @@ function setupEventListeners() {
     }
 }
 
+    // [BARU] Fungsi untuk menyimpan data bet ke state JS (Versi V3)
+function addBetToState(playerAddress, ethAmount, usdtAmount, babyDogeAmount, usdWeight, isNewBet) {
+    const key = playerAddress.toLowerCase();
+    
+    if (!players[key]) {
+        players[key] = {
+            id: playerAddress,
+            eth: ethers.BigNumber.from(0),
+            usdt: ethers.BigNumber.from(0),
+            baby: ethers.BigNumber.from(0),
+            weight: ethers.BigNumber.from(0), // Ini adalah total USD weight
+            color: PLAYER_COLORS[Object.keys(players).length % PLAYER_COLORS.length]
+        };
+    }
+    
+    // Tambahkan jumlah baru ke total yang ada
+    players[key].eth = players[key].eth.add(ethAmount);
+    players[key].usdt = players[key].usdt.add(usdtAmount);
+    players[key].baby = players[key].baby.add(babyDogeAmount);
+    
+    // Saat bet baru masuk (dari event), kita tambahkan bobot spesifiknya.
+    // Saat loading (fetchAndDisplayRoundData), usdWeight adalah total bobot.
+    if (isNewBet) {
+        players[key].weight = players[key].weight.add(usdWeight);
+        totalWeight = totalWeight.add(usdWeight);
+    } else {
+        // Ini dari refresh data, jadi set total bobot langsung
+        players[key].weight = usdWeight;
+        totalWeight = totalWeight.add(usdWeight); // totalWeight di-reset ke 0 di resetRoundUI
+    }
+      }
+
+    // [BARU] Fungsi untuk update HTML daftar bet & menggambar ulang wheel (Versi V3)
+function updateBetList() {
+    if (Object.keys(players).length === 0) {
+        betList.innerHTML = "";
+        betList.appendChild(betListPlaceholder);
+        rebuildPlayersArrayAndDraw(); // Menggambar wheel "No bets yet"
+        return;
+    }
+
+    betList.innerHTML = ""; // Bersihkan list
+    
+    // Bangun ulang playersArray untuk wheel DAN urutkan untuk daftar list
+    playersArray = [];
+    totalWeight = ethers.BigNumber.from(0); // Hitung ulang total bobot
+
+    for (const key in players) {
+        playersArray.push({
+            addr: players[key].id,
+            weight: players[key].weight,
+            color: players[key].color,
+            eth: players[key].eth,
+            usdt: players[key].usdt,
+            baby: players[key].baby
+        });
+        totalWeight = totalWeight.add(players[key].weight);
+    }
+    
+    // Urutkan berdasarkan bobot (weight) terbesar
+    playersArray.sort((a, b) => {
+        if (b.weight.gt(a.weight)) return 1;
+        if (b.weight.lt(a.weight)) return -1;
+        return 0;
+    });
+
+    const fragment = document.createDocumentFragment();
+    
+    for (const p of playersArray) {
+        const player = p.addr;
+        const shortId = (userAddress && player.toLowerCase() === userAddress.toLowerCase()) 
+                        ? "You" 
+                        : (player.slice(0, 6) + "..." + player.slice(-4));
+        
+        const item = document.createElement("div");
+        item.className = "bet-list-item";
+        item.style.borderLeft = `3px solid ${p.color}`;
+        
+        // Format jumlah
+        const ethStr = parseFloat(ethers.utils.formatEther(p.eth)).toFixed(4);
+        const usdtStr = parseFloat(ethers.utils.formatUnits(p.usdt, usdtDecimals)).toFixed(2);
+        const babyStr = parseFloat(ethers.utils.formatUnits(p.baby, babyDogeDecimals)).toFixed(0);
+
+        // Buat string deposit
+        let depositsHTML = "";
+        if (p.eth.gt(0)) depositsHTML += `<span>${ethStr} ETH</span><br>`;
+        if (p.usdt.gt(0)) depositsHTML += `<span>${usdtStr} USDT</span><br>`;
+        if (p.baby.gt(0)) depositsHTML += `<span>${babyStr} BabyDoge</span>`;
+
+        item.innerHTML = `
+            <div class="player-id" style="cursor:pointer;" onclick="showPlayerProfile('${player}')">${shortId}</div>
+            <div class="player-bets">${depositsHTML}</div>
+        `;
+        fragment.appendChild(item);
+    }
+    
+    betList.appendChild(fragment);
+    
+    // Setelah playersArray di-build, update wheel-nya
+    rebuildPlayersArrayAndDraw();
+}
+
 // --- (Data Ronde V3: Tambah BabyDoge & Pool USD) ---
     async function fetchAndDisplayRoundData() {
         let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
