@@ -2974,30 +2974,34 @@ function drawDonut(rotationDeg = currentRotation) {
     ctx.rotate(rotationDeg * Math.PI / 180); // 2. Rotasi wheel
 
     // Jika tidak ada player, gambar wheel default
-    if (!playersArray || playersArray.length === 0) {
-        const gradient = ctx.createRadialGradient(cx, cy, innerR, cx, cy, outerR);
-        gradient.addColorStop(0, '#ff00e6');    
-        gradient.addColorStop(0.7, '#6200ff');  
-        gradient.addColorStop(1, '#0b0b12');    
-        ctx.beginPath();
-        ctx.arc(0, 0, outerR, 0, Math.PI * 2); // (cx, cy) sekarang (0, 0)
-        ctx.fillStyle = gradient;
-        ctx.fill();
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.beginPath();
-        ctx.arc(0, 0, innerR, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.restore(); // Hapus rotasi
-        
-        // Gambar teks "No bets yet" di tengah
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '14px Ubuntu'; 
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('No bets yet', cx, cy);
-        return;
-    }
+if (!playersArray || playersArray.length === 0) {
+    const gradient = ctx.createRadialGradient(0, 0, innerR, 0, 0, outerR); // <-- Ganti cx, cy menjadi 0,0
+    gradient.addColorStop(0, '#ff00e6');    // Pink
+    gradient.addColorStop(0.7, '#6200ff');  // Ungu
+    gradient.addColorStop(1, '#0b0b12');    // Hampir hitam (untuk tepi)
+
+    ctx.beginPath();
+    ctx.arc(0, 0, outerR, 0, Math.PI * 2); // (cx, cy) sekarang (0, 0) karena sudah translate
+    ctx.fillStyle = gradient;
+    ctx.fill();
+    
+    // Potong lingkaran tengah (inner circle) agar menjadi bentuk donat
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(0, 0, innerR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over'; // Kembalikan mode komposit
+
+    ctx.restore(); // Hapus rotasi dan translasi
+
+    // Gambar teks "No bets yet" di tengah (gunakan cx, cy asli)
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '14px Ubuntu'; 
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('No bets yet', cx, cy);
+    return;
+}
 
     // 3. Loop 1: Gambar segmen warna
     for (let i = 0; i < playersArray.length; i++) {
