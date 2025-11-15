@@ -675,9 +675,10 @@ h1, h2, h3 {
   -webkit-text-fill-color: #ff5e5e;
 }
 
-  /* === katana=== */
-.btnK {
+  /* katana */
+  .button {
   width: 100%;
+  height: 100%;
   height: 500px;
   position: relative;
   background: none;
@@ -685,9 +686,7 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  text-decoration: none; /* penting untuk <a> */
 }
-
 .text {
   opacity: 0;
   position: absolute;
@@ -698,17 +697,27 @@ h1, h2, h3 {
   transition: opacity 0.5s ease;
   animation: fuse 2s infinite;
 }
-
 @keyframes fuse {
-  20%, 80% { opacity: 0.6; }
-  40% { opacity: 0.2; }
-  60% { opacity: 0; }
-  70% { opacity: 0.4; }
-  75% { opacity: 0; }
+  20%,
+  80% {
+    opacity: 0.6;
+  }
+  40% {
+    opacity: 0.2;
+  }
+  60% {
+    opacity: 0;
+  }
+  70% {
+    opacity: 0.4;
+  }
+  75% {
+    opacity: 0;
+  }
 }
 
-.btnK:hover .text,
-.btnK:active .text {
+.button:hover .text,
+.button:active .text {
   opacity: 1;
   animation-play-state: paused;
 }
@@ -734,7 +743,6 @@ h1, h2, h3 {
   transition: transform 0.8s cubic-bezier(0.15, 1.15, 0.35, 1.15);
 }
 
-/* ===== BLADE ===== */
 .blade {
   width: 75%;
   height: 6px;
@@ -754,7 +762,7 @@ h1, h2, h3 {
   box-shadow: 0 0 10px rgba(200, 200, 200, 0.5);
 }
 
-/* Curved blade highlight */
+/* Curved blade effect */
 .blade::before {
   content: "";
   position: absolute;
@@ -772,7 +780,6 @@ h1, h2, h3 {
   transform: translateY(-1px);
 }
 
-/* ===== HANDLE ===== */
 .handle {
   width: 25%;
   height: 28px;
@@ -784,12 +791,11 @@ h1, h2, h3 {
     rgba(139, 69, 19, 0.5) 8px
   );
   position: absolute;
-  left: 0;
+  left: 0px;
   border-radius: 15px;
   box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* ===== GUARD ===== */
 .guard {
   width: 40px;
   height: 40px;
@@ -824,8 +830,9 @@ h1, h2, h3 {
   );
 }
 
-/* ===== PEDANG MUNCUL TANPA HOVER ===== */
-.katana-1 {
+/* Pedang langsung muncul tanpa hover */
+.katana-1,
+.katana-2 {
   transform: translate(-60%, -60%) rotate(150deg) translateX(0) !important;
 }
 
@@ -833,32 +840,48 @@ h1, h2, h3 {
   transform: translate(-60%, -60%) rotate(-150deg) translateX(0) !important;
 }
 
-/* ===== ANIMASI CLASH (masih aktif saat hover) ===== */
-.btnK:hover .katana-1,
-.btnK:active .katana-1 {
+.katana-container:hover .katana-1,
+.katana-container:active .katana-1 {
+  transform: translate(-60%, -60%) rotate(150deg) translateX(0);
   animation: katanaClash1 0.8s cubic-bezier(0.15, 1.15, 0.35, 1.15) forwards;
 }
 
-.btnK:hover .katana-2,
-.btnK:active .katana-2 {
+.katana-container:hover .katana-2,
+.katana-container:active .katana-2 {
+  transform: translate(-60%, -60%) rotate(-150deg) translateX(0);
   animation: katanaClash2 0.8s cubic-bezier(0.15, 1.15, 0.35, 1.15) forwards;
 }
 
 @keyframes katanaClash1 {
-  0% { transform: translate(-60%, -60%) rotate(150deg) translateX(0); }
-  40% { transform: translate(-60%, -60%) rotate(125deg) translateX(-20%); }
-  70% { transform: translate(-60%, -60%) rotate(140deg) translateX(10%); }
-  100% { transform: translate(-60%, -60%) rotate(150deg) translateX(0); }
+  0% {
+    transform: translate(-60%, -60%) rotate(150deg) translateX(-100%);
+  }
+  40% {
+    transform: translate(-60%, -60%) rotate(125deg) translateX(-20%);
+  }
+  70% {
+    transform: translate(-60%, -60%) rotate(140deg) translateX(10%);
+  }
+  100% {
+    transform: translate(-60%, -60%) rotate(150deg) translateX(0%);
+  }
 }
 
 @keyframes katanaClash2 {
-  0% { transform: translate(-60%, -60%) rotate(-150deg) translateX(0); }
-  40% { transform: translate(-60%, -60%) rotate(-125deg) translateX(20%); }
-  70% { transform: translate(-60%, -60%) rotate(-140deg) translateX(-10%); }
-  100% { transform: translate(-60%, -60%) rotate(-150deg) translateX(0); }
+  0% {
+    transform: translate(-60%, -60%) rotate(-150deg) translateX(100%);
+  }
+  40% {
+    transform: translate(-60%, -60%) rotate(-125deg) translateX(20%);
+  }
+  70% {
+    transform: translate(-60%, -60%) rotate(-140deg) translateX(-10%);
+  }
+  100% {
+    transform: translate(-60%, -60%) rotate(-150deg) translateX(0%);
+  }
 }
 
-/* ===== SPARK ===== */
 .katana-container::after {
   content: "";
   position: absolute;
@@ -871,21 +894,30 @@ h1, h2, h3 {
   pointer-events: none;
 }
 
-.btnK:hover .katana-container::after,
-.btnK:active .katana-container::after {
+.katana-container:hover::after,
+.katana-container:active::after {
   animation: clashSpark 0.8s cubic-bezier(0.15, 1.15, 0.35, 1.15);
 }
 
 @keyframes clashSpark {
-  0%, 100% {
+  0%,
+  100% {
     width: 0;
     height: 0;
-    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, transparent 70%);
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.9) 0%,
+      transparent 70%
+    );
   }
   40% {
     width: 100px;
     height: 100px;
-    background: radial-gradient(circle, rgba(255,255,255,0.9) 0%, transparent 70%);
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.9) 0%,
+      transparent 70%
+    );
   }
 }
 
@@ -988,17 +1020,15 @@ h1, h2, h3 {
 
 If you win a betting war, the prize will automatically be credited to your wallet, as there is no claim system.<br><br>
             Use Your Balance:<br><br>
-            <a href="https://spinbattle.faylotto.xyz class="btnK">
-  <span class="textK">ST&nbsp;&nbsp;&nbsp;&nbsp;RT</span>
-
-  <div class="katana-container-K">
-    <div class="katana-K k1">
+            <a href="https://spinbattle.faylotto.xyx" class="button">
+  <span class="text">ST&nbsp;&nbsp;&nbsp;&nbsp; RT</span>
+  <div class="katana-container">
+    <div class="katana katana-1">
       <div class="handle"></div>
       <div class="guard"></div>
       <div class="blade"></div>
     </div>
-
-    <div class="katana-K k2">
+    <div class="katana katana-2">
       <div class="handle"></div>
       <div class="guard"></div>
       <div class="blade"></div>
