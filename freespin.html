@@ -1050,16 +1050,6 @@ const usdtRewards = document.getElementById("usdtRewards");
 const babyDogeRewards = document.getElementById("babyDogeRewards");
 const referralCount = document.getElementById("referralCount");
 const claimRewardsBtn = document.getElementById("claimRewardsBtn");
-
-// === MAPPING IKON UNTUK TOAST ===
-const TOAST_ICONS = {
-  success: 'succes.svg',
-  error: 'error.svg',
-  info: 'info.svg',
-  warning: 'warning.svg',
-  wolf: 'wolf.svg',
-  loading: 'load.svg'
-};
     
 // === 2. PETA HADIAH ===
 const prizes = [  
@@ -1154,20 +1144,20 @@ function glowWinnerSector(winnerIndex) {
 // === 3. FUNGSI SPIN (Logika V3 "Free") ===
 async function spinFromBlockchain() {
   if (spinning || !contract) {
-    showToast("Please connect your wallet first.", "error");
+    showStatus("Please connect your wallet first.", "error");
     return;
   }
   spinning = true;
   btn.disabled = true;
   btn.textContent = "Please wait...";
   
-  showToast("Sending transaction...", "info");
+  showStatus("Sending transaction...", "info");
   resultText.innerHTML = "<h5>Press SPIN to play</h5>";
   
   try {
     const tx = await contract.spinFree();
     
-    showToast("Waiting for blockchain confirmation...", "info");
+    showStatus("Waiting for blockchain confirmation...", "info");
     
     const receipt = await tx.wait();
     spinSound.play(); 
@@ -1195,7 +1185,7 @@ async function spinFromBlockchain() {
       onComplete: () => {
         winSound.play();
         
-        showToast(`🎉 Congratulations, you win: ${winner.name} BabyDoge! 🎉`, "success");
+        showStatus(`🎉 Congratulations, you win: ${winner.name} BabyDoge! 🎉`, "success");
         resultText.innerHTML = "<h5>Press SPIN to play</h5>";
         
         glowWinnerSector(winnerIndex);
@@ -1224,7 +1214,7 @@ async function spinFromBlockchain() {
         errorMsg = "You rejected the transaction.";
     }
     
-    showToast(errorMsg, "error");
+    showStatus(errorMsg, "error");
     resultText.innerHTML = "<h5>Press SPIN to play</h5>";
     
     resetButton();
@@ -1328,7 +1318,7 @@ async function updateUI() {
 
   } catch (err) {
     console.error("Failed to update UI:", err);
-    showToast("Failed to load data. Try refreshing.", "error");
+    showStatus("Failed to load data. Try refreshing.", "error");
     resultText.innerHTML = "<h5>Press SPIN to play</h5>";
     spinCountText.textContent = "0 / 2";
     freeBalanceText.textContent = "0";
@@ -1374,7 +1364,7 @@ async function ensureBaseSepolia() {
 async function connectWallet() {
   try {
     if (!hasEthereum()) {
-      showToast("Please install MetaMask first.", "error");
+      showStatus("Please install MetaMask first.", "error");
       return;
     }
     await ensureBaseSepolia(); 
@@ -1389,11 +1379,11 @@ async function connectWallet() {
     userAddress = await signer.getAddress();
     
     if (!ethers.isAddress(FAYLOTTO_ADDRESS) || FAYLOTTO_ADDRESS.startsWith("0x...")) {
-         showToast("Developer Error: Invalid Contract Address.", "error");
+         showStatus("Developer Error: Invalid Contract Address.", "error");
          return;
     }
     if (FAYLOTTO_ABI.length === 0) {
-        showToast("Developer Error: FAYLOTTO_ABI is empty.", "error");
+        showStatus("Developer Error: FAYLOTTO_ABI is empty.", "error");
         return;
     }
 
@@ -1404,7 +1394,7 @@ async function connectWallet() {
     connectBtn.addEventListener("click", openWalletModal);
 
     await updateUI(); 
-    showToast("Wallet connected! You can spin now.", "success");
+    showStatus("Wallet connected! You can spin now.", "success");
     resultText.innerHTML = "<h5>Press SPIN to play</h5>";
 
     await handleReferralOnLoad();
@@ -1423,14 +1413,14 @@ async function connectWallet() {
 
   } catch (err) {
     console.error("connectWallet error:", err);
-    showToast("Wallet connection failed.", "error");
+    showStatus("Wallet connection failed.", "error");
     resultText.innerHTML = "<h5>Press SPIN to play</h5>";
     disconnectWallet(); 
   }
 }
     
 function disconnectWallet() {
-  showToast("Wallet disconnected.", "info"); 
+  showStatus("Wallet disconnected.", "info"); 
   closeWalletModal(); 
   provider = signer = contract = userAddress = null;
   
@@ -1469,19 +1459,19 @@ async function handleReferralOnLoad() {
     const currentReferrer = await contract.referrerOf(userAddress);
     if (currentReferrer !== ethers.ZeroAddress) {
         console.log("User already has a referral.");
-        showToast("You already have a referrer.", "info");
+        showStatus("You already have a referrer.", "info");
         return; 
     }
     try {
       resultText.innerHTML = `<h5>Registering referrer: ${refNickname}...</h5>`;
       const tx = await contract.setReferralByNickname(refNickname);
       await tx.wait();
-      showToast(`Referrer ${refNickname} registered successfully!`, "success");
+      showStatus(`Referrer ${refNickname} registered successfully!`, "success");
       resultText.innerHTML = "<h5>Press SPIN to play</h5>";
       await updateUI(); 
     } catch (err) {
       console.warn("Failed to set referrer:", err.message);
-      showToast("Failed to register referrer. (Maybe nickname is wrong.)", "error");
+      showStatus("Failed to register referrer. (Maybe nickname is wrong.)", "error");
       resultText.innerHTML = "<h5>Press SPIN to play</h5>";
     }
   }
@@ -1491,7 +1481,7 @@ async function handleCreateNickname() {
   if (!contract) return;
   const nick = nicknameInput.value;
   if (nick.length < 3) {
-    showToast("Nickname must be at least 3 characters.", "error");
+    showStatus("Nickname must be at least 3 characters.", "error");
     return;
   }
   
@@ -1500,11 +1490,11 @@ async function handleCreateNickname() {
   try {
     const tx = await contract.createNickname(nick);
     await tx.wait();
-    showToast("Nickname successfully created/updated!", "success");
+    showStatus("Nickname successfully created/updated!", "success");
     await updateUI();
   } catch (err) {
     console.error("Failed to create nickname:", err);
-    showToast("Failed to create nickname. (Maybe already taken?)", "error");
+    showStatus("Failed to create nickname. (Maybe already taken?)", "error");
   }
   createNicknameBtn.disabled = false;
   createNicknameBtn.textContent = "Create";
@@ -1518,11 +1508,11 @@ async function handleClaimRewards() {
   try {
     const tx = await contract.claimReferralRewards();
     await tx.wait();
-    showToast("Rewards successfully claimed!", "success");
+    showStatus("Rewards successfully claimed!", "success");
     await updateUI();
   } catch (err) {
     console.error("Failed claim:", err);
-    showToast("Failed to claim rewards. (Maybe no rewards?)", "error");
+    showStatus("Failed to claim rewards. (Maybe no rewards?)", "error");
   }
   claimRewardsBtn.textContent = "Claim Rewards";
 }
@@ -1531,10 +1521,10 @@ function handleCopyLink() {
   referralLinkInput.select();
   try {
     navigator.clipboard.writeText(referralLinkInput.value);
-    showToast("Referral link copied!", "success");
+    showStatus("Referral link copied!", "success");
   } catch (err) {
     console.error("Failed to copy:", err);
-    showToast("Failed to copy link.", "error");
+    showStatus("Failed to copy link.", "error");
   }
 }
   
@@ -1563,7 +1553,7 @@ async function openWalletModal() {
   } catch (err) {
     console.error("Failed to load wallet info:", err);
     modalWalletAddress.textContent = "Failed to load data.";
-    showToast("Failed to load wallet info.", "error");
+    showStatus("Failed to load wallet info.", "error");
   }
 }
 
