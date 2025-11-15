@@ -718,36 +718,7 @@ h1, h2, h3 {
   opacity: 0;
   transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
 }
-  
-  /* Style Glassmorphism (Sama seperti Navbar & Modal) */
-  background-color: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-
-  /* Teks & Ikon */
-  color: #fff;
-  font-size: 14px;
-  font-family: "Ubuntu", sans-serif;
-  
-  /* State Awal Animasi (Sembunyi) */
-  transform: translateX(120%);
-  opacity: 0;
-  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
-}
-
-/* State Animasi Masuk */
-.toast.show {
-  transform: translateX(0);
-  opacity: 1;
-}
-
-/* State Animasi Keluar */
-.toast.hide {
-  transform: translateX(120%);
-  opacity: 0;
-}
+    
     /* === TOMBOL CLOSE UNTUK TOAST === */
 .toast-close-btn {
   position: absolute;
@@ -840,14 +811,13 @@ h1, h2, h3 {
     </div>
   </div>
 
-  <a href="https://spinbattle.faylotto.xyz" target="_blank" style="text-decoration:none; color:inherit;"><div class="info-box">
+  <a href="https://spinbattle.faylotto.xyz" target="_blank" class="info-box" style="text-decoration:none; color:inherit;">
     <h3 class="info-box-title">Balance BabyDoge:</h3>
     <div class="info-box-value">
       <img src="bb.svg" alt="Balance Icon" class="info-icon">
       <span id="dummyBalanceText">0</span>
-    </div></a>
-  </div>
-  </div>
+    </div>
+  </a> </div>
 
   <div class="referral-container">
     <div class="ref-section">
@@ -1074,10 +1044,10 @@ const claimRewardsBtn = document.getElementById("claimRewardsBtn");
 
 // === MAPPING IKON UNTUK TOAST ===
 const TOAST_ICONS = {
-  success: 'succes.svg',    // Ganti ini jika ikon sukses Anda beda
-  error: 'error.svg',  // Ganti ini jika ikon error Anda beda
-  info: 'info.svg'
-  warning: 'warning.svg'
+  success: 'succes.svg',
+  error: 'error.svg',
+  info: 'info.svg',
+  warning: 'warning.svg', // <-- KOMA DITAMBAHKAN
   wolf: 'wolf.svg'
 };
     
@@ -1425,11 +1395,11 @@ async function connectWallet() {
     userAddress = await signer.getAddress();
     
     if (!ethers.isAddress(FAYLOTTO_ADDRESS) || FAYLOTTO_ADDRESS.startsWith("0x...")) {
-         alert("Developer Error: Contract Address is invalid or has not been filled in.);
+         showToast("Developer Error: Invalid Contract Address.", "error");
          return;
     }
     if (FAYLOTTO_ABI.length === 0) {
-        alert("Developer Error: FAYLOTTO_ABI is empty. Please enter the contract ABI.);
+        showToast("Developer Error: FAYLOTTO_ABI is empty.", "error");
         return;
     }
 
@@ -1672,7 +1642,7 @@ function showToast(message, type = 'info', duration = 15000) {
   
   // 8. Set timer otomatis untuk hilang (tetap ada)
   autoHideTimer = setTimeout(hideToast, duration);
-      }
+  }
   
 // === Event Listeners ===
 connectBtn.addEventListener("click", connectWallet);  
