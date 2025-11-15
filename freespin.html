@@ -1006,7 +1006,7 @@ Use Your Balance:
       <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
       <a href="#"><i class="fa-brands fa-telegram"></i></a>
       <a href="#"><i class="fa-brands fa-telegram"></i></a>
-      <a href="mailto:support@faylotto.com"><i class="fa-solid fa-envelope"></i></a>
+      <a href="mailto:support@faylotto.xyx"><i class="fa-solid fa-envelope"></i></a>
     </div>
     <div class="footer-text"><h6>© 2025 Faylotto. All rights reserved.</h6></div>
   </footer>
@@ -1170,17 +1170,24 @@ function glowWinnerSector(winnerIndex) {
 // === 3. FUNGSI SPIN (Logika V3 "Free") ===
 async function spinFromBlockchain() {
   if (spinning || !contract) {
-    resultText.textContent = "Please connect your wallet first.";
+    // PERGANTIAN: Ganti resultText dengan toast error
+    showToast("Please connect your wallet first.", "error");
     return;
   }
   spinning = true;
   btn.disabled = true;
   btn.textContent = "Please wait...";
-  resultText.textContent = "Sending transactions...";
+  
+  // PERGANTIAN: Ganti resultText dengan toast info
+  showToast("Sending transaction...", "info");
+  resultText.textContent = "Press SPIN to play"; // Reset text utama
   
   try {
     const tx = await contract.spinFree();
-    resultText.textContent = "Waiting for blockchain confirmation...";
+    
+    // PERGANTIAN: Ganti resultText dengan toast info
+    showToast("Waiting for blockchain confirmation...", "info");
+    
     const receipt = await tx.wait();
     spinSound.play(); 
     const { prizeTier, prizeAmount } = parseReceiptForPrize(receipt);
@@ -1190,49 +1197,39 @@ async function spinFromBlockchain() {
     
     const winner = prizes[winnerIndex];
 
-    // --- PERHITUNGAN MATEMATIKA PRESISI (FIX POINTER NGACO) ---
+    // --- Perhitungan Matematika (Tetap Sama) ---
     const sliceAngle = 360 / total;
-    
-    // 1. Hitung posisi roda saat ini (0-360 derajat)
     const currentPosition = currentRotation % 360;
-    
-    // 2. Hitung target posisi pemenang (0-360 derajat)
     const targetPosition = (360 - (winnerIndex * sliceAngle) - (sliceAngle / 2));
-    
-    // 3. Hitung JARAK yang harus ditempuh dari posisi sekarang ke target
     let distance = targetPosition - currentPosition;
-    // Jika jarak negatif, tambahkan 360 agar berputar ke depan (searah jarum jam)
     if (distance < 0) {
         distance += 360;
     }
-    
-    // 4. Tambahkan putaran ekstra (Misal: 10 putaran penuh)
     const extraSpins = 360 * 10; 
-    
-    // 5. Total rotasi absolut baru
     const finalRotation = currentRotation + distance + extraSpins;
     // -----------------------------------------------------------
 
     gsap.to(svg, {
       rotation: finalRotation, 
-      duration: 35, // Durasi 8 detik (pas untuk 10 putaran)
-      ease: "expo.inOut", // Efek 'Ngebut' dramatis di tengah
+      duration: 35,
+      ease: "expo.inOut",
       onComplete: () => {
         winSound.play();
-        resultText.textContent = `🎉 Congratulations, you win: ${winner.name} BabyDoge! 🎉`;
+        
+        // PERGANTIAN: Ganti resultText dengan toast sukses
+        showToast(`🎉 Congratulations, you win: ${winner.name} BabyDoge! 🎉`, "success");
+        resultText.textContent = "Press SPIN to play"; // Reset text utama
+        
         glowWinnerSector(winnerIndex);
         resetButton();
         
-        // Update UI Langsung
         updateUI();
         
-        // Update UI LAGI setelah 3 detik (Mengatasi lag node RPC)
         setTimeout(() => {
             console.log("Re-checking balance...");
             updateUI();
         }, 3000);
         
-        // Simpan posisi terakhir untuk spin berikutnya
         currentRotation = finalRotation; 
       }
     });
@@ -1246,11 +1243,14 @@ async function spinFromBlockchain() {
     } else if (errorReason.includes("Free promo is paused")) {
         errorMsg = "Free spin event is currently paused by admin.";
     } else if (errorReason.includes("user rejected transaction")) {
-        errorMsg = "You reject the transaction.";
+        errorMsg = "You rejected the transaction.";
     }
-    resultText.textContent = errorMsg;
+    
+    // PERGANTIAN: Ganti resultText dengan toast error
+    showToast(errorMsg, "error");
+    resultText.textContent = "Press SPIN to play"; // Reset text utama
+    
     resetButton();
-    // Tetap update UI jika gagal untuk memastikan status tombol/saldo benar
     updateUI();
   }
 }
@@ -1567,7 +1567,7 @@ async function handleClaimRewards() {
     await updateUI();
   } catch (err) {
     console.error("Failed claim:", err);
-    alert("Failed to claim rewards. (Maybe there are no rewards?)");
+    alert("Failed to claim rewards. (Maybe there are no rewards)");
   }
   claimRewardsBtn.textContent = "Claim Rewards";
 }
