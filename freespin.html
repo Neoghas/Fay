@@ -1475,7 +1475,6 @@ function resetButton() {
 }  
 
 // === Fungsi Referral (Sesuai Kontrak V3) ===
-
 async function handleReferralOnLoad() {
   const params = new URLSearchParams(window.location.search);
   const refNickname = params.get('ref');
@@ -1484,20 +1483,25 @@ async function handleReferralOnLoad() {
     const currentReferrer = await contract.referrerOf(userAddress);
     if (currentReferrer !== ethers.ZeroAddress) {
         console.log("User already has a referral.");
+        // PERGANTIAN: Ke Bahasa Inggris
+        showToast("You already have a referrer.", "info");
         return; 
     }
     try {
-      resultText.textContent = `Registering referrers: ${refNickname}...`;
+      resultText.textContent = `Registering referrer: ${refNickname}...`; 
       const tx = await contract.setReferralByNickname(refNickname);
       await tx.wait();
-      resultText.textContent = `Referrer ${refNickname} Registered successfully!`;
+      
+      // PERGANTIAN: Ke Bahasa Inggris
+      showToast(`Referrer ${refNickname} registered successfully!`, "success");
+      resultText.textContent = "Wallet connected! Spin now.";
       await updateUI(); 
     } catch (err) {
       console.warn("Failed to set referrer:", err.message);
-      resultText.textContent = "Failed to register referrer. (Maybe nickname is wrong.)";
-      setTimeout(() => {
-        if (!spinning) resultText.textContent = "Wallet connected! Spin now.";
-      }, 3000);
+      
+      // PERGANTIAN: Ke Bahasa Inggris
+      showToast("Failed to register referrer. (Nickname wrong?)", "error");
+      resultText.textContent = "Wallet connected! Spin now.";
     }
   }
 }
@@ -1506,7 +1510,8 @@ async function handleCreateNickname() {
   if (!contract) return;
   const nick = nicknameInput.value;
   if (nick.length < 3) {
-    alert("Nickname must be at least 3 characters.");
+    // PERGANTIAN: Ke Bahasa Inggris
+    showToast("Nickname must be at least 3 characters.", "error");
     return;
   }
   
@@ -1515,14 +1520,17 @@ async function handleCreateNickname() {
   try {
     const tx = await contract.createNickname(nick);
     await tx.wait();
-    alert("Nickname successfully created/updated!");
+    
+    // PERGANTIAN: Ke Bahasa Inggris
+    showToast("Nickname successfully created/updated!", "success");
     await updateUI();
   } catch (err) {
     console.error("Failed to create nickname:", err);
-    alert("Failed to create nickname. (Maybe already taken.)");
+    // PERGANTIAN: Ke Bahasa Inggris
+    showToast("Failed to create nickname. (Maybe already taken?)", "error");
   }
   createNicknameBtn.disabled = false;
-  createNicknameBtn.textContent = "Update";
+  createNicknameBtn.textContent = "Create";
 }
 
 async function handleClaimRewards() {
@@ -1533,11 +1541,14 @@ async function handleClaimRewards() {
   try {
     const tx = await contract.claimReferralRewards();
     await tx.wait();
-    alert("Rewards successfully claimed!");
+    
+    // PERGANTIAN: Ke Bahasa Inggris
+    showToast("Rewards successfully claimed!", "success");
     await updateUI();
   } catch (err) {
     console.error("Failed claim:", err);
-    alert("Failed to claim rewards. (Maybe there are no rewards)");
+    // PERGANTIAN: Ke Bahasa Inggris
+    showToast("Failed to claim rewards. (Maybe no rewards?)", "error");
   }
   claimRewardsBtn.textContent = "Claim Rewards";
 }
@@ -1546,11 +1557,51 @@ function handleCopyLink() {
   referralLinkInput.select();
   try {
     navigator.clipboard.writeText(referralLinkInput.value);
-    alert("Referral link copied!");
+    // PERGANTIAN: Ke Bahasa Inggris
+    showToast("Referral link copied!", "success");
   } catch (err) {
     console.error("Failed to copy:", err);
-    alert("Failed to copy link");
+    // PERGANTIAN: Ke Bahasa Inggris
+    showToast("Failed to copy link.", "error");
   }
+}
+  
+// === FUNGSI MODAL BARU ===
+async function openWalletModal() {
+  if (!provider || !contract || !userAddress) return;
+
+  // Set loading state (PERGANTIAN: Ke Bahasa Inggris)
+  modalWalletAddress.textContent = "Loading...";
+  modalNickname.textContent = "Loading...";
+  modalEthBalance.textContent = "Loading...";
+  modalFreeBalance.textContent = "Loading...";
+  walletModal.style.display = "block";
+
+  try {
+    // Ambil data terbaru secara bersamaan
+    const [ethBalance, nick, freeBalance] = await Promise.all([
+      provider.getBalance(userAddress),
+      contract.nicknames(userAddress),
+      contract.freeBalances(userAddress)
+    ]);
+
+    // Isi modal dengan data (PERGANTIAN: Ke Bahasa Inggris)
+    modalWalletAddress.textContent = userAddress;
+    modalNickname.textContent = nick || "(No nickname yet)";
+    modalEthBalance.textContent = ethers.formatEther(ethBalance);
+    modalFreeBalance.textContent = ethers.formatUnits(freeBalance, 18);
+
+  } catch (err) {
+    console.error("Failed to load wallet info:", err);
+    modalWalletAddress.textContent = "Failed to load data.";
+    
+    // PERGANTIAN: Ke Bahasa Inggris
+    showToast("Failed to load wallet info.", "error");
+  }
+}
+
+function closeWalletModal() {
+  walletModal.style.display = "none";
 }
   
 // === FUNGSI MODAL BARU ===
