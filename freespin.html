@@ -690,10 +690,34 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 18px;
+  
+  /* PERUBAHAN: Padding kanan ditambah agar teks tidak tertimpa tombol X */
+  padding: 12px 35px 12px 18px; 
+  
   border-radius: 12px;
   width: 300px;
   max-width: 90vw;
+  
+  /* PERUBAHAN: Dibutuhkan agar tombol "X" bisa diposisikan */
+  position: relative; 
+  
+  /* Style Glassmorphism (Sama seperti Navbar & Modal) */
+  background-color: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+
+  /* Teks & Ikon */
+  color: #fff;
+  font-size: 14px;
+  font-family: "Ubuntu", sans-serif;
+  
+  /* State Awal Animasi (Sembunyi) */
+  transform: translateX(120%);
+  opacity: 0;
+  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
   
   /* Style Glassmorphism (Sama seperti Navbar & Modal) */
   background-color: rgba(255, 255, 255, 0.05);
@@ -723,6 +747,23 @@ h1, h2, h3 {
 .toast.hide {
   transform: translateX(120%);
   opacity: 0;
+}
+    /* === TOMBOL CLOSE UNTUK TOAST === */
+.toast-close-btn {
+  position: absolute;
+  top: 8px;   /* Atur jarak dari atas */
+  right: 12px;  /* Atur jarak dari kanan */
+  
+  font-size: 20px;
+  font-weight: bold;
+  color: #ff4a4a; /* Warna merah sesuai permintaan */
+  cursor: pointer;
+  
+  transition: transform 0.2s ease;
+}
+
+.toast-close-btn:hover {
+  transform: scale(1.2); /* Efek hover */
 }
 
 /* Styling untuk Ikon di dalam Toast */
@@ -1570,46 +1611,60 @@ function closeWalletModal() {
   walletModal.style.display = "none";
 }
 
-    // === FUNGSI TOAST NOTIFICATION (OTOMATIS) ===
-function showToast(message, type = 'info', duration = 3000) {
+// === FUNGSI TOAST NOTIFICATION (OTOMATIS + TOMBOL X) ===
+function showToast(message, type = 'info', duration = 15000) {
   const container = document.getElementById('toast-container');
   
   // 1. Ambil Ikon Otomatis dari mapping
-  // Jika tipe tidak ditemukan, pakai 'info' sebagai default
   const iconUrl = TOAST_ICONS[type] || TOAST_ICONS['info'];
   
   // 2. Buat elemen toast
   const toast = document.createElement('div');
-  toast.classList.add('toast', `toast-${type}`); // Tipe tetap dipakai untuk styling (border)
+  toast.classList.add('toast', `toast-${type}`);
   
-  // 3. Isi dengan ikon (yang sudah otomatis) dan pesan
+  // 3. (PERUBAHAN) Isi dengan ikon, pesan, DAN TOMBOL CLOSE (X)
   toast.innerHTML = `
     <img src="${iconUrl}" alt="icon" class="toast-icon">
     <span class="toast-message">${message}</span>
+    <span class="toast-close-btn">&times;</span>
   `;
   
   // 4. Tambahkan ke wadah
   container.appendChild(toast);
   
-  // 5. Animasikan masuk
+  // --- LOGIKA BARU UNTUK HIDE ---
+  
+  let autoHideTimer; // Variabel untuk menyimpan timer
+
+  // Buat fungsi 'hide' yang bisa dipakai ulang
+  const hideToast = () => {
+    // Hentikan timer otomatis (jika tombol X diklik)
+    clearTimeout(autoHideTimer); 
+    
+    toast.classList.add('hide');
+    
+    // Hapus elemen dari DOM setelah animasi hide selesai
+    setTimeout(() => {
+      if (container.contains(toast)) {
+        container.removeChild(toast);
+      }
+    }, 500); 
+  };
+  
+  // 5. (BARU) Cari tombol 'X' yang baru dibuat
+  const closeBtn = toast.querySelector('.toast-close-btn');
+  
+  // 6. (BARU) Tambahkan listener klik ke tombol 'X'
+  closeBtn.addEventListener('click', hideToast);
+
+  // 7. Animasikan masuk
   setTimeout(() => {
     toast.classList.add('show');
   }, 100);
   
-  // 6. Set timer untuk sembunyikan
-  setTimeout(() => {
-    toast.classList.add('hide');
-    
-    // 7. Hapus elemen dari DOM setelah animasi hide selesai
-    setTimeout(() => {
-      // Cek dulu apakah toast masih ada sebelum dihapus
-      if (container.contains(toast)) {
-        container.removeChild(toast);
+  // 8. Set timer otomatis untuk hilang (tetap ada)
+  autoHideTimer = setTimeout(hideToast, duration);
       }
-    }, 500); // 500ms = durasi animasi di CSS
-    
-  }, duration);
-}
   
 // === Event Listeners ===
 connectBtn.addEventListener("click", connectWallet);  
