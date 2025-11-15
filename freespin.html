@@ -1034,7 +1034,7 @@ const TOAST_ICONS = {
   success: 'succes.svg',
   error: 'error.svg',
   info: 'info.svg',
-  warning: 'warning.svg', // <-- PERBAIKAN: KOMA DITAMBAHKAN
+  warning: 'warning.svg',
   wolf: 'wolf.svg',
   loading: 'load.svg'
 };
@@ -1212,9 +1212,10 @@ async function spinFromBlockchain() {
     
 // === 4. FUNGSI HELPER ===
 function parseReceiptForPrize(receipt) {
+  // PERBAIKAN: Cek ABI di sini agar tidak error
   if (FAYLOTTO_ABI.length === 0) {
-      console.error("ABI WRONG!");
-      return { prizeTier: 1, prizeAmount: 0 };
+      console.error("ABI is empty! Cannot parse receipt.");
+      return { prizeTier: 1, prizeAmount: 0 }; 
   }
   const iface = new ethers.Interface(FAYLOTTO_ABI);
   
@@ -1305,7 +1306,6 @@ async function updateUI() {
 
   } catch (err) {
     console.error("Failed to update UI:", err);
-    // PERBAIKAN: Menggunakan showToast
     showToast("Failed to load data. Try refreshing.", "error");
     resultText.innerHTML = "<h5>Press SPIN to play</h5>";
     spinCountText.textContent = "0 / 2";
@@ -1408,7 +1408,7 @@ async function connectWallet() {
 }
     
 function disconnectWallet() {
-  showToast("Wallet disconnected.", "info"); // Notifikasi disconnect
+  showToast("Wallet disconnected.", "info"); 
   closeWalletModal(); 
   provider = signer = contract = userAddress = null;
   
@@ -1545,10 +1545,6 @@ async function openWalletModal() {
   }
 }
 
-// PERBAIKAN: HAPUS FUNGSI DUPLIKAT
-// function closeWalletModal() { ... } 
-// async function openWalletModal() { ... } 
-
 function closeWalletModal() {
   walletModal.style.display = "none";
 }
@@ -1628,6 +1624,4 @@ document.querySelectorAll(".faq-question").forEach(btn => {
     }
   });
 });
-</script>
-</body>
-</head>
+  </script>
