@@ -677,97 +677,119 @@ h1, h2, h3 {
 
     /* === TOAST NOTIFICATIONS === */
 #toast-container {
-  position: fixed;
-  top: 90px; /* Jarak dari atas (di bawah navbar) */
+  position: fixed; /* Tetap di layar saat di-scroll */
+  top: 90px; /* Di bawah navbar */
   right: 20px;
-  z-index: 9999; /* Paling depan */
-  display: flex;
-  flex-direction: column;
-  gap: 10px; /* Jarak antar toast */
+  z-index: 10000; /* Paling atas */
+  width: 300px;
+  max-width: 90%;
 }
 
-.toast {
+/* Style untuk setiap notifikasi */
+.toast-notification {
+  background: #333;
+  color: white;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+  font-size: 14px;
+  border: 2px solid #555;
+  
+  /* Flexbox untuk ikon + teks */
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   
-  /* PERUBAHAN: Padding kanan ditambah agar teks tidak tertimpa tombol X */
-  padding: 12px 35px 12px 18px; 
-  
-  border-radius: 12px;
-  width: 300px;
-  max-width: 90vw;
-  
-  /* PERUBAHAN: Dibutuhkan agar tombol "X" bisa diposisikan */
-  position: relative; 
-  
-  /* Style Glassmorphism (Sama seperti Navbar & Modal) */
-  background-color: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-
-  /* Teks & Ikon */
-  color: #fff;
-  font-size: 14px;
-  font-family: "Ubuntu", sans-serif;
-  
-  /* State Awal Animasi (Sembunyi) */
-  transform: translateX(120%);
+  /* Animasi fade-in dan fade-out */
   opacity: 0;
-  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+  transform: translateX(100%);
+  transition: all 0.5s ease-in-out;
 }
-    
-    /* === TOMBOL CLOSE UNTUK TOAST === */
+
+/* Animasi saat muncul */
+.toast-notification.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Animasi saat hilang */
+.toast-notification.hide {
+  opacity: 0;
+  transform: translateX(100%);
+}
+
+/* Ikon di dalam toast */
+.toast-notification img {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+.toast-notification span {
+  flex-grow: 1;
+  word-wrap: break-word;
+}
+
+/* Warna berdasarkan tipe */
+.toast-notification.success {
+  background: #2c4c00;
+  border: 2px solid #69a31a;
+}
+.toast-notification.error {
+  background: #4a2c2c;
+  border: 2px solid #dc3545;
+}
+.toast-notification.info {
+  background: #56616e;
+  border: 2px solid #343a42;
+}
+.toast-notification.load {
+  background: #0a3c66; /* Abu-abu gelap */
+  border: border 2px solid #0061b3;
+}
+
+.toast-notification.warning {
+  background: #997a00;
+  border: 2px solid #ffcc00;
+}
+
+/* Warna untuk tipe 'spin' (Ungu/Pink) */
+.toast-notification.spin {
+  background: #501f66;
+  border: 2px solid #a03ecc; /* Mengambil warna dari gradien tombol */
+}
+
+/* Warna untuk tipe 'wolf' (Biru Cyan) */
+.toast-notification.wolf {
+  background: #804f00;
+  border: 2px solid #e68d00; /* Mengambil warna dari gradien tombol */
+}
+
+/* === STYLE BARU UNTUK TOMBOL CLOSE TOAST === */
 .toast-close-btn {
-  position: absolute;
-  top: 8px;   /* Atur jarak dari atas */
-  right: 12px;  /* Atur jarak dari kanan */
-  
-  font-size: 20px;
+  background: none;
+  border: none;
+  color: #ff4d4d;
+  font-size: 24px;  /* Perbesar tombol 'x' */
   font-weight: bold;
-  color: #ff4a4a; /* Warna merah sesuai permintaan */
+  line-height: 1;
+  padding: 0 5px;
+  margin-left: 10px; /* Jarak dari teks */
   cursor: pointer;
-  
-  transition: transform 0.2s ease;
+  transition: color 0.2s;
 }
 
+/* Tombol close jadi merah saat di-hover */
 .toast-close-btn:hover {
-  transform: scale(1.2); /* Efek hover */
+  color: #ff8282; 
 }
 
-/* Styling untuk Ikon di dalam Toast */
-.toast-icon {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-  flex-shrink: 0; /* Mencegah ikon penyet */
-}
-
-/* Styling untuk Teks Pesan */
-.toast-message {
-  word-break: break-word;
-}
-
-/* Varian Warna berdasarkan Tipe */
-.toast.success {
-  border-left: 4px solid #00eaff; /* Cyan (sukses) */
-}
-.toast.error {
-  border-left: 4px solid #ff4a4a; /* Merah (error) */
-}
-.toast.info {
-  border-left: 4px solid #7368f7; /* Ungu (info) */
-}
-.toast.warning {
-  border-left: 4px solid #00eaff; /* Cyan (sukses) */
-    }
-.toast.wolf {
-  border-left: 4px solid #00eaff; /* Cyan (sukses) */
-}
-.toast.loading {
-  border-left: 4px solid #00eaff; /* Cyan (sukses) */
+/* Pastikan span-nya tidak menabrak tombol */
+.toast-notification span {
+  flex-grow: 1; /* Biarkan teks mengambil sisa ruang */
+  word-wrap: break-word;
 }
 </style>
 
@@ -1549,45 +1571,48 @@ function closeWalletModal() {
   walletModal.style.display = "none";
 }
 
-// === FUNGSI TOAST NOTIFICATION (OTOMATIS + TOMBOL X) ===
-function showToast(message, type = 'info', duration = 15000) {
-  const container = document.getElementById('toast-container');
-  
-  const iconUrl = TOAST_ICONS[type] || TOAST_ICONS['info'];
-  
-  const toast = document.createElement('div');
-  toast.classList.add('toast', `toast-${type}`);
-  
-  toast.innerHTML = `
-    <img src="${iconUrl}" alt="icon" class="toast-icon">
-    <span class="toast-message">${message}</span>
-    <span class="toast-close-btn">&times;</span>
-  `;
-  
-  container.appendChild(toast);
-  
-  let autoHideTimer; 
-
-  const hideToast = () => {
-    clearTimeout(autoHideTimer); 
-    toast.classList.add('hide');
-    
-    setTimeout(() => {
-      if (container.contains(toast)) {
-        container.removeChild(toast);
-      }
-    }, 500); 
-  };
-  
-  const closeBtn = toast.querySelector('.toast-close-btn');
-  closeBtn.addEventListener('click', hideToast);
-
-  setTimeout(() => {
-    toast.classList.add('show');
-  }, 100);
-  
-  autoHideTimer = setTimeout(hideToast, duration);
-} 
+function showStatus(message, type = 'info', duration = 10000) { 
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        let iconName = 'info-icon.svg'; 
+        if (type === 'success') iconName = 'success.svg';
+        else if (type === 'error') iconName = 'error.svg';
+        else if (type === 'load') iconName = 'load.svg';
+        else if (type === 'warning') iconName = 'warning.svg';
+        else if (type === 'spin') iconName = 'spin.svg';
+        else if (type === 'wolf') iconName = 'wolf.svg';
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        const icon = document.createElement('img');
+        icon.src = `${iconName}`; 
+        icon.alt = "status icon";
+        const text = document.createElement('span');
+        text.textContent = message;
+        const closeButton = document.createElement('button');
+        closeButton.className = 'toast-close-btn';
+        closeButton.innerHTML = '&times;'; 
+        toast.appendChild(icon);
+        toast.appendChild(text);
+        toast.appendChild(closeButton);
+        function removeToast() {
+          toast.classList.remove('show');
+          toast.classList.add('hide');
+          toast.addEventListener('transitionend', () => {
+            if (toast.parentNode === container) {
+                container.removeChild(toast);
+            }
+          }, { once: true });
+        }
+        const hideTimeout = setTimeout(removeToast, duration);
+        closeButton.onclick = () => {
+          clearTimeout(hideTimeout); 
+          removeToast(); 
+        };
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.classList.add('show');
+        }, 10); 
+}
   
 // === Event Listeners ===
 connectBtn.addEventListener("click", connectWallet);  
