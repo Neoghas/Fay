@@ -1170,23 +1170,23 @@ function glowWinnerSector(winnerIndex) {
 // === 3. FUNGSI SPIN (Logika V3 "Free") ===
 async function spinFromBlockchain() {
   if (spinning || !contract) {
-    resultText.textContent = "Harap hubungkan wallet dulu.";
+    resultText.textContent = "Please connect your wallet first.";
     return;
   }
   spinning = true;
   btn.disabled = true;
-  btn.textContent = "WAIT...";
-  resultText.textContent = "Mengirim transaksi...";
+  btn.textContent = "Please wait...";
+  resultText.textContent = "Sending transactions...";
   
   try {
     const tx = await contract.spinFree();
-    resultText.textContent = "Menunggu konfirmasi blockchain...";
+    resultText.textContent = "Waiting for blockchain confirmation...";
     const receipt = await tx.wait();
     spinSound.play(); 
     const { prizeTier, prizeAmount } = parseReceiptForPrize(receipt);
     const winnerIndex = getTargetSlice(prizeTier);
     
-    if (winnerIndex === -1) throw new Error("Gagal memetakan hadiah.");
+    if (winnerIndex === -1) throw new Error("Failed to map reward.");
     
     const winner = prizes[winnerIndex];
 
@@ -1219,7 +1219,7 @@ async function spinFromBlockchain() {
       ease: "expo.inOut", // Efek 'Ngebut' dramatis di tengah
       onComplete: () => {
         winSound.play();
-        resultText.textContent = `🎉 Anda menang: ${winner.name} BabyDoge! 🎉`;
+        resultText.textContent = `🎉 Congratulations, you win: ${winner.name} BabyDoge! 🎉`;
         glowWinnerSector(winnerIndex);
         resetButton();
         
@@ -1238,15 +1238,15 @@ async function spinFromBlockchain() {
     });
 
   } catch (err) {
-    console.error("Spin Gagal:", err);
-    let errorMsg = "Spin Gagal! (Ditolak, kuota habis, atau event dijeda)";
+    console.error("Spin Failed:", err);
+    let errorMsg = "Spin Failed! (Rejected, quota exhausted, or event paused)";
     const errorReason = err.reason || (err.data ? err.data.message : null) || err.message || "";
     if (errorReason.includes("Max 2 free spins")) {
-        errorMsg = "Jatah spin Anda sudah habis (2/2).";
+        errorMsg = "Your spin quota has run out (2/2).";
     } else if (errorReason.includes("Free promo is paused")) {
-        errorMsg = "Event free spin sedang dijeda oleh admin.";
+        errorMsg = "Free spin event is currently paused by admin.";
     } else if (errorReason.includes("user rejected transaction")) {
-        errorMsg = "Anda menolak transaksi.";
+        errorMsg = "You reject the transaction.";
     }
     resultText.textContent = errorMsg;
     resetButton();
@@ -1268,7 +1268,7 @@ function parseReceiptForPrize(receipt) {
   
   const wonEvent = iface.getEvent("FreeSpinWon");
   if (!wonEvent) {
-      console.error("ABI Error: Event 'FreeSpinWon' tidak ditemukan!");
+      console.error("ABI Failed: Event 'FreeSpinWon' not found!");
       return { prizeTier: 1, prizeAmount: 0 }; 
   }
   
@@ -1284,7 +1284,7 @@ function parseReceiptForPrize(receipt) {
       // 'FreeSpinNoPrize' sudah tidak ada
     } catch (e) { /* Abaikan log lain */ }
   }
-  console.error("Logic Error: Tidak ada event spin yang ditemukan.");
+  console.error("Logic Failed: No spin events found.");
   // Default ke Tier 1 (hadiah hiburan)
   return { prizeTier: 1, prizeAmount: 250000 * (10**18) }; 
 }
@@ -1304,7 +1304,7 @@ function getTargetSlice(prizeTier) {
     return matchingSlices[randomIndex];
   }
   
-  console.error(`Error: Tier ${prizeTier} dari kontrak tidak ada di roda!`);
+  console.error(`Failed: Tier ${prizeTier} from the contract there is no wheel!`);
   return 8; // Fallback ke index Tier 1 (250k)
 }
 
@@ -1362,8 +1362,8 @@ async function updateUI() {
     // }
 
   } catch (err) {
-    console.error("Error updating UI:", err);
-    resultText.textContent = "Gagal memuat data. Coba refresh.";
+    console.error("Failed to update UI:", err);
+    resultText.textContent = "Failed to load data. Try refreshing.";
     spinCountText.textContent = "0 / 2";
     freeBalanceText.textContent = "0";
     myNickname.textContent = "-";
@@ -1410,7 +1410,7 @@ async function ensureBaseSepolia() {
 async function connectWallet() {
   try {
     if (!hasEthereum()) {
-      alert("🦊 Silakan instal MetaMask terlebih dahulu.");
+      alert("Please install MetaMask first.");
       return;
     }
     await ensureBaseSepolia(); 
@@ -1418,18 +1418,18 @@ async function connectWallet() {
     provider = new ethers.BrowserProvider(window.ethereum);
     const accounts = await provider.send("eth_requestAccounts", []);
     if (!accounts || accounts.length === 0) {
-        throw new Error("Tidak ada akun terhubung.");
+        throw new Error("No accounts connected.");
     }
     
     signer = await provider.getSigner();
     userAddress = await signer.getAddress();
     
     if (!ethers.isAddress(FAYLOTTO_ADDRESS) || FAYLOTTO_ADDRESS.startsWith("0x...")) {
-         alert("Developer Error: Alamat Kontrak tidak valid atau belum diisi.");
+         alert("Developer Error: Contract Address is invalid or has not been filled in.);
          return;
     }
     if (FAYLOTTO_ABI.length === 0) {
-        alert("Developer Error: FAYLOTTO_ABI kosong. Harap isi ABI kontrak.");
+        alert("Developer Error: FAYLOTTO_ABI is empty. Please enter the contract ABI.);
         return;
     }
 
@@ -1445,7 +1445,7 @@ async function connectWallet() {
     // === AKHIR PERUBAHAN ===
 
     await updateUI(); 
-    resultText.textContent = "Wallet terhubung! Silakan spin.";
+    resultText.textContent = "Wallet connected! Please spin.";
 
     await handleReferralOnLoad();
 
@@ -1463,7 +1463,7 @@ async function connectWallet() {
 
   } catch (err) {
     console.error("connectWallet error:", err);
-    resultText.textContent = "Koneksi wallet gagal.";
+    resultText.textContent = "Wallet connection failed.";
     disconnectWallet(); // Pastikan disconnect membersihkan state
   }
 }
@@ -1513,20 +1513,20 @@ async function handleReferralOnLoad() {
   if (refNickname && contract && userAddress) {
     const currentReferrer = await contract.referrerOf(userAddress);
     if (currentReferrer !== ethers.ZeroAddress) {
-        console.log("Pengguna sudah punya referrer.");
+        console.log("User already has a referral.");
         return; 
     }
     try {
-      resultText.textContent = `Mendaftarkan referrer: ${refNickname}...`;
+      resultText.textContent = `Registering referrers: ${refNickname}...`;
       const tx = await contract.setReferralByNickname(refNickname);
       await tx.wait();
-      resultText.textContent = `Referrer ${refNickname} berhasil didaftarkan!`;
+      resultText.textContent = `Referrer ${refNickname} Registered successfully!`;
       await updateUI(); 
     } catch (err) {
-      console.warn("Gagal set referrer:", err.message);
-      resultText.textContent = "Gagal mendaftarkan referrer. (Mungkin nickname salah?)";
+      console.warn("Failed to set referrer:", err.message);
+      resultText.textContent = "Failed to register referrer. (Maybe nickname is wrong.)";
       setTimeout(() => {
-        if (!spinning) resultText.textContent = "Wallet terhubung! Silakan spin.";
+        if (!spinning) resultText.textContent = "Wallet connected! Spin now.";
       }, 3000);
     }
   }
@@ -1536,7 +1536,7 @@ async function handleCreateNickname() {
   if (!contract) return;
   const nick = nicknameInput.value;
   if (nick.length < 3) {
-    alert("Nickname harus minimal 3 karakter.");
+    alert("Nickname must be at least 3 characters.");
     return;
   }
   
@@ -1545,11 +1545,11 @@ async function handleCreateNickname() {
   try {
     const tx = await contract.createNickname(nick);
     await tx.wait();
-    alert("Nickname berhasil dibuat/di-update!");
+    alert("Nickname successfully created/updated!");
     await updateUI();
   } catch (err) {
-    console.error("Gagal buat nickname:", err);
-    alert("Gagal membuat nickname. (Mungkin sudah diambil?)");
+    console.error("Failed to create nickname:", err);
+    alert("Failed to create nickname. (Maybe already taken.)");
   }
   createNicknameBtn.disabled = false;
   createNicknameBtn.textContent = "Update";
@@ -1563,11 +1563,11 @@ async function handleClaimRewards() {
   try {
     const tx = await contract.claimReferralRewards();
     await tx.wait();
-    alert("Rewards berhasil diklaim!");
+    alert("Rewards successfully claimed!");
     await updateUI();
   } catch (err) {
-    console.error("Gagal klaim:", err);
-    alert("Gagal klaim rewards. (Mungkin tidak ada rewards?)");
+    console.error("Failed claim:", err);
+    alert("Failed to claim rewards. (Maybe there are no rewards?)");
   }
   claimRewardsBtn.textContent = "Claim Rewards";
 }
@@ -1576,10 +1576,10 @@ function handleCopyLink() {
   referralLinkInput.select();
   try {
     navigator.clipboard.writeText(referralLinkInput.value);
-    alert("Link referral disalin!");
+    alert("Referral link copied!");
   } catch (err) {
-    console.error("Gagal menyalin:", err);
-    alert("Gagal menyalin link.");
+    console.error("Failed to copy:", err);
+    alert("Failed to copy link");
   }
 }
   
