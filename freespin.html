@@ -904,15 +904,15 @@ h1, h2, h3 {
   font-weight: bold;
 }
 
-    /* === CSS TAMBAHAN UNTUK RIWAYAT (DIPERBARUI) === */
+    /* === CSS TAMBAHAN UNTUK RIWAYAT (DENGAN TOOLTIP) === */
 
-/* Wadah untuk Alamat + Waktu */
+/* Wadah baru untuk Alamat + Waktu */
 .history-details {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 0; /* Mencegah teks mendorong reward */
-  overflow: hidden; /* Sembunyikan jika terlalu panjang */
+  min-width: 0; 
+  overflow: hidden;
 }
 
 /* Teks Alamat */
@@ -922,25 +922,74 @@ h1, h2, h3 {
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis; /* Beri ... jika terlalu panjang */
+  text-overflow: ellipsis;
 }
 
-/* Teks Waktu (PERUBAHAN) */
+/* Teks Waktu (PERUBAHAN: Menjadi '5 mnt lalu' dan bisa di-hover) */
 .history-time {
-  font-size: 12px;
+  font-size: 11px;
   color: #888;
-  white-space: nowrap; /* Pastikan waktu tidak turun baris */
-  overflow: hidden;
-  text-overflow: ellipsis; /* Beri ... jika terlalu panjang */
+  font-style: italic;
+  cursor: help; /* Menunjukkan bisa di-hover */
+  position: relative; /* Dibutuhkan untuk tooltip */
+  width: fit-content; /* Agar hover-nya pas */
 }
 
 /* Mengatur ulang reward agar rapi */
 .history-reward {
-  margin-left: auto; /* Dorong ke kanan */
+  margin-left: auto; 
   gap: 5px;
   display: flex;
   align-items: center;
-  flex-shrink: 0; /* Mencegah reward mengecil */
+  flex-shrink: 0; 
+}
+
+/* === CSS UNTUK TOOLTIP HOVER === */
+.history-time[data-tooltip]::after {
+  content: attr(data-tooltip); /* Ambil teks dari atribut */
+  position: absolute;
+  bottom: 125%; /* Posisikan di atas teks 'timeAgo' */
+  left: 50%;
+  transform: translateX(-50%);
+  
+  /* Tampilan Box */
+  background: #111;
+  border: 1px solid #00eaff;
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: "Ubuntu", sans-serif;
+  white-space: nowrap;
+  z-index: 10;
+  
+  /* Sembunyikan by default */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+/* Panah kecil di bawah tooltip */
+.history-time[data-tooltip]::before {
+  content: "";
+  position: absolute;
+  bottom: 100%; /* Posisikan di antara teks dan box */
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #00eaff; /* Warna panah */
+  
+  /* Sembunyikan by default */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+
+/* Tampilkan saat di-hover */
+.history-time[data-tooltip]:hover::before,
+.history-time[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
 }
 </style>
 
@@ -1872,70 +1921,65 @@ function timeAgo(timestampInSeconds) {
   return `${days} day${days > 1 ? 's' : ''} ago`;
 }
 
-// === FUNGSI AMBIL RIWAYAT (BARU - LEBIH AMAN) ===
-async function getGlobalFreeSpinHistory(contract) {
-  if (!publicHistoryList) return;
-  publicHistoryList.innerHTML = "<p>Loading public history...</p>";
-  
-  try {
-    // Ambil desimal token DAN riwayat secara bersamaan
-    const [decimals, history] = await Promise.all([
-        contract.babyDogeDecimals(), // Panggil 'babyDogeDecimals()' dari kontrak
-        contract.getFreeSpinHistory(50) // Ambil 50 terbaru
-    ]);
-    
-    const historyData = history.map(item => {
-      return {
-        player: item.user,
-        // Gunakan variabel 'decimals' yang baru kita ambil
-        amount: new Intl.NumberFormat().format(Number(ethers.formatUnits(item.amount, decimals))), 
-        tier: Number(item.prizeTier),
-        time: Number(item.timestamp)
-      };
-    });
-    
-    renderGlobalHistory(historyData); 
-    
-  } catch (err) {
-    // --- DEBUGGING ---
-    // Tampilkan error yang sebenarnya di konsol untuk debugging
-    console.error("Gagal mengambil riwayat global:", err); 
-    
-    // Tampilkan pesan error di UI
-    publicHistoryList.innerHTML = "<p>Failed to load history. (Check console for errors)</p>";
-  }
+// === FUNGSI HELPER (Format Tanggal & Waktu) ===
+function formatTimestamp(timestampInSeconds) {
+  const timestamp = Number(timestampInSeconds);
+  if (isNaN(timestamp) || timestamp === 0) return "Invalid date";
+  const date = new Date(timestamp * 1000); 
+  return date.toLocaleString(undefined, {
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit'
+  });
 }
 
-async function getMyFreeSpinHistory(contract, userAddress) {
-  if (!myHistoryList || !userAddress) return;
-  myHistoryList.innerHTML = "<p>Loading your history...</p>"; 
-  
-  try {
-    // Ambil desimal token DAN riwayat secara bersamaan
-    const [decimals, globalHistory] = await Promise.all([
-        contract.babyDogeDecimals(),
-        contract.getFreeSpinHistory(100) // Ambil 100
-    ]);
-    
-    // Filter di sisi front-end
-    const myHistory = globalHistory.filter(item => item.user === userAddress);
-    
-    const historyData = myHistory.map(item => {
-      return {
-        tier: Number(item.prizeTier),
-        // Gunakan variabel 'decimals' yang baru kita ambil
-        amount: new Intl.NumberFormat().format(Number(ethers.formatUnits(item.amount, decimals))),
-        time: Number(item.timestamp)
-      };
-    });
-    
-    renderMyHistory(historyData);
-    
-  } catch (err) {
-    // --- DEBUGGING ---
-    console.error("Gagal mengambil riwayat pribadi:", err);
-    myHistoryList.innerHTML = "<p>Failed to load your history. (Check console)</p>";
+// === FUNGSI RENDER RIWAYAT (DIPERBARUI DENGAN TOOLTIP) ===
+function renderGlobalHistory(historyData) {
+  if (!publicHistoryList) return;
+  if (historyData.length === 0) {
+    publicHistoryList.innerHTML = "<p>No public history found yet.</p>";
+    return;
   }
+  publicHistoryList.innerHTML = historyData.map(item => `
+    <div class="history-item">
+      <img src="wallet.svg" class="info-icon">
+      <div class="history-details">
+        <span class="history-address">${shortAddress(item.player)}</span>
+        <span class="history-time" data-tooltip="${formatTimestamp(item.time)}">
+          ${timeAgo(item.time)}
+        </span> 
+      </div>
+      <span class="history-reward">
+        (Tier ${item.tier}) won <strong>${item.amount}</strong> 
+        <img src="bb.svg" class="info-icon">
+      </span>
+    </div>
+  `).join('');
+}
+
+function renderMyHistory(historyData) {
+  if (!myHistoryList) return;
+  if (historyData.length === 0) {
+    myHistoryList.innerHTML = "<p>You have no personal spin history yet.</p>";
+    return;
+  }
+  myHistoryList.innerHTML = historyData.map(item => `
+    <div class="history-item">
+      <img src="winb.png" class="info-icon">
+      <div class="history-details">
+        <span class="history-address">You won (Tier ${item.tier})</span>
+        <span class="history-time" data-tooltip="${formatTimestamp(item.time)}">
+          ${timeAgo(item.time)}
+        </span>
+      </div>
+      <span class="history-reward">
+        <strong>${item.amount}</strong> 
+        <img src="bb.svg" class="info-icon">
+      </span>
+    </div>
+  `).join('');
 }
             
 // === FUNGSI AMBIL RIWAYAT (BARU - SESUAI KONTRAK) ===
