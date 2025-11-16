@@ -767,6 +767,12 @@ h1, h2, h3 {
   border: 2px solid #e68d00; /* Mengambil warna dari gradien tombol */
 }
 
+/* Warna untuk tipe 'wolf' (Biru Cyan) */
+.toast-notification.win {
+  background: #3e0080;
+  border: 2px solid #7c00ff; /* Mengambil warna dari gradien tombol */
+}
+
 /* === STYLE BARU UNTUK TOMBOL CLOSE TOAST === */
 .toast-close-btn {
   background: none;
@@ -791,6 +797,13 @@ h1, h2, h3 {
   flex-grow: 1; /* Biarkan teks mengambil sisa ruang */
   word-wrap: break-word;
 }
+    /* === SEMBUNYIKAN ELEMEN SEBELUM KONEK === */
+#info-container,
+#how-to-withdraw-container,
+#referral-system-container {
+  display: none;
+}
+    
 </style>
 
 <body>
@@ -826,7 +839,7 @@ h1, h2, h3 {
 
   <div class="result" id="resultText"><h5>Press SPIN to play</h5></div>
   
-  <div class="info-container">
+  <div class="info-container" id="info-container">
 
     <div class="info-box">
       <h3 class="info-box-title">Spin Quota:</h3>
@@ -846,7 +859,7 @@ h1, h2, h3 {
   
   </div>
 
-  <div class="referral-container">
+  <div class="referral-container" id="how-to-withdraw-container">
     <div class="ref-section">
         <center><h3>How to Withdraw Baby Doge Balance?</h3></center>
         <div class="ref-info">
@@ -861,7 +874,7 @@ h1, h2, h3 {
   </div>
   
   <!-- REFERRAL SYSTEM -->
-  <div class="referral-container">
+  <div class="referral-container" id="referral-system-container">
     <h2 class="referral-header">Referral System</h2>
     <div class="ref-section">
         <h3>Dashboard</h3>
@@ -1061,6 +1074,9 @@ const usdtRewards = document.getElementById("usdtRewards");
 const babyDogeRewards = document.getElementById("babyDogeRewards");
 const referralCount = document.getElementById("referralCount");
 const claimRewardsBtn = document.getElementById("claimRewardsBtn");
+const infoContainer = document.getElementById("info-container");
+const howToWithdrawContainer = document.getElementById("how-to-withdraw-container");
+const referralSystemContainer = document.getElementById("referral-system-container");
     
 // === 2. PETA HADIAH ===
 const prizes = [  
@@ -1162,7 +1178,7 @@ async function spinFromBlockchain() {
   btn.disabled = true;
   btn.textContent = "Please wait...";
   
-  showStatus("Sending transaction...", "info");
+  showStatus("Sending transaction...", "spin");
   resultText.innerHTML = "<h5>Press SPIN to play</h5>";
   
   try {
@@ -1196,8 +1212,19 @@ async function spinFromBlockchain() {
       onComplete: () => {
         winSound.play();
         
-        showStatus(`🎉 Congratulations, you win: ${winner.name} BabyDoge! 🎉`, "success");
-        resultText.innerHTML = "<h5>Press SPIN to play</h5>";
+        showStatus(
+  `<img src="win.svg" style="width:20px;height:20px;vertical-align:middle;margin:0 5px;">
+   Congratulations, you win: ${winner.name} BabyDoge!
+   <img src="bb.svg" style="width:20px;height:20px;vertical-align:middle;margin:0 5px;">`,
+  "win"
+);
+
+resultText.innerHTML = `
+  <h5>
+    <img src="play.svg" style="width:20px;height:20px;vertical-align:middle;margin-right:5px;">
+    Press SPIN to play
+  </h5>
+`;
         
         glowWinnerSector(winnerIndex);
         resetButton();
@@ -1408,6 +1435,10 @@ async function connectWallet() {
     showStatus("Wallet connected! You can spin now.", "success");
     resultText.innerHTML = "<h5>Press SPIN to play</h5>";
 
+    if (infoContainer) infoContainer.style.display = "flex";
+    if (howToWithdrawContainer) howToWithdrawContainer.style.display = "block";
+    if (referralSystemContainer) referralSystemContainer.style.display = "block";
+
     await handleReferralOnLoad();
 
     window.ethereum.removeAllListeners('accountsChanged');
@@ -1438,6 +1469,10 @@ function disconnectWallet() {
   connectBtn.textContent = "Connect Wallet";
   connectBtn.removeEventListener("click", openWalletModal);
   connectBtn.addEventListener("click", connectWallet);
+
+  if (infoContainer) infoContainer.style.display = "none";
+  if (howToWithdrawContainer) howToWithdrawContainer.style.display = "none";
+  if (referralSystemContainer) referralSystemContainer.style.display = "none";
   
   resultText.innerHTML = "<h5>Press SPIN to play</h5>";
   spinCountText.textContent = "0 / 2";
@@ -1594,6 +1629,7 @@ function showStatus(message, type = 'info', duration = 10000) {
         else if (type === 'warning') iconName = 'warning.svg';
         else if (type === 'spin') iconName = 'spin.svg';
         else if (type === 'wolf') iconName = 'wolf.svg';
+        else if (type === 'win') iconName = 'win.png';
         const toast = document.createElement('div');
         toast.className = `toast-notification ${type}`;
         const icon = document.createElement('img');
