@@ -1416,66 +1416,73 @@
       </div>
     </div>
   </div>
+  
   <div class="modal-overlay" id="bet-modal-overlay"></div>
   <div class="modal" id="bet-modal">
-    <div class="modal-header">
-      <h2>Place Your Bet</h2>
-      <button class="modal-close-btn" id="bet-modal-close-btn">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="balance-display">
-        <p>Your Balance:</p> 
-        <div class="balance-line">
-            <img src="eth.svg" class="balance-icon" alt="ETH"> 
-            <span id="modalEthBalance">0</span> ETH
-        </div>
-        
-        <div class="balance-line">
-            <img src="usdt.svg" class="balance-icon" alt="USDT"> <span id="modalUsdtBalance">0</span> USDT
-        </div>
-        
-        <div class="balance-line">
-            <img src="bb.svg" class="balance-icon" alt="BabyDoge"> <span id="modalBabyDogeBalance">0</span> BabyDoge
-        </div>
+  <div class="modal-header">
+    <h2>Place Your Bet</h2>
+    <button class="modal-close-btn" id="bet-modal-close-btn">&times;</button>
+  </div>
+  <div class="modal-body">
+    <div class="balance-display">
+      <p>Your Balance:</p> 
+      <div class="balance-line">
+          <img src="eth.svg" class="balance-icon" alt="ETH"> 
+          <span id="modalEthBalance">0</span> ETH
       </div>
       
-      <div class="input-group">
-        
-        <div class="input-icon-wrapper" style="flex-grow: 1; width: 65%;">
-            <i class="fa-solid fa-hashtag input-icon-fa"></i>
-            <input type="number" id="betAmountInput" placeholder="Custom Amount">
-        </div>
-        
-        <div class="input-icon-wrapper select-wrapper" style="width: 35%;">
-            <img src="eth.svg" class="input-icon" id="currency-icon" alt="">
-            <select id="betCurrencySelect">
-              <option value="ETH" data-icon="eth.svg">ETH</option>
-              <option value="USDT" data-icon="usdt.svg">USDT</option>
-              <option value="BABYDOGE" data-icon="bb.svg">BabyDoge</option>
-            </select>
-        </div>
+      <div class="balance-line">
+          <img src="usdt.svg" class="balance-icon" alt="USDT"> <span id="modalUsdtBalance">0</span> USDT
+      </div>
+      
+      <div class="balance-line">
+          <img src="bb.svg" class="balance-icon" alt="BabyDoge"> <span id="modalBabyDogeBalance">0</span> BabyDoge
+      </div>
 
-      </div>
-      <div class="percent-buttons">
-        <button class="percent-btn" data-percent="0.10">MIN</button> 
-        <button class="percent-btn" data-percent="0.25">25%</button>
-        <button class="percent-btn" data-percent="0.50">50%</button>
-        <button class="percent-btn" data-percent="0.75">75%</button>
-        <button class="percent-btn" data-percent="1.00">MAX</button>
+      <div class="balance-line">
+          <img src="bb.svg" class="balance-icon" alt="Free"> 
+          <span id="modalFreeBalance">0</span> FREE
       </div>
     </div>
-    <div class="modal-footer">
-      <button id="confirmBetBtn" class="modal-btn">Confirm Bet</button>
+    
+    <div class="input-group">
+      
+      <div class="input-icon-wrapper" style="flex-grow: 1; width: 65%;">
+          <i class="fa-solid fa-hashtag input-icon-fa"></i>
+          <input type="number" id="betAmountInput" placeholder="Custom Amount">
+      </div>
+      
+      <div class="input-icon-wrapper select-wrapper" style="width: 35%;">
+          <img src="eth.svg" class="input-icon" id="currency-icon" alt="">
+          <select id="betCurrencySelect">
+            <option value="ETH" data-icon="eth.svg">ETH</option>
+            <option value="USDT" data-icon="usdt.svg">USDT</option>
+            <option value="BABYDOGE" data-icon="bb.svg">BabyDoge</option>
+            <option value="FREE" data-icon="bb.svg">FREE</option>
+          </select>
+      </div>
+
     </div>
-    <center><p>
-  <span style="color:#f0f0f0; font-size: 13px;">Note:</span><br>
-  <span style="color:#ccba00; font-size: 12px;">
-    Minimum bet is 0.00005 ETH or 0.5 USDT<br>
-    Maximum bet is 0.00256 ETH or 10 USDT<br>
-    Maximum bets are 2 per round
-  </span>
-    </p></center>
+    <div class="percent-buttons">
+      <button class="percent-btn" data-percent="0.10">MIN</button> 
+      <button class="percent-btn" data-percent="0.25">25%</button>
+      <button class="percent-btn" data-percent="0.50">50%</button>
+      <button class="percent-btn" data-percent="0.75">75%</button>
+      <button class="percent-btn" data-percent="1.00">MAX</button>
+    </div>
   </div>
+  <div class="modal-footer">
+    <button id="confirmBetBtn" class="modal-btn">Confirm Bet</button>
+  </div>
+  <center><p>
+<span style="color:#f0f0f0; font-size: 13px;">Note:</span><br>
+<span style="color:#ccba00; font-size: 12px;">
+  Minimum bet is 0.00005 ETH or 0.5 USDT<br>
+  Maximum bet is 0.00256 ETH or 10 USDT<br>
+  Maximum bets are 2 per round
+</span>
+  </p></center>
+</div>
   
   <div class="modal-overlay" id="referral-modal-overlay"></div>
   <div class="modal" id="referral-modal">
@@ -1659,6 +1666,7 @@
     let provider, signer, userAddress;
     let faylottoContract, usdtContract, babyDogeContract; // Ditambah babyDogeContract
     let rawEthBalance, rawUsdtBalance, rawBabyDogeBalance; // Ditambah rawBabyDogeBalance
+    let rawFreeBalance = ethers.BigNumber.from(0);
     let usdtDecimals = 6, babyDogeDecimals = 18; // Default, akan di-fetch
     let currentRoundId;
     let currentRoundEndTime = 0;
@@ -2641,18 +2649,34 @@ async function callFinalizeRound() {
 }
     
 // --- (Modal Bet V3: Tambah BabyDoge) ---
-    function showBetModal() {
-      if (!signer) return showStatus("Connect wallet first!", "error");
-      if (isFinalizing) return showStatus("Round is ending, new bets are closed.", "warning"); 
-      
-      modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance || 0)).toFixed(5);
-      modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance || 0, usdtDecimals)).toFixed(2);
-      modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance || 0, babyDogeDecimals)).toFixed(2);
+function showBetModal() {
+  if (!signer) return showStatus("Connect wallet first!", "error");
+  if (isFinalizing) return showStatus("Round is ending, new bets are closed.", "warning"); 
+  
+  modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance || 0)).toFixed(5);
+  modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance || 0, usdtDecimals)).toFixed(2);
+  modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance || 0, babyDogeDecimals)).toFixed(2);
 
-      betAmountInput.value = "";
-      betModalOverlay.classList.add("show");
-      betModal.classList.add("show");
-    }
+  // LOGIKA BARU UNTUK MENAMPILKAN SALDO GRATIS
+  const modalFreeBalanceEl = document.getElementById("modalFreeBalance");
+  if (modalFreeBalanceEl) {
+      // 'prizeAmount' disimpan dalam 18 desimal (seperti ETH), jadi kita format
+      modalFreeBalanceEl.innerText = parseFloat(ethers.utils.formatEther(rawFreeBalance || 0)).toFixed(0);
+  }
+
+  betAmountInput.value = "";
+  
+  // Reset tampilan jika sebelumnya memilih FREE
+  document.querySelector('.input-icon-wrapper[style*="flex-grow"]').style.display = 'flex';
+  document.querySelector('.percent-buttons').style.display = 'flex';
+  betCurrencySelect.value = "ETH"; // Default ke ETH
+  document.getElementById('currency-icon').src = "eth.svg";
+
+
+  betModalOverlay.classList.add("show");
+  betModal.classList.add("show");
+}
+
 
 function hideBetModal() {
       betModalOverlay.classList.remove("show");
@@ -2681,73 +2705,73 @@ function hideBetModal() {
     }
 
 // --- (Confirm Bet V3: Panggil Fungsi Baru) ---
-    async function confirmBet() {
-      const amountStr = betAmountInput.value;
-      const currency = betCurrencySelect.value;
-      
-      if (!amountStr || parseFloat(amountStr) <= 0) {
-          showStatus("Please enter a valid amount.", "warning");
-          return;
-      }
-      
-      confirmBetBtn.disabled = true;
-      confirmBetBtn.innerText = "Processing...";
-      showStatus("Sending bet transaction...", "load");
+async function confirmBet() {
+  const amountStr = betAmountInput.value;
+  const currency = betCurrencySelect.value;
+  
+  // Validasi di-skip jika mata uangnya 'FREE'
+  if (currency !== 'FREE' && (!amountStr || parseFloat(amountStr) <= 0)) {
+      showStatus("Please enter a valid amount.", "warning");
+      return;
+  }
+  
+  confirmBetBtn.disabled = true;
+  confirmBetBtn.innerText = "Processing...";
+  showStatus("Sending bet transaction...", "load");
 
-      try {
-        let tx;
-        if (currency === 'ETH') {
-          tx = await placeBetNative(amountStr);
-        } else if (currency === 'USDT') {
-          tx = await placeBetUSDT(amountStr);
-        } else if (currency === 'BABYDOGE') {
-          tx = await placeBetBabyDoge(amountStr);
-        } else {
-            throw new Error("Invalid currency selected.");
-        }
-        
-        showStatus("Bet sent! Awaiting confirmation...", "load", 10000);
-        statusText.innerText = `Bet sent! Awaiting confirmation...`;
-        
-        await tx.wait();
-        
-        playSound('sfx-coin');
-        showStatus("Bet confirmed! Good luck.", "success");
-        statusText.innerText = `Bet confirmed! Good luck.`;
-        
-        hideBetModal();
-        await updateUserBalances();
-        // updateMyDeposits() akan dipanggil oleh event listener
-        
-      } catch (err) {
-        // [PERBAIKAN DI SINI]
-        // Ini adalah blok 'catch' yang benar untuk 'confirmBet'.
-        // Blok ini TIDAK menghentikan timer atau mengganti tombol.
-        console.error("Bet failed:", err);
-        
-        let errorMessage = "Transaction failed!";
-        if (err.code === 'ACTION_REJECTED') {
-            errorMessage = "User rejected transaction.";
-        } else {
-            const reason = err.reason || (err.data ? faylottoContract.interface.parseError(err.data)?.args[0] : null) || err.message;
-            if (reason) {
-                errorMessage = `Failed: ${reason.substring(0, 100)}`;
-            }
-        }
-
-        showStatus(errorMessage, "error");
-        
-        // Mengatur statusText ke error yang relevan, BUKAN error finalisasi
-        statusText.innerText = "Transaction failed. Please try again.";
-        
-      } finally {
-        // [PERBAIKAN DI SINI]
-        // Selalu pastikan tombol 'Confirm Bet' aktif kembali
-        confirmBetBtn.disabled = false;
-        confirmBetBtn.innerText = "Confirm Bet";
-      }
+  try {
+    let tx;
+    if (currency === 'ETH') {
+      tx = await placeBetNative(amountStr);
+    } else if (currency === 'USDT') {
+      tx = await placeBetUSDT(amountStr);
+    } else if (currency === 'BABYDOGE') {
+      tx = await placeBetBabyDoge(amountStr);
+    } else if (currency === 'FREE') { // <-- LOGIKA BARU DITAMBAHKAN
+      tx = await placeBetFree(); // Memanggil fungsi helper baru
+    } else {
+        throw new Error("Invalid currency selected.");
     }
     
+    showStatus("Bet sent! Awaiting confirmation...", "load", 10000);
+    statusText.innerText = `Bet sent! Awaiting confirmation...`;
+    
+    await tx.wait();
+    
+    playSound('sfx-coin');
+    showStatus("Bet confirmed! Good luck.", "success");
+    statusText.innerText = `Bet confirmed! Good luck.`;
+    
+    hideBetModal();
+    await updateUserBalances(); // Ini akan me-refresh saldo gratis juga
+    
+  } catch (err) {
+    console.error("Bet failed:", err);
+    
+    let errorMessage = "Transaction failed!";
+    if (err.code === 'ACTION_REJECTED') {
+        errorMessage = "User rejected transaction.";
+    } else {
+        const reason = err.reason || (err.data ? faylottoContract.interface.parseError(err.data)?.args[0] : null) || err.message;
+        if (reason) {
+            errorMessage = `Failed: ${reason.substring(0, 100)}`;
+        }
+    }
+
+    showStatus(errorMessage, "error");
+    statusText.innerText = "Transaction failed. Please try again.";
+    
+  } finally {
+    confirmBetBtn.disabled = false;
+    confirmBetBtn.innerText = "Confirm Bet";
+  }
+}
+    
+    // freebet
+async function placeBetFree() {
+  return faylottoContract.placeBetFree();
+}
+
 
 // --- (Helper Betting V3: Fungsi Baru) ---
     async function placeBetNative(amountStr) {
@@ -2926,46 +2950,47 @@ function hideBetModal() {
 
     
 // --- (Update Saldo V3: Tambah BabyDoge DAN Saldo Gratis) ---
-    async function updateUserBalances() {
-      if (!provider || !userAddress) return;
-      try {
-        rawEthBalance = await provider.getBalance(userAddress);
-        ethBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
-        modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
-        
-        if (usdtContract) {
-            usdtDecimals = await usdtContract.decimals();
-            rawUsdtBalance = await usdtContract.balanceOf(userAddress);
-            usdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
-            modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
-        }
-        if (babyDogeContract) {
-            babyDogeDecimals = await babyDogeContract.decimals();
-            rawBabyDogeBalance = await babyDogeContract.balanceOf(userAddress);
-            babyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
-            modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
-        }
-
-        // --- LOGIKA BARU DITAMBAHKAN DI SINI ---
-        if (faylottoContract) {
-            const freeBalanceEl = document.getElementById("freeBalance"); // Ambil elemen baru
-            if (freeBalanceEl) {
-                const rawFreeBalance = await faylottoContract.freeBalances(userAddress);
-                
-                // Kontrak Anda menyimpan 'prizeAmount' dalam 18 desimal (seperti ETH)
-                // jadi kita gunakan formatEther
-                const formattedFree = parseFloat(ethers.utils.formatEther(rawFreeBalance)).toFixed(0); 
-                
-                freeBalanceEl.innerText = formattedFree;
-            }
-        }
-        // --- AKHIR DARI LOGIKA BARU ---
-
-      } catch (err) { 
-        console.error("Failed fetching balances:", err.message);
-        showStatus("Failed to fetch balances.", "error");
-      }
+async function updateUserBalances() {
+  if (!provider || !userAddress) return;
+  try {
+    rawEthBalance = await provider.getBalance(userAddress);
+    ethBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
+    modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
+    
+    if (usdtContract) {
+        usdtDecimals = await usdtContract.decimals();
+        rawUsdtBalance = await usdtContract.balanceOf(userAddress);
+        usdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
+        modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
     }
+    if (babyDogeContract) {
+        babyDogeDecimals = await babyDogeContract.decimals();
+        rawBabyDogeBalance = await babyDogeContract.balanceOf(userAddress);
+        babyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
+        modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
+    }
+
+    if (faylottoContract) {
+        const freeBalanceEl = document.getElementById("freeBalance"); // Ambil elemen modal wallet
+        
+        // Ambil saldo gratis dari kontrak
+        const rawFreeBalanceBN = await faylottoContract.freeBalances(userAddress);
+        
+        // Simpan ke variabel global
+        rawFreeBalance = rawFreeBalanceBN; 
+        
+        if (freeBalanceEl) {
+            // Tampilkan di modal wallet
+            const formattedFree = parseFloat(ethers.utils.formatEther(rawFreeBalanceBN)).toFixed(0); 
+            freeBalanceEl.innerText = formattedFree;
+        }
+    }
+  } catch (err) { 
+    console.error("Failed fetching balances:", err.message);
+    showStatus("Failed to fetch balances.", "error");
+  }
+}
+
 
     // --- (Update Deposit V3: Tambah BabyDoge) ---
     async function updateMyDeposits() {
