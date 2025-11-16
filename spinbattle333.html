@@ -3592,51 +3592,14 @@ function copyToClipboard(text) {
 
 
 // === 4. Inisialisasi & Event Listeners (LENGKAP & DIPERBAIKI) ===
-
+// =CAD; GANTI SELURUH BLOK LAMA ANDA DENGAN INI ===
 document.addEventListener("DOMContentLoaded", () => {
-        console.log("🚀 Faylotto V3 Initializing...");
-        
-        const canvas = document.getElementById('donutCanvas');
-if (canvas) {
-    ctx = canvas.getContext('2d');
+    console.log("🚀 Faylotto V3 Initializing...");
+    
+    // 1. Inisialisasi Canvas (memanggil fungsi dari Langkah 1)
+    initResponsiveCanvas();
 
-    // [FIX TAJAM] 1. Baca ukuran CSS (bisa 360px di HP, atau 550px di desktop)
-    const rect = canvas.getBoundingClientRect();
-    const displayWidth = rect.width;
-    const displayHeight = displayWidth;
-
-    // [FIX TAJAM] 2. Dapatkan rasio pixel device (misal 2x untuk Retina)
-    const dpr = window.devicePixelRatio || 1;
-
-    // [FIX TAJAM] 3. Set resolusi bitmap (ukuran file) kanvas
-    canvas.width = displayWidth * dpr;
-    canvas.height = displayHeight * dpr;
-
-    // [FIX TAJAM] 4. Set ukuran CSS (tampilan) agar sesuai
-    // Ini "mengecilkan" gambar 720px ke 360px, membuatnya tajam
-    canvas.style.width = `${displayWidth}px`;
-    canvas.style.height = `${displayHeight}px`;
-
-    // [FIX TAJAM] 5. Scale context. 
-    // Semua gambar (garis, teks) akan dikali 2 secara otomatis
-    ctx.scale(dpr, dpr);
-
-    // Set global (cx, cy) berdasarkan UKURAN CSS (bukan bitmap)
-    cw = displayWidth;
-    ch = displayHeight;
-    cx = cw / 2; // misal 180 (dari 360 / 2)
-    cy = ch / 2; // misal 180 (dari 360 / 2)
-
-    // [FIX RESPONSIVE] Buat radius menjadi RELATIF
-    // (Ini menggantikan global state yang kita hapus di Langkah 2)
-    // [FIX RESPONSIVE] Buat radius menjadi RELATIF
-outerR = displayWidth * 0.45; // Mengambil 45% dari lebar (misal: 360 * 0.45 = 162)
-innerR = displayWidth * 0.20; // <-- [PERBAIKAN] Angka ini dinaikkan dari 100
-    drawDonut(); 
-}
-
-    // 2. Cek Link Referral dari URL
-    // (Ini adalah logika dari DOMContentLoaded Anda yang error di baris 297)
+    // 2. Cek Link Referral
     const urlParams = new URLSearchParams(window.location.search);
     const refNick = urlParams.get('ref');
     if (refNick) {
@@ -3644,20 +3607,16 @@ innerR = displayWidth * 0.20; // <-- [PERBAIKAN] Angka ini dinaikkan dari 100
         pendingReferrerNickname = refNick;
     }
 
-    // 3. Panggil Data Awal SEGERA (Tanpa Menunggu Wallet)
-    // [FIX] Ini adalah perbaikan untuk bug "tombol tidak aktif"
-    
-    // Init Provider Read-Only
+    // 3. Panggil Data Awal (Read-Only)
     provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
     faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
-    // [PERBAIKAN 2] Gunakan USDT_ABI
     babyDogeContract = new ethers.Contract(BABYDOGE_ADDRESS, USDT_ABI, provider);
 
-    fetchAndDisplayRoundData(); // <-- FUNGSI YANG HILANG SEKARANG ADA
+    fetchAndDisplayRoundData();
     fetchAndDisplayWinners();
-    fetchAndRenderLeaderboard(); // Panggil leaderboard saat load
-    checkAutoConnect(); // Coba auto-connect
+    fetchAndRenderLeaderboard();
+    checkAutoConnect();
 
     // -------------------------------------------------
     // 4. Pasang Semua Event Listeners
@@ -3692,23 +3651,8 @@ innerR = displayWidth * 0.20; // <-- [PERBAIKAN] Angka ini dinaikkan dari 100
     if (referralModalCloseBtn) referralModalCloseBtn.addEventListener("click", hideReferralModal);
     if (referralModalOverlay) referralModalOverlay.addEventListener("click", hideReferralModal);
     if (createNicknameBtn) createNicknameBtn.addEventListener("click", callCreateNickname);
-    
-    // [PERBAIKAN 3] Hapus referensi ke 'setReferrerBtn' yang tidak ada
-    // if (setReferrerBtn) setReferrerBtn.addEventListener("click", callSetReferrer);
-    
     if (claimRewardsBtn) claimRewardsBtn.addEventListener("click", callClaimRewards);
-
-    // Listener Modal Wallet
-    if (walletModalCloseBtn) walletModalCloseBtn.addEventListener("click", hideWalletModal);
-    if (walletModalOverlay) walletModalOverlay.addEventListener("click", hideWalletModal);
-    if (disconnectBtn) disconnectBtn.addEventListener("click", disconnectWallet);
-
-    // Setup Listeners Kontrak (setelah wallet connect, tapi juga read-only)
-    setupEventListeners();
-        
-    // Atur tahun di footer
-    document.getElementById("year").textContent = new Date().getFullYear();
-
+    
     // Listener Copy Referral
     const copyBtn = document.getElementById("copyReferralBtn");
     if (copyBtn) {
@@ -3718,31 +3662,68 @@ innerR = displayWidth * 0.20; // <-- [PERBAIKAN] Angka ini dinaikkan dari 100
                 linkInput.select();
                 linkInput.setSelectionRange(0, 99999); 
                 navigator.clipboard.writeText(linkInput.value)
-                    .then(() => showStatus("Link referral disalin!", "success")) // [FIX] Ganti alert ke showStatus
+                    .then(() => showStatus("Link referral disalin!", "success"))
                     .catch(() => {
                         document.execCommand('copy');
-                        showStatus("Link referral disalin!", "success"); // [FIX] Ganti alert ke showStatus
+                        showStatus("Link referral disalin!", "success");
                     });
             }
         });
     }
 
-    // Listener ganti ikon di modal bet
+    // Listener Modal Wallet
+    if (walletModalCloseBtn) walletModalCloseBtn.addEventListener("click", hideWalletModal);
+    if (walletModalOverlay) walletModalOverlay.addEventListener("click", hideWalletModal);
+    if (disconnectBtn) disconnectBtn.addEventListener("click", disconnectWallet);
+
+    // Listener ganti ikon/sembunyikan input di Modal Bet (DARI PERCAKAPAN TERAKHIR KITA)
     const currencySelect = document.getElementById('betCurrencySelect');
     const currencyIcon = document.getElementById('currency-icon');
+    const amountInputGroup = document.querySelector('.input-icon-wrapper[style*="flex-grow"]');
+    const percentButtonsGroup = document.querySelector('.percent-buttons');
+
     if (currencySelect && currencyIcon) {
         currencySelect.addEventListener('change', (e) => {
+            const selectedValue = e.target.value;
             const selectedIconPath = e.target.options[e.target.selectedIndex].dataset.icon;
+            
             if (selectedIconPath) {
                 currencyIcon.src = selectedIconPath;
+            }
+
+            if (selectedValue === 'FREE') {
+                if (amountInputGroup) amountInputGroup.style.display = 'none';
+                if (percentButtonsGroup) percentButtonsGroup.style.display = 'none';
+            } else {
+                if (amountInputGroup) amountInputGroup.style.display = 'flex'; 
+                if (percentButtonsGroup) percentButtonsGroup.style.display = 'flex';
             }
         });
     }
 
-     // ==========================================
-// PERBAIKAN STABILITAS RODA (CANVAS)
-// ==========================================
+    // Listener Suara Klik Tombol
+    document.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => playSound('sfx-click'));
+    });
 
+    // Listener Perbaikan Canvas & Pindah Tab
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === 'visible') handleCanvasRedraw();
+    });
+    window.addEventListener("focus", handleCanvasRedraw);
+    
+    // Setup Listeners Kontrak
+    setupEventListeners(); 
+        
+    // Atur tahun di footer
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+}); // <-- INI ADALAH AKHIR DARI SATU-SATUNYA DOMContentLoaded
+
+     // ==========================================
+// FUNGSI HELPER UNTUK CANVAS
+// (Letakkan ini SEBELUM DOMContentLoaded)
+// ==========================================
 function initResponsiveCanvas() {
     const canvas = document.getElementById('donutCanvas');
     const container = document.querySelector('.donut-wrap');
@@ -3751,125 +3732,47 @@ function initResponsiveCanvas() {
 
     ctx = canvas.getContext('2d');
 
-    // Fungsi untuk mengatur ukuran canvas secara dinamis
+    // Fungsi internal untuk mengatur ulang ukuran
     function resizeCanvas() {
-        // 1. Ambil lebar container saat ini
         const boxWidth = container.clientWidth;
         
-        // 2. Atur resolusi internal canvas (agar tajam di HP retina)
-        canvas.width = boxWidth;
-        canvas.height = boxWidth; // Buat kotak sempurna
+        // Atur resolusi internal (untuk retina)
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = boxWidth * dpr;
+        canvas.height = boxWidth * dpr;
 
-        // 3. Update variabel global
-        cw = canvas.width;
-        ch = canvas.height;
+        // Atur ukuran tampilan CSS
+        canvas.style.width = `${boxWidth}px`;
+        canvas.style.height = `${boxWidth}px`;
+        
+        // Scale context
+        ctx.scale(dpr, dpr);
+
+        // Update variabel global (berdasarkan ukuran CSS, BUKAN dpr)
+        cw = boxWidth;
+        ch = boxWidth;
         cx = cw / 2;
         cy = ch / 2;
 
-        // 4. ATUR RADIUS SECARA RELATIF (KUNCI STABILITAS)
-        // Radius luar = 40% dari lebar canvas
-        // Radius dalam = 25% dari lebar canvas
+        // Atur radius secara relatif
         outerR = cw * 0.4; 
         innerR = cw * 0.25;
 
-        // 5. Gambar ulang segera
+        // Gambar ulang
         drawDonut(currentRotation);
     }
 
-    // Panggil saat pertama kali load
+    // Panggil saat pertama kali
     resizeCanvas();
 
-    // Panggil setiap kali layar diubah ukurannya
+    // Panggil saat ukuran window berubah
     window.addEventListener('resize', resizeCanvas);
     
-    // Panggil saat orientasi HP berubah (Potrait/Landscape)
+    // Panggil saat orientasi HP berubah
     window.addEventListener('orientationchange', () => {
         setTimeout(resizeCanvas, 100);
     });
 }
-
-// PANGGIL FUNGSI INI DI DALAM DOMContentLoaded
-document.addEventListener("DOMContentLoaded", () => {
-    // ... (kode inisialisasi wallet dll biarkan saja) ...
-
-    // INSIALISASI KANVAS BARU
-    initResponsiveCanvas();
-    
-     // Listener ganti ikon di modal bet (DAN Sembunyikan Input)
-
-    const currencySelect = document.getElementById('betCurrencySelect');
-
-    const currencyIcon = document.getElementById('currency-icon');
-
-    const amountInputGroup = document.querySelector('.input-icon-wrapper[style*="flex-grow"]');
-
-    const percentButtonsGroup = document.querySelector('.percent-buttons');
-
-
-
-    if (currencySelect && currencyIcon) {
-
-        currencySelect.addEventListener('change', (e) => {
-
-            const selectedValue = e.target.value;
-
-            const selectedIconPath = e.target.options[e.target.selectedIndex].dataset.icon;
-
-            
-
-            if (selectedIconPath) {
-
-                currencyIcon.src = selectedIconPath;
-
-            }
-
-
-
-            // Logika Show/Hide
-
-            if (selectedValue === 'FREE') {
-
-                if (amountInputGroup) amountInputGroup.style.display = 'none';
-
-                if (percentButtonsGroup) percentButtonsGroup.style.display = 'none';
-
-            } else {
-
-                if (amountInputGroup) amountInputGroup.style.display = 'flex'; 
-
-                if (percentButtonsGroup) percentButtonsGroup.style.display = 'flex';
-
-            }
-
-        });
-
-    }
-
-
-
-    // Tambahkan suara klik ke semua tombol
-
-    document.querySelectorAll('button').forEach(btn => {
-
-        btn.addEventListener('click', () => playSound('sfx-click'));
-
-    });
-
-
-
-    // Listener Perbaikan Canvas & Tab
-
-    document.addEventListener("visibilitychange", () => {
-
-        if (document.visibilityState === 'visible') handleCanvasRedraw();
-
-    });
-
-    window.addEventListener("focus", handleCanvasRedraw);
-
-
-
-});
   </script>
 </body>
 </html>
