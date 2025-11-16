@@ -904,28 +904,43 @@ h1, h2, h3 {
   font-weight: bold;
 }
 
-    /* === CSS TAMBAHAN UNTUK RIWAYAT === */
+    /* === CSS TAMBAHAN UNTUK RIWAYAT (DIPERBARUI) === */
 
-/* Wadah baru untuk Alamat + Waktu */
+/* Wadah untuk Alamat + Waktu */
 .history-details {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0; /* Mencegah teks mendorong reward */
+  overflow: hidden; /* Sembunyikan jika terlalu panjang */
 }
 
-/* Teks Waktu */
+/* Teks Alamat */
+.history-address {
+  color: #00eaff;
+  font-family: monospace;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* Beri ... jika terlalu panjang */
+}
+
+/* Teks Waktu (PERUBAHAN) */
 .history-time {
-  font-size: 11px;
+  font-size: 12px;
   color: #888;
-  font-style: italic;
+  white-space: nowrap; /* Pastikan waktu tidak turun baris */
+  overflow: hidden;
+  text-overflow: ellipsis; /* Beri ... jika terlalu panjang */
 }
 
 /* Mengatur ulang reward agar rapi */
 .history-reward {
-  margin-left: auto; 
+  margin-left: auto; /* Dorong ke kanan */
   gap: 5px;
   display: flex;
   align-items: center;
+  flex-shrink: 0; /* Mencegah reward mengecil */
 }
 </style>
 
@@ -1790,7 +1805,7 @@ function showStatus(message, type = 'info', duration = 10000) {
   const container = document.getElementById('toast-container');
   if (!container) return;
   let iconName = 'info-icon.svg'; 
-  if (type === 'success') iconName = 'succes.svg';
+  if (type === 'success') iconName = 'success.svg';
   else if (type === 'error') iconName = 'error.svg';
   else if (type === 'load') iconName = 'load.svg';
   else if (type === 'warning') iconName = 'warning.svg';
@@ -1857,7 +1872,7 @@ function timeAgo(timestampInSeconds) {
   return `${days} day${days > 1 ? 's' : ''} ago`;
 }
 
-// === FUNGSI RENDER RIWAYAT (DIPERBARUI) ===
+// === FUNGSI RENDER RIWAYAT (DIPERBARUI DENGAN WAKTU LENGKAP) ===
 function renderGlobalHistory(historyData) {
   if (!publicHistoryList) return;
   if (historyData.length === 0) {
@@ -1869,7 +1884,9 @@ function renderGlobalHistory(historyData) {
       <img src="wallet.svg" class="info-icon">
       <div class="history-details">
         <span class="history-address">${shortAddress(item.player)}</span>
-        <span class="history-time">${timeAgo(item.time)}</span> 
+        <span class="history-time">
+          ${timeAgo(item.time)} | ${formatTimestamp(item.time)}
+        </span> 
       </div>
       <span class="history-reward">
         (Tier ${item.tier}) won <strong>${item.amount}</strong> 
@@ -1890,7 +1907,9 @@ function renderMyHistory(historyData) {
       <img src="winb.png" class="info-icon">
       <div class="history-details">
         <span class="history-address">You won (Tier ${item.tier})</span>
-        <span class="history-time">${timeAgo(item.time)}</span>
+        <span class="history-time">
+          ${timeAgo(item.time)} | ${formatTimestamp(item.time)}
+        </span>
       </div>
       <span class="history-reward">
         <strong>${item.amount}</strong> 
