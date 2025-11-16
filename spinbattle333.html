@@ -3602,135 +3602,7 @@ function copyToClipboard(text) {
 
 
 // === 4. Inisialisasi & Event Listeners (LENGKAP & DIPERBAIKI) ===
-// =CAD; GANTI SELURUH BLOK LAMA ANDA DENGAN INI ===
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("🚀 Faylotto V3 Initializing...");
-    
-    // 1. Inisialisasi Canvas (memanggil fungsi dari Langkah 1)
-    initResponsiveCanvas();
-
-    // 2. Cek Link Referral
-    const urlParams = new URLSearchParams(window.location.search);
-    const refNick = urlParams.get('ref');
-    if (refNick) {
-        console.log("🔗 Referral detected:", refNick);
-        pendingReferrerNickname = refNick;
-    }
-
-    // 3. Panggil Data Awal (Read-Only)
-    provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
-    faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-    usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
-    babyDogeContract = new ethers.Contract(BABYDOGE_ADDRESS, USDT_ABI, provider);
-
-    fetchAndDisplayRoundData();
-    fetchAndDisplayWinners();
-    fetchAndRenderLeaderboard();
-    checkAutoConnect();
-
-    // -------------------------------------------------
-    // 4. Pasang Semua Event Listeners
-    // -------------------------------------------------
-
-    // Listener Tombol Utama
-    walletBtn.addEventListener("click", () => {
-        if (!userAddress) toggleWallet(); else showWalletModal();
-    });
-    placeBetBtn.addEventListener("click", showBetModal);
-    finalizeBtn.addEventListener("click", callFinalizeRound);
-
-    // Listener Modal Profil
-    const profileCloseBtn = document.getElementById('profile-modal-close-btn');
-    if (profileCloseBtn) profileCloseBtn.addEventListener('click', hideProfileModal);
-    const profileOverlay = document.getElementById('profile-modal-overlay');
-    if (profileOverlay) profileOverlay.addEventListener('click', hideProfileModal);
-
-    // Listener Modal Bet
-    betModalCloseBtn.addEventListener("click", hideBetModal);
-    betModalOverlay.addEventListener("click", hideBetModal);
-    confirmBetBtn.addEventListener("click", confirmBet);
-    percentButtons.forEach(button => {
-        button.addEventListener("click", () => {
-            const percent = parseFloat(button.dataset.percent);
-            setAmountByPercent(percent);
-        });
-    });
-
-    // Listener Modal Referral
-    if (referralBtn) referralBtn.addEventListener("click", showReferralModal);
-    if (referralModalCloseBtn) referralModalCloseBtn.addEventListener("click", hideReferralModal);
-    if (referralModalOverlay) referralModalOverlay.addEventListener("click", hideReferralModal);
-    if (createNicknameBtn) createNicknameBtn.addEventListener("click", callCreateNickname);
-    if (claimRewardsBtn) claimRewardsBtn.addEventListener("click", callClaimRewards);
-    
-    // Listener Copy Referral
-    const copyBtn = document.getElementById("copyReferralBtn");
-    if (copyBtn) {
-        copyBtn.addEventListener("click", () => {
-            const linkInput = document.getElementById("referralLinkInput");
-            if (linkInput) {
-                linkInput.select();
-                linkInput.setSelectionRange(0, 99999); 
-                navigator.clipboard.writeText(linkInput.value)
-                    .then(() => showStatus("Link referral disalin!", "success"))
-                    .catch(() => {
-                        document.execCommand('copy');
-                        showStatus("Link referral disalin!", "success");
-                    });
-            }
-        });
-    }
-
-    // Listener Modal Wallet
-    if (walletModalCloseBtn) walletModalCloseBtn.addEventListener("click", hideWalletModal);
-    if (walletModalOverlay) walletModalOverlay.addEventListener("click", hideWalletModal);
-    if (disconnectBtn) disconnectBtn.addEventListener("click", disconnectWallet);
-
-    // Listener ganti ikon/sembunyikan input di Modal Bet (DARI PERCAKAPAN TERAKHIR KITA)
-    const currencySelect = document.getElementById('betCurrencySelect');
-    const currencyIcon = document.getElementById('currency-icon');
-    const amountInputGroup = document.querySelector('.input-icon-wrapper[style*="flex-grow"]');
-    const percentButtonsGroup = document.querySelector('.percent-buttons');
-
-    if (currencySelect && currencyIcon) {
-        currencySelect.addEventListener('change', (e) => {
-            const selectedValue = e.target.value;
-            const selectedIconPath = e.target.options[e.target.selectedIndex].dataset.icon;
-            
-            if (selectedIconPath) {
-                currencyIcon.src = selectedIconPath;
-            }
-
-            if (selectedValue === 'FREE') {
-                if (amountInputGroup) amountInputGroup.style.display = 'none';
-                if (percentButtonsGroup) percentButtonsGroup.style.display = 'none';
-            } else {
-                if (amountInputGroup) amountInputGroup.style.display = 'flex'; 
-                if (percentButtonsGroup) percentButtonsGroup.style.display = 'flex';
-            }
-        });
-    }
-
-    // Listener Suara Klik Tombol
-    document.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', () => playSound('sfx-click'));
-    });
-
-    // Listener Perbaikan Canvas & Pindah Tab
-    document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === 'visible') handleCanvasRedraw();
-    });
-    window.addEventListener("focus", handleCanvasRedraw);
-    
-    // Setup Listeners Kontrak
-    setupEventListeners(); 
-        
-    // Atur tahun di footer
-    document.getElementById("year").textContent = new Date().getFullYear();
-
-}); // <-- INI ADALAH AKHIR DARI SATU-SATUNYA DOMContentLoaded
-
-     // ==========================================
+// ==========================================
 // FUNGSI HELPER UNTUK CANVAS
 // (Letakkan ini SEBELUM DOMContentLoaded)
 // ==========================================
@@ -3783,6 +3655,137 @@ function initResponsiveCanvas() {
         setTimeout(resizeCanvas, 100);
     });
 }
+
+
+// === 4. Inisialisasi & Event Listeners (LENGKAP) ===
+// (GANTI SELURUH BLOK LAMA ANDA DENGAN INI)
+document.addEventListener("DOMContentLoaded", () => {
+    console.log("🚀 Faylotto V3 Initializing...");
+    
+    // 1. Inisialisasi Canvas
+    initResponsiveCanvas();
+
+    // 2. Cek Link Referral
+    const urlParams = new URLSearchParams(window.location.search);
+    const refNick = urlParams.get('ref');
+    if (refNick) {
+        console.log("🔗 Referral detected:", refNick);
+        pendingReferrerNickname = refNick;
+    }
+
+    // 3. Panggil Data Awal (Read-Only)
+    provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
+    faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
+    babyDogeContract = new ethers.Contract(BABYDOGE_ADDRESS, USDT_ABI, provider);
+
+    fetchAndDisplayRoundData();
+    fetchAndDisplayWinners();
+    fetchAndRenderLeaderboard();
+    checkAutoConnect();
+
+    // -------------------------------------------------
+    // 4. Pasang Semua Event Listeners (INI YANG HILANG)
+    // -------------------------------------------------
+
+    // Listener Tombol Utama
+    walletBtn.addEventListener("click", () => {
+        if (!userAddress) toggleWallet(); else showWalletModal();
+    });
+    placeBetBtn.addEventListener("click", showBetModal);
+    finalizeBtn.addEventListener("click", callFinalizeRound);
+
+    // Listener Modal Profil
+    const profileCloseBtn = document.getElementById('profile-modal-close-btn');
+    if (profileCloseBtn) profileCloseBtn.addEventListener('click', hideProfileModal);
+    const profileOverlay = document.getElementById('profile-modal-overlay');
+    if (profileOverlay) profileOverlay.addEventListener('click', hideProfileModal);
+
+    // Listener Modal Bet
+    betModalCloseBtn.addEventListener("click", hideBetModal);
+    betModalOverlay.addEventListener("click", hideBetModal);
+    confirmBetBtn.addEventListener("click", confirmBet);
+    percentButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            const percent = parseFloat(button.dataset.percent);
+            setAmountByPercent(percent);
+        });
+    });
+
+    // Listener Modal Referral
+    if (referralBtn) referralBtn.addEventListener("click", showReferralModal);
+    if (referralModalCloseBtn) referralModalCloseBtn.addEventListener("click", hideReferralModal);
+    if (referralModalOverlay) referralModalOverlay.addEventListener("click", hideReferralModal);
+    if (createNicknameBtn) createNicknameBtn.addEventListener("click", callCreateNickname);
+    if (claimRewardsBtn) claimRewardsBtn.addEventListener("click", callClaimRewards);
+    
+    // Listener Copy Referral
+    const copyBtn = document.getElementById("copyReferralBtn");
+    if (copyBtn) {
+        copyBtn.addEventListener("click", () => {
+            const linkInput = document.getElementById("referralLinkInput");
+            if (linkInput) {
+                linkInput.select();
+                linkInput.setSelectionRange(0, 99999); 
+                navigator.clipboard.writeText(linkInput.value)
+                    .then(() => showStatus("Link referral disalin!", "success"))
+                    .catch(() => {
+                        document.execCommand('copy');
+                        showStatus("Link referral disalin!", "success");
+                    });
+            }
+        });
+    }
+
+    // Listener Modal Wallet (INI YANG MEMPERBAIKI TOMBOL CLOSE)
+    if (walletModalCloseBtn) walletModalCloseBtn.addEventListener("click", hideWalletModal);
+    if (walletModalOverlay) walletModalOverlay.addEventListener("click", hideWalletModal);
+    if (disconnectBtn) disconnectBtn.addEventListener("click", disconnectWallet);
+
+    // Listener ganti ikon/sembunyikan input di Modal Bet
+    const currencySelect = document.getElementById('betCurrencySelect');
+    const currencyIcon = document.getElementById('currency-icon');
+    const amountInputGroup = document.querySelector('.input-icon-wrapper[style*="flex-grow"]');
+    const percentButtonsGroup = document.querySelector('.percent-buttons');
+
+    if (currencySelect && currencyIcon) {
+        currencySelect.addEventListener('change', (e) => {
+            const selectedValue = e.target.value;
+            const selectedIconPath = e.target.options[e.target.selectedIndex].dataset.icon;
+            
+            if (selectedIconPath) {
+                currencyIcon.src = selectedIconPath;
+            }
+
+            if (selectedValue === 'FREE') {
+                if (amountInputGroup) amountInputGroup.style.display = 'none';
+                if (percentButtonsGroup) percentButtonsGroup.style.display = 'none';
+            } else {
+                if (amountInputGroup) amountInputGroup.style.display = 'flex'; 
+                if (percentButtonsGroup) percentButtonsGroup.style.display = 'flex';
+            }
+        });
+    }
+
+    // Listener Suara Klik Tombol
+    document.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', () => playSound('sfx-click'));
+    });
+
+    // Listener Perbaikan Canvas & Pindah Tab
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === 'visible') handleCanvasRedraw();
+    });
+    window.addEventListener("focus", handleCanvasRedraw);
+    
+    // Setup Listeners Kontrak
+    setupEventListeners(); 
+        
+    // Atur tahun di footer
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+}); // <-- AKHIR DARI SATU-SATUNYA DOMContentLoaded
+            
   </script>
 </body>
 </html>
