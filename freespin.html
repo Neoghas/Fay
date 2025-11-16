@@ -1872,51 +1872,70 @@ function timeAgo(timestampInSeconds) {
   return `${days} day${days > 1 ? 's' : ''} ago`;
 }
 
-// === FUNGSI RENDER RIWAYAT (DIPERBARUI DENGAN WAKTU LENGKAP) ===
-function renderGlobalHistory(historyData) {
+// === FUNGSI AMBIL RIWAYAT (BARU - LEBIH AMAN) ===
+async function getGlobalFreeSpinHistory(contract) {
   if (!publicHistoryList) return;
-  if (historyData.length === 0) {
-    publicHistoryList.innerHTML = "<p>No public history found yet.</p>";
-    return;
+  publicHistoryList.innerHTML = "<p>Loading public history...</p>";
+  
+  try {
+    // Ambil desimal token DAN riwayat secara bersamaan
+    const [decimals, history] = await Promise.all([
+        contract.babyDogeDecimals(), // Panggil 'babyDogeDecimals()' dari kontrak
+        contract.getFreeSpinHistory(50) // Ambil 50 terbaru
+    ]);
+    
+    const historyData = history.map(item => {
+      return {
+        player: item.user,
+        // Gunakan variabel 'decimals' yang baru kita ambil
+        amount: new Intl.NumberFormat().format(Number(ethers.formatUnits(item.amount, decimals))), 
+        tier: Number(item.prizeTier),
+        time: Number(item.timestamp)
+      };
+    });
+    
+    renderGlobalHistory(historyData); 
+    
+  } catch (err) {
+    // --- DEBUGGING ---
+    // Tampilkan error yang sebenarnya di konsol untuk debugging
+    console.error("Gagal mengambil riwayat global:", err); 
+    
+    // Tampilkan pesan error di UI
+    publicHistoryList.innerHTML = "<p>Failed to load history. (Check console for errors)</p>";
   }
-  publicHistoryList.innerHTML = historyData.map(item => `
-    <div class="history-item">
-      <img src="wallet.svg" class="info-icon">
-      <div class="history-details">
-        <span class="history-address">${shortAddress(item.player)}</span>
-        <span class="history-time">
-          ${timeAgo(item.time)} | ${formatTimestamp(item.time)}
-        </span> 
-      </div>
-      <span class="history-reward">
-        (Tier ${item.tier}) won <strong>${item.amount}</strong> 
-        <img src="bb.svg" class="info-icon">
-      </span>
-    </div>
-  `).join('');
 }
 
-function renderMyHistory(historyData) {
-  if (!myHistoryList) return;
-  if (historyData.length === 0) {
-    myHistoryList.innerHTML = "<p>You have no personal spin history yet.</p>";
-    return;
+async function getMyFreeSpinHistory(contract, userAddress) {
+  if (!myHistoryList || !userAddress) return;
+  myHistoryList.innerHTML = "<p>Loading your history...</p>"; 
+  
+  try {
+    // Ambil desimal token DAN riwayat secara bersamaan
+    const [decimals, globalHistory] = await Promise.all([
+        contract.babyDogeDecimals(),
+        contract.getFreeSpinHistory(100) // Ambil 100
+    ]);
+    
+    // Filter di sisi front-end
+    const myHistory = globalHistory.filter(item => item.user === userAddress);
+    
+    const historyData = myHistory.map(item => {
+      return {
+        tier: Number(item.prizeTier),
+        // Gunakan variabel 'decimals' yang baru kita ambil
+        amount: new Intl.NumberFormat().format(Number(ethers.formatUnits(item.amount, decimals))),
+        time: Number(item.timestamp)
+      };
+    });
+    
+    renderMyHistory(historyData);
+    
+  } catch (err) {
+    // --- DEBUGGING ---
+    console.error("Gagal mengambil riwayat pribadi:", err);
+    myHistoryList.innerHTML = "<p>Failed to load your history. (Check console)</p>";
   }
-  myHistoryList.innerHTML = historyData.map(item => `
-    <div class="history-item">
-      <img src="winb.png" class="info-icon">
-      <div class="history-details">
-        <span class="history-address">You won (Tier ${item.tier})</span>
-        <span class="history-time">
-          ${timeAgo(item.time)} | ${formatTimestamp(item.time)}
-        </span>
-      </div>
-      <span class="history-reward">
-        <strong>${item.amount}</strong> 
-        <img src="bb.svg" class="info-icon">
-      </span>
-    </div>
-  `).join('');
 }
             
 // === FUNGSI AMBIL RIWAYAT (BARU - SESUAI KONTRAK) ===
