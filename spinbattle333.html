@@ -988,15 +988,22 @@
     padding: 15px;
     box-shadow: 0 0 30px rgba(98, 0, 255, 0.2);
 }
+/* Pastikan CSS ini ada */
 .lb-header, .lb-item {
     display: grid;
-    grid-template-columns: 0.5fr 2fr 1fr 1.5fr 1.5fr; /* [REVISI] 5 kolom */
+    /* Ini adalah 5 kolom yang Anda butuhkan */
+    grid-template-columns: 0.5fr 2fr 1fr 1.5fr 1.5fr; 
     padding: 10px;
     border-bottom: 1px solid rgba(120, 0, 255, 0.2);
-    font-size: 12px; text-align: left;
+    font-size: 12px;
+    text-align: left;
+    align-items: center; /* Menambahkan ini agar rapi secara vertikal */
 }
+
 .lb-header {
-    color: var(--cyan-main); font-weight: bold; letter-spacing: 1px;
+    color: var(--cyan-main);
+    font-weight: bold;
+    letter-spacing: 1px;
 }
 .lb-item {
     color: #ccc; transition: all 0.2s ease;
@@ -3416,80 +3423,86 @@ function stopVictoryConfetti() {
     
 // --- (Fungsi Leaderboard V3: Tambah BabyDoge) ---
     async function fetchAndRenderLeaderboard() {
-        const list = leaderboardList;
-        if (!list) return;
-        let providerToUse = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
-        let contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerToUse);
+    const list = leaderboardList;
+    if (!list) return;
+    
+    // Gunakan provider read-only yang sudah ada
+    let providerToUse = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+    let contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerToUse);
+    
+    try {
+        let usdtDecimalsLB = 6, babyDecimalsLB = 18;
         try {
-            let usdtDecimalsLB = 6, babyDecimalsLB = 18; // Default
-            try {
-                // [PERBAIKAN 2] Gunakan USDT_ABI
-                usdtDecimalsLB = await (new ethers.Contract(USDT_ADDRESS, USDT_ABI, providerToUse)).decimals();
-                babyDecimalsLB = await (new ethers.Contract(BABYDOGE_ADDRESS, USDT_ABI, providerToUse)).decimals();
-            } catch (e) {}
-
-            const currentBlock = await providerToUse.getBlockNumber();
-            const fromBlock = Math.max(0, currentBlock - 500000); 
-            
-            const filter = contract.filters.WinnerRecorded();
-            const logs = await contract.queryFilter(filter, fromBlock, "latest");
-
-            const stats = {};
-            logs.forEach(log => {
-                const { winner, rewardETH, rewardUSDT, rewardBabyDoge } = log.args;
-                if (!stats[winner]) {
-                    stats[winner] = { 
-                        wins: 0, 
-                        totalEth: ethers.BigNumber.from(0),
-                        totalUsdt: ethers.BigNumber.from(0),
-                        totalBabyDoge: ethers.BigNumber.from(0) 
-                    };
-                }
-                stats[winner].wins += 1;
-                stats[winner].totalEth = stats[winner].totalEth.add(rewardETH);
-                stats[winner].totalUsdt = stats[winner].totalUsdt.add(rewardUSDT);
-                stats[winner].totalBabyDoge = stats[winner].totalBabyDoge.add(rewardBabyDoge);
-            });
-
-            const sortedLeaderboard = Object.entries(stats)
-                .map(([addr, data]) => ({ addr, ...data }))
-                .sort((a, b) => b.wins - a.wins) 
-                .slice(0, 10); 
-
-            if (sortedLeaderboard.length === 0) {
-                list.innerHTML = "<div class 'lb-loading' style='animation:none;'>NO DATA YET.</div>";
-                return;
-            }
-
-            list.innerHTML = ""; 
-            sortedLeaderboard.forEach((player, index) => {
-                const rank = index + 1;
-                const shortAddr = player.addr.slice(0, 6) + "..." + player.addr.slice(-4);
-                const ethTotal = parseFloat(ethers.utils.formatEther(player.totalEth)).toFixed(4);
-                const usdtTotal = parseFloat(ethers.utils.formatUnits(player.totalUsdt, usdtDecimalsLB)).toFixed(2);
-                const babyTotal = parseFloat(ethers.utils.formatUnits(player.totalBabyDoge, babyDecimalsLB)).toFixed(0); 
-                
-                const isMe = userAddress && player.addr.toLowerCase() === userAddress.toLowerCase();
-                const displayName = isMe ? "YOU" : shortAddr;
-
-                // Perbarui HTML Leaderboard untuk V3
-                list.innerHTML += `
-                    <div class="lb-item rank-${rank}" style="${isMe ? 'color:var(--cyan-main);' : ''}">
-                        <div class="lb-rank">#${rank}</div>
-                        <div style="cursor:pointer;" onclick="showPlayerProfile('${player.addr}')">${displayName}</div>
-                        <div>${player.wins}</div>
-                        <div>${ethTotal} ETH</div>
-                        <div>
-                            ${usdtTotal} USDT
-                            <br><small style="color:#aaa">${babyTotal} BabyDoge</small>
-                        </div> 
-                    </div>
-                `;
-            });
-        } catch (err) {
-            console.error("Leaderboard error:", err);
-            list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>FAILED TO LOAD. RPC TIMEOUT.</div>";
+            usdtDecimalsLB = await (new ethers.Contract(USDT_ADDRESS, USDT_ABI, providerToUse)).decimals();
+            babyDecimalsLB = await (new ethers.Contract(BABYDOGE_ADDRESS, USDT_ABI, providerToUse)).decimals();
+        } catch (e) {
+            console.warn("Gagal mengambil decimals token, menggunakan default.");
         }
+
+        const currentBlock = await providerToUse.getBlockNumber();
+        
+        // [PERBAIKAN] Mengurangi jangkauan pindaian dari 500,000 menjadi 200,000
+        const fromBlock = Math.max(0, currentBlock - 200000); 
+        
+        const filter = contract.filters.WinnerRecorded();
+        const logs = await contract.queryFilter(filter, fromBlock, "latest");
+
+        const stats = {};
+        logs.forEach(log => {
+            const { winner, rewardETH, rewardUSDT, rewardBabyDoge } = log.args;
+            if (!stats[winner]) {
+                stats[winner] = { 
+                    wins: 0, 
+                    totalEth: ethers.BigNumber.from(0),
+                    totalUsdt: ethers.BigNumber.from(0),
+                    totalBabyDoge: ethers.BigNumber.from(0) 
+                };
+            }
+            stats[winner].wins += 1;
+            stats[winner].totalEth = stats[winner].totalEth.add(rewardETH);
+            stats[winner].totalUsdt = stats[winner].totalUsdt.add(rewardUSDT);
+            stats[winner].totalBabyDoge = stats[winner].totalBabyDoge.add(rewardBabyDoge);
+        });
+
+        const sortedLeaderboard = Object.entries(stats)
+            .map(([addr, data]) => ({ addr, ...data }))
+            .sort((a, b) => b.wins - a.wins) 
+            .slice(0, 10); 
+
+        if (sortedLeaderboard.length === 0) {
+            list.innerHTML = "<div class='lb-loading' style='animation:none; text-align:center;'>NO DATA YET.</div>";
+            return;
+        }
+
+        list.innerHTML = ""; 
+        sortedLeaderboard.forEach((player, index) => {
+            const rank = index + 1;
+            const shortAddr = player.addr.slice(0, 6) + "..." + player.addr.slice(-4);
+            const ethTotal = parseFloat(ethers.utils.formatEther(player.totalEth)).toFixed(4);
+            const usdtTotal = parseFloat(ethers.utils.formatUnits(player.totalUsdt, usdtDecimalsLB)).toFixed(2);
+            const babyTotal = parseFloat(ethers.utils.formatUnits(player.totalBabyDoge, babyDecimalsLB)).toFixed(0); 
+            
+            const isMe = userAddress && player.addr.toLowerCase() === userAddress.toLowerCase();
+            const displayName = isMe ? "YOU" : shortAddr;
+
+            // HTML ini sudah benar (5 kolom)
+            list.innerHTML += `
+                <div class="lb-item rank-${rank}" style="${isMe ? 'color:var(--cyan-main);' : ''}">
+                    <div class="lb-rank">#${rank}</div>
+                    <div style="cursor:pointer;" onclick="showPlayerProfile('${player.addr}')">${displayName}</div>
+                    <div>${player.wins}</div>
+                    <div>${ethTotal} ETH</div>
+                    <div>
+                        ${usdtTotal} USDT
+                        <br><small style="color:#aaa">${babyTotal} BabyDoge</small>
+                    </div> 
+                </div>
+            `;
+        });
+    } catch (err) {
+        console.error("Leaderboard error:", err);
+        list.innerHTML = "<div class='lb-loading' style='color:#ff5555; text-align:center;'>FAILED TO LOAD. RPC TIMEOUT.</div>";
+    }
     }
     
 // Fungsi Tutup Modal Profil
