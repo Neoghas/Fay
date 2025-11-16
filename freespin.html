@@ -1198,15 +1198,6 @@ const claimRewardsBtn = document.getElementById("claimRewardsBtn");
 const infoContainer = document.getElementById("info-container");
 const howToWithdrawContainer = document.getElementById("how-to-withdraw-container");
 const referralSystemContainer = document.getElementById("referral-system-container");
-
-// === DAN INI (Untuk Riwayat) ===
-const historyContainer = document.getElementById("history-container");
-const showPublicHistoryBtn = document.getElementById("show-public-history");
-const showMyHistoryBtn = document.getElementById("show-my-history");
-const publicHistoryContent = document.getElementById("public-history-content");
-const myHistoryContent = document.getElementById("my-history-content");
-const publicHistoryList = document.getElementById("public-history-list");
-const myHistoryList = document.getElementById("my-history-list");
     
 // === 2. PETA HADIAH ===
 const prizes = [  
@@ -1445,8 +1436,6 @@ async function updateUI() {
   myNickname.textContent = "...";
   myReferrer.textContent = "...";
 
-  getMyFreeSpinHistory(contract, userAddress);
-
   try {
     const [spins, balance] = await Promise.all([
       contract.spinCounts(userAddress),
@@ -1566,16 +1555,6 @@ async function connectWallet() {
     showStatus("Wallet connected! You can spin now.", "success");
     resultText.innerHTML = "<h5>Press SPIN to play</h5>";
 
-    if (infoContainer) infoContainer.style.display = "flex";
-    if (howToWithdrawContainer) howToWithdrawContainer.style.display = "block";
-    if (referralSystemContainer) referralSystemContainer.style.display = "block";
-    if (infoContainer) infoContainer.style.display = "flex";
-    if (howToWithdrawContainer) howToWithdrawContainer.style.display = "block";
-    if (referralSystemContainer) referralSystemContainer.style.display = "block";
-    if (historyContainer) historyContainer.style.display = "block";
-    if (showMyHistoryBtn) showMyHistoryBtn.style.display = "block";
-    getGlobalFreeSpinHistory(contract);
-
     await handleReferralOnLoad();
 
     window.ethereum.removeAllListeners('accountsChanged');
@@ -1606,15 +1585,6 @@ function disconnectWallet() {
   connectBtn.textContent = "Connect Wallet";
   connectBtn.removeEventListener("click", openWalletModal);
   connectBtn.addEventListener("click", connectWallet);
-
-  if (infoContainer) infoContainer.style.display = "none";
-  if (howToWithdrawContainer) howToWithdrawContainer.style.display = "none";
-  if (referralSystemContainer) referralSystemContainer.style.display = "none";
-  if (infoContainer) infoContainer.style.display = "none";
-  if (howToWithdrawContainer) howToWithdrawContainer.style.display = "none";
-  if (referralSystemContainer) referralSystemContainer.style.display = "none";
-  if (historyContainer) historyContainer.style.display = "none";
-  if (showMyHistoryBtn) showMyHistoryBtn.style.display = "none";
   
   resultText.innerHTML = "<h5>Press SPIN to play</h5>";
   spinCountText.textContent = "0 / 2";
@@ -1807,92 +1777,7 @@ function showStatus(message, type = 'info', duration = 10000) {
         }, 10); 
 }
 
-    // === FUNGSI RENDER RIWAYAT ===
-function renderGlobalHistory(historyData) {
-  if (!publicHistoryList) return;
-  if (historyData.length === 0) {
-    publicHistoryList.innerHTML = "<p>No public history found yet.</p>";
-    return;
-  }
-  
-  // Ubah data menjadi HTML
-  publicHistoryList.innerHTML = historyData.map(item => `
-    <div class="history-item">
-      <img src="wallet.svg" class="info-icon">
-      <span class="history-address">${shortAddress(item.player)}</span>
-      <span class="history-reward">won <strong>${item.amount}</strong> <img src="bb.svg" class="info-icon"></span>
-    </div>
-  `).join('');
-}
-
-function renderMyHistory(historyData) {
-  if (!myHistoryList) return;
-  if (historyData.length === 0) {
-    myHistoryList.innerHTML = "<p>You have no personal spin history yet.</p>";
-    return;
-  }
-  
-  // Ubah data menjadi HTML
-  myHistoryList.innerHTML = historyData.map(item => `
-    <div class="history-item">
-      <img src="win.png" class="info-icon">
-      <span class="history-reward">You won <strong>${item.amount}</strong> (Tier ${item.tier}) <img src="bb.svg" class="info-icon"></span>
-    </div>
-  `).join('');
-}
-            
-// === FUNGSI AMBIL RIWAYAT (DARI EVENT) ===
-async function getGlobalFreeSpinHistory(contract) {
-  if (!publicHistoryList) return;
-  publicHistoryList.innerHTML = "<p>Loading public history...</p>";
-  
-  try {
-    const eventFilter = contract.filters.FreeSpinWon();
-    // Ambil semua event dari blok pertama (0) sampai terbaru ('latest')
-    const events = await contract.queryFilter(eventFilter, 0, 'latest');
     
-    const history = events.map(event => {
-      return {
-        player: event.args.user,
-        tier: Number(event.args.prizeTier),
-        // Format angka (misal 5000000) menjadi (5,000,000)
-        amount: new Intl.NumberFormat().format(Number(ethers.formatUnits(event.args.amount, 18)))
-      };
-    });
-    
-    // Balikkan agar yang terbaru di atas, dan ambil 50 terakhir
-    renderGlobalHistory(history.reverse().slice(0, 50)); 
-    
-  } catch (err) {
-    console.error("Gagal mengambil riwayat global:", err);
-    publicHistoryList.innerHTML = "<p>Failed to load history.</p>";
-  }
-}
-
-async function getMyFreeSpinHistory(contract, userAddress) {
-  if (!myHistoryList || !userAddress) return;
-  myHistoryList.innerHTML = "<p>Loading your history...</p>"; // Set loading
-  
-  try {
-    // Filter event HANYA untuk userAddress yang sedang login
-    const eventFilter = contract.filters.FreeSpinWon(userAddress);
-    const events = await contract.queryFilter(eventFilter, 0, 'latest');
-    
-    const history = events.map(event => {
-      return {
-        tier: Number(event.args.prizeTier),
-        amount: new Intl.NumberFormat().format(Number(ethers.formatUnits(event.args.amount, 18)))
-      };
-    });
-    
-    // Tampilkan semua riwayat pribadi (dibalik)
-    renderMyHistory(history.reverse());
-    
-  } catch (err) {
-    console.error("Gagal mengambil riwayat pribadi:", err);
-    myHistoryList.innerHTML = "<p>Failed to load your history.</p>";
-  }
-}
   
 // === Event Listeners ===
 connectBtn.addEventListener("click", connectWallet);  
@@ -1930,19 +1815,4 @@ document.querySelectorAll(".faq-question").forEach(btn => {
   });
 });
 
-    showPublicHistoryBtn.addEventListener('click', () => {
-    publicHistoryContent.style.display = 'block';
-    myHistoryContent.style.display = 'none';
-    showPublicHistoryBtn.classList.add('active');
-    showMyHistoryBtn.classList.remove('active');
-
-  });
-
-  showMyHistoryBtn.addEventListener('click', () => {
-    publicHistoryContent.style.display = 'none';
-    myHistoryContent.style.display = 'block';
-    showPublicHistoryBtn.classList.remove('active');
-    showMyHistoryBtn.classList.add('active');
-
-  });
   </script>
