@@ -1155,7 +1155,7 @@ function glowWinnerSector(winnerIndex) {
 // === 3. FUNGSI SPIN (Logika V3 "Free") ===
 async function spinFromBlockchain() {
   if (spinning || !contract) {
-    showStatus("Please connect your wallet first.", "error");
+    showStatus("Please connect your wallet first.", "wolf");
     return;
   }
   spinning = true;
@@ -1168,7 +1168,7 @@ async function spinFromBlockchain() {
   try {
     const tx = await contract.spinFree();
     
-    showStatus("Waiting for blockchain confirmation...", "info");
+    showStatus("Waiting for blockchain confirmation...", "load");
     
     const receipt = await tx.wait();
     spinSound.play(); 
@@ -1375,7 +1375,7 @@ async function ensureBaseSepolia() {
 async function connectWallet() {
   try {
     if (!hasEthereum()) {
-      showStatus("Please install MetaMask first.", "error");
+      showStatus("Please install MetaMask first.", "wolf");
       return;
     }
     await ensureBaseSepolia(); 
@@ -1390,11 +1390,11 @@ async function connectWallet() {
     userAddress = await signer.getAddress();
     
     if (!ethers.isAddress(FAYLOTTO_ADDRESS) || FAYLOTTO_ADDRESS.startsWith("0x...")) {
-         showStatus("Developer Error: Invalid Contract Address.", "error");
+         showStatus("Developer Problem: Invalid Contract Address.", "error");
          return;
     }
     if (FAYLOTTO_ABI.length === 0) {
-        showStatus("Developer Error: FAYLOTTO_ABI is empty.", "error");
+        showStatus("Developer Problem: FAYLOTTO_ABI is empty.", "error");
         return;
     }
 
@@ -1492,7 +1492,7 @@ async function handleCreateNickname() {
   if (!contract) return;
   const nick = nicknameInput.value;
   if (nick.length < 3) {
-    showStatus("Nickname must be at least 3 characters.", "error");
+    showStatus("Nickname must be at least 3 characters.", "warning");
     return;
   }
   
@@ -1512,19 +1512,31 @@ async function handleCreateNickname() {
 }
 
 async function handleClaimRewards() {
-  if (!contract) return;
-  
+  if (!contract) return;  
   claimRewardsBtn.disabled = true;
   claimRewardsBtn.textContent = "Waiting...";
   try {
     const tx = await contract.claimReferralRewards();
     await tx.wait();
-    showStatus("Rewards successfully claimed!", "success");
+    showToast("Rewards successfully claimed!", "success"); 
     await updateUI();
+    
   } catch (err) {
     console.error("Failed claim:", err);
-    showStatus("Failed to claim rewards. (Maybe no rewards?)", "error");
+
+    const errorReason = err.reason || (err.data ? err.data.message : null) || err.message || "";
+    if (errorReason.includes("no referral rewards")) {
+        showToast("Sorry, you don't have any reward balance yet.", "error");
+        
+    } else if (errorReason.includes("user rejected transaction")) {
+        showToast("You rejected the transaction.", "warning");
+        
+    } else {
+        showToast("Failed to claim rewards. An unknown error occurred.", "error");
+    }
   }
+
+  claimRewardsBtn.disabled = false;
   claimRewardsBtn.textContent = "Claim Rewards";
 }
 
