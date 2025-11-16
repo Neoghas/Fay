@@ -2669,35 +2669,26 @@ async function showBetModal() {
     // [FITUR BARU] Ambil saldo Free Balance dari kontrak
     try {
         const freeBalRaw = await faylottoContract.freeBalances(userAddress);
-        const freeBalFmt = parseFloat(ethers.utils.formatUnits(freeBalRaw, babyDogeDecimals)).toFixed(0);
+        rawFreeBalance = freeBalRaw; // Simpan di global state
+        
+        // [FIX] Gunakan babyDogeDecimals untuk memformat
+        const freeBalFmt = parseFloat(ethers.utils.formatUnits(freeBalRaw, babyDogeDecimals)).toFixed(0); 
         document.getElementById("modalFreeBalance").innerText = freeBalFmt;
     } catch (e) {
         document.getElementById("modalFreeBalance").innerText = "0";
+        rawFreeBalance = ethers.BigNumber.from(0); // Set global ke 0 jika error
     }
 
     betAmountInput.value = "";
+    
+    // Reset tampilan jika sebelumnya memilih FREE
+    document.querySelector('.input-icon-wrapper[style*="flex-grow"]').style.display = 'flex';
+    document.querySelector('.percent-buttons').style.display = 'flex';
+    betCurrencySelect.value = "ETH"; // Default ke ETH
+    document.getElementById('currency-icon').src = "eth.svg";
+
     betModalOverlay.classList.add("show");
     betModal.classList.add("show");
-}
-    
-  // LOGIKA BARU UNTUK MENAMPILKAN SALDO GRATIS
-  const modalFreeBalanceEl = document.getElementById("modalFreeBalance");
-  if (modalFreeBalanceEl) {
-      // 'prizeAmount' disimpan dalam 18 desimal (seperti ETH), jadi kita format
-      modalFreeBalanceEl.innerText = parseFloat(ethers.utils.formatEther(rawFreeBalance || 0)).toFixed(0);
-  }
-
-  betAmountInput.value = "";
-  
-  // Reset tampilan jika sebelumnya memilih FREE
-  document.querySelector('.input-icon-wrapper[style*="flex-grow"]').style.display = 'flex';
-  document.querySelector('.percent-buttons').style.display = 'flex';
-  betCurrencySelect.value = "ETH"; // Default ke ETH
-  document.getElementById('currency-icon').src = "eth.svg";
-
-
-  betModalOverlay.classList.add("show");
-  betModal.classList.add("show");
 }
 
 function hideBetModal() {
