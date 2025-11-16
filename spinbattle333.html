@@ -3795,49 +3795,79 @@ document.addEventListener("DOMContentLoaded", () => {
     // INSIALISASI KANVAS BARU
     initResponsiveCanvas();
     
-    // ... (sisa kode event listener Anda) ...
-});
+     // Listener ganti ikon di modal bet (DAN Sembunyikan Input)
 
-     // Tambahkan suara klik ke semua tombol
+    const currencySelect = document.getElementById('betCurrencySelect');
+
+    const currencyIcon = document.getElementById('currency-icon');
+
+    const amountInputGroup = document.querySelector('.input-icon-wrapper[style*="flex-grow"]');
+
+    const percentButtonsGroup = document.querySelector('.percent-buttons');
+
+
+
+    if (currencySelect && currencyIcon) {
+
+        currencySelect.addEventListener('change', (e) => {
+
+            const selectedValue = e.target.value;
+
+            const selectedIconPath = e.target.options[e.target.selectedIndex].dataset.icon;
+
+            
+
+            if (selectedIconPath) {
+
+                currencyIcon.src = selectedIconPath;
+
+            }
+
+
+
+            // Logika Show/Hide
+
+            if (selectedValue === 'FREE') {
+
+                if (amountInputGroup) amountInputGroup.style.display = 'none';
+
+                if (percentButtonsGroup) percentButtonsGroup.style.display = 'none';
+
+            } else {
+
+                if (amountInputGroup) amountInputGroup.style.display = 'flex'; 
+
+                if (percentButtonsGroup) percentButtonsGroup.style.display = 'flex';
+
+            }
+
+        });
+
+    }
+
+
+
+    // Tambahkan suara klik ke semua tombol
+
     document.querySelectorAll('button').forEach(btn => {
+
         btn.addEventListener('click', () => playSound('sfx-click'));
+
     });
 
-    // GANTI LISTENER LAMA ANDA DI DALAM DOMContentLoaded DENGAN YANG INI
 
-// Listener ganti ikon di modal bet (DAN Sembunyikan Input)
-const currencySelect = document.getElementById('betCurrencySelect');
-const currencyIcon = document.getElementById('currency-icon');
-// Ambil elemen yang akan disembunyikan
-const amountInputGroup = document.querySelector('.input-icon-wrapper[style*="flex-grow"]');
-const percentButtonsGroup = document.querySelector('.percent-buttons');
-
-if (currencySelect && currencyIcon) {
-    currencySelect.addEventListener('change', (e) => {
-        const selectedValue = e.target.value;
-        const selectedIconPath = e.target.options[e.target.selectedIndex].dataset.icon;
-        
-        if (selectedIconPath) {
-            currencyIcon.src = selectedIconPath;
-        }
-
-        // Logika Show/Hide
-        if (selectedValue === 'FREE') {
-            if (amountInputGroup) amountInputGroup.style.display = 'none';
-            if (percentButtonsGroup) percentButtonsGroup.style.display = 'none';
-        } else {
-            // 'flex' adalah display default dari CSS Anda
-            if (amountInputGroup) amountInputGroup.style.display = 'flex'; 
-            if (percentButtonsGroup) percentButtonsGroup.style.display = 'flex';
-        }
-    });
-}
 
     // Listener Perbaikan Canvas & Tab
+
     document.addEventListener("visibilitychange", () => {
+
         if (document.visibilityState === 'visible') handleCanvasRedraw();
+
     });
+
     window.addEventListener("focus", handleCanvasRedraw);
+
+
 
 });
   </script>
