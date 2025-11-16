@@ -904,35 +904,25 @@ h1, h2, h3 {
   font-weight: bold;
 }
 
-    /* === CSS TAMBAHAN UNTUK RIWAYAT (DENGAN TOOLTIP) === */
+    /* === CSS RIWAYAT (PERBAIKAN FINAL UNTUK TOOLTIP) === */
 
-/* Wadah baru untuk Alamat + Waktu */
+/* Wadah untuk Alamat + Waktu */
 .history-details {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0; 
-  overflow: hidden;
+  /* HAPUS 'overflow: hidden' DARI SINI */
 }
 
-/* Teks Alamat */
+/* Teks Alamat (biarkan ini terpotong) */
 .history-address {
   color: #00eaff;
   font-family: monospace;
   font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Teks Waktu (PERUBAHAN: Menjadi '5 mnt lalu' dan bisa di-hover) */
-.history-time {
-  font-size: 11px;
-  color: #888;
-  font-style: italic;
-  cursor: help; /* Menunjukkan bisa di-hover */
-  position: relative; /* Dibutuhkan untuk tooltip */
-  width: fit-content; /* Agar hover-nya pas */
+  text-overflow: ellipsis; 
 }
 
 /* Mengatur ulang reward agar rapi */
@@ -944,14 +934,28 @@ h1, h2, h3 {
   flex-shrink: 0; 
 }
 
-/* === CSS UNTUK TOOLTIP HOVER === */
+/* === TOOLTIP BARU === */
+
+/* Teks Waktu (5 mnt lalu) */
+.history-time {
+  font-size: 11px;
+  color: #888;
+  font-style: italic;
+  cursor: help;
+  position: relative; /* Ini adalah parent dari tooltip */
+  width: fit-content; 
+  /* JANGAN tambahkan overflow: hidden di sini */
+}
+
+/* Box Tooltip (::after) */
 .history-time[data-tooltip]::after {
   content: attr(data-tooltip); /* Ambil teks dari atribut */
   position: absolute;
-  bottom: 125%; /* Posisikan di atas teks 'timeAgo' */
-  left: 50%;
-  transform: translateX(-50%);
   
+  /* Posisikan di BAWAH teks */
+  top: 130%; 
+  left: 0; /* Mulai dari kiri teks */
+
   /* Tampilan Box */
   background: #111;
   border: 1px solid #00eaff;
@@ -961,59 +965,37 @@ h1, h2, h3 {
   font-size: 12px;
   font-family: "Ubuntu", sans-serif;
   white-space: nowrap;
-  z-index: 10;
+  
+  /* PENTING: Jauh di depan elemen lain */
+  z-index: 100; 
   
   /* Sembunyikan by default */
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s, visibility 0.2s;
+  
+  /* Mencegah tooltip memicu hover lagi */
+  pointer-events: none; 
 }
 
-/* === CSS UNTUK TOOLTIP HOVER (DIPERBAIKI) === */
-.history-time[data-tooltip]::after {
-  content: attr(data-tooltip); 
-  position: absolute;
-  
-  /* PERUBAHAN: Posisikan di BAWAH teks, bukan di atas */
-  top: 125%; 
-  left: 50%;
-  transform: translateX(-50%);
-  
-  background: #111;
-  border: 1px solid #00eaff;
-  color: #fff;
-  padding: 5px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-family: "Ubuntu", sans-serif;
-  white-space: nowrap;
-  
-  /* PENTING: Pastikan tooltip di atas item lain */
-  z-index: 10; 
-  
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.2s, visibility 0.2s;
-}
-
-/* Panah kecil di ATAS tooltip (menunjuk ke atas) */
+/* Panah Tooltip (::before) */
 .history-time[data-tooltip]::before {
   content: "";
   position: absolute;
-
-  /* PERUBAHAN: Posisikan di BAWAH teks */
+  
+  /* Posisikan di antara teks dan box */
   top: 100%; 
-  left: 50%;
-  transform: translateX(-50%);
+  left: 15px; /* Sesuaikan posisi panah */
   
-  /* PERUBAHAN: Ubah arah panah (dari atas ke bawah) */
+  /* Panah menunjuk ke atas */
   border: 5px solid transparent;
-  border-bottom-color: #00eaff; /* <-- Diubah dari border-top-color */
+  border-bottom-color: #00eaff;
   
-  z-index: 10;
+  z-index: 100;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s, visibility 0.2s;
+  pointer-events: none;
 }
 
 /* Tampilkan saat di-hover */
@@ -1021,7 +1003,7 @@ h1, h2, h3 {
 .history-time[data-tooltip]:hover::after {
   opacity: 1;
   visibility: visible;
-}
+    }
 </style>
 
 <body>
