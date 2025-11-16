@@ -1664,6 +1664,7 @@
     let provider, signer, userAddress;
     let faylottoContract, usdtContract, babyDogeContract; // Ditambah babyDogeContract
     let rawEthBalance, rawUsdtBalance, rawBabyDogeBalance; // Ditambah rawBabyDogeBalance
+    let rawFreeBalance = ethers.BigNumber.from(0);
     let usdtDecimals = 6, babyDogeDecimals = 18; // Default, akan di-fetch
     let currentRoundId;
     let currentRoundEndTime = 0;
@@ -2645,19 +2646,34 @@ async function callFinalizeRound() {
     }
 }
     
-// --- (Modal Bet V3: Tambah BabyDoge) ---
-    function showBetModal() {
-      if (!signer) return showStatus("Connect wallet first!", "error");
-      if (isFinalizing) return showStatus("Round is ending, new bets are closed.", "warning"); 
-      
-      modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance || 0)).toFixed(5);
-      modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance || 0, usdtDecimals)).toFixed(2);
-      modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance || 0, babyDogeDecimals)).toFixed(2);
+// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
+function showBetModal() {
+  if (!signer) return showStatus("Connect wallet first!", "error");
+  if (isFinalizing) return showStatus("Round is ending, new bets are closed.", "warning"); 
+  
+  modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance || 0)).toFixed(5);
+  modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance || 0, usdtDecimals)).toFixed(2);
+  modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance || 0, babyDogeDecimals)).toFixed(2);
 
-      betAmountInput.value = "";
-      betModalOverlay.classList.add("show");
-      betModal.classList.add("show");
-    }
+  // LOGIKA BARU UNTUK MENAMPILKAN SALDO GRATIS
+  const modalFreeBalanceEl = document.getElementById("modalFreeBalance");
+  if (modalFreeBalanceEl) {
+      // 'prizeAmount' disimpan dalam 18 desimal (seperti ETH), jadi kita format
+      modalFreeBalanceEl.innerText = parseFloat(ethers.utils.formatEther(rawFreeBalance || 0)).toFixed(0);
+  }
+
+  betAmountInput.value = "";
+  
+  // Reset tampilan jika sebelumnya memilih FREE
+  document.querySelector('.input-icon-wrapper[style*="flex-grow"]').style.display = 'flex';
+  document.querySelector('.percent-buttons').style.display = 'flex';
+  betCurrencySelect.value = "ETH"; // Default ke ETH
+  document.getElementById('currency-icon').src = "eth.svg";
+
+
+  betModalOverlay.classList.add("show");
+  betModal.classList.add("show");
+}
 
 function hideBetModal() {
       betModalOverlay.classList.remove("show");
@@ -2685,74 +2701,71 @@ function hideBetModal() {
         betAmountInput.value = amountToSet.toFixed(decimalsToDisplay);
     }
 
-// --- (Confirm Bet V3: Panggil Fungsi Baru) ---
-    async function confirmBet() {
-      const amountStr = betAmountInput.value;
-      const currency = betCurrencySelect.value;
-      
-      if (!amountStr || parseFloat(amountStr) <= 0) {
-          showStatus("Please enter a valid amount.", "warning");
-          return;
-      }
-      
-      confirmBetBtn.disabled = true;
-      confirmBetBtn.innerText = "Processing...";
-      showStatus("Sending bet transaction...", "load");
+// GANTI FUNGSI LAMA ANDA DENGAN YANG INI
+async function confirmBet() {
+  const amountStr = betAmountInput.value;
+  const currency = betCurrencySelect.value;
+  
+  // Validasi di-skip jika mata uangnya 'FREE'
+  if (currency !== 'FREE' && (!amountStr || parseFloat(amountStr) <= 0)) {
+      showStatus("Please enter a valid amount.", "warning");
+      return;
+  }
+  
+  confirmBetBtn.disabled = true;
+  confirmBetBtn.innerText = "Processing...";
+  showStatus("Sending bet transaction...", "load");
 
-      try {
-        let tx;
-        if (currency === 'ETH') {
-          tx = await placeBetNative(amountStr);
-        } else if (currency === 'USDT') {
-          tx = await placeBetUSDT(amountStr);
-        } else if (currency === 'BABYDOGE') {
-          tx = await placeBetBabyDoge(amountStr);
-        } else {
-            throw new Error("Invalid currency selected.");
-        }
-        
-        showStatus("Bet sent! Awaiting confirmation...", "load", 10000);
-        statusText.innerText = `Bet sent! Awaiting confirmation...`;
-        
-        await tx.wait();
-        
-        playSound('sfx-coin');
-        showStatus("Bet confirmed! Good luck.", "success");
-        statusText.innerText = `Bet confirmed! Good luck.`;
-        
-        hideBetModal();
-        await updateUserBalances();
-        // updateMyDeposits() akan dipanggil oleh event listener
-        
-      } catch (err) {
-        // [PERBAIKAN DI SINI]
-        // Ini adalah blok 'catch' yang benar untuk 'confirmBet'.
-        // Blok ini TIDAK menghentikan timer atau mengganti tombol.
-        console.error("Bet failed:", err);
-        
-        let errorMessage = "Transaction failed!";
-        if (err.code === 'ACTION_REJECTED') {
-            errorMessage = "User rejected transaction.";
-        } else {
-            const reason = err.reason || (err.data ? faylottoContract.interface.parseError(err.data)?.args[0] : null) || err.message;
-            if (reason) {
-                errorMessage = `Failed: ${reason.substring(0, 100)}`;
-            }
-        }
-
-        showStatus(errorMessage, "error");
-        
-        // Mengatur statusText ke error yang relevan, BUKAN error finalisasi
-        statusText.innerText = "Transaction failed. Please try again.";
-        
-      } finally {
-        // [PERBAIKAN DI SINI]
-        // Selalu pastikan tombol 'Confirm Bet' aktif kembali
-        confirmBetBtn.disabled = false;
-        confirmBetBtn.innerText = "Confirm Bet";
-      }
+  try {
+    let tx;
+    if (currency === 'ETH') {
+      tx = await placeBetNative(amountStr);
+    } else if (currency === 'USDT') {
+      tx = await placeBetUSDT(amountStr);
+    } else if (currency === 'BABYDOGE') {
+      tx = await placeBetBabyDoge(amountStr);
+    } else if (currency === 'FREE') { // <-- LOGIKA BARU DITAMBAHKAN
+      tx = await placeBetFree(); // Memanggil fungsi helper baru
+    } else {
+        throw new Error("Invalid currency selected.");
     }
     
+    showStatus("Bet sent! Awaiting confirmation...", "load", 10000);
+    statusText.innerText = `Bet sent! Awaiting confirmation...`;
+    
+    await tx.wait();
+    
+    playSound('sfx-coin');
+    showStatus("Bet confirmed! Good luck.", "success");
+    statusText.innerText = `Bet confirmed! Good luck.`;
+    
+    hideBetModal();
+    await updateUserBalances(); // Ini akan me-refresh saldo gratis juga
+    
+  } catch (err) {
+    console.error("Bet failed:", err);
+    
+    let errorMessage = "Transaction failed!";
+    if (err.code === 'ACTION_REJECTED') {
+        errorMessage = "User rejected transaction.";
+    } else {
+        const reason = err.reason || (err.data ? faylottoContract.interface.parseError(err.data)?.args[0] : null) || err.message;
+        if (reason) {
+            errorMessage = `Failed: ${reason.substring(0, 100)}`;
+        }
+    }
+
+    showStatus(errorMessage, "error");
+    statusText.innerText = "Transaction failed. Please try again.";
+    
+  } finally {
+    confirmBetBtn.disabled = false;
+    confirmBetBtn.innerText = "Confirm Bet";
+  }
+}
+    async function placeBetFree() {
+  return faylottoContract.placeBetFree();
+    }
 
 // --- (Helper Betting V3: Fungsi Baru) ---
     async function placeBetNative(amountStr) {
@@ -2929,48 +2942,47 @@ function hideBetModal() {
         }
     }
 
+    // GANTI FUNGSI LAMA ANDA DENGAN YANG INI
+async function updateUserBalances() {
+  if (!provider || !userAddress) return;
+  try {
+    rawEthBalance = await provider.getBalance(userAddress);
+    ethBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
+    modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
     
-// --- (Update Saldo V3: Tambah BabyDoge DAN Saldo Gratis) ---
-    async function updateUserBalances() {
-      if (!provider || !userAddress) return;
-      try {
-        rawEthBalance = await provider.getBalance(userAddress);
-        ethBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
-        modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
-        
-        if (usdtContract) {
-            usdtDecimals = await usdtContract.decimals();
-            rawUsdtBalance = await usdtContract.balanceOf(userAddress);
-            usdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
-            modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
-        }
-        if (babyDogeContract) {
-            babyDogeDecimals = await babyDogeContract.decimals();
-            rawBabyDogeBalance = await babyDogeContract.balanceOf(userAddress);
-            babyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
-            modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
-        }
-
-        // --- LOGIKA BARU DITAMBAHKAN DI SINI ---
-        if (faylottoContract) {
-            const freeBalanceEl = document.getElementById("freeBalance"); // Ambil elemen baru
-            if (freeBalanceEl) {
-                const rawFreeBalance = await faylottoContract.freeBalances(userAddress);
-                
-                // Kontrak Anda menyimpan 'prizeAmount' dalam 18 desimal (seperti ETH)
-                // jadi kita gunakan formatEther
-                const formattedFree = parseFloat(ethers.utils.formatEther(rawFreeBalance)).toFixed(0); 
-                
-                freeBalanceEl.innerText = formattedFree;
-            }
-        }
-        // --- AKHIR DARI LOGIKA BARU ---
-
-      } catch (err) { 
-        console.error("Failed fetching balances:", err.message);
-        showStatus("Failed to fetch balances.", "error");
-      }
+    if (usdtContract) {
+        usdtDecimals = await usdtContract.decimals();
+        rawUsdtBalance = await usdtContract.balanceOf(userAddress);
+        usdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
+        modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
     }
+    if (babyDogeContract) {
+        babyDogeDecimals = await babyDogeContract.decimals();
+        rawBabyDogeBalance = await babyDogeContract.balanceOf(userAddress);
+        babyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
+        modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
+    }
+
+    if (faylottoContract) {
+        const freeBalanceEl = document.getElementById("freeBalance"); // Ambil elemen modal wallet
+        
+        // Ambil saldo gratis dari kontrak
+        const rawFreeBalanceBN = await faylottoContract.freeBalances(userAddress);
+        
+        // Simpan ke variabel global
+        rawFreeBalance = rawFreeBalanceBN; 
+        
+        if (freeBalanceEl) {
+            // Tampilkan di modal wallet
+            const formattedFree = parseFloat(ethers.utils.formatEther(rawFreeBalanceBN)).toFixed(0); 
+            freeBalanceEl.innerText = formattedFree;
+        }
+    }
+  } catch (err) { 
+    console.error("Failed fetching balances:", err.message);
+    showStatus("Failed to fetch balances.", "error");
+  }
+}
 
     // --- (Update Deposit V3: Tambah BabyDoge) ---
     async function updateMyDeposits() {
@@ -3790,6 +3802,36 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', () => playSound('sfx-click'));
     });
+
+    // GANTI LISTENER LAMA ANDA DI DALAM DOMContentLoaded DENGAN YANG INI
+
+// Listener ganti ikon di modal bet (DAN Sembunyikan Input)
+const currencySelect = document.getElementById('betCurrencySelect');
+const currencyIcon = document.getElementById('currency-icon');
+// Ambil elemen yang akan disembunyikan
+const amountInputGroup = document.querySelector('.input-icon-wrapper[style*="flex-grow"]');
+const percentButtonsGroup = document.querySelector('.percent-buttons');
+
+if (currencySelect && currencyIcon) {
+    currencySelect.addEventListener('change', (e) => {
+        const selectedValue = e.target.value;
+        const selectedIconPath = e.target.options[e.target.selectedIndex].dataset.icon;
+        
+        if (selectedIconPath) {
+            currencyIcon.src = selectedIconPath;
+        }
+
+        // Logika Show/Hide
+        if (selectedValue === 'FREE') {
+            if (amountInputGroup) amountInputGroup.style.display = 'none';
+            if (percentButtonsGroup) percentButtonsGroup.style.display = 'none';
+        } else {
+            // 'flex' adalah display default dari CSS Anda
+            if (amountInputGroup) amountInputGroup.style.display = 'flex'; 
+            if (percentButtonsGroup) percentButtonsGroup.style.display = 'flex';
+        }
+    });
+}
 
     // Listener Perbaikan Canvas & Tab
     document.addEventListener("visibilitychange", () => {
