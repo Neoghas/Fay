@@ -1353,15 +1353,16 @@
       <button class="modal-close-btn" id="wallet-modal-close-btn">&times;</button>
     </div>
     <div class="modal-body" id="walletInfo"> 
-      <p>Address: <span id="walletAddress">-</span></p>
-      <p><img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance (ETH): <span id="ethBalance">0</span></p>
-      <p><img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance (USDT): <span id="usdtBalance">0</span></p>
-      <p><img src="bb.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">BabyDoge: <span id="babyDogeBalance">0</span></p>
-      <hr/>
-      <p><img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (ETH): <span id="myEthDeposit">0</span></p>
-      <p><img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (USDT): <span id="myUsdtDeposit">0</span></p>
-      <p><img src="bb.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (BabyDoge): <span id="myBabyDogeDeposit">0</span></p>
-    </div>
+  <p>Address: <span id="walletAddress">-</span></p>
+  <p><img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance (ETH): <span id="ethBalance">0</span></p>
+  <p><img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance (USDT): <span id="usdtBalance">0</span></p>
+  <p><img src="bb.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">BabyDoge: <span id="babyDogeBalance">0</span></p>
+  <p><img src="bb.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance Free: <span id="freeBalance">0</span></p> 
+  <hr/> 
+  <p><img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (ETH): <span id="myEthDeposit">0</span></p>
+  <p><img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (USDT): <span id="myUsdtDeposit">0</span></p>
+  <p><img src="bb.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (BabyDoge): <span id="myBabyDogeDeposit">0</span></p>
+</div>
     <div class="modal-footer">
       <button id="disconnectBtn" class="modal-btn modal-btn-disconnect">Disconnect</button>
     </div>
@@ -2924,7 +2925,7 @@ function hideBetModal() {
     }
 
     
-// --- (Update Saldo V3: Tambah BabyDoge) ---
+// --- (Update Saldo V3: Tambah BabyDoge DAN Saldo Gratis) ---
     async function updateUserBalances() {
       if (!provider || !userAddress) return;
       try {
@@ -2944,6 +2945,22 @@ function hideBetModal() {
             babyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
             modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
         }
+
+        // --- LOGIKA BARU DITAMBAHKAN DI SINI ---
+        if (faylottoContract) {
+            const freeBalanceEl = document.getElementById("freeBalance"); // Ambil elemen baru
+            if (freeBalanceEl) {
+                const rawFreeBalance = await faylottoContract.freeBalances(userAddress);
+                
+                // Kontrak Anda menyimpan 'prizeAmount' dalam 18 desimal (seperti ETH)
+                // jadi kita gunakan formatEther
+                const formattedFree = parseFloat(ethers.utils.formatEther(rawFreeBalance)).toFixed(0); 
+                
+                freeBalanceEl.innerText = formattedFree;
+            }
+        }
+        // --- AKHIR DARI LOGIKA BARU ---
+
       } catch (err) { 
         console.error("Failed fetching balances:", err.message);
         showStatus("Failed to fetch balances.", "error");
