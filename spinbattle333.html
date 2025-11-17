@@ -2684,25 +2684,70 @@ function hideBetModal() {
     }
 
 // --- (Persentase V3: Tambah BabyDoge) ---
-    function setAmountByPercent(percent) {
-        const currency = betCurrencySelect.value;
-        let min, max, decimalsToDisplay;
+function setAmountByPercent(percent) {
+    const currency = betCurrencySelect.value;
+    let min, max, decimalsToDisplay, userBalanceBN;
 
-        if (currency === 'ETH') {
-            min = 0.00005; max = 0.0265; decimalsToDisplay = 8; // Sesuai MAX_BET_NATIVE
-        } else if (currency === 'USDT') {
-            min = 0.5; max = 10.0; decimalsToDisplay = 2; // Sesuai MAX_BET_USDT_UNSCALED
-        } else if (currency === 'BABYDOGE') { 
-            min = 1000000; max = 10000000000; decimalsToDisplay = 0; // Sesuai MIN/MAX_BET_BABYDOGE
-        } else { return; } 
-
-        let amountToSet;
-        if (percent === 0.10) amountToSet = min;
-        else if (percent === 1.00) amountToSet = max;
-        else amountToSet = min + ((max - min) * percent);
-
-        betAmountInput.value = amountToSet.toFixed(decimalsToDisplay);
+    // Ambil BigNumber dari saldo yang relevan
+    if (currency === 'ETH') {
+        userBalanceBN = rawEthBalance || ethers.BigNumber.from(0);
+        decimalsToDisplay = 8;
+        min = 0.00005; 
+        max = 0.00265; // Sesuai MAX_BET_NATIVE
+    } else if (currency === 'USDT') {
+        userBalanceBN = rawUsdtBalance || ethers.BigNumber.from(0);
+        decimalsToDisplay = 2;
+        min = 0.5; 
+        max = 10.0; // Sesuai MAX_BET_USDT_UNSCALED
+    } else if (currency === 'BABYDOGE') {
+        userBalanceBN = rawBabyDogeBalance || ethers.BigNumber.from(0);
+        decimalsToDisplay = 0;
+        min = 1000000; 
+        max = 10000000000; // 10 Miliar
+    } else if (currency === 'FREE') {
+        userBalanceBN = rawFreeBalance || ethers.BigNumber.from(0); // Ambil dari saldo gratis global
+        decimalsToDisplay = 0;
+        min = 1000000; // Min 1 Juta
+        max = 10000000000; // Max 10 Miliar
+    } else {
+        return; // Tidak melakukan apa-apa jika currency tidak dikenal
     }
+
+    // Tentukan desimal untuk konversi
+    let decimals = 18; // Default untuk ETH & FREE
+    if (currency === 'USDT') decimals = usdtDecimals;
+    if (currency === 'BABYDOGE') decimals = babyDogeDecimals;
+
+    // Konversi min/max ke BigNumber
+    const minBN = ethers.utils.parseUnits(min.toString(), decimals);
+    const maxBN = ethers.utils.parseUnits(max.toString(), decimals);
+
+    let amountToSetBN;
+
+    if (percent === 0.10) { // Tombol MIN
+        amountToSetBN = minBN;
+    } else if (percent === 1.00) { // Tombol MAX
+        // MAX adalah yang terkecil antara (Saldo User) ATAU (Cap Kontrak)
+        amountToSetBN = userBalanceBN.lt(maxBN) ? userBalanceBN : maxBN;
+    } else {
+        // Persentase dari saldo user
+        amountToSetBN = userBalanceBN.mul(Math.floor(percent * 100)).div(100);
+    }
+
+    // Validasi akhir: pastikan tidak kurang dari MIN atau lebih dari MAX
+    if (amountToSetBN.lt(minBN)) amountToSetBN = minBN;
+    if (amountToSetBN.gt(maxBN)) amountToSetBN = maxBN;
+    
+    // Validasi terpenting: pastikan tidak lebih dari yang dimiliki user
+    if (amountToSetBN.gt(userBalanceBN)) amountToSetBN = userBalanceBN;
+
+    // Format kembali ke string untuk ditampilkan di input
+    const formattedAmount = ethers.utils.formatUnits(amountToSetBN, decimals);
+    
+    // Tampilkan dengan desimal yang sesuai
+    betAmountInput.value = parseFloat(formattedAmount).toFixed(decimalsToDisplay);
+}
+    
 
 // --- (Confirm Bet V3: Panggil Fungsi Baru) ---
 async function confirmBet() {
