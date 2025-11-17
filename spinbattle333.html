@@ -1352,17 +1352,27 @@
       <h2>Wallet Info</h2>
       <button class="modal-close-btn" id="wallet-modal-close-btn">&times;</button>
     </div>
-    <div class="modal-body" id="walletInfo"> 
-  <p>Address: <span id="walletAddress">-</span></p>
-  <p><img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance (ETH): <span id="ethBalance">0</span></p>
-  <p><img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance (USDT): <span id="usdtBalance">0</span></p>
-  <p><img src="bb.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">BabyDoge: <span id="babyDogeBalance">0</span></p>
-  <p><img src="bb.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">Balance Free: <span id="freeBalance">0</span></p> 
-  <hr/> 
-  <p><img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (ETH): <span id="myEthDeposit">0</span></p>
-  <p><img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (USDT): <span id="myUsdtDeposit">0</span></p>
-  <p><img src="bb.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">My Deposits (BabyDoge): <span id="myBabyDogeDeposit">0</span></p>
-</div>
+    <div class="modal-body" id="walletInfo">
+      <p style="font-family: monospace; color: var(--cyan-main);">Address: <span id="walletAddress">...</span></p>
+      <hr style="border-color: #333;">
+      
+      <div class="balance-line"><img src="eth.svg"> <span>ETH: <b id="ethBalance">0</b></span></div>
+      <div class="balance-line"><img src="usdt.svg"> <span>USDT: <b id="usdtBalance">0</b></span></div>
+      <div class="balance-line"><img src="bb.svg"> <span>BabyDoge: <b id="babyDogeBalance">0</b></span></div>
+      <div class="balance-line" style="color: #00ff88;"><img src="bb.svg" style="filter: hue-rotate(90deg);"> <span>Free Balance: <b id="freeBalance">0</b></span></div>
+      
+      <hr style="border-color: #333;">
+      
+      <p style="color: #888; font-size: 12px; margin-bottom: 5px;">MY DEPOSITS (THIS ROUND):</p>
+      <div class="balance-line"><img src="eth.svg"> <span><b id="myEthDeposit">0</b></span></div>
+      <div class="balance-line"><img src="usdt.svg"> <span><b id="myUsdtDeposit">0</b></span></div>
+      <div class="balance-line"><img src="bb.svg"> <span><b id="myBabyDogeDeposit">0</b></span></div>
+      
+      <div class="balance-line" style="color: #00ff88;">
+          <img src="bb.svg" style="filter: hue-rotate(90deg);"> 
+          <span><b id="myFreeDeposit">0</b> (Free)</span>
+      </div>
+    </div>
     <div class="modal-footer">
       <button id="disconnectBtn" class="modal-btn modal-btn-disconnect">Disconnect</button>
     </div>
@@ -3008,29 +3018,36 @@ async function updateUserBalances() {
 
 
     // --- (Update Deposit V3: Tambah BabyDoge) ---
-    async function updateMyDeposits() {
-        if (!faylottoContract || !currentRoundId || !userAddress) {
-            myEthDeposit.innerText = "0"; myUsdtDeposit.innerText = "0"; myBabyDogeDeposit.innerText = "0";
-            myCurrentEthDeposit = ethers.BigNumber.from(0); 
-            myCurrentUsdtDeposit = ethers.BigNumber.from(0);
-            myCurrentBabyDogeDeposit = ethers.BigNumber.from(0);
-            return;
-        }
-        try {
-            // V3: getPlayerDeposits mengembalikan 4 nilai
-            const deposits = await faylottoContract.getPlayerDeposits(currentRoundId, userAddress);
-            myCurrentEthDeposit = deposits.ethAmount; 
-            myCurrentUsdtDeposit = deposits.usdtAmount;
-            myCurrentBabyDogeDeposit = deposits.babyDogeAmount;
-            
-            myEthDeposit.innerText = parseFloat(ethers.utils.formatEther(deposits.ethAmount)).toFixed(5);
-            myUsdtDeposit.innerText = parseFloat(ethers.utils.formatUnits(deposits.usdtAmount, usdtDecimals)).toFixed(2);
-            myBabyDogeDeposit.innerText = parseFloat(ethers.utils.formatUnits(deposits.babyDogeAmount, babyDogeDecimals)).toFixed(2);
-            
-        } catch (err) {
-            console.error("Could not fetch user deposits:", err.message);
-        }
+async function updateMyDeposits() {
+    if (!faylottoContract || !currentRoundId || !userAddress) {
+        document.getElementById("myEthDeposit").innerText = "0";
+        document.getElementById("myUsdtDeposit").innerText = "0";
+        document.getElementById("myBabyDogeDeposit").innerText = "0";
+        document.getElementById("myFreeDeposit").innerText = "0";
+        return;
     }
+
+    try {
+        // 1. Ambil data deposit asli dari kontrak
+        const d = await faylottoContract.getPlayerDeposits(currentRoundId, userAddress);
+        document.getElementById("myEthDeposit").innerText = parseFloat(ethers.utils.formatEther(d.ethAmount)).toFixed(5);
+        document.getElementById("myUsdtDeposit").innerText = parseFloat(ethers.utils.formatUnits(d.usdtAmount, usdtDecimals)).toFixed(2);
+        document.getElementById("myBabyDogeDeposit").innerText = parseFloat(ethers.utils.formatUnits(d.babyDogeAmount, babyDogeDecimals)).toFixed(0);
+
+        // 2. [BARU] Ambil data deposit FREE dari state lokal 'players'
+        // (Karena 'getPlayerDeposits' di kontrak belum return free amount)
+        const key = userAddress.toLowerCase();
+        if (players[key] && players[key].free) {
+            const freeFmt = parseFloat(ethers.utils.formatUnits(players[key].free, babyDogeDecimals)).toFixed(0);
+            document.getElementById("myFreeDeposit").innerText = freeFmt;
+        } else {
+            document.getElementById("myFreeDeposit").innerText = "0";
+        }
+
+    } catch(e) {
+        console.error("Error update deposits", e);
+    }
+}
 
   function startVisualTimer(endTime) {
   // ... (Tidak ada perubahan pada fungsi ini) ...
