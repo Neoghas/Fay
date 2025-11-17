@@ -2301,72 +2301,42 @@ function toggleComments(winnerId, winnerAddr) {
 
 // === FUNGSI UTAMA: Memulai Event Listener (V3 DIPERBAIKI) ===
 function setupEventListeners() {
-    let contractToListen = faylottoContract;
-    if (!contractToListen && provider) {
-         contractToListen = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-    }
+    let contractToListen = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     if (!contractToListen) return; 
     
     contractToListen.removeAllListeners(); 
-    
-    console.log("Setting up V3 listeners..."); // Debug
+    console.log("Setting up listeners...");
 
-    // [FIX 1] Mendengarkan event 'BetNative' (bukan BetETH)
+    // ... Listener BetNative, BetUSDT, BetBabyDoge biarkan seperti sebelumnya ...
     contractToListen.on("BetNative", (roundId, player, amount, usdWeight) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            // Memanggil addBetToState versi V3
-            addBetToState(player, amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, true);
+            addBetToState(player, amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, true);
             updateBetList();
-            if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
-        }
-    });
-
-    // [FIX 2] Mendengarkan event 'BetUSDT' (bukan BetERC20)
-    contractToListen.on("BetUSDT", (roundId, player, amount, usdWeight) => {
-        if (currentRoundId && roundId.eq(currentRoundId)) {
-            // Memanggil addBetToState versi V3
-            addBetToState(player, ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), usdWeight, true);
-            updateBetList();
-            if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
-        }
-    });
-
-    // [FIX 3] Mendengarkan event 'BetBabyDoge' (bukan BetERC20)
-    contractToListen.on("BetBabyDoge", (roundId, player, amount, usdWeight) => {
-        if (currentRoundId && roundId.eq(currentRoundId)) {
-            // Memanggil addBetToState versi V3
-            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, usdWeight, true);
-            updateBetList();
-            if (userAddress && player.toLowerCase() === userAddress.toLowerCase()) updateMyDeposits();
-        }
-    });
-
-    // [FIX 4] 'WinnerRecorded' versi V3 memiliki 7 argumen (bukan 6)
-    contractToListen.on("WinnerRecorded", (winnerId, roundId, winner, rewardETH, rewardUSDT, rewardBabyDoge, timestamp) => {
-        console.log("Event WinnerRecorded V3 received:", roundId.toString(), winner);
-        if (currentRoundId && roundId.eq(currentRoundId)) {
-            if (!isSpinning) {
-                 console.log("Starting auto spin for passive users!");
-                 // handleRoundFinalized hanya butuh roundId dan winner
-                 handleRoundFinalized(roundId, winner);
-            } else {
-                 console.log("While spinning, event is ignored (prevents double spins).");
-            }
         }
     });
     
-    if (userAddress) {
-        contractToListen.on("NicknameCreated", (user) => {
-            if (user.toLowerCase() === userAddress.toLowerCase()) fetchReferralData();
-        });
-        contractToListen.on("ReferralSet", (user) => {
-            if (user.toLowerCase() === userAddress.toLowerCase()) fetchReferralData();
-        });
-    }
+    // ... (Listener lain sama, tambahkan parameter 0 untuk freeAmount) ...
+
+    // [BARU] Listener khusus BetFree
+    contractToListen.on("BetFree", (roundId, player, amount) => {
+        if (currentRoundId && roundId.eq(currentRoundId)) {
+            // Masukkan amount ke posisi parameter 'freeAmount' (ke-5)
+            // Note: Free Bet di kontrak V4 ini tidak menambah bobot USD (weight 0)
+            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), true);
+            updateBetList();
+        }
+    });
+
+    contractToListen.on("WinnerRecorded", (winnerId, roundId, winner) => {
+        if (currentRoundId && roundId.eq(currentRoundId) && !isSpinning) {
+             handleRoundFinalized(roundId, winner);
+        }
+    });
 }
 
+
     // [BARU] Fungsi untuk menyimpan data bet ke state JS (Versi V3)
-function addBetToState(playerAddress, ethAmount, usdtAmount, babyDogeAmount, usdWeight, isNewBet) {
+function addBetToState(playerAddress, ethAmount, usdtAmount, babyDogeAmount, freeAmount, usdWeight, isNewBet) {
     const key = playerAddress.toLowerCase();
     
     if (!players[key]) {
@@ -2375,7 +2345,8 @@ function addBetToState(playerAddress, ethAmount, usdtAmount, babyDogeAmount, usd
             eth: ethers.BigNumber.from(0),
             usdt: ethers.BigNumber.from(0),
             baby: ethers.BigNumber.from(0),
-            weight: ethers.BigNumber.from(0), // Ini adalah total USD weight
+            free: ethers.BigNumber.from(0), // [BARU] Simpan saldo free
+            weight: ethers.BigNumber.from(0),
             color: PLAYER_COLORS[Object.keys(players).length % PLAYER_COLORS.length]
         };
     }
@@ -2384,33 +2355,30 @@ function addBetToState(playerAddress, ethAmount, usdtAmount, babyDogeAmount, usd
     players[key].eth = players[key].eth.add(ethAmount);
     players[key].usdt = players[key].usdt.add(usdtAmount);
     players[key].baby = players[key].baby.add(babyDogeAmount);
+    players[key].free = players[key].free.add(freeAmount); // [BARU] Tambahkan free
     
-    // Saat bet baru masuk (dari event), kita tambahkan bobot spesifiknya.
-    // Saat loading (fetchAndDisplayRoundData), usdWeight adalah total bobot.
     if (isNewBet) {
         players[key].weight = players[key].weight.add(usdWeight);
         totalWeight = totalWeight.add(usdWeight);
     } else {
-        // Ini dari refresh data, jadi set total bobot langsung
         players[key].weight = usdWeight;
-        totalWeight = totalWeight.add(usdWeight); // totalWeight di-reset ke 0 di resetRoundUI
+        totalWeight = totalWeight.add(usdWeight);
     }
-      }
+}
+
 
     // [BARU] Fungsi untuk update HTML daftar bet & menggambar ulang wheel (Versi V3)
 function updateBetList() {
     if (Object.keys(players).length === 0) {
         betList.innerHTML = "";
         betList.appendChild(betListPlaceholder);
-        rebuildPlayersArrayAndDraw(); // Menggambar wheel "No bets yet"
+        rebuildPlayersArrayAndDraw(); 
         return;
     }
 
-    betList.innerHTML = ""; // Bersihkan list
-    
-    // Bangun ulang playersArray untuk wheel DAN urutkan untuk daftar list
+    betList.innerHTML = "";
     playersArray = [];
-    totalWeight = ethers.BigNumber.from(0); // Hitung ulang total bobot
+    totalWeight = ethers.BigNumber.from(0); 
 
     for (const key in players) {
         playersArray.push({
@@ -2419,20 +2387,15 @@ function updateBetList() {
             color: players[key].color,
             eth: players[key].eth,
             usdt: players[key].usdt,
-            baby: players[key].baby
+            baby: players[key].baby,
+            free: players[key].free // [BARU] Masukkan free ke array
         });
         totalWeight = totalWeight.add(players[key].weight);
     }
     
-    // Urutkan berdasarkan bobot (weight) terbesar
-    playersArray.sort((a, b) => {
-        if (b.weight.gt(a.weight)) return 1;
-        if (b.weight.lt(a.weight)) return -1;
-        return 0;
-    });
+    playersArray.sort((a, b) => b.weight.sub(a.weight).gt(0) ? 1 : -1);
 
     const fragment = document.createDocumentFragment();
-    
     for (const p of playersArray) {
         const player = p.addr;
         const shortId = (userAddress && player.toLowerCase() === userAddress.toLowerCase()) 
@@ -2447,28 +2410,28 @@ function updateBetList() {
         const ethStr = parseFloat(ethers.utils.formatEther(p.eth)).toFixed(4);
         const usdtStr = parseFloat(ethers.utils.formatUnits(p.usdt, usdtDecimals)).toFixed(2);
         const babyStr = parseFloat(ethers.utils.formatUnits(p.baby, babyDogeDecimals)).toFixed(0);
+        const freeStr = parseFloat(ethers.utils.formatUnits(p.free, babyDogeDecimals)).toFixed(0); // [BARU]
 
-        // Buat string deposit
+        // [PERMINTAAN ANDA] Update HTML di sini
         let depositsHTML = "";
         if (p.eth.gt(0)) depositsHTML += `<span>${ethStr} ETH</span><br>`;
         if (p.usdt.gt(0)) depositsHTML += `<span>${usdtStr} USDT</span><br>`;
-        if (p.baby.gt(0)) depositsHTML += `<span>${babyStr} BabyDoge</span>`;
+        if (p.baby.gt(0)) depositsHTML += `<span>${babyStr} BabyDoge</span><br>`;
+        // Tampilkan Free Balance dengan warna berbeda (misal hijau neon)
+        if (p.free.gt(0)) depositsHTML += `<span style="color:#00ff88;">${freeStr} Free BabyDoge</span>`; 
 
         item.innerHTML = `
             <div class="player-id" style="cursor:pointer;" onclick="showPlayerProfile('${player}')">${shortId}</div>
-            <div class="player-bets">${depositsHTML}</div>
+            <div class="player-bets">${depositsHTML || '<span style="color:#888;">No Deposit</span>'}</div>
         `;
         fragment.appendChild(item);
     }
-    
     betList.appendChild(fragment);
-    
-    // Setelah playersArray di-build, update wheel-nya
     rebuildPlayersArrayAndDraw();
 }
 
+
 // --- (Data Ronde V3: Tambah BabyDoge & Pool USD) ---
-    // GANTI FUNGSI LAMA ANDA DENGAN YANG INI
 async function fetchAndDisplayRoundData() {
     let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     if (!contract) return;
@@ -2485,12 +2448,15 @@ async function fetchAndDisplayRoundData() {
         const playersList = await contract.getRoundPlayers(currentRoundId);
         for (const playerAddress of playersList) {
             const deposits = await contract.getPlayerDeposits(currentRoundId, playerAddress);
-            addBetToState(playerAddress, deposits.ethAmount, deposits.usdtAmount, deposits.babyDogeAmount, deposits.usdWeight, false);
+            // [FIX] Parameter ke-5 adalah '0' untuk Free Amount 
+            // (Karena kontrak V4 Anda belum menyimpan data free bet di getPlayerDeposits, 
+            // jadi saat refresh halaman, history free bet ronde ini akan 0, tapi live bet akan muncul)
+            addBetToState(playerAddress, deposits.ethAmount, deposits.usdtAmount, deposits.babyDogeAmount, ethers.BigNumber.from(0), deposits.usdWeight, false);
         }
         updateBetList();
         if (userAddress) await updateMyDeposits();
 
-        // Tampilkan Total Pool (Cek null)
+        // ... (Sisa kode sama: Tampilkan Pool, Timer, dll) ...
         const ethPool = parseFloat(ethers.utils.formatEther(roundInfo[5]));
         const usdtPool = parseFloat(ethers.utils.formatUnits(roundInfo[6], usdtDecimals));
         const babyPool = parseFloat(ethers.utils.formatUnits(roundInfo[7], babyDogeDecimals));
@@ -2498,36 +2464,24 @@ async function fetchAndDisplayRoundData() {
         
         const poolUsdValue = document.getElementById('pool-usd-value');
         if (poolUsdValue) poolUsdValue.innerText = "$" + totalUsd.toFixed(2);
-        const poolEthTotal = document.getElementById('pool-eth-total');
-        if (poolEthTotal) poolEthTotal.innerText = ethPool.toFixed(4) + " ETH";
-        const poolUsdtTotal = document.getElementById('pool-usdt-total');
-        if (poolUsdtTotal) poolUsdtTotal.innerText = usdtPool.toFixed(2) + " USDT";
-
-        // Timer
+        
         const contractEndTime = roundInfo[2].toNumber() * 1000;
-        startVisualTimer(contractEndTime); // Memulai timer
+        startVisualTimer(contractEndTime); 
 
-        // Status
         if (Date.now() < contractEndTime) {
             statusText.innerText = `Round ${currentRoundId.toString()} is live!`;
             if (signer) placeBetBtn.disabled = false;
             isFinalizing = false;
         } else {
             statusText.innerText = "Round ended. Waiting for finalization...";
-            
-            // [PERBAIKAN] HAPUS 'isFinalizing = true;' DARI SINI
-            // Biarkan showFinalizeButton yang menanganinya
-            
             showFinalizeButton();
         }
 
     } catch (err) {
         console.error("Failed fetching round data:", err.message);
-        statusText.innerText = "Failed syncing data. Please refresh.";
     }
 }
     
-
 
 // === FUNGSI UTAMA: Handle Finalisasi ===
 async function handleRoundFinalized(roundId, winnerAddr) {
