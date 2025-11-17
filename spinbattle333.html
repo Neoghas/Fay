@@ -1477,8 +1477,10 @@
   <center><p>
 <span style="color:#f0f0f0; font-size: 13px;">Note:</span><br>
 <span style="color:#ccba00; font-size: 12px;">
-  Minimum bet is 0.00005 ETH or 0.5 USDT<br>
-  Maximum bet is 0.00256 ETH or 10 USDT<br>
+  Min bet is 0.00005 ETH Max 0.00256 ETH<br>
+  Min bet is 0.5 ETH Max 10 USDT<br>
+  Min bet is 1M BabyDoge Max 10M BabyDoge<br>
+  Min bet is 500k FreeBabyDoge Max 10B FreeBabyDoge<br>
   Maximum bets are 2 per round
 </span>
   </p></center>
@@ -2707,7 +2709,7 @@ function setAmountByPercent(percent) {
     } else if (currency === 'FREE') {
         userBalanceBN = rawFreeBalance || ethers.BigNumber.from(0); // Ambil dari saldo gratis global
         decimalsToDisplay = 0;
-        min = 1000000; // Min 1 Juta
+        min = 500000; // Min 1 Juta
         max = 10000000000; // Max 10 Miliar
     } else {
         return; // Tidak melakukan apa-apa jika currency tidak dikenal
@@ -2811,12 +2813,12 @@ async function confirmBet() {
             const reason = err.reason || (err.data ? faylottoContract.interface.parseError(err.data)?.args[0] : null) || err.message;
             if (reason) {
                 if (reason.includes("Not enough free balance")) errorMessage = "Not enough free balance.";
-                else if (reason.includes("Min free bet")) errorMessage = "Minimum bet is 1,000,000.";
+                else if (reason.includes("Min free bet")) errorMessage = "Minimum bet is 500,000.";
                 else if (reason.includes("Max free bet")) errorMessage = "Maximum bet is 10,000,000,000.";
                 else errorMessage = `Failed: ${reason.substring(0, 100)}`;
             }
         }
-        showStatus(errorMessage, "error");
+        showStatus(errorMessage, "warning");
         statusText.innerText = "Transaction failed. Please try again.";
         
     } finally {
