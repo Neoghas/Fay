@@ -2639,67 +2639,83 @@ function hideBetModal() {
 function setAmountByPercent(percent) {
     const currency = betCurrencySelect.value;
     let min, max, decimalsToDisplay, userBalanceBN;
+    let decimals = 18; // Default
 
-    // Ambil BigNumber dari saldo yang relevan
+    // 1. Tentukan Limit & Saldo berdasarkan Currency
     if (currency === 'ETH') {
         userBalanceBN = rawEthBalance || ethers.BigNumber.from(0);
-        decimalsToDisplay = 8;
-        min = 0.00005; 
-        max = 0.00265; // Sesuai MAX_BET_NATIVE
+        decimalsToDisplay = 8; // Tampilkan lebih presisi untuk ETH
+        min = "0.00005"; 
+        max = "0.00265"; 
+        decimals = 18;
     } else if (currency === 'USDT') {
         userBalanceBN = rawUsdtBalance || ethers.BigNumber.from(0);
         decimalsToDisplay = 2;
-        min = 0.5; 
-        max = 10.0; // Sesuai MAX_BET_USDT_UNSCALED
+        min = "0.5"; 
+        max = "10.0"; 
+        decimals = usdtDecimals;
     } else if (currency === 'BABYDOGE') {
         userBalanceBN = rawBabyDogeBalance || ethers.BigNumber.from(0);
         decimalsToDisplay = 0;
-        min = 1000000; 
-        max = 10000000000; // 10 Miliar
+        min = "1000000"; 
+        max = "10000000000"; 
+        decimals = babyDogeDecimals;
     } else if (currency === 'FREE') {
-        userBalanceBN = rawFreeBalance || ethers.BigNumber.from(0); // Ambil dari saldo gratis global
+        userBalanceBN = rawFreeBalance || ethers.BigNumber.from(0);
         decimalsToDisplay = 0;
-        min = 500000; // Min 1 Juta
-        max = 10000000000; // Max 10 Miliar
+        min = "500000"; 
+        max = "10000000000"; 
+        decimals = 18; // Asumsi Free pakai 18 desimal
     } else {
-        return; // Tidak melakukan apa-apa jika currency tidak dikenal
+        return; 
     }
 
-    // Tentukan desimal untuk konversi
-    let decimals = 18; // Default untuk ETH & FREE
-    if (currency === 'USDT') decimals = usdtDecimals;
-    if (currency === 'BABYDOGE') decimals = babyDogeDecimals;
-
-    // Konversi min/max ke BigNumber
-    const minBN = ethers.utils.parseUnits(min.toString(), decimals);
-    const maxBN = ethers.utils.parseUnits(max.toString(), decimals);
+    // Konversi min/max string ke BigNumber
+    const minBN = ethers.utils.parseUnits(min, decimals);
+    const maxBN = ethers.utils.parseUnits(max, decimals);
 
     let amountToSetBN;
 
-    if (percent === 0.10) { // Tombol MIN
+    // 2. LOGIKA PERBAIKAN UTAMA DI SINI
+    if (percent === 0.10) { 
+        // Jika tombol MIN ditekan, langsung set ke Minimum Bet (bukan 10%)
         amountToSetBN = minBN;
-    } else if (percent === 1.00) { // Tombol MAX
-        // MAX adalah yang terkecil antara (Saldo User) ATAU (Cap Kontrak)
-        amountToSetBN = userBalanceBN.lt(maxBN) ? userBalanceBN : maxBN;
     } else {
-        // Persentase dari saldo user
-        amountToSetBN = userBalanceBN.mul(Math.floor(percent * 100)).div(100);
+        // Tentukan "Base Calculation" (Dasar Perhitungan)
+        // Jika Saldo User > Max Cap, maka hitung % dari Max Cap.
+        // Jika Saldo User < Max Cap, maka hitung % dari Saldo User.
+        let calculationBase = userBalanceBN.lt(maxBN) ? userBalanceBN : maxBN;
+
+        if (percent === 1.00) {
+            amountToSetBN = calculationBase;
+        } else {
+            // Hitung persentase dari calculationBase
+            // Contoh: 75% -> (Base * 75) / 100
+            amountToSetBN = calculationBase.mul(Math.floor(percent * 100)).div(100);
+        }
     }
 
-    // Validasi akhir: pastikan tidak kurang dari MIN atau lebih dari MAX
-    if (amountToSetBN.lt(minBN)) amountToSetBN = minBN;
-    if (amountToSetBN.gt(maxBN)) amountToSetBN = maxBN;
-    
-    // Validasi terpenting: pastikan tidak lebih dari yang dimiliki user
-    if (amountToSetBN.gt(userBalanceBN)) amountToSetBN = userBalanceBN;
+    // 3. Validasi Akhir
+    // Jangan biarkan kurang dari Minimum Bet (kecuali saldonya emang 0)
+    if (amountToSetBN.lt(minBN) && userBalanceBN.gte(minBN)) {
+        amountToSetBN = minBN;
+    }
+    // Jangan biarkan lebih dari Max Bet (safety check)
+    if (amountToSetBN.gt(maxBN)) {
+        amountToSetBN = maxBN;
+    }
+    // Jangan biarkan melebihi saldo user
+    if (amountToSetBN.gt(userBalanceBN)) {
+        amountToSetBN = userBalanceBN;
+    }
 
-    // Format kembali ke string untuk ditampilkan di input
+    // 4. Tampilkan ke Input
     const formattedAmount = ethers.utils.formatUnits(amountToSetBN, decimals);
     
-    // Tampilkan dengan desimal yang sesuai
+    // Trik: Hapus desimal berlebih biar tidak error di UI (misal 1.00000000)
+    // Parse float dulu baru toFixed sesuai mata uang
     betAmountInput.value = parseFloat(formattedAmount).toFixed(decimalsToDisplay);
 }
-    
 
 // --- (Confirm Bet V3: Panggil Fungsi Baru) ---
 async function confirmBet() {
