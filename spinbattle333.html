@@ -2295,73 +2295,73 @@ function toggleComments(winnerId, winnerAddr) {
     }
 }
 
-// === FUNGSI UTAMA: Memulai Event Listener (V3 DIPERBAIKI) ===
+// GANTI SELURUH FUNGSI setupEventListeners DENGAN INI:
+
 function setupEventListeners() {
+    // Gunakan kontrak yang sudah ada atau buat provider baru jika belum connect
     let contractToListen = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    
     if (!contractToListen) return; 
     
+    // Hapus listener lama agar tidak double trigger
     contractToListen.removeAllListeners(); 
     console.log("Setting up listeners...");
 
-    // ... Listener BetNative, BetUSDT, BetBabyDoge biarkan seperti sebelumnya ...
+    // 1. Listener ETH (Native)
     contractToListen.on("BetNative", (roundId, player, amount, usdWeight) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            addBetToState(player, amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, true);
+            // Parameter terakhir 'false' = Mode Accumulate (Realtime)
+            addBetToState(player, amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, false);
             updateBetList();
+            
+            // Update log status kecil
+            if(statusText) statusText.innerText = "New ETH Bet detected!";
+        }
+    });
+
+    // 2. Listener USDT
+    contractToListen.on("BetUSDT", (roundId, player, amount, usdWeight) => {
+        if (currentRoundId && roundId.eq(currentRoundId)) {
+            // Parameter terakhir 'false' = Mode Accumulate (Realtime)
+            addBetToState(player, ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, false);
+            updateBetList();
+            
+            if(statusText) statusText.innerText = "New USDT Bet detected!";
+        }
+    });
+
+    // 3. Listener BabyDoge
+    contractToListen.on("BetBabyDoge", (roundId, player, amount, usdWeight) => {
+        if (currentRoundId && roundId.eq(currentRoundId)) {
+            // Parameter terakhir 'false' = Mode Accumulate (Realtime)
+            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), usdWeight, false);
+            updateBetList();
+            
+            if(statusText) statusText.innerText = "New BabyDoge Bet detected!";
         }
     });
     
-    // ... (Listener lain sama, tambahkan parameter 0 untuk freeAmount) ...
-
-    // [BARU] Listener khusus BetFree
+    // 4. Listener Free Bet
     contractToListen.on("BetFree", (roundId, player, amount) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            // Masukkan amount ke posisi parameter 'freeAmount' (ke-5)
-            // Note: Free Bet di kontrak V4 ini tidak menambah bobot USD (weight 0)
-            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), true);
+            // Parameter Free Amount ada di posisi ke-5
+            // Weight 0 karena Free Bet tidak menambah bobot USD
+            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), false);
             updateBetList();
+            
+            if(statusText) statusText.innerText = "New Free Bet detected!";
         }
     });
 
+    // 5. Listener Pemenang (Finalize)
     contractToListen.on("WinnerRecorded", (winnerId, roundId, winner) => {
         if (currentRoundId && roundId.eq(currentRoundId) && !isSpinning) {
+             console.log("Winner Event Received:", winner);
              handleRoundFinalized(roundId, winner);
         }
     });
 }
-
-
-    // [BARU] Fungsi untuk menyimpan data bet ke state JS (Versi V3)
-function addBetToState(playerAddress, ethAmount, usdtAmount, babyDogeAmount, freeAmount, usdWeight, isNewBet) {
-    const key = playerAddress.toLowerCase();
     
-    if (!players[key]) {
-        players[key] = {
-            id: playerAddress,
-            eth: ethers.BigNumber.from(0),
-            usdt: ethers.BigNumber.from(0),
-            baby: ethers.BigNumber.from(0),
-            free: ethers.BigNumber.from(0), // [BARU] Simpan saldo free
-            weight: ethers.BigNumber.from(0),
-            color: PLAYER_COLORS[Object.keys(players).length % PLAYER_COLORS.length]
-        };
-    }
-    
-    // Tambahkan jumlah baru ke total yang ada
-    players[key].eth = players[key].eth.add(ethAmount);
-    players[key].usdt = players[key].usdt.add(usdtAmount);
-    players[key].baby = players[key].baby.add(babyDogeAmount);
-    players[key].free = players[key].free.add(freeAmount); // [BARU] Tambahkan free
-    
-    if (isNewBet) {
-        players[key].weight = players[key].weight.add(usdWeight);
-        totalWeight = totalWeight.add(usdWeight);
-    } else {
-        players[key].weight = usdWeight;
-        totalWeight = totalWeight.add(usdWeight);
-    }
-}
-
 
     // [BARU] Fungsi untuk update HTML daftar bet & menggambar ulang wheel (Versi V3)
 function updateBetList() {
@@ -2434,25 +2434,42 @@ async function fetchAndDisplayRoundData() {
 
     try {
         statusText.innerText = "Syncing round data...";
+        // Update harga jika belum ada
         if (currentEthPrice === 0) await fetchTokenPrices();
 
         currentRoundId = await contract.currentRoundId();
         const roundInfo = await contract.getRoundBasic(currentRoundId);
 
+        // Reset UI sebelum mengisi ulang
         resetRoundUI();
 
         const playersList = await contract.getRoundPlayers(currentRoundId);
+        
+        // Loop semua pemain
         for (const playerAddress of playersList) {
             const deposits = await contract.getPlayerDeposits(currentRoundId, playerAddress);
-            // [FIX] Parameter ke-5 adalah '0' untuk Free Amount 
-            // (Karena kontrak V4 Anda belum menyimpan data free bet di getPlayerDeposits, 
-            // jadi saat refresh halaman, history free bet ronde ini akan 0, tapi live bet akan muncul)
-            addBetToState(playerAddress, deposits.ethAmount, deposits.usdtAmount, deposits.babyDogeAmount, ethers.BigNumber.from(0), deposits.usdWeight, false);
+            
+            // [PERBAIKAN UTAMA]
+            // Parameter terakhir 'true' artinya: "Ini adalah TOTAL deposit, jangan ditambah lagi!"
+            // Parameter ke-5 (freeAmount) kita set 0 dulu karena contract V3 belum return free balance di getPlayerDeposits
+            // Tapi logika isTotal=true akan mencegah bug double counting pada ETH/USDT/BabyDoge
+            addBetToState(
+                playerAddress, 
+                deposits.ethAmount, 
+                deposits.usdtAmount, 
+                deposits.babyDogeAmount, 
+                ethers.BigNumber.from(0), // Free amount placeholder (jika kontrak blm support read)
+                deposits.usdWeight, 
+                true // <--- PENTING: isTotal = true
+            );
         }
+        
+        // Gambar ulang list dan roda
         updateBetList();
+        
         if (userAddress) await updateMyDeposits();
 
-        // ... (Sisa kode sama: Tampilkan Pool, Timer, dll) ...
+        // Update Info Pool (Sama seperti sebelumnya)
         const ethPool = parseFloat(ethers.utils.formatEther(roundInfo[5]));
         const usdtPool = parseFloat(ethers.utils.formatUnits(roundInfo[6], usdtDecimals));
         const babyPool = parseFloat(ethers.utils.formatUnits(roundInfo[7], babyDogeDecimals));
@@ -2722,7 +2739,6 @@ async function confirmBet() {
     const amountStr = betAmountInput.value;
     const currency = betCurrencySelect.value;
     
-    // [FIX] Validasi Amount wajib untuk SEMUA tipe, termasuk FREE
     if (!amountStr || parseFloat(amountStr) <= 0) {
         return showStatus("Please enter a valid amount.", "warning");
     }
@@ -2744,47 +2760,47 @@ async function confirmBet() {
                 tx = await placeBetBabyDoge(amountStr);
                 break;
             case 'FREE':
-                // [UPGRADE V4] Mengambil input amount untuk Free Bet
-                // Asumsi input user adalah angka bulat (misal 1000000)
-                // Dan desimal di kontrak adalah 18
-                const freeAmountWei = ethers.utils.parseUnits(amountStr, babyDogeDecimals); // Gunakan desimal BabyDoge (18)
-
+                const freeAmountWei = ethers.utils.parseUnits(amountStr, babyDogeDecimals); 
                 showStatus("Using Free Balance... please confirm.", "info");
-                
-                // Panggil fungsi baru di kontrak: placeBetFree(amount)
                 tx = await faylottoContract.placeBetFree(freeAmountWei);
                 break;
             default:
                 throw new Error("Invalid currency selected.");
         }
         
-        showStatus("Bet sent! Awaiting confirmation...", "load", 10000);
+        showStatus("Bet sent! Awaiting confirmation...", "load", 15000);
         statusText.innerText = `Bet sent! Awaiting confirmation...`;
         
+        // Tunggu transaksi selesai
         await tx.wait();
         
         playSound('sfx-coin');
-        showStatus("Bet confirmed! Good luck.", "success");
-        statusText.innerText = `Bet confirmed! Good luck.`;
+        showStatus("Bet confirmed! Refreshing data...", "success");
+        statusText.innerText = `Bet confirmed! Refreshing data...`;
         
         hideBetModal();
+        
+        // [PERBAIKAN AUTO REFRESH]
+        // 1. Update saldo user
         await updateUserBalances(); 
+        
+        // 2. Tunggu 1 detik agar node RPC sempat mengindeks data baru
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // 3. Refresh total list taruhan dari blockchain
+        await fetchAndDisplayRoundData(); 
 
     } catch (err) {
         console.error("Bet failed:", err);
         let errorMessage = "Transaction failed!";
+        // ... (Error handling tetap sama) ...
         if (err.code === 'ACTION_REJECTED') {
             errorMessage = "User rejected transaction.";
         } else {
             const reason = err.reason || (err.data ? faylottoContract.interface.parseError(err.data)?.args[0] : null) || err.message;
-            if (reason) {
-                if (reason.includes("Not enough free balance")) errorMessage = "Not enough free balance.";
-                else if (reason.includes("Min free bet")) errorMessage = "Minimum bet is 500,000.";
-                else if (reason.includes("Max free bet")) errorMessage = "Maximum bet is 10,000,000,000.";
-                else errorMessage = `Failed: ${reason.substring(0, 100)}`;
-            }
+            if (reason) errorMessage = `Failed: ${reason.substring(0, 100)}`;
         }
-        showStatus(errorMessage, "warning");
+        showStatus(errorMessage, "error"); // Ganti ke 'error' style
         statusText.innerText = "Transaction failed. Please try again.";
         
     } finally {
