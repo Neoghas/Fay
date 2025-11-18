@@ -1570,63 +1570,62 @@
   </div>
   
   <div class="modal-overlay" id="referral-modal-overlay"></div>
-  <div class="modal" id="referral-modal">
-    <div class="modal-body">
+<div class="modal" id="referral-modal">
+  <div class="modal-header">
+    <h2>Referral System</h2>
+    <button class="modal-close-btn" id="referral-modal-close-btn">&times;</button>
+  </div>
+  <div class="modal-body">
+      
+    <div class="ref-section">
+        <h3>My Info</h3>
+        <div class="ref-info">
+            My Nickname: <span id="myNickname">-</span><br/>
+            My Referrer: <span id="myReferrer">-</span>
+        </div>
+    </div>
     
-  <div class="ref-section">
-      <h3>My Info</h3>
-      <div class="ref-info">
-          My Nickname: <span id="myNickname">-</span><br/>
-          My Referrer: <span id="myReferrer">-</span>
-      </div>
-  </div>
-  
-  <div class="ref-section">
-      <h3>Create/Update Nickname</h3>
-      <div class="input-group">
-          <input type="text" id="nicknameInput" placeholder="Enter your nickname">
-      </div>
-      <button id="createNicknameBtn" class="modal-btn">Create</button>
-  </div>
-
-  <div class="ref-section" id="referralLinkSection" style="display: none;">
-        <h3>Your Referral Link</h3>
+    <div class="ref-section">
+        <h3>Create/Update Nickname</h3>
         <div class="input-group">
-            <input type="text" id="referralLinkInput" readonly style="cursor: pointer;">
+            <input type="text" id="nicknameInput" placeholder="Enter your nickname">
         </div>
-        <br><button id="copyReferralBtn" class="modal-btn">Copy Link</button>
-  </div>
-  
-  <div class="ref-section">
-    <h3>My Rewards</h3>
-    <div class="ref-info">
-        <!-- ETH -->
-        <div style="margin-bottom: 4px;">
-            <img src="eth.svg" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
-            ETH: <span id="ethRewards" style="color:var(--cyan-main); font-weight:bold;">0</span>
-        </div>
-
-        <!-- USDT -->
-        <div style="margin-bottom: 4px;">
-            <img src="usdt.svg" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
-            USDT: <span id="usdtRewards" style="color:var(--cyan-main); font-weight:bold;">0</span>
-        </div>
-        
-        <!-- [BARU] BABY DOGE -->
-        <div style="margin-bottom: 4px;">
-            <img src="bb.svg" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
-            BabyDoge: <span id="babyDogeRewards" style="color:var(--cyan-main); font-weight:bold;">0</span>
-        </div>
-
-        <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 8px 0;">
-        
-        <img src="ref.png" width="20" height="20" style="vertical-align: middle; margin-right: 5px;">
-        Total Referrals: <span id="referralCount">0</span>
-
+        <button id="createNicknameBtn" class="modal-btn">Create</button>
     </div>
-  </div>
 
+    <div class="ref-section" id="referralLinkSection" style="display: none;">
+          <h3>Your Referral Link</h3>
+          <div class="input-group">
+              <input type="text" id="referralLinkInput" readonly style="cursor: pointer;">
+          </div>
+          <br><button id="copyReferralBtn" class="modal-btn">Copy Link</button>
     </div>
+    
+    <div class="ref-section">
+        <h3>My Rewards</h3>
+        <div class="ref-info">
+
+            <img src="eth.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+            ETH Rewards: <span id="ethRewards">0</span><br/>
+
+            <img src="usdt.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+            USDT Rewards: <span id="usdtRewards">0</span><br/>
+            
+            <img src="bb.svg" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+            BabyDoge Rewards: <span id="babyDogeRewards">0</span><br/>
+            
+            <img src="ref.png" width="22" height="22" style="vertical-align: middle; margin-right: 5px;">
+            Total Referrals: <span id="referralCount">0</span>
+
+        </div>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button id="claimRewardsBtn" class="modal-btn">Claim Rewards</button>
+  </div>
+</div>
+
 
   <div class="modal-overlay" id="profile-modal-overlay"></div>
 <div class="modal" id="profile-modal">
@@ -2795,112 +2794,185 @@ async function placeBetUSDT(amountStr) {
 // ===========================================
 // === [BARU] FUNGSI-FUNGSI REFERRAL ===
 // ===========================================
-// --- Tampilkan Modal ---
+// --- Tampilkan & Sembunyikan Modal Referral ---
 async function showReferralModal() {
     if (!signer) {
         showStatus("Connect wallet first!", "warning");
         return;
     }
-    // Tampilkan modal dulu agar user tidak menunggu lama
+    await fetchReferralData(); 
     referralModalOverlay.classList.add("show");
     referralModal.classList.add("show");
-    
-    // Baru fetch data
-    await fetchReferralData(); 
 }
 
-// --- Ambil Data Referral (PERBAIKAN) ---
+function hideReferralModal() {
+    referralModalOverlay.classList.remove("show");
+    referralModal.classList.remove("show");
+}
+
+// --- [DIPERBAIKI] Ambil Data Referral (Support BabyDoge) ---
 async function fetchReferralData() {
     if (!faylottoContract || !userAddress) return;
-
     try {
-        // Pastikan decimals sudah terload
+        // 1. Pastikan decimals sudah ada
         if (!usdtDecimals && usdtContract) {
-            try { usdtDecimals = await usdtContract.decimals(); } catch { usdtDecimals = 6; }
+             try { usdtDecimals = await usdtContract.decimals(); } catch(e) { usdtDecimals = 6; }
         }
         if (!babyDogeDecimals && babyDogeContract) {
-            try { babyDogeDecimals = await babyDogeContract.decimals(); } catch { babyDogeDecimals = 18; } // Default 18 atau 9 tergantung token aslinya
+             try { babyDogeDecimals = await babyDogeContract.decimals(); } catch(e) { babyDogeDecimals = 18; }
+        } else if (!babyDogeDecimals) {
+             babyDogeDecimals = 18; // Default fallback
         }
 
-        // Panggil data dari Smart Contract
+        // 2. Ambil data dari kontrak
         const nick = await faylottoContract.nicknames(userAddress);
         const referrer = await faylottoContract.referrerOf(userAddress);
-        // Di kontrak baru, returns (ethReward, usdtReward, babyDogeReward)
-        const rewards = await faylottoContract.getReferralRewards(userAddress); 
+        
+        // Return struct: { ethReward, usdtReward, babyDogeReward }
+        const rewards = await faylottoContract.getReferralRewards(userAddress);
         const count = await faylottoContract.getReferralCount(userAddress);
         
-        updateReferralUI(nick, referrer, rewards, count);
+        // 3. Panggil UI Update dengan 3 parameter reward
+        updateReferralUI(
+            nick, 
+            referrer, 
+            rewards.ethReward, 
+            rewards.usdtReward,      // Nama variabel baru di kontrak V3
+            rewards.babyDogeReward,  // Nama variabel baru di kontrak V3
+            count
+        );
 
     } catch (err) {
         console.error("Failed fetching referral data:", err);
-        // Jangan tampilkan error jika modal sudah ditutup
-        if(document.getElementById('referral-modal').classList.contains('show')){
-             showStatus("Failed to load referral data.", "error");
-        }
+        showStatus("Failed to load your referral data.", "error");
     }
 }
 
-// --- Update UI (PERBAIKAN + BABY DOGE) ---
-function updateReferralUI(nick, referrer, rewards, count) {
+// --- [DIPERBAIKI] Update UI Modal Referral ---
+function updateReferralUI(nick, referrer, ethReward, usdtReward, babyDogeReward, count) {
     // 1. Update Nickname & Link
-    const myNickElem = document.getElementById("myNickname");
+    const myNicknameEl = document.getElementById("myNickname");
     const linkSection = document.getElementById("referralLinkSection");
     const linkInput = document.getElementById("referralLinkInput");
     
+    myNicknameEl.innerText = nick || "-";
+    
     if (nick) {
-        myNickElem.innerText = nick;
-        myNickElem.style.color = "var(--cyan-main)";
         linkSection.style.display = "block";
         linkInput.value = `${window.location.origin}${window.location.pathname}?ref=${nick}`;
     } else {
-        myNickElem.innerText = "-";
         linkSection.style.display = "none";
     }
     
-    // 2. Update Referrer
-    const myRefElem = document.getElementById("myReferrer");
+    // 2. Update Referrer Info
+    const myReferrerEl = document.getElementById("myReferrer");
+    // Variabel setReferrerSection dihapus jika tidak ada di HTML Anda, saya beri safety check
+    const setReferrerSection = document.getElementById("setReferrerSection"); 
+
     if (referrer === ethers.constants.AddressZero) {
-        myRefElem.innerText = pendingReferrerNickname ? `Pending (${pendingReferrerNickname})` : "-";
-        // Jika Anda punya elemen input set referrer, tampilkan di sini
+        myReferrerEl.innerText = pendingReferrerNickname ? `Pending (${pendingReferrerNickname})` : "-";
+        if (setReferrerSection) setReferrerSection.style.display = "block"; 
     } else {
-        myRefElem.innerText = referrer.slice(0, 6) + "..." + referrer.slice(-4);
+        myReferrerEl.innerText = referrer.slice(0, 6) + "..." + referrer.slice(-4);
+        if (setReferrerSection) setReferrerSection.style.display = "none"; 
     }
     
-    // 3. Update Rewards (LOGIKA BARU)
-    // Struct return dari kontrak: [ethReward, usdtReward, babyDogeReward]
-    
-    const ethVal = rewards.ethReward || rewards[0];
-    const usdtVal = rewards.usdtReward || rewards.erc20Reward || rewards[1]; // Support nama lama/baru/array index
-    const babyVal = rewards.babyDogeReward || rewards[2]; // Nama variabel baru di kontrak
-
-    // Format Angka
-    document.getElementById("ethRewards").innerText = parseFloat(ethers.utils.formatEther(ethVal)).toFixed(6);
-    document.getElementById("usdtRewards").innerText = parseFloat(ethers.utils.formatUnits(usdtVal, usdtDecimals || 6)).toFixed(2);
-    
-    // [BARU] Format BabyDoge
-    // Cek apakah babyVal ada (karena ini variabel baru)
-    if(babyVal) {
-        document.getElementById("babyDogeRewards").innerText = parseFloat(ethers.utils.formatUnits(babyVal, babyDogeDecimals || 18)).toFixed(0);
-    } else {
-        document.getElementById("babyDogeRewards").innerText = "0";
-    }
-
-    document.getElementById("referralCount").innerText = count.toString();
-    
-    // 4. Enable/Disable Claim Button
+    // 3. Update Angka Rewards
+    const ethEl = document.getElementById("ethRewards");
+    const usdtEl = document.getElementById("usdtRewards");
+    const babyEl = document.getElementById("babyDogeRewards"); // Element Baru
+    const countEl = document.getElementById("referralCount");
     const claimBtn = document.getElementById("claimRewardsBtn");
+
+    ethEl.innerText = parseFloat(ethers.utils.formatEther(ethReward)).toFixed(6);
+    usdtEl.innerText = parseFloat(ethers.utils.formatUnits(usdtReward, usdtDecimals)).toFixed(2);
+    // Format BabyDoge (biasanya 0 desimal atau 2 desimal tergantung preferensi, di sini 0 biar rapi)
+    babyEl.innerText = parseFloat(ethers.utils.formatUnits(babyDogeReward, babyDogeDecimals)).toFixed(0);
     
-    // Tombol aktif jika SALAH SATU reward > 0
-    if (ethVal.gt(0) || usdtVal.gt(0) || (babyVal && babyVal.gt(0))) {
+    countEl.innerText = count.toString();
+    
+    // 4. Logic Tombol Claim (Cek 3 Mata Uang)
+    if (ethReward.gt(0) || usdtReward.gt(0) || babyDogeReward.gt(0)) {
         claimBtn.disabled = false;
-        claimBtn.innerText = "Claim Rewards";
-        claimBtn.style.background = "linear-gradient(90deg, var(--blue-main), var(--pink-main))";
     } else {
         claimBtn.disabled = true;
-        claimBtn.innerText = "No Rewards";
-        claimBtn.style.background = "#555";
     }
 }
+
+// --- Create Nickname ---
+async function callCreateNickname() {
+    const input = document.getElementById("nicknameInput");
+    const btn = document.getElementById("createNicknameBtn");
+    const nick = input.value;
+    
+    if (!nick || nick.length < 3) {
+        showStatus("Nickname must be at least 3 characters.", "warning");
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerText = "Processing...";
+    showStatus("Sending transaction...", "load");
+    
+    try {
+        const tx = await faylottoContract.createNickname(nick);
+        await tx.wait();
+        showStatus("Nickname created successfully!", "success");
+        await fetchReferralData(); 
+    } catch (err) {
+        console.error("Failed creating nickname:", err.message);
+        let userMessage = "Failed to create nickname.";
+        const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+        if (reason) {
+             if(reason.includes("taken")) userMessage = "Nickname already taken.";
+             else userMessage = `Failed: ${reason.substring(0, 100)}`;
+        }
+        showStatus(userMessage, "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Create";
+    }
+}
+
+// --- Claim Rewards ---
+async function callClaimRewards() {
+    const btn = document.getElementById("claimRewardsBtn");
+    btn.disabled = true;
+    btn.innerText = "Claiming...";
+    showStatus("Processing claim transaction...", "load");
+
+    try {
+        const tx = await faylottoContract.claimReferralRewards();
+        btn.innerText = "Confirming...";
+        await tx.wait();
+        
+        showStatus("Rewards claimed successfully!", "success");
+        
+        // Refresh data
+        await fetchReferralData(); 
+        await updateUserBalances(); 
+        
+    } catch (err) {
+        console.error("Error claiming rewards:", err.message);
+        let userMessage = "Failed to claim rewards.";
+        const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+        if (reason) {
+            if (reason.includes("no referral rewards")) {
+                userMessage = "You have no rewards to claim.";
+            } else {
+                userMessage = `Error: ${reason.substring(0, 100)}`;
+            }
+        } else if (err.code === 'ACTION_REJECTED') {
+           userMessage = "Transaction rejected by user.";
+        }
+        showStatus(userMessage, "error");
+    } finally {
+        btn.innerText = "Claim Rewards";
+        // Jangan otomatis enable, biarkan fetchReferralData yang menentukan status disable
+        await fetchReferralData();
+    }
+}
+
 
     
 // === FUNGSI HELPER (Tidak berubah) ===
