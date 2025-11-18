@@ -1910,44 +1910,36 @@ async function fetchAndDisplayWinners() {
             if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals(); 
             if (babyDogeContract) babyDecimalsWinner = await babyDogeContract.decimals();
         } catch (e) {}
-      
+
+
         for (const winner of winnersArray) {
             const winnerId = winner.winnerId.toString();
             const roundId = winner.roundId.toString();
             const winnerAddr = winner.winner;
-            
-            // [FIX V3] Mengambil reward V3
             const ethAmtBigNum = winner.rewardETH;
             const usdtAmtBigNum = winner.rewardUSDT;
-            const babyDogeAmtBigNum = winner.rewardBabyDoge; // BARU
-            
+            const babyDogeAmtBigNum = winner.rewardBabyDoge;
+            const freeAmtBigNum = winner.rewardFree;
             const ethAmt = parseFloat(ethers.utils.formatEther(ethAmtBigNum)).toFixed(4);
             const usdtAmt = parseFloat(ethers.utils.formatUnits(usdtAmtBigNum, usdtDecimalsWinner)).toFixed(2);
-            const babyDogeAmt = parseFloat(ethers.utils.formatUnits(babyDogeAmtBigNum, babyDecimalsWinner)).toFixed(0); // BARU
+            const babyDogeAmt = parseFloat(ethers.utils.formatUnits(babyDogeAmtBigNum, babyDecimalsWinner)).toFixed(0);
+            const freeAmt = parseFloat(ethers.utils.formatUnits(freeAmtBigNum, 18)).toFixed(0); // Asumsi 18 desimal
 
-            const date = new Date(winner.timestamp.toNumber() * 1000).toLocaleString();
-            const shortId = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) ? "You" : (winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4));
-            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700&size=40`;
-
-            // [FIX V3] Logika Ikon Aset V3
             let assetIconsHtml = '';
-            const hasEthReward = ethAmtBigNum.gt(0);
-            const hasUsdtReward = usdtAmtBigNum.gt(0);
-            const hasBabyDogeReward = babyDogeAmtBigNum.gt(0); // BARU
+            const hasEth = ethAmtBigNum.gt(0);
+            const hasUsdt = usdtAmtBigNum.gt(0);
+            const hasBaby = babyDogeAmtBigNum.gt(0);
+            const hasFree = freeAmtBigNum.gt(0);
 
-            if (hasEthReward || hasUsdtReward || hasBabyDogeReward) {
+
+            if (hasEth || hasUsdt || hasBaby || hasFree) {
                 assetIconsHtml += '<div class="asset-icon-group">';
-                if (hasEthReward) {
-                    assetIconsHtml += `<img src="${ETH_LOGO_PATH}" alt="ETH" class="asset-icon">`;
-                }
-                if (hasUsdtReward) {
-                    assetIconsHtml += `<img src="${USDT_LOGO_PATH}" alt="USDT" class="asset-icon">`;
-                }
-                if (hasBabyDogeReward) {
-                    assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" alt="BabyDoge" class="asset-icon">`;
-                }
+                if (hasEth) assetIconsHtml += `<img src="${ETH_LOGO_PATH}" class="asset-icon">`;
+                if (hasUsdt) assetIconsHtml += `<img src="${USDT_LOGO_PATH}" class="asset-icon">`;
+                if (hasBaby) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" class="asset-icon">`;
+                if (hasFree) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" style="border:1px solid #00ff88; border-radius:50%;" class="asset-icon" title="Free Balance">`; 
                 assetIconsHtml += '</div>';
-            }
+              }
 
             // --- AMBIL DATA SOSIAL ---
             let likes = 0, ratingCount = 0, commentCount = 0;
@@ -2000,13 +1992,12 @@ async function fetchAndDisplayWinners() {
                       </div><br>
 
                       <div class="prize-line" style="color: #00dd00; font-weight: bold; font-size:15px;">
-                         Prize Amount: 
-                         ${hasEthReward ? ethAmt + ' ETH' : ''} 
-                         ${(hasEthReward && (hasUsdtReward || hasBabyDogeReward)) ? ' + ' : ''}
-                         ${hasUsdtReward ? usdtAmt + ' USDT' : ''}
-                         ${(hasUsdtReward && hasBabyDogeReward) ? ' + ' : ''}
-                         ${hasBabyDogeReward ? babyDogeAmt + ' BabyDoge' : ''}
-                      </div><br>
+                 Prize: 
+                 ${hasEth ? ethAmt + ' ETH ' : ''} 
+                 ${hasUsdt ? '+ ' + usdtAmt + ' USDT ' : ''}
+                 ${hasBaby ? '+ ' + babyDogeAmt + ' BabyDoge ' : ''}
+                 ${hasFree ? `<br><span style="color:#00ff88;">+ ${freeAmt} Free BabyDoge</span>` : ''}
+            </div><br>
                   </div>
               </div>
               <div class="winner-social" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(120,0,255,0.2); display:flex; justify-content:space-between; align-items:center;">
