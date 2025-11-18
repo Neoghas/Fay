@@ -914,47 +914,190 @@
     .victory-glitch { font-size: 0.9rem; letter-spacing: 2px; }
 }
 
-  /* === LEADERBOARD STYLES === */
+  /* =========================================
+   LEADERBOARD SECTION STYLES
+   ========================================= */
+
+/* Wrapper Utama Section */
 .leaderboard-section {
-    width: 90%; max-width: 820px; margin: 40px auto;
-    text-align: center;
+    width: 95%;
+    max-width: 850px; /* Lebar maksimal agar tidak terlalu lebar di PC */
+    margin: 60px auto; /* Jarak atas bawah */
+    position: relative;
+    z-index: 5;
 }
+
 .section-title {
+    text-align: center;
+    font-family: "Ubuntu", sans-serif;
+    font-size: 28px;
+    margin-bottom: 25px;
     background: linear-gradient(90deg, #03a9f4, #f441a5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent; font-size: 24px; margin-bottom: 20px; letter-spacing: 2px;
-    text-shadow: 0 0 10px var(--purple-main);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 20px rgba(98, 0, 255, 0.4);
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
-.leaderboard-container {
-    background: rgba(10, 10, 25, 0.6);
+
+/* === TABS SWITCHER (Tombol Ganti Mode) === */
+.lb-tabs {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+/* Style Dasar Tombol Tab */
+.lb-tabs button {
+    background: rgba(0, 0, 0, 0.6); /* Latar gelap transparan */
     border: 1px solid var(--purple-main);
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 0 30px rgba(98, 0, 255, 0.2);
+    color: #aaa;
+    padding: 10px 30px;
+    border-radius: 30px; /* Membuat tombol bulat kapsul */
+    font-family: "Ubuntu", sans-serif;
+    font-weight: bold;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
 }
+
+/* Efek Hover */
+.lb-tabs button:hover {
+    border-color: var(--cyan-main);
+    color: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(0, 255, 255, 0.2);
+}
+
+/* Efek Active (Dikontrol JS, tapi kita perkuat di CSS) */
+.lb-tabs button.active {
+    background: linear-gradient(90deg, var(--pink-main), var(--purple-main)) !important;
+    color: #fff !important;
+    border: none !important;
+    box-shadow: 0 0 25px var(--pink-main) !important;
+    opacity: 1 !important;
+}
+
+
+/* === CONTAINER LEADERBOARD === */
+.leaderboard-container {
+    background: rgba(12, 12, 28, 0.85); /* Latar belakang tabel */
+    border: 1px solid rgba(120, 0, 255, 0.4);
+    border-radius: 16px;
+    padding: 0; 
+    overflow: hidden; /* Agar konten tidak keluar dari radius */
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px); /* Efek kaca */
+}
+
+/* === GRID HEADER & ITEM === */
+/* Note: Grid template columns diatur inline oleh JS, 
+   tapi kita set alignment dasar di sini */
 .lb-header, .lb-item {
     display: grid;
-    grid-template-columns: 0.5fr 2fr 1fr 1.5fr 1.5fr; /* [REVISI] 5 kolom */
-    padding: 10px;
-    border-bottom: 1px solid rgba(120, 0, 255, 0.2);
-    font-size: 12px; text-align: left;
+    align-items: center;
+    padding: 16px 20px;
+    gap: 10px;
 }
-.lb-header {
-    color: var(--cyan-main); font-weight: bold; letter-spacing: 1px;
-}
-.lb-item {
-    color: #ccc; transition: all 0.2s ease;
-}
-.lb-item:hover {
-    background: rgba(98, 0, 255, 0.1); color: #fff;
-}
-.lb-rank { font-weight: bold; color: var(--pink-main); }
-.lb-loading { padding: 20px; color: #888; font-style: italic; animation: blink 1s infinite; }
 
-/* Highlight untuk Juara 1, 2, 3 */
-.lb-item.rank-1 { background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), transparent); border-left: 3px solid gold; }
-.lb-item.rank-2 { border-left: 3px solid silver; }
-.lb-item.rank-3 { border-left: 3px solid #cd7f32; /* Bronze */ }
+/* Header Kolom */
+.lb-header {
+    background: rgba(30, 30, 60, 0.9);
+    border-bottom: 2px solid var(--purple-main);
+    color: var(--cyan-main);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 800;
+}
+
+/* Baris Item Pemain */
+.lb-item {
+    border-bottom: 1px solid rgba(120, 0, 255, 0.1);
+    color: #ddd;
+    font-size: 13px;
+    transition: background 0.2s ease;
+}
+
+.lb-item:last-child {
+    border-bottom: none;
+}
+
+.lb-item:hover {
+    background: rgba(255, 255, 255, 0.05); /* Highlight saat mouse lewat */
+}
+
+
+/* === RANKING COLORS (Juara 1-3) === */
+.lb-rank {
+    font-weight: bold;
+    font-size: 14px;
+    font-family: 'Courier Prime', monospace;
+}
+
+/* Juara 1 (Emas) */
+.lb-item.rank-1 {
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.15), transparent);
+    border-left: 4px solid #ffd700;
+}
+.lb-item.rank-1 .lb-rank { color: #ffd700; text-shadow: 0 0 10px #ffd700; }
+
+/* Juara 2 (Perak) */
+.lb-item.rank-2 {
+    border-left: 4px solid #c0c0c0;
+}
+.lb-item.rank-2 .lb-rank { color: #c0c0c0; text-shadow: 0 0 10px #c0c0c0; }
+
+/* Juara 3 (Perunggu) */
+.lb-item.rank-3 {
+    border-left: 4px solid #cd7f32;
+}
+.lb-item.rank-3 .lb-rank { color: #cd7f32; text-shadow: 0 0 10px #cd7f32; }
+
+
+/* === LOADING STATE === */
+.lb-loading {
+    padding: 50px;
+    text-align: center;
+    color: #666;
+    font-family: 'Courier Prime', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+
+/* === RESPONSIVE MOBILE === */
+@media (max-width: 600px) {
+    .leaderboard-section {
+        width: 95%;
+        margin-top: 30px;
+    }
+
+    /* Kecilkan tombol tab di HP */
+    .lb-tabs button {
+        padding: 8px 20px;
+        font-size: 10px;
+    }
+    
+    /* Atur padding tabel agar muat */
+    .lb-header, .lb-item {
+        padding: 12px 10px;
+        font-size: 11px;
+        grid-gap: 5px;
+    }
+    
+    /* Sembunyikan detail yang kurang penting jika layar sangat kecil (Opsional) */
+    .lb-item div small {
+        font-size: 9px;
+    }
+}
+
 
   /* === [BARU] Gaya Box untuk Setiap Komentar === */
 
@@ -1520,20 +1663,30 @@
     </div>
   </div>
 
-  <section class="leaderboard-section">
-    <h2 class="section-title">Top Pilot</h2>
+    <section class="leaderboard-section">
+    <h2 class="section-title">Leaderboard</h2>
+    
+    <!-- [BARU] Tombol Ganti Mode -->
+    <div class="lb-tabs" style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;">
+        <button id="btn-lb-score" class="terminal-btn active" style="background:var(--pink-main); color:#fff;" onclick="switchLbMode('score')">TOP PROFIT</button>
+        <button id="btn-lb-ref" class="terminal-btn" style="opacity:0.6;" onclick="switchLbMode('ref')">TOP REFERRAL</button>
+    </div>
+
     <div class="leaderboard-container">
-        <div class="lb-header">
+        <!-- Header Kolom (Akan berubah lewat JS) -->
+        <div class="lb-header" id="lb-header-row" style="display:grid; grid-template-columns: 0.5fr 2fr 1.5fr 2fr; padding:10px; border-bottom:1px solid var(--purple-main); color:var(--cyan-main); font-weight:bold;">
             <span>Rank</span>
             <span>Pilot</span>
-            <span>Win</span>
-            <span>ETH</span>
-            <span>USDT</span> </div>
+            <span>Score ($)</span>
+            <span>Details</span> 
+        </div>
+        
         <div id="leaderboard-list">
-            <div class="lb-loading">> No data is displayed...</div>
+            <div class="lb-loading">> Loading data...</div>
         </div>
     </div>
   </section>
+
 
 <audio id="sfx-click" src="clickI.mp3" preload="auto"></audio>
 <audio id="sfx-spin" src="spinI.mp3" preload="auto"></audio>
@@ -3357,87 +3510,152 @@ function stopVictoryConfetti() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
     
-   // === FUNGSI LEADERBOARD (FRONTEND-ONLY) ===
+   // 1. Variabel Global Baru
+let currentLbMode = 'score'; // Default ke Profit
+
+// 2. Fungsi Ganti Mode
+function switchLbMode(mode) {
+    currentLbMode = mode;
+    
+    // Update Tampilan Tombol
+    document.getElementById('btn-lb-score').style.opacity = mode === 'score' ? '1' : '0.6';
+    document.getElementById('btn-lb-score').style.background = mode === 'score' ? 'var(--pink-main)' : 'transparent';
+    
+    document.getElementById('btn-lb-ref').style.opacity = mode === 'ref' ? '1' : '0.6';
+    document.getElementById('btn-lb-ref').style.background = mode === 'ref' ? 'var(--pink-main)' : 'transparent';
+
+    // Update Header Kolom
+    const header = document.getElementById('lb-header-row');
+    if (mode === 'score') {
+        header.innerHTML = `<span>Rank</span><span>Pilot</span><span>Net Profit ($)</span><span>Assets Won</span>`;
+    } else {
+        header.innerHTML = `<span>Rank</span><span>Inviter</span><span>Total Refs</span><span>Rewards Claimed</span>`;
+    }
+
+    // Refresh Data
+    fetchAndRenderLeaderboard();
+}
+
+// 3. UPDATE FUNGSI fetchAndRenderLeaderboard (Support 2 Mode)
 async function fetchAndRenderLeaderboard() {
-    const list = document.getElementById('leaderboard-list');
+    const list = document.getElementById("leaderboard-list");
     if (!list) return;
-
-    // Gunakan provider read-only jika belum connect
-    let providerToUse = provider || new ethers.providers.JsonRpcProvider("https://sepolia.base.org");
-    let contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerToUse);
-
+    
+    // Gunakan provider read-only
+    let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    
     try {
-        // [BARU] Ambil desimal USDT terlebih dahulu
-        let usdtDecimalsForLeaderboard = 18; // Default
-        try {
-            const tempUsdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, providerToUse);
-            usdtDecimalsForLeaderboard = await tempUsdtContract.decimals();
-        } catch (e) { console.warn("Could not fetch USDT decimals for leaderboard."); }
-
-
-        // 1. Ambil event 'WinnerRecorded'
-        const currentBlock = await providerToUse.getBlockNumber();
-        const fromBlock = Math.max(0, currentBlock - 50000); 
+        list.innerHTML = "<div class='lb-loading' style='animation:blink 1s infinite;'>Scanning blockchain data...</div>";
         
-        const filter = contract.filters.WinnerRecorded();
-        const logs = await contract.queryFilter(filter, fromBlock, "latest");
-
-        // 2. Proses Data: Hitung statistik per pemain
-        const stats = {};
-        logs.forEach(log => {
-            const { winner, rewardETH, rewardERC20 } = log.args;
-            if (!stats[winner]) {
-                stats[winner] = { 
-                    wins: 0, 
-                    totalEth: ethers.BigNumber.from(0),
-                    totalUsdt: ethers.BigNumber.from(0) // [BARU] Tambahkan totalUsdt
-                };
-            }
-            stats[winner].wins += 1;
-            stats[winner].totalEth = stats[winner].totalEth.add(rewardETH);
-            stats[winner].totalUsdt = stats[winner].totalUsdt.add(rewardERC20); // [BARU] Tambahkan reward USDT
-        });
-
-        // 3. Urutkan: Berdasarkan jumlah kemenangan
-        const sortedLeaderboard = Object.entries(stats)
-            .map(([addr, data]) => ({ addr, ...data }))
-            .sort((a, b) => b.wins - a.wins) // Urutkan berdasarkan 'wins' terbanyak
-            .slice(0, 10); // Ambil Top 10
-
-        // 4. Render ke HTML
-        if (sortedLeaderboard.length === 0) {
-            list.innerHTML = "<div class='lb-loading' style='animation:none;'>NO DATA YET. BE THE FIRST!</div>";
+        const playerAddresses = await contract.getLeaderboardPlayers();
+        
+        if (playerAddresses.length === 0) {
+            list.innerHTML = "<div class='lb-loading' style='animation:none;'>NO DATA YET.</div>";
             return;
         }
 
-        list.innerHTML = ""; // Bersihkan loading
-        sortedLeaderboard.forEach((player, index) => {
-            const rank = index + 1;
-            const shortAddr = player.addr.slice(0, 6) + "..." + player.addr.slice(-4);
-            const ethTotal = parseFloat(ethers.utils.formatEther(player.totalEth)).toFixed(4);
-            // [BARU] Format total USDT
-            const usdtTotal = parseFloat(ethers.utils.formatUnits(player.totalUsdt, usdtDecimalsForLeaderboard)).toFixed(2);
-            
-            const isMe = userAddress && player.addr.toLowerCase() === userAddress.toLowerCase();
-            const displayName = isMe ? "YOU" : shortAddr;
-
-            // [PERBAIKAN] Tambahkan <div> baru untuk usdtTotal
-            list.innerHTML += `
-                <div class="lb-item rank-${rank}" style="${isMe ? 'color:var(--cyan-main); font-weight:bold;' : ''}">
-                    <div class="lb-rank">#${rank}</div>
-                    <div style="cursor:pointer;" onclick="showPlayerProfile('${player.addr}')">${displayName}</div>
-                    <div>${player.wins}</div>
-                    <div>${ethTotal} ETH</div>
-                    <div>${usdtTotal} USDT</div> 
-                </div>
-            `;
+        // Ambil Data
+        const promises = playerAddresses.map(async (addr) => {
+            const stats = await contract.leaderboardStats(addr);
+            return {
+                addr: addr,
+                // Data Profit
+                netEth: stats.netEth,
+                netUsdt: stats.netUsdt,
+                netBaby: stats.netBabyDoge,
+                score: stats.netUsdScore, // BigNumber (int256)
+                
+                // Data Referral
+                refCount: stats.referralCount, // BigNumber (uint256)
+                refEth: stats.totalReferralEthClaimed,
+                refUsdt: stats.totalReferralUsdtClaimed,
+                refBaby: stats.totalReferralBabyDogeClaimed
+            };
         });
+
+        const rawData = await Promise.all(promises);
+
+        // === LOGIKA SORTING BERDASARKAN MODE ===
+        rawData.sort((a, b) => {
+            if (currentLbMode === 'score') {
+                // Sort Profit: Dari Tinggi ke Rendah
+                if (b.score.gt(a.score)) return 1;
+                if (b.score.lt(a.score)) return -1;
+                return 0;
+            } else {
+                // Sort Referral: Dari Banyak ke Sedikit
+                if (b.refCount.gt(a.refCount)) return 1;
+                if (b.refCount.lt(a.refCount)) return -1;
+                return 0;
+            }
+        });
+
+        const top10 = rawData.slice(0, 10);
+        list.innerHTML = ""; 
+
+        if (!usdtDecimals) usdtDecimals = 6; 
+        if (!babyDogeDecimals) babyDogeDecimals = 18;
+
+        for (let i = 0; i < top10.length; i++) {
+            const p = top10[i];
+            const rank = i + 1;
+            const shortAddr = p.addr.slice(0, 6) + "..." + p.addr.slice(-4);
+            const isMe = userAddress && p.addr.toLowerCase() === userAddress.toLowerCase();
+            const displayName = isMe ? "YOU" : shortAddr;
+            
+            let rankClass = "";
+            if (rank === 1) rankClass = "rank-1";
+            else if (rank === 2) rankClass = "rank-2";
+            else if (rank === 3) rankClass = "rank-3";
+
+            // === RENDER HTML BERDASARKAN MODE ===
+            if (currentLbMode === 'score') {
+                // TAMPILAN PROFIT
+                const scoreFmt = parseFloat(ethers.utils.formatEther(p.score)).toFixed(2);
+                // Warna skor: Hijau jika plus, Merah jika minus
+                const scoreColor = p.score.gte(0) ? '#00ff88' : '#ff4d4d';
+                
+                // Hitung total aset (Net)
+                const ethFmt = parseFloat(ethers.utils.formatEther(p.netEth)).toFixed(4);
+                const usdtFmt = parseFloat(ethers.utils.formatUnits(p.netUsdt, usdtDecimals)).toFixed(2);
+
+                list.innerHTML += `
+                    <div class="lb-item ${rankClass}" style="display:grid; grid-template-columns: 0.5fr 2fr 1.5fr 2fr; padding:10px; border-bottom:1px solid rgba(120,0,255,0.2); ${isMe ? 'color:var(--cyan-main); font-weight:bold;' : ''}">
+                        <div class="lb-rank">#${rank}</div>
+                        <div style="cursor:pointer;" onclick="showPlayerProfile('${p.addr}')">${displayName}</div>
+                        <div style="color:${scoreColor}; font-weight:bold;">$${scoreFmt}</div>
+                        <div style="font-size:11px;">
+                            ${ethFmt} ETH<br>
+                            ${usdtFmt} USDT
+                        </div> 
+                    </div>
+                `;
+            } else {
+                // TAMPILAN REFERRAL
+                const count = p.refCount.toString();
+                const refEth = parseFloat(ethers.utils.formatEther(p.refEth)).toFixed(4);
+                const refBaby = parseFloat(ethers.utils.formatUnits(p.refBaby, babyDogeDecimals)).toFixed(0);
+
+                list.innerHTML += `
+                    <div class="lb-item ${rankClass}" style="display:grid; grid-template-columns: 0.5fr 2fr 1.5fr 2fr; padding:10px; border-bottom:1px solid rgba(120,0,255,0.2); ${isMe ? 'color:var(--cyan-main); font-weight:bold;' : ''}">
+                        <div class="lb-rank">#${rank}</div>
+                        <div style="cursor:pointer;" onclick="showPlayerProfile('${p.addr}')">${displayName}</div>
+                        <div style="color:#ff00e6; font-weight:bold;">${count} Users</div>
+                        <div style="font-size:11px;">
+                            ${refEth} ETH<br>
+                            ${refBaby} Baby
+                        </div> 
+                    </div>
+                `;
+            }
+        }
 
     } catch (err) {
         console.error("Leaderboard error:", err);
-        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>Failed To Load Data.</div>";
+        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>FAILED TO LOAD.</div>";
     }
-  }
+}
+
     
 // Fungsi Tutup Modal Profil
 function hideProfileModal() {
