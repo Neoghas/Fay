@@ -940,8 +940,8 @@
     text-transform: uppercase;
 }
 
-/* === TABS SWITCHER (Tombol Ganti Mode) === */
-.lb-tabs {
+/* === LEADERBOARD CONTROLS (Tombol Kapsul Keren) === */
+.lb-controls {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -949,63 +949,88 @@
     margin-bottom: 20px;
 }
 
-/* Style Dasar Tombol Tab */
-.lb-tabs button {
+/* Style Tombol Toggle */
+.lb-toggle-btn {
     background: rgba(0, 0, 0, 0.6); /* Latar gelap transparan */
     border: 1px solid var(--purple-main);
     color: #aaa;
-    padding: 10px 30px;
-    border-radius: 30px; /* Membuat tombol bulat kapsul */
+    padding: 10px 30px; /* Lebih lebar agar gagah */
+    border-radius: 30px; /* Bentuk kapsul sempurna */
     font-family: "Ubuntu", sans-serif;
     font-weight: bold;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
     letter-spacing: 1px;
-    text-transform: uppercase;
+    text-transform: uppercase; /* Huruf besar semua ala HUD Sci-Fi */
     box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    
+    /* Agar ikon dan teks rapi */
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/* Efek Hover */
-.lb-tabs button:hover {
+/* Efek Hover: Tombol naik sedikit */
+.lb-toggle-btn:hover {
     border-color: var(--cyan-main);
     color: #fff;
-    transform: translateY(-3px);
+    transform: translateY(-3px); 
     box-shadow: 0 5px 20px rgba(0, 255, 255, 0.2);
 }
 
-/* Efek Active (Dikontrol JS, tapi kita perkuat di CSS) */
-.lb-tabs button.active {
+/* Efek Active: Saat tombol dipilih */
+.lb-toggle-btn.active {
     background: linear-gradient(90deg, var(--pink-main), var(--purple-main)) !important;
     color: #fff !important;
-    border: none !important;
+    border: 1px solid transparent !important;
     box-shadow: 0 0 25px var(--pink-main) !important;
     opacity: 1 !important;
+    transform: scale(1.05); /* Sedikit membesar */
 }
+
+/* === TABLE LAYOUT (Penting untuk kerapian data) === */
+/* Update Grid Layout Header agar lebih rapi */
+.lb-header, .lb-item {
+    display: grid;
+    /* Layout 4 kolom: Rank kecil, Nama sedang, Score sedang, Detail lebar */
+    grid-template-columns: 0.5fr 1.5fr 1.5fr 2fr; 
+    padding: 12px;
+    border-bottom: 1px solid rgba(120, 0, 255, 0.2);
+    font-size: 13px; 
+    text-align: left;
+    align-items: center;
+}
+
+/* Warna khusus untuk Score positif/negatif */
+.score-plus { color: #00ff88; text-shadow: 0 0 5px #00ff88; }
+.score-minus { color: #ff4d4d; text-shadow: 0 0 5px #ff0000; }
 
 
 /* === CONTAINER LEADERBOARD === */
+/* === CONTAINER LEADERBOARD (Style Lama: Dipertahankan karena bagus) === */
 .leaderboard-container {
-    background: rgba(12, 12, 28, 0.85); /* Latar belakang tabel */
+    background: rgba(12, 12, 28, 0.85); 
     border: 1px solid rgba(120, 0, 255, 0.4);
     border-radius: 16px;
     padding: 0; 
-    overflow: hidden; /* Agar konten tidak keluar dari radius */
+    overflow: hidden;
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(10px); /* Efek kaca */
+    backdrop-filter: blur(10px);
 }
 
-/* === GRID HEADER & ITEM === */
-/* Note: Grid template columns diatur inline oleh JS, 
-   tapi kita set alignment dasar di sini */
+/* === GRID HEADER & ITEM (UPGRADE PENTING) === */
+/* Kita gabungkan style visual lama dengan layout kolom baru */
 .lb-header, .lb-item {
     display: grid;
+    /* [UPGRADE] Definisi kolom agar rapi: Rank | Nama | Score | Detail */
+    grid-template-columns: 0.5fr 1.5fr 1.5fr 2fr; 
     align-items: center;
-    padding: 16px 20px;
+    padding: 16px 20px; /* Padding asli Anda */
     gap: 10px;
 }
 
-/* Header Kolom */
+/* Visual Header */
 .lb-header {
     background: rgba(30, 30, 60, 0.9);
     border-bottom: 2px solid var(--purple-main);
@@ -1016,7 +1041,7 @@
     font-weight: 800;
 }
 
-/* Baris Item Pemain */
+/* Visual Baris Item */
 .lb-item {
     border-bottom: 1px solid rgba(120, 0, 255, 0.1);
     color: #ddd;
@@ -1024,16 +1049,13 @@
     transition: background 0.2s ease;
 }
 
-.lb-item:last-child {
-    border-bottom: none;
-}
+.lb-item:last-child { border-bottom: none; }
 
 .lb-item:hover {
-    background: rgba(255, 255, 255, 0.05); /* Highlight saat mouse lewat */
+    background: rgba(255, 255, 255, 0.05); 
 }
 
-
-/* === RANKING COLORS (Juara 1-3) === */
+/* === RANKING COLORS (Dipertahankan) === */
 .lb-rank {
     font-weight: bold;
     font-size: 14px;
@@ -1048,17 +1070,12 @@
 .lb-item.rank-1 .lb-rank { color: #ffd700; text-shadow: 0 0 10px #ffd700; }
 
 /* Juara 2 (Perak) */
-.lb-item.rank-2 {
-    border-left: 4px solid #c0c0c0;
-}
+.lb-item.rank-2 { border-left: 4px solid #c0c0c0; }
 .lb-item.rank-2 .lb-rank { color: #c0c0c0; text-shadow: 0 0 10px #c0c0c0; }
 
 /* Juara 3 (Perunggu) */
-.lb-item.rank-3 {
-    border-left: 4px solid #cd7f32;
-}
+.lb-item.rank-3 { border-left: 4px solid #cd7f32; }
 .lb-item.rank-3 .lb-rank { color: #cd7f32; text-shadow: 0 0 10px #cd7f32; }
-
 
 /* === LOADING STATE === */
 .lb-loading {
@@ -1071,32 +1088,32 @@
     letter-spacing: 2px;
 }
 
-
-/* === RESPONSIVE MOBILE === */
+/* === RESPONSIVE MOBILE (UPGRADE) === */
 @media (max-width: 600px) {
     .leaderboard-section {
         width: 95%;
         margin-top: 30px;
     }
 
-    /* Kecilkan tombol tab di HP */
-    .lb-tabs button {
-        padding: 8px 20px;
+    /* [UPGRADE] Ganti .lb-tabs button ke .lb-toggle-btn */
+    .lb-toggle-btn {
+        padding: 8px 15px; /* Sedikit lebih kecil di HP */
         font-size: 10px;
     }
     
-    /* Atur padding tabel agar muat */
+    /* Sesuaikan padding tabel di HP */
     .lb-header, .lb-item {
         padding: 12px 10px;
         font-size: 11px;
-        grid-gap: 5px;
+        gap: 5px;
+        /* Di HP, kolom 'Detail Profit' (terakhir) bisa dikecilkan sedikit */
+        grid-template-columns: 0.5fr 1.8fr 1.5fr 0.1fr; 
     }
     
-    /* Sembunyikan detail yang kurang penting jika layar sangat kecil (Opsional) */
-    .lb-item div small {
-        font-size: 9px;
-    }
+    /* Opsional: Sembunyikan detail profit di layar sangat kecil agar tidak sumpek */
+    /* .lb-item > div:last-child { display: none; } */
 }
+
 
 
   /* === [BARU] Gaya Box untuk Setiap Komentar === */
@@ -1669,28 +1686,29 @@
   </div>
 
     <section class="leaderboard-section">
-    <h2 class="section-title">Leaderboard</h2>
+    <h2 class="section-title">Top Pilot Leaderboard</h2>
     
-    <!-- [BARU] Tombol Ganti Mode -->
-    <div class="lb-tabs" style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;">
-        <button id="btn-lb-score" class="terminal-btn active" style="background:var(--pink-main); color:#fff;" onclick="switchLbMode('score')">TOP PROFIT</button>
-        <button id="btn-lb-ref" class="terminal-btn" style="opacity:0.6;" onclick="switchLbMode('ref')">TOP REFERRAL</button>
+    <div class="lb-controls">
+        <button class="lb-toggle-btn active" id="btn-lb-battle" onclick="switchLeaderboardMode('BATTLE')">
+            <i class="fa-solid fa-trophy"></i> Battle Rank
+        </button>
+        <button class="lb-toggle-btn" id="btn-lb-ref" onclick="switchLeaderboardMode('REFERRAL')">
+            <i class="fa-solid fa-users"></i> Top Referrer
+        </button>
     </div>
 
     <div class="leaderboard-container">
-        <!-- Header Kolom (Akan berubah lewat JS) -->
-        <div class="lb-header" id="lb-header-row" style="display:grid; grid-template-columns: 0.5fr 2fr 1.5fr 2fr; padding:10px; border-bottom:1px solid var(--purple-main); color:var(--cyan-main); font-weight:bold;">
+        <div class="lb-header" id="lb-header-row">
             <span>Rank</span>
             <span>Pilot</span>
-            <span>Score ($)</span>
-            <span>Details</span> 
-        </div>
-        
+            <span>Net Score (USD)</span> <span>Net Profit</span>      </div>
+
         <div id="leaderboard-list">
-            <div class="lb-loading">> Loading data...</div>
+            <div class="lb-loading">> Initializing Data Link...</div>
         </div>
     </div>
-  </section>
+</section>
+
 
 
 <audio id="sfx-click" src="clickI.mp3" preload="auto"></audio>
@@ -3508,125 +3526,171 @@ function switchLbMode(mode) {
     fetchAndRenderLeaderboard();
 }
 
-// 3. UPDATE FUNGSI fetchAndRenderLeaderboard (Support 2 Mode)
+// === GLOBAL STATE UNTUK LEADERBOARD ===
+let currentLbMode = 'BATTLE'; // 'BATTLE' atau 'REFERRAL'
+
+async function switchLeaderboardMode(mode) {
+    currentLbMode = mode;
+    
+    // Update UI Tombol
+    document.getElementById('btn-lb-battle').classList.toggle('active', mode === 'BATTLE');
+    document.getElementById('btn-lb-ref').classList.toggle('active', mode === 'REFERRAL');
+    
+    // Update Header Tabel
+    const headerRow = document.getElementById('lb-header-row');
+    if (mode === 'BATTLE') {
+        headerRow.innerHTML = `
+            <span>Rank</span>
+            <span>Pilot</span>
+            <span>Net Score ($)</span>
+            <span>Net Profit Details</span>
+        `;
+    } else {
+        headerRow.innerHTML = `
+            <span>Rank</span>
+            <span>Referrer</span>
+            <span>Total Reward ($)</span>
+            <span>Stats</span>
+        `;
+    }
+
+    // Refresh Data
+    await fetchAndRenderLeaderboard();
+}
+
+// === FUNGSI UTAMA LEADERBOARD V3 (On-Chain Data) ===
 async function fetchAndRenderLeaderboard() {
     const list = document.getElementById("leaderboard-list");
     if (!list) return;
-    
-    // Gunakan provider read-only
-    let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-    
+
+    list.innerHTML = "<div class='lb-loading' style='animation:blink 1s infinite;'>> Scanning Neural Network...</div>";
+
+    // Gunakan provider read-only agar cepat (tidak perlu wallet connect)
+    let providerToUse = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+    let contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerToUse);
+
     try {
-        list.innerHTML = "<div class='lb-loading' style='animation:blink 1s infinite;'>Scanning blockchain data...</div>";
+        // 1. Ambil daftar semua pemain yang tercatat di leaderboard
+        // (Contract V3 punya fungsi getLeaderboardPlayers)
+        const playersList = await contract.getLeaderboardPlayers();
         
-        const playerAddresses = await contract.getLeaderboardPlayers();
-        
-        if (playerAddresses.length === 0) {
-            list.innerHTML = "<div class='lb-loading' style='animation:none;'>NO DATA YET.</div>";
+        if (playersList.length === 0) {
+            list.innerHTML = "<div class='lb-loading' style='animation:none;'>NO PILOTS FOUND.</div>";
             return;
         }
 
-        // Ambil Data
-        const promises = playerAddresses.map(async (addr) => {
+        // 2. Ambil data statistik untuk setiap pemain secara paralel (Batch Request)
+        // Kita gunakan Promise.all agar loading cepat
+        const statsPromises = playersList.map(async (addr) => {
             const stats = await contract.leaderboardStats(addr);
             return {
                 addr: addr,
-                // Data Profit
+                // Battle Stats
+                netUsdScore: stats.netUsdScore, // Int256 (Bisa minus)
                 netEth: stats.netEth,
                 netUsdt: stats.netUsdt,
                 netBaby: stats.netBabyDoge,
-                score: stats.netUsdScore, // BigNumber (int256)
-                
-                // Data Referral
-                refCount: stats.referralCount, // BigNumber (uint256)
+                // Referral Stats
+                refCount: stats.referralCount,
                 refEth: stats.totalReferralEthClaimed,
                 refUsdt: stats.totalReferralUsdtClaimed,
                 refBaby: stats.totalReferralBabyDogeClaimed
             };
         });
 
-        const rawData = await Promise.all(promises);
+        const rawData = await Promise.all(statsPromises);
 
-        // === LOGIKA SORTING BERDASARKAN MODE ===
-        rawData.sort((a, b) => {
-            if (currentLbMode === 'score') {
-                // Sort Profit: Dari Tinggi ke Rendah
-                if (b.score.gt(a.score)) return 1;
-                if (b.score.lt(a.score)) return -1;
-                return 0;
-            } else {
-                // Sort Referral: Dari Banyak ke Sedikit
-                if (b.refCount.gt(a.refCount)) return 1;
-                if (b.refCount.lt(a.refCount)) return -1;
-                return 0;
-            }
-        });
+        // 3. Proses Data & Sorting
+        let sortedData = [];
 
-        const top10 = rawData.slice(0, 10);
-        list.innerHTML = ""; 
+        if (currentLbMode === 'BATTLE') {
+            // --- LOGIKA BATTLE MODE ---
+            // Urutkan berdasarkan netUsdScore tertinggi ke terendah
+            // Karena int256, kita harus hati-hati membandingkan BigNumber
+            sortedData = rawData.sort((a, b) => {
+                return b.netUsdScore.sub(a.netUsdScore).gt(0) ? 1 : -1;
+            });
 
-        if (!usdtDecimals) usdtDecimals = 6; 
-        if (!babyDogeDecimals) babyDogeDecimals = 18;
-
-        for (let i = 0; i < top10.length; i++) {
-            const p = top10[i];
-            const rank = i + 1;
-            const shortAddr = p.addr.slice(0, 6) + "..." + p.addr.slice(-4);
-            const isMe = userAddress && p.addr.toLowerCase() === userAddress.toLowerCase();
-            const displayName = isMe ? "YOU" : shortAddr;
+        } else {
+            // --- LOGIKA REFERRAL MODE ---
+            // Kita harus hitung estimasi Total USD Reward karena kontrak menyimpan terpisah
+            // Total = USDT + (ETH * Price) + (Baby * Price)
             
-            let rankClass = "";
-            if (rank === 1) rankClass = "rank-1";
-            else if (rank === 2) rankClass = "rank-2";
-            else if (rank === 3) rankClass = "rank-3";
-
-            // === RENDER HTML BERDASARKAN MODE ===
-            if (currentLbMode === 'score') {
-                // TAMPILAN PROFIT
-                const scoreFmt = parseFloat(ethers.utils.formatEther(p.score)).toFixed(2);
-                // Warna skor: Hijau jika plus, Merah jika minus
-                const scoreColor = p.score.gte(0) ? '#00ff88' : '#ff4d4d';
+            // Pastikan harga terupdate
+            if (currentEthPrice === 0) await fetchTokenPrices();
+            
+            sortedData = rawData.map(p => {
+                // Hitung nilai USD manual untuk sorting
+                const valEth = parseFloat(ethers.utils.formatEther(p.refEth)) * currentEthPrice;
+                const valUsdt = parseFloat(ethers.utils.formatUnits(p.refUsdt, 6)); // Asumsi 6 desimal
+                const valBaby = parseFloat(ethers.utils.formatUnits(p.refBaby, 18)) * currentBabyDogePrice;
+                const totalRefUsd = valEth + valUsdt + valBaby;
                 
-                // Hitung total aset (Net)
-                const ethFmt = parseFloat(ethers.utils.formatEther(p.netEth)).toFixed(4);
-                const usdtFmt = parseFloat(ethers.utils.formatUnits(p.netUsdt, usdtDecimals)).toFixed(2);
-
-                list.innerHTML += `
-                    <div class="lb-item ${rankClass}" style="display:grid; grid-template-columns: 0.5fr 2fr 1.5fr 2fr; padding:10px; border-bottom:1px solid rgba(120,0,255,0.2); ${isMe ? 'color:var(--cyan-main); font-weight:bold;' : ''}">
-                        <div class="lb-rank">#${rank}</div>
-                        <div style="cursor:pointer;" onclick="showPlayerProfile('${p.addr}')">${displayName}</div>
-                        <div style="color:${scoreColor}; font-weight:bold;">$${scoreFmt}</div>
-                        <div style="font-size:11px;">
-                            ${ethFmt} ETH<br>
-                            ${usdtFmt} USDT
-                        </div> 
-                    </div>
-                `;
-            } else {
-                // TAMPILAN REFERRAL
-                const count = p.refCount.toString();
-                const refEth = parseFloat(ethers.utils.formatEther(p.refEth)).toFixed(4);
-                const refBaby = parseFloat(ethers.utils.formatUnits(p.refBaby, babyDogeDecimals)).toFixed(0);
-
-                list.innerHTML += `
-                    <div class="lb-item ${rankClass}" style="display:grid; grid-template-columns: 0.5fr 2fr 1.5fr 2fr; padding:10px; border-bottom:1px solid rgba(120,0,255,0.2); ${isMe ? 'color:var(--cyan-main); font-weight:bold;' : ''}">
-                        <div class="lb-rank">#${rank}</div>
-                        <div style="cursor:pointer;" onclick="showPlayerProfile('${p.addr}')">${displayName}</div>
-                        <div style="color:#ff00e6; font-weight:bold;">${count} Users</div>
-                        <div style="font-size:11px;">
-                            ${refEth} ETH<br>
-                            ${refBaby} Baby
-                        </div> 
-                    </div>
-                `;
-            }
+                return { ...p, totalRefUsd: totalRefUsd };
+            }).sort((a, b) => b.totalRefUsd - a.totalRefUsd);
         }
+
+        // 4. Render HTML (Ambil Top 10)
+        list.innerHTML = "";
+        const top10 = sortedData.slice(0, 10);
+
+        top10.forEach((player, index) => {
+            const rank = index + 1;
+            const shortAddr = player.addr.slice(0, 6) + "..." + player.addr.slice(-4);
+            const isMe = userAddress && player.addr.toLowerCase() === userAddress.toLowerCase();
+            
+            // Style khusus jika user sendiri
+            const rowStyle = isMe ? "border-left: 3px solid var(--pink-main); background: rgba(255, 0, 230, 0.1);" : "";
+            const nameColor = isMe ? "var(--cyan-main)" : "#fff";
+
+            let col3_html = "";
+            let col4_html = "";
+
+            if (currentLbMode === 'BATTLE') {
+                // Tampilkan Net USD Score
+                // netUsdScore dari kontrak biasanya 18 desimal (karena native price feed)
+                // Cek apakah negatif
+                const isNegative = player.netUsdScore.isNegative();
+                const absScore = player.netUsdScore.abs();
+                const fmtScore = parseFloat(ethers.utils.formatUnits(absScore, 18)).toFixed(2);
+                const sign = isNegative ? "-" : "+";
+                const scoreClass = isNegative ? "score-minus" : "score-plus";
+                
+                col3_html = `<span class="${scoreClass}" style="font-weight:bold; font-size:14px;">${sign}$${fmtScore}</span>`;
+                
+                // Detail Profit (ETH/USDT/Baby)
+                // Kita hanya tampilkan koin yang profit positif agar tidak semrawut
+                let details = [];
+                if(player.netEth.gt(0)) details.push(`<span style="color:#aaa">${parseFloat(ethers.utils.formatEther(player.netEth)).toFixed(4)} ETH</span>`);
+                if(player.netUsdt.gt(0)) details.push(`<span style="color:#aaa">${parseFloat(ethers.utils.formatUnits(player.netUsdt, 6)).toFixed(2)} USDT</span>`);
+                
+                col4_html = details.length > 0 ? details.join("<br>") : "<span style='color:#555'>-</span>";
+                
+            } else {
+                // Tampilkan Referral Stats
+                const totalUsd = player.totalRefUsd.toFixed(2);
+                col3_html = `<span style="color:#ffd700; font-weight:bold;">$${totalUsd}</span>`;
+                col4_html = `<span style="font-size:12px; color:#ccc;">${player.refCount} Recruits</span>`;
+            }
+
+            list.innerHTML += `
+                <div class="lb-item rank-${rank}" style="${rowStyle}">
+                    <div class="lb-rank">#${rank}</div>
+                    <div style="cursor:pointer; color:${nameColor}; font-weight:bold;" onclick="showPlayerProfile('${player.addr}')">
+                        ${shortAddr} ${isMe ? "(YOU)" : ""}
+                    </div>
+                    <div>${col3_html}</div>
+                    <div>${col4_html}</div> 
+                </div>
+            `;
+        });
 
     } catch (err) {
         console.error("Leaderboard error:", err);
-        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>FAILED TO LOAD.</div>";
+        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>CONNECTION LOST. RETRYING...</div>";
     }
 }
+
 
     
 // Fungsi Tutup Modal Profil
