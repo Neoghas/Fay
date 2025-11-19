@@ -830,10 +830,12 @@
     }
 
     // ================= LEADERBOARD & WINNERS [FIXED] =================
-    async function fetchAndDisplayWinners() {
+    
+        async function fetchAndDisplayWinners() {
         try {
             const list = document.getElementById('winner-list');
-            const winners = await faylottoContract.getWinners(5);
+            // Ambil 10 pemenang terakhir
+            const winners = await faylottoContract.getWinners(10);
             
             if(winners.length === 0) {
                  list.innerHTML = "<p style='text-align:center; color:#555;'>No winners yet.</p>";
@@ -841,31 +843,66 @@
             }
             
             list.innerHTML = "";
-            // Reverse to show newest first
+
+            // Gunakan spread operator untuk copy array sebelum reverse agar tidak mutasi data asli
             [...winners].reverse().forEach(w => {
-                // LOGIKA BARU: Cek semua jenis reward
-                let prizeStr = "";
-                if(w.rewardETH.gt(0)) prizeStr += parseFloat(ethers.utils.formatEther(w.rewardETH)).toFixed(4) + " ETH ";
-                if(w.rewardUSDT.gt(0)) prizeStr += parseFloat(ethers.utils.formatUnits(w.rewardUSDT, 6)).toFixed(2) + " USDT ";
-                if(w.rewardBabyDoge.gt(0)) prizeStr += parseFloat(ethers.utils.formatUnits(w.rewardBabyDoge, 18)).toFixed(0) + " Baby ";
+                // STRUCT URUTAN di Solidity:
+                // 0: winnerId, 1: roundId, 2: winner, 3: rewardETH, 4: rewardUSDT, 5: rewardBabyDoge, 6: timestamp
                 
-                if(prizeStr === "") prizeStr = "0.00"; // Fallback
+                // Ambil nilai BigNumber (Support akses properti ATAU index array)
+                const rEth = w.rewardETH || w[3];
+                const rUsdt = w.rewardUSDT || w[4];
+                const rBaby = w.rewardBabyDoge || w[5];
+                const rId = w.roundId || w[1];
+                const rWinner = w.winner || w[2];
+
+                // Format String Hadiah
+                let prizeParts = [];
+                
+                if(rEth && rEth.gt(0)) {
+                    prizeParts.push(`${parseFloat(ethers.utils.formatEther(rEth)).toFixed(4)} ETH`);
+                }
+                
+                if(rUsdt && rUsdt.gt(0)) {
+                    // Gunakan global usdtDecimals (fallback 6)
+                    const val = parseFloat(ethers.utils.formatUnits(rUsdt, usdtDecimals || 6));
+                    prizeParts.push(`${val.toFixed(2)} USDT`);
+                }
+                
+                if(rBaby && rBaby.gt(0)) {
+                    // Gunakan global babyDogeDecimals (fallback 18)
+                    const val = parseFloat(ethers.utils.formatUnits(rBaby, babyDogeDecimals || 18));
+                    // Format angka besar (1B, 1M) atau koma
+                    let fmt = val >= 1000000 ? (val/1000000).toFixed(1) + "M" : val.toFixed(0);
+                    prizeParts.push(`${fmt} Baby`);
+                }
+                
+                const prizeStr = prizeParts.length > 0 ? prizeParts.join(" + ") : "0.00";
+
+                // Avatar
+                const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${rWinner}`;
 
                 list.innerHTML += `
                 <div class="winner-list-item">
                    <div class="winner-main-content">
-                      <div class="winner-avatar-small" style="background:${PLAYER_COLORS[w.winnerId % 10]}"></div>
+                      <img src="${avatarUrl}" class="winner-avatar-small">
                       <div class="winner-info-text">
-                          <div style="color:var(--cyan-main); font-weight:bold;">Round #${w.roundId}</div>
-                          <div>Winner: ${w.winner.slice(0,6)}...</div>
-                          <div style="color:#00ff88; font-size:11px;">Won: ${prizeStr}</div>
+                          <div style="display:flex; justify-content:space-between;">
+                             <span style="color:var(--cyan-main); font-weight:bold;">Round #${rId.toString()}</span>
+                          </div>
+                          <div style="font-size:12px; color:#ccc;">Winner: ${rWinner.slice(0,6)}...${rWinner.slice(-4)}</div>
+                          <div style="color:#00ff88; font-size:11px; margin-top:2px; font-weight:bold;">
+                             Won: ${prizeStr}
+                          </div>
                       </div>
                    </div>
                 </div>`;
             });
-        } catch(e) {}
+        } catch(e) {
+            console.error("Winner List Error:", e);
+        }
     }
-    
+
     function switchLbMode(mode) {
         currentLbMode = mode;
         document.getElementById('btn-lb-score').className = (mode === 'score' ? 'active' : '');
