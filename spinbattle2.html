@@ -243,7 +243,7 @@
       </div>
       <div class="navbar-actions">
           <button class="referral-btn" id="referralBtn">Referral</button>
-          <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+          <button class="wallet-btn" id="walletBtn">Connect Walle</button>
       </div>
    </nav>
 
@@ -480,25 +480,51 @@
 
     // ================= CONNECT WALLET (FIXED) =================
     async function connectWallet() {
-        if (!window.ethereum) return showStatus("Install MetaMask", "error");
+    if (!window.ethereum) return showStatus("Install MetaMask", "error");
+    try {
+        // Switch to Base Sepolia network
         try {
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            await provider.send("eth_requestAccounts", []);
-            signer = provider.getSigner();
-            userAddress = await signer.getAddress();
-            
-            faylottoContract = faylottoContract.connect(signer);
-            usdtContract = usdtContract.connect(signer);
-            babyDogeContract = babyDogeContract.connect(signer);
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: '0x1383c' }], // 84532 in hex
+            });
+        } catch (switchError) {
+            // If chain not added (error code 4902), add it
+            if (switchError.code === 4902) {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [{
+                        chainId: '0x1383c',
+                        chainName: 'Base Sepolia',
+                        rpcUrls: ['https://sepolia.base.org'],
+                        nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+                        blockExplorerUrls: ['https://sepolia.basescan.org']
+                    }],
+                });
+            } else {
+                throw switchError; // Rethrow other errors
+            }
+        }
 
-            document.getElementById('walletBtn').innerText = userAddress.slice(0,6)+"..."+userAddress.slice(-4);
-            document.querySelector('.referral-btn').style.display = 'block';
-            
-            showStatus("Wallet Connected!", "success");
-            updateUserBalances();
-        } catch (e) { showStatus("Failed to Connect", "error"); }
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        
+        faylottoContract = faylottoContract.connect(signer);
+        usdtContract = usdtContract.connect(signer);
+        babyDogeContract = babyDogeContract.connect(signer);
+
+        document.getElementById('walletBtn').innerText = userAddress.slice(0,6)+"..."+userAddress.slice(-4);
+        document.querySelector('.referral-btn').style.display = 'block';
+        
+        showStatus("Wallet Connected!", "success");
+        updateUserBalances();
+    } catch (e) { 
+        console.error(e);
+        showStatus("Failed to Connect: " + (e.message || "Unknown error"), "error"); 
     }
-
+    }
     // ================= GAME CORE LOGIC =================
     async function fetchAndDisplayRoundData() {
         try {
