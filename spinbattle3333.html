@@ -2545,6 +2545,202 @@ async function fetchAndDisplayWinners() {
     }
 }
 
+  // Comment Function
+  async function submitComment(winnerId) {
+  // 1. Ganti alert() dengan showStatus()
+  if (!signer) {
+    showStatus("Connect wallet first.", "warning");
+    return;
+  }
+  
+  const input = document.getElementById(`new-comment-${winnerId}`);
+  const text = input.value.trim();
+  if (!text) return; // Tidak perlu notifikasi jika hanya kosong
+
+  try {
+    input.disabled = true;
+    const originalValue = input.value;
+    input.value = "Transmitting...";
+    
+    // 2. Tambahkan toast 'load'
+    showStatus("Sending comment...", "load");
+    
+    const tx = await faylottoContract.addCommentToWinner(winnerId, text);
+    await tx.wait();
+    
+    // 3. Tambahkan toast 'success'
+    showStatus("Comment sent!", "success");
+    
+    input.value = "";
+    await fetchAndRenderComments(winnerId); // Refresh
+  } catch (err) {
+    console.error(err);
+    
+    // 4. Ganti alert() dengan showStatus() 'error'
+    let userMessage = "Failed to send comment.";
+    const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    else if (err.code === 'ACTION_REJECTED') userMessage = "Transaction rejected.";
+    
+    showStatus(userMessage, "error");
+    
+    input.value = originalValue; // Kembalikan teks asli jika gagal
+  } finally {
+    input.disabled = false;
+  }
+}
+
+function showEditComment(wid, cid) {
+  // ... (Tidak ada perubahan pada fungsi ini, sudah benar) ...
+  document.getElementById(`msg-${wid}-${cid}`).style.display = 'none';
+  document.getElementById(`edit-btn-${wid}-${cid}`).style.display = 'none';
+  document.getElementById(`edit-actions-${wid}-${cid}`).style.display = 'block';
+}
+
+function cancelEditComment(wid, cid) {
+  // ... (Tidak ada perubahan pada fungsi ini, sudah benar) ...
+  document.getElementById(`msg-${wid}-${cid}`).style.display = 'block';
+  document.getElementById(`edit-btn-${wid}-${cid}`).style.display = 'inline-block';
+  document.getElementById(`edit-actions-${wid}-${cid}`).style.display = 'none';
+}
+
+async function saveEditComment(wid, cid) {
+  // 1. Tambahkan pengecekan signer
+  if (!signer) {
+      showStatus("Connect wallet first.", "warning");
+      return;
+  }
+  
+  const input = document.getElementById(`edit-input-${wid}-${cid}`);
+  const newText = input.value.trim();
+  
+  // 2. Ganti alert() dengan showStatus()
+  if (!newText) {
+    showStatus("Comment cannot be empty.", "warning");
+    return;
+  }
+
+  // 3. Tambahkan toast 'load'
+  showStatus("Saving edit...", "load");
+  
+  try {
+    const tx = await faylottoContract.editCommentOnWinner(wid, cid, newText);
+    await tx.wait();
+    
+    // 4. Tambahkan toast 'success'
+    showStatus("Comment updated!", "success");
+    
+    fetchAndRenderComments(wid); // Refresh setelah simpan
+  } catch (err) {
+    console.error("Edit failed:", err);
+    
+    // 5. Ganti alert() dengan showStatus() 'error'
+    let userMessage = "Failed to edit comment.";
+    const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    else if (err.code === 'ACTION_REJECTED') userMessage = "Transaction rejected.";
+    
+    showStatus(userMessage, "error");
+  }
+  // 'finally' block tidak diperlukan di sini karena
+  // 'fetchAndRenderComments' akan menggambar ulang UI
+  // dan 'cancelEditComment' akan dipanggil secara manual jika gagal.
+}
+
+
+// [WAJIB ADA] Fungsi untuk mengambil dan merender komentar
+async function fetchAndRenderComments(winnerId) {
+    // ... (Tidak ada perubahan pada fungsi ini) ...
+    const terminalDiv = document.getElementById(`terminal-${winnerId}`);
+    if (!terminalDiv) return;
+    const commentsListDiv = terminalDiv.querySelector('.comments-list');
+    if (!commentsListDiv) return;
+    commentsListDiv.innerHTML = "> Loading Neural Logs...";
+    let contractInstance = faylottoContract;
+    if (!contractInstance) {
+        if (!provider) provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
+        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    }
+    try {
+        const comments = await contractInstance.getAllCommentsForWinner(winnerId);
+        if (comments.length === 0) {
+            commentsListDiv.innerHTML = "> No Transmissions Found.";
+            const commBtn = document.getElementById(`comm-btn-${winnerId}`);
+            if (commBtn) {
+                commBtn.innerHTML = `<img src="comment.svg" style="width:20px; height:20px; vertical-align:middle;"> <span>(0)</span>`;
+            }
+            return;
+        }
+        commentsListDiv.innerHTML = "";
+        const fragment = document.createDocumentFragment();
+        for (let i = 0; i < comments.length; i++) {
+            const c = comments[i];
+            const user = c.user;
+            const text = c.text;
+            const dateObj = new Date(c.timestamp.toNumber() * 1000);
+            const time = dateObj.toLocaleString('id-ID', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                day: '2-digit', month: '2-digit', year: 'numeric', hour12: false
+            });
+            const isMyComment = (userAddress && user.toLowerCase() === userAddress.toLowerCase());
+            let nickname = null;
+            try { nickname = await contractInstance.nicknames(user); } catch (e) {}
+            const displayName = nickname || user.slice(0, 6) + '...';
+            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${user}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700&size=40`;
+            const commentDiv = document.createElement('div');
+            commentDiv.className = "comment-log";
+            commentDiv.id = `comment-${winnerId}-${i}`;
+            let commentHTML = `
+                <img src="${avatarUrl}" alt="Avatar" class="comment-avatar" onclick="showPlayerProfile('${user}')">
+                <div class="comment-content">
+                    <div class="log-meta">
+                        <span class="log-nickname" style="cursor: pointer;" onclick="showPlayerProfile('${user}')">
+                            ${displayName}
+                        </span>
+                        <span class="log-wallet" style="cursor: pointer;" onclick="showPlayerProfile('${user}')">
+                            (${user.slice(0, 6)}...${user.slice(-4)})
+                        </span><br>[${time}]
+                    </div><br>
+                    <div class="log-message" id="msg-${winnerId}-${i}">${text}</div><br>
+            `;
+            if (isMyComment) {
+                commentHTML += `
+                    <div class="edit-actions" style="display:none; margin-top: 10px;" id="edit-actions-${winnerId}-${i}">
+                        <textarea class="terminal-input" id="edit-input-${winnerId}-${i}" rows="2">${text}</textarea>
+                        <div style="display:flex; gap:5px; margin-top:5px;">
+                            <button class="terminal-btn" onclick="saveEditComment(${winnerId}, ${i})">[ SAVE ]</button>
+                            <button class="terminal-btn" style="color:#ff5555;border-color:#ff5555" onclick="cancelEditComment(${winnerId}, ${i})">[ CANCEL ]</button>
+                        </div>
+                    </div>
+                    <button class="terminal-btn" id="edit-btn-${winnerId}-${i}" onclick="showEditComment(${winnerId}, ${i})" style="opacity:0.7; margin-top:5px;">[ EDIT LOG ]</button>
+                `;
+            }
+            commentHTML += `</div>`;
+            commentDiv.innerHTML = commentHTML;
+            fragment.appendChild(commentDiv);
+        }
+        commentsListDiv.appendChild(fragment);
+        const commBtn = document.getElementById(`comm-btn-${winnerId}`);
+        if(commBtn) {
+            commBtn.innerHTML = `<img src="comment.svg" style="width:20px; height:20px; vertical-align:middle;"> <span>(${comments.length})</span>`;
+        }
+    } catch (err) {
+        console.error("Error fetching comments:", err);
+        commentsListDiv.innerHTML = "> Failed: No Signal.";
+    }
+}
+    
+function toggleComments(winnerId, winnerAddr) {
+    // ... (Tidak ada perubahan pada fungsi ini) ...
+    const terminal = document.getElementById(`terminal-${winnerId}`);
+    if (terminal.style.display === 'none') {
+        terminal.style.display = 'block';
+        fetchAndRenderComments(winnerId);
+    } else {
+        terminal.style.display = 'none';
+    }
+              }
+  
     // ==================================================================
     // 8. UTILS & INITIALIZATION
     // ==================================================================
