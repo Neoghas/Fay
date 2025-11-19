@@ -3032,87 +3032,154 @@ async function saveEditComment(wid, cid) {
 
 
 // [WAJIB ADA] Fungsi untuk mengambil dan merender komentar
-async function fetchAndRenderComments(winnerId) {
-    // ... (Tidak ada perubahan pada fungsi ini) ...
-    const terminalDiv = document.getElementById(`terminal-${winnerId}`);
-    if (!terminalDiv) return;
-    const commentsListDiv = terminalDiv.querySelector('.comments-list');
-    if (!commentsListDiv) return;
-    commentsListDiv.innerHTML = "> Loading Neural Logs...";
+async function fetchAndDisplayWinners() {
+    const list = document.getElementById("winner-list");
+    if (!list) return;
     let contractInstance = faylottoContract;
     if (!contractInstance) {
-        if (!provider) provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
-        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+        const tempProvider = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, tempProvider);
     }
     try {
-        const comments = await contractInstance.getAllCommentsForWinner(winnerId);
-        if (comments.length === 0) {
-            commentsListDiv.innerHTML = "> No Transmissions Found.";
-            const commBtn = document.getElementById(`comm-btn-${winnerId}`);
-            if (commBtn) {
-                commBtn.innerHTML = `<img src="comment.svg" style="width:20px; height:20px; vertical-align:middle;"> <span>(0)</span>`;
-            }
+        const winnersArray = await contractInstance.getWinners(10);
+        list.innerHTML = "";
+        if (winnersArray.length === 0) {
+            list.innerHTML = "<p style='text-align:center;'>No winners yet.</p>";
             return;
         }
-        commentsListDiv.innerHTML = "";
-        const fragment = document.createDocumentFragment();
-        for (let i = 0; i < comments.length; i++) {
-            const c = comments[i];
-            const user = c.user;
-            const text = c.text;
-            const dateObj = new Date(c.timestamp.toNumber() * 1000);
-            const time = dateObj.toLocaleString('id-ID', {
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                day: '2-digit', month: '2-digit', year: 'numeric', hour12: false
-            });
-            const isMyComment = (userAddress && user.toLowerCase() === userAddress.toLowerCase());
-            let nickname = null;
-            try { nickname = await contractInstance.nicknames(user); } catch (e) {}
-            const displayName = nickname || user.slice(0, 6) + '...';
-            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${user}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700&size=40`;
-            const commentDiv = document.createElement('div');
-            commentDiv.className = "comment-log";
-            commentDiv.id = `comment-${winnerId}-${i}`;
-            let commentHTML = `
-                <img src="${avatarUrl}" alt="Avatar" class="comment-avatar" onclick="showPlayerProfile('${user}')">
-                <div class="comment-content">
-                    <div class="log-meta">
-                        <span class="log-nickname" style="cursor: pointer;" onclick="showPlayerProfile('${user}')">
-                            ${displayName}
-                        </span>
-                        <span class="log-wallet" style="cursor: pointer;" onclick="showPlayerProfile('${user}')">
-                            (${user.slice(0, 6)}...${user.slice(-4)})
-                        </span><br>[${time}]
-                    </div><br>
-                    <div class="log-message" id="msg-${winnerId}-${i}">${text}</div><br>
+        let usdtDec = 6, babyDec = 18;
+        try {
+            if (usdtContract) usdtDec = await usdtContract.decimals();
+            if (babyDogeContract) babyDec = await babyDogeContract.decimals();
+        } catch (e) {}
+        const renderArray = [...winnersArray].reverse();
+        
+        for (const winner of renderArray) {
+            try {
+                // 1. Definisi Data Dasar
+                const winnerId = winner.winnerId.toString();
+                const roundId = winner.roundId.toString();
+                const winnerAddr = winner.winner;
+                const timestamp = winner.timestamp ? winner.timestamp.toNumber() : Date.now() / 1000;
+                const shortId = winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4);
+                const date = new Date(timestamp * 1000).toLocaleString('id-ID', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                });
+                const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700`;
+
+                // 2. Definisi Amount
+                const ethAmt = parseFloat(ethers.utils.formatEther(winner.rewardETH || 0)).toFixed(4);
+                const usdtAmt = parseFloat(ethers.utils.formatUnits(winner.rewardUSDT || 0, usdtDec)).toFixed(2);
+                const babyAmt = parseFloat(ethers.utils.formatUnits(winner.rewardBabyDoge || 0, babyDec)).toFixed(0);
+                
+                // [PERBAIKAN 1] Definisikan 'freeAmt' (Default 0 karena tidak ada di ABI)
+                const freeAmt = "0"; 
+
+                // [PERBAIKAN 2] Definisikan 'displayName'
+                const displayName = shortId; 
+
+                // [PERBAIKAN 3] Definisikan Boolean Checks (hasEth, dll) untuk logika HTML
+                const hasEth = winner.rewardETH.gt(0);
+                const hasUsdt = winner.rewardUSDT.gt(0);
+                const hasBaby = winner.rewardBabyDoge.gt(0);
+                const hasFree = false; // Tidak ada di ABI, set false agar tidak error
+
+                // [PERBAIKAN 4] Ganti nama variabel dari 'iconsHtml' ke 'assetIconsHtml' agar sesuai HTML
+                let assetIconsHtml = '<div class="asset-icon-group">';
+                if (hasEth) assetIconsHtml += `<img src="${ETH_LOGO_PATH}" class="asset-icon" title="ETH">`;
+                if (hasUsdt) assetIconsHtml += `<img src="${USDT_LOGO_PATH}" class="asset-icon" title="USDT">`;
+                if (hasBaby) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" class="asset-icon" title="BabyDoge">`;
+                assetIconsHtml += '</div>';
+
+                // [PERBAIKAN 5] Definisikan Data Sosial Default (Agar HTML tidak error undefined)
+                // Jika ingin data asli, Anda harus memanggil fungsi kontraknya lagi di sini.
+                // Untuk performa UI cepat, kita set default dulu.
+                let likes = 0;
+                let ratingCount = 0; 
+                let commentCount = 0;
+                let isLikedByMe = false; 
+                let myRating = 0;
+                
+                // Coba ambil data sosial (Opsional, biar angka muncul)
+                try {
+                     likes = (await contractInstance.getLikeCount(winnerId)).toNumber();
+                     commentCount = (await contractInstance.getCommentCountForWinner(winnerId)).toNumber();
+                     ratingCount = (await contractInstance.getRatingCountForWinner(winnerId)).toNumber();
+                } catch(e) {}
+
+
+                const item = document.createElement("div");
+                item.className = "winner-list-item";
+                
+                // HTML ANDA (TIDAK DIUBAH ISINYA, HANYA VARIABEL DI ATAS YANG DISIAPKAN)
+                item.innerHTML = `
+              <div class="winner-main-content">
+                  <img src="${avatarUrl}" alt="Avatar" 
+                       class="winner-avatar-small"
+                       onclick="showPlayerProfile('${winnerAddr}')">              
+
+                  <div class="winner-info-text">
+                      <div class="winner-id" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <span>Round: #${roundId}</span>  
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">        
+                        <small style="color: #888; font-size: 10px;">${date}</small>
+                        ${assetIconsHtml} 
+                     </div>
+                 </div>
+
+                      <div style="margin-top: 4px; margin-bottom: 4px; font-weight: bold; font-size:14px; color: var(--cyan-main); cursor: pointer;" 
+                           onclick="showPlayerProfile('${winnerAddr}')">
+                         Winer: ${displayName}
+                      </div><br>
+
+                      <div class="prize-line" style="color: #00dd00; font-weight: bold; font-size:15px;">
+                 Prize: 
+                 ${hasEth ? ethAmt + ' ETH ' : ''} 
+                 ${hasUsdt ? '+ ' + usdtAmt + ' USDT ' : ''}
+                 ${hasBaby ? '+ ' + babyDogeAmt + ' BabyDoge ' : ''}
+                 ${hasFree ? `<br><span style="color:#00ff88;">+ ${freeAmt} Free BabyDoge</span>` : ''}
+            </div><br>
+                  </div>
+              </div>
+              <div class="winner-social" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(120,0,255,0.2); display:flex; justify-content:space-between; align-items:center;">
+                  <button class="like-btn" style="background:none; border:none; cursor:pointer; color: ${isLikedByMe ? '#ff00e6' : '#888'}; font-size:14px; display:flex; align-items:center; gap:4px;" onclick="toggleLike(${winnerId})"><img src="like.svg" style="width:25px; height:25px; vertical-align:middle;"><span style="color:#ff00e6">Like (${likes})</span>
+                  </button>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                      <div class="rating-stars">
+                         ${[5, 4, 3, 2, 1].map(i => `
+                            <span class="star-icon ${i <= myRating ? 'active' : ''}" onclick="rateWinner(${winnerId}, ${i})"></span>
+                         `).join('')}
+                      </div>
+                      <span style="font-size: 12px; color: #888;">(${ratingCount})</span>
+                  </div>
+                  <button class="terminal-btn" id="comm-btn-${winnerId}" 
+                        style="background:none; border:none; color:var(--cyan-main); font-size:14px; cursor:pointer; display:flex; align-items:center; gap:5px;" 
+                        onclick="toggleComments(${winnerId}, '${winnerAddr}')">
+                    <img src="comment.svg" style="width:25px; height:25px; vertical-align:middle;">Log
+                    <span>(${commentCount})</span>
+                  </button>
+              </div>
+              <div class="comments-terminal" id="terminal-${winnerId}" style="display: none; margin-top: 10px;">
+                  <div class="terminal-header">> Log For Winner: ${winnerAddr.slice(0,10)}...</div>
+                  <div class="comments-list"></div>
+                  <div class="new-comment-section" style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(120, 0, 255, 0.2); display: flex; gap: 5px; align-items: center;">
+                      <span style="color: var(--cyan-main);">></span>
+                      <textarea class="terminal-input" id="new-comment-${winnerId}" placeholder="Transmit data..." rows="1" style="resize: none; overflow-y: hidden;" oninput="this.style.height = '';this.style.height = this.scrollHeight + 'px'"></textarea>
+                      <button class="terminal-btn" onclick="submitComment(${winnerId})">[ SEND ]</button>
+                  </div>
+              </div>
             `;
-            if (isMyComment) {
-                commentHTML += `
-                    <div class="edit-actions" style="display:none; margin-top: 10px;" id="edit-actions-${winnerId}-${i}">
-                        <textarea class="terminal-input" id="edit-input-${winnerId}-${i}" rows="2">${text}</textarea>
-                        <div style="display:flex; gap:5px; margin-top:5px;">
-                            <button class="terminal-btn" onclick="saveEditComment(${winnerId}, ${i})">[ SAVE ]</button>
-                            <button class="terminal-btn" style="color:#ff5555;border-color:#ff5555" onclick="cancelEditComment(${winnerId}, ${i})">[ CANCEL ]</button>
-                        </div>
-                    </div>
-                    <button class="terminal-btn" id="edit-btn-${winnerId}-${i}" onclick="showEditComment(${winnerId}, ${i})" style="opacity:0.7; margin-top:5px;">[ EDIT LOG ]</button>
-                `;
+                winnerList.appendChild(item);
+            } catch (errInner) {
+                console.error("Error rendering item:", errInner);
             }
-            commentHTML += `</div>`;
-            commentDiv.innerHTML = commentHTML;
-            fragment.appendChild(commentDiv);
-        }
-        commentsListDiv.appendChild(fragment);
-        const commBtn = document.getElementById(`comm-btn-${winnerId}`);
-        if(commBtn) {
-            commBtn.innerHTML = `<img src="comment.svg" style="width:20px; height:20px; vertical-align:middle;"> <span>(${comments.length})</span>`;
         }
     } catch (err) {
-        console.error("Error fetching comments:", err);
-        commentsListDiv.innerHTML = "> Failed: No Signal.";
+        console.error("Fetch Winners Error:", err);
+        list.innerHTML = `<p style="color:#ff5555; text-align:center;">Failed to load data.</p>`;
     }
 }
-    
+  
 function toggleComments(winnerId, winnerAddr) {
     // ... (Tidak ada perubahan pada fungsi ini) ...
     const terminal = document.getElementById(`terminal-${winnerId}`);
