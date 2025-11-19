@@ -2050,15 +2050,122 @@
     // 5. BETTING & INTERACTION
     // ==================================================================
 
-    function showBetModal() { 
-        if (!userAddress) return showStatus("Connect Wallet first", "error");
-        document.getElementById("bet-modal-overlay").classList.add("show");
-        document.getElementById("bet-modal").classList.add("show");
+    function showBetModal() {
+  if (!signer) return showStatus("Connect wallet first!", "error");
+  if (isFinalizing) return showStatus("Round is ending, new bets are closed.", "warning"); 
+  
+  modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance || 0)).toFixed(5);
+  modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance || 0, usdtDecimals)).toFixed(2);
+  modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance || 0, babyDogeDecimals)).toFixed(2);
+
+  // LOGIKA BARU UNTUK MENAMPILKAN SALDO GRATIS
+  const modalFreeBalanceEl = document.getElementById("modalFreeBalance");
+  if (modalFreeBalanceEl) {
+      // 'prizeAmount' disimpan dalam 18 desimal (seperti ETH), jadi kita format
+      modalFreeBalanceEl.innerText = parseFloat(ethers.utils.formatEther(rawFreeBalance || 0)).toFixed(0);
+  }
+
+  betAmountInput.value = "";
+  
+  // Reset tampilan jika sebelumnya memilih FREE
+  document.querySelector('.input-icon-wrapper[style*="flex-grow"]').style.display = 'flex';
+  document.querySelector('.percent-buttons').style.display = 'flex';
+  betCurrencySelect.value = "ETH"; // Default ke ETH
+  document.getElementById('currency-icon').src = "eth.svg";
+
+
+  betModalOverlay.classList.add("show");
+  betModal.classList.add("show");
+}
+
+
+function hideBetModal() {
+      betModalOverlay.classList.remove("show");
+      betModal.classList.remove("show");
     }
-    function hideBetModal() {
-        document.getElementById("bet-modal-overlay").classList.remove("show");
-        document.getElementById("bet-modal").classList.remove("show");
+
+// --- (Persentase V3: Tambah BabyDoge) ---
+function setAmountByPercent(percent) {
+    const currency = betCurrencySelect.value;
+    let min, max, decimalsToDisplay, userBalanceBN;
+    let decimals = 18; // Default
+
+    // 1. Tentukan Limit & Saldo berdasarkan Currency
+    if (currency === 'ETH') {
+        userBalanceBN = rawEthBalance || ethers.BigNumber.from(0);
+        decimalsToDisplay = 8; // Tampilkan lebih presisi untuk ETH
+        min = "0.00005"; 
+        max = "0.00265"; 
+        decimals = 18;
+    } else if (currency === 'USDT') {
+        userBalanceBN = rawUsdtBalance || ethers.BigNumber.from(0);
+        decimalsToDisplay = 2;
+        min = "0.5"; 
+        max = "10.0"; 
+        decimals = usdtDecimals;
+    } else if (currency === 'BABYDOGE') {
+        userBalanceBN = rawBabyDogeBalance || ethers.BigNumber.from(0);
+        decimalsToDisplay = 0;
+        min = "1000000"; 
+        max = "10000000000"; 
+        decimals = babyDogeDecimals;
+    } else if (currency === 'FREE') {
+        userBalanceBN = rawFreeBalance || ethers.BigNumber.from(0);
+        decimalsToDisplay = 0;
+        min = "500000"; 
+        max = "10000000000"; 
+        decimals = 18; // Asumsi Free pakai 18 desimal
+    } else {
+        return; 
     }
+
+    // Konversi min/max string ke BigNumber
+    const minBN = ethers.utils.parseUnits(min, decimals);
+    const maxBN = ethers.utils.parseUnits(max, decimals);
+
+    let amountToSetBN;
+
+    // 2. LOGIKA PERBAIKAN UTAMA DI SINI
+    if (percent === 0.10) { 
+        // Jika tombol MIN ditekan, langsung set ke Minimum Bet (bukan 10%)
+        amountToSetBN = minBN;
+    } else {
+        // Tentukan "Base Calculation" (Dasar Perhitungan)
+        // Jika Saldo User > Max Cap, maka hitung % dari Max Cap.
+        // Jika Saldo User < Max Cap, maka hitung % dari Saldo User.
+        let calculationBase = userBalanceBN.lt(maxBN) ? userBalanceBN : maxBN;
+
+        if (percent === 1.00) {
+            amountToSetBN = calculationBase;
+        } else {
+            // Hitung persentase dari calculationBase
+            // Contoh: 75% -> (Base * 75) / 100
+            amountToSetBN = calculationBase.mul(Math.floor(percent * 100)).div(100);
+        }
+    }
+
+    // 3. Validasi Akhir
+    // Jangan biarkan kurang dari Minimum Bet (kecuali saldonya emang 0)
+    if (amountToSetBN.lt(minBN) && userBalanceBN.gte(minBN)) {
+        amountToSetBN = minBN;
+    }
+    // Jangan biarkan lebih dari Max Bet (safety check)
+    if (amountToSetBN.gt(maxBN)) {
+        amountToSetBN = maxBN;
+    }
+    // Jangan biarkan melebihi saldo user
+    if (amountToSetBN.gt(userBalanceBN)) {
+        amountToSetBN = userBalanceBN;
+    }
+
+    // 4. Tampilkan ke Input
+    const formattedAmount = ethers.utils.formatUnits(amountToSetBN, decimals);
+    
+    // Trik: Hapus desimal berlebih biar tidak error di UI (misal 1.00000000)
+    // Parse float dulu baru toFixed sesuai mata uang
+    betAmountInput.value = parseFloat(formattedAmount).toFixed(decimalsToDisplay);
+}
+
 
     async function confirmBet() {
         const amt = document.getElementById("betAmountInput").value;
