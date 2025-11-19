@@ -1999,17 +1999,38 @@
     }
 
     async function callFinalizeRound() {
-        if (!userAddress) return;
-        document.getElementById("finalizeBtn").disabled = true;
-        showStatus("Finalizing Round...", "load");
+        if (!userAddress || !faylottoContract) return showStatus("Connect wallet first", "error");
+        
+        const finalizeBtn = document.getElementById("finalizeBtn");
+        finalizeBtn.disabled = true;
+        finalizeBtn.innerText = "Processing...";
+        showStatus("Sending Finalize Transaction...", "load");
+
         try {
+            // 1. Kirim Transaksi
             const tx = await faylottoContract.finalizeRound(currentRoundId);
-            await tx.wait();
-            showStatus("Round Finalized!", "success");
-            // Event WinnerRecorded akan men-trigger animasi
+            
+            showStatus("Finalizing... Waiting for confirmation", "load");
+            
+            // 2. Tunggu Receipt (Konfirmasi Blok)
+            const receipt = await tx.wait(); 
+            showStatus("Transaction Confirmed!", "success");
+
+            // 3. LOGIKA BARU: Paksa UI masuk mode Loading Ronde Baru
+            // Simpan ID ronde yang baru saja kita selesaikan
+            const finishedRoundId = currentRoundId;
+            
+            // Panggil fungsi pemaksa update
+            await forceWaitForNextRound(finishedRoundId);
+
         } catch (e) {
-            showStatus("Finalize Failed", "error");
-            document.getElementById("finalizeBtn").disabled = false;
+            console.error(e);
+            let msg = e.reason || e.message || "Finalize Failed";
+            showStatus(msg.slice(0, 60), "error");
+            
+            // Kembalikan tombol jika gagal
+            finalizeBtn.disabled = false;
+            finalizeBtn.innerText = "Finalize Round";
         }
     }
 
@@ -2219,98 +2240,111 @@
 
     // 2. LOGIKA RESET UI (Memaksa Tombol Kembali ke Awal)
     function resetRoundUI() {
-        console.log("Resetting UI for New Round...");
+        console.log("🧹 Resetting UI Components...");
         
-        // 1. Simpan ID Ronde Lama
-        const oldRoundId = currentRoundId; 
-
-        // 2. Reset State Global
-        currentRoundId = null; // Penting: Kosongkan ID agar fetcher tidak bingung
+        // Reset Variabel Global
         isSpinning = false;
         isFinalizing = false;
-        
-        // Reset Data Visual
         players = {};
         playersArray = [];
         totalWeight = ethers.BigNumber.from(0);
         currentRotation = 0;
-        
+
+        // Bersihkan List dan Canvas
         updateBetList();
+        if(ctx) drawDonut();
 
-        // 3. TAMPILAN "LOADING"
-        const finalizeBtn = document.getElementById("finalizeBtn");
-        if (finalizeBtn) finalizeBtn.style.display = "none";
-
-        const placeBetBtn = document.getElementById("placeBetBtn");
-        if (placeBetBtn) {
-            placeBetBtn.style.display = "block";
-            placeBetBtn.disabled = true; 
-            placeBetBtn.innerText = "Loading Round...";
-        }
-
-        const statusEl = document.getElementById("statusText");
-        if (statusEl) statusEl.innerText = "Syncing new round...";
-        document.getElementById("timerText").innerText = "--:--";
-
-        // Reset Deposit Saya
+        // Reset Tampilan Deposit Saya
         if(document.getElementById("myEthDeposit")) document.getElementById("myEthDeposit").innerText = "0";
         if(document.getElementById("myUsdtDeposit")) document.getElementById("myUsdtDeposit").innerText = "0";
         if(document.getElementById("myBabyDogeDeposit")) document.getElementById("myBabyDogeDeposit").innerText = "0";
         if(document.getElementById("myFreeDeposit")) document.getElementById("myFreeDeposit").innerText = "0";
 
-        // 4. LOOPING PENGECEKAN (POLLING)
-        let attempts = 0;
-        const maxAttempts = 30; // Cek selama 60 detik
+        // PENTING: Kembalikan Tombol Place Bet ke Kondisi Aktif
+        const placeBetBtn = document.getElementById("placeBetBtn");
+        if (placeBetBtn) {
+            placeBetBtn.style.display = "block";
+            placeBetBtn.disabled = false; // Aktifkan kembali
+            placeBetBtn.innerText = "Place Bet";
+        }
 
-        const waitForNewRound = async () => {
-            attempts++;
+        // Sembunyikan Tombol Finalize
+        const finalizeBtn = document.getElementById("finalizeBtn");
+        if (finalizeBtn) {
+            finalizeBtn.style.display = "none";
+            finalizeBtn.disabled = false;
+            finalizeBtn.innerText = "Finalize Round";
+        }
+        
+        // Update Data Pemenang & Leaderboard terbaru
+        fetchAndDisplayWinners();
+        fetchAndRenderLeaderboard();
+    }
+
+  async function forceWaitForNextRound(oldRoundId) {
+        console.log(`🛑 OLD Round: ${oldRoundId}. Waiting for NEW Round...`);
+        
+        // 1. Manipulasi UI Langsung (Optimistic UI)
+        // Sembunyikan tombol Finalize segera
+        document.getElementById("finalizeBtn").style.display = "none";
+        
+        // Tampilkan tombol Place Bet dalam keadaan Loading
+        const placeBetBtn = document.getElementById("placeBetBtn");
+        placeBetBtn.style.display = "block";
+        placeBetBtn.disabled = true;
+        placeBetBtn.innerText = "Loading New Round...";
+        
+        document.getElementById("statusText").innerText = "Creating Next Round...";
+        document.getElementById("timerText").innerText = "Loading...";
+
+        // 2. Loop Pengecekan (Hard Polling)
+        let retries = 0;
+        const maxRetries = 30; // Cek selama 60 detik (30 * 2s)
+
+        const checkInterval = setInterval(async () => {
+            retries++;
             try {
-                // Gunakan provider read-only (cepat)
-                const providerValid = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL); 
-                const contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerValid);
+                // Gunakan provider sederhana untuk mempercepat bacaan
+                const tempProvider = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+                const contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, tempProvider);
                 
-                // Panggil 'currentRoundId' sesuai ABI yang baru
-                const latestId = await contract.currentRoundId();
-
-                // Jika ID baru > ID lama, atau ini load pertama
-                if (!oldRoundId || latestId.gt(oldRoundId)) {
-                    console.log("✅ New Round Detected:", latestId.toString());
+                // Baca ID terbaru
+                const latestIdBN = await contract.currentRoundId();
+                
+                // Cek apakah ID sudah bertambah?
+                if (latestIdBN.gt(oldRoundId)) {
+                    console.log(`✅ NEW Round Detected: ${latestIdBN.toString()}`);
+                    clearInterval(checkInterval); // Hentikan loop
                     
-                    // Load semua data
-                    await fetchAndDisplayRoundData(); 
-                    fetchAndDisplayWinners(); 
-                    fetchAndRenderLeaderboard();
+                    // Update Global State
+                    currentRoundId = latestIdBN;
                     
-                    // Aktifkan tombol Place Bet
-                    if (placeBetBtn) {
-                        placeBetBtn.disabled = false;
-                        placeBetBtn.innerText = "Place Bet";
-                    }
-                    if (statusEl) statusEl.innerText = `Round ${latestId} Live!`;
-
+                    // Reset UI secara total untuk ronde baru
+                    resetRoundUI(); 
+                    
+                    // Ambil data lengkap ronde baru
+                    await fetchAndDisplayRoundData();
+                    
+                    showStatus(`Round ${latestIdBN} Started!`, "success");
                 } else {
-                    // Belum update, coba lagi dalam 2 detik
-                    if (attempts < maxAttempts) {
-                        if (statusEl) statusEl.innerText = `Waiting block... (${attempts})`;
-                        setTimeout(waitForNewRound, 2000); 
-                    } else {
-                        // Timeout, paksa load
-                        fetchAndDisplayRoundData();
-                        if (placeBetBtn) {
-                            placeBetBtn.disabled = false;
-                            placeBetBtn.innerText = "Place Bet";
-                        }
+                    console.log(`⏳ Still on old round... (${retries})`);
+                    if(document.getElementById("statusText")) {
+                        document.getElementById("statusText").innerText = `Waiting for block propagation... (${retries})`;
                     }
                 }
+
+                // Safety break jika terlalu lama
+                if (retries >= maxRetries) {
+                    clearInterval(checkInterval);
+                    showStatus("Network slow. Please refresh manually.", "warning");
+                    window.location.reload();
+                }
+
             } catch (err) {
                 console.error("Polling error:", err);
-                if (attempts < maxAttempts) setTimeout(waitForNewRound, 2000);
             }
-        };
-
-        // Mulai polling
-        setTimeout(waitForNewRound, 1000);
-    }
+        }, 2000); // Cek setiap 2 detik
+  }
 
     // ==================================================================
     // 7. REFERRAL & SOCIAL (Fungsi Tambahan)
