@@ -1,1 +1,998 @@
-4
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faylotto Spin Battle V4</title>
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --purple-main: #6200ff;
+    --blue-main: #00b3ff;
+    --pink-main: #ff00e6;
+    --cyan-main: #00ffff;
+    --bg-dark-1: #0b0b12;
+    --bg-dark-2: #000;
+    --bg-modal: #151525;
+    --border-color: rgba(120, 0, 255, 0.4);
+  }
+  body {
+    margin: 0; min-height: 100vh;
+    background: radial-gradient(circle at center, var(--bg-dark-1) 0%, var(--bg-dark-2) 100%);
+    font-family: "Ubuntu", sans-serif; color: #fff;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 20px 0; overflow-x: hidden;
+  }
+
+  /* Navbar */
+  .navbar {
+    position: fixed; top: 0; left: 0; width: 100%; height: 70px;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 30px; box-sizing: border-box; z-index: 1000;
+    background: rgba(10, 10, 25, 0.8); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(120, 0, 255, 0.3);
+  }
+  .navbar-logo { font-size: 20px; font-weight: bold; color: var(--cyan-main); display: flex; align-items: center; gap: 10px; }
+  .navbar-actions { display: flex; gap: 10px; }
+
+  /* Buttons */
+  .wallet-btn, .referral-btn {
+    background: linear-gradient(90deg, var(--purple-main), var(--blue-main));
+    border: none; border-radius: 12px; color: white;
+    font-weight: bold; padding: 8px 20px; cursor: pointer;
+    box-shadow: 0 0 15px var(--blue-main); transition: 0.3s;
+  }
+  .wallet-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px var(--pink-main); }
+  
+  /* Hero */
+  #hero-section { margin-top: 80px; text-align: center; margin-bottom: 20px; }
+  .hero-title { font-size: 2rem; margin: 0; }
+  .highlight-text { 
+    background: linear-gradient(90deg, #03a9f4, #f441a5);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+  }
+  .pool-info { font-size: 1.2rem; margin-top: 10px; color: #0f0; text-shadow: 0 0 10px #0f0; }
+
+  /* Wheel Container */
+  .donut-wrap {
+    position: relative; width: 100%; max-width: 450px;
+    aspect-ratio: 1 / 1; margin: 20px auto;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #donutCanvas { width: 100%; height: 100%; display: block; }
+  .donut-pointer {
+    position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+    z-index: 10; width: 0; height: 0;
+    border-left: 18px solid transparent; border-right: 18px solid transparent;
+    border-top: 38px solid var(--cyan-main);
+    filter: drop-shadow(0 0 10px var(--cyan-main));
+  }
+
+  /* Controls */
+  .controls { width: 280px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; text-align: center; }
+  .main-btn {
+    width: 100%; padding: 12px; border-radius: 12px; border: none;
+    font-weight: bold; font-size: 16px; color: white; cursor: pointer;
+    background: linear-gradient(90deg, var(--blue-main), var(--pink-main));
+    box-shadow: 0 0 20px var(--blue-main); transition: 0.3s;
+  }
+  .main-btn:hover { transform: scale(1.02); box-shadow: 0 0 30px var(--pink-main); }
+  .main-btn:disabled { background: #444; cursor: not-allowed; box-shadow: none; }
+  .status { color: var(--cyan-main); min-height: 20px; font-size: 14px; }
+  .timer { font-size: 18px; font-weight: bold; color: gold; margin-top: 5px; }
+
+  /* Lists */
+  .lists-wrapper { display: flex; gap: 20px; width: 90%; max-width: 800px; flex-wrap: wrap; }
+  .list-container { 
+    flex: 1; min-width: 300px; background: rgba(20,20,30,0.8); 
+    border: 1px solid var(--border-color); border-radius: 12px; padding: 15px;
+    max-height: 300px; overflow-y: auto;
+  }
+  .list-container h3 { margin-top: 0; color: var(--blue-main); text-align: center; font-size: 16px; }
+  
+  .bet-list-item, .winner-list-item {
+    background: rgba(0,0,0,0.4); padding: 10px; margin-bottom: 8px;
+    border-radius: 8px; display: flex; justify-content: space-between; font-size: 13px;
+  }
+
+  /* Modals */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+    z-index: 2000; display: none; align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--bg-modal); border: 1px solid var(--border-color);
+    width: 350px; padding: 20px; border-radius: 16px;
+    box-shadow: 0 0 30px rgba(100,0,255,0.3);
+    transform: scale(0.9); transition: 0.3s;
+  }
+  .modal-overlay.show .modal { transform: scale(1); }
+  .modal-header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+  .modal-header h2 { margin: 0; color: var(--cyan-main); }
+  .modal-close-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+  
+  /* Input Group */
+  .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+  .input-group input { flex: 1; background: #000; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 8px; }
+  .input-group select { background: #000; border: 1px solid #444; color: #fff; padding: 10px; border-radius: 8px; }
+  .input-icon-wrapper { display: flex; align-items: center; position: relative; }
+  .input-icon { position: absolute; left: 10px; width: 20px; }
+  
+  .percent-buttons { display: flex; gap: 5px; margin-bottom: 20px; }
+  .percent-btn { flex: 1; background: rgba(255,255,255,0.1); border: 1px solid #444; color: #fff; padding: 5px; border-radius: 6px; cursor: pointer; }
+  .percent-btn:hover { background: rgba(255,255,255,0.2); }
+
+  /* Toast */
+  #toast-container { position: fixed; top: 80px; right: 20px; z-index: 3000; }
+  .toast-notification { background: #222; color: #fff; padding: 15px; margin-bottom: 10px; border-left: 4px solid var(--blue-main); border-radius: 4px; animation: slideIn 0.3s; display: flex; align-items: center; gap: 10px;}
+  .toast-notification.success { border-left-color: #0f0; }
+  .toast-notification.error { border-left-color: #f00; }
+  @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+  /* Balance Items */
+  .balance-line { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; font-size: 14px; }
+  .balance-line img { width: 20px; height: 20px; }
+  .disconnect-btn { width: 100%; padding: 10px; background: rgba(255,0,0,0.2); border: 1px solid #f00; color: #f00; border-radius: 8px; cursor: pointer; margin-top: 10px; }
+
+  /* Victory Overlay */
+  #victory-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 4000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+  #victory-overlay.show { display: flex; }
+  .victory-title { font-size: 4rem; color: gold; text-shadow: 0 0 30px gold; animation: pulse 1s infinite; }
+  .claim-victory-btn { padding: 15px 40px; background: var(--pink-main); border: none; color: white; font-size: 18px; font-weight: bold; border-radius: 30px; cursor: pointer; margin-top: 20px; box-shadow: 0 0 20px var(--pink-main); }
+  @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+  /* Leaderboard Grid */
+  .lb-header, .lb-item { display: grid; grid-template-columns: 0.5fr 2fr 1fr 1.5fr 1.5fr; padding: 10px; border-bottom: 1px solid rgba(120, 0, 255, 0.2); font-size: 12px; text-align: left; align-items: center; }
+  .lb-header { color: var(--cyan-main); font-weight: bold; letter-spacing: 1px; }
+  .lb-item:hover { background: rgba(98, 0, 255, 0.1); }
+</style>
+</head>
+
+<body>
+
+<nav class="navbar">
+    <div class="navbar-logo">
+        <img src="logo.svg" alt="Logo" style="height: 30px;"> FAYLOTTO
+    </div>
+    <div class="navbar-actions">
+        <button class="referral-btn" id="referralBtn">Referral</button>
+        <button class="wallet-btn" id="walletBtn">Connect Wallet</button>
+    </div>
+</nav>
+
+<div class="modal-overlay" id="wallet-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Wallet Info</h2>
+      <button class="modal-close-btn" id="wallet-modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body" id="walletInfo">
+      <p style="font-family: monospace; color: var(--cyan-main);">Address: <span id="walletAddress">...</span></p>
+      <hr style="border-color: #333;">
+      
+      <div class="balance-line"><img src="eth.svg"> <span>ETH: <b id="ethBalance">0</b></span></div>
+      <div class="balance-line"><img src="usdt.svg"> <span>USDT: <b id="usdtBalance">0</b></span></div>
+      <div class="balance-line"><img src="bb.svg"> <span>BabyDoge: <b id="babyDogeBalance">0</b></span></div>
+      <div class="balance-line" style="color: #00ff88;"><img src="bb.svg" style="filter: hue-rotate(90deg);"> <span>Free Balance: <b id="freeBalance">0</b></span></div>
+      
+      <hr style="border-color: #333;">
+      
+      <p style="color: #888; font-size: 12px; margin-bottom: 5px;">MY DEPOSITS (THIS ROUND):</p>
+      <div class="balance-line"><img src="eth.svg"> <span><b id="myEthDeposit">0</b></span></div>
+      <div class="balance-line"><img src="usdt.svg"> <span><b id="myUsdtDeposit">0</b></span></div>
+      <div class="balance-line"><img src="bb.svg"> <span><b id="myBabyDogeDeposit">0</b></span></div>
+      <div class="balance-line" style="color: #00ff88;"><img src="bb.svg" style="filter: hue-rotate(90deg);"> <span><b id="myFreeDeposit">0</b> (Free)</span></div>
+    </div>
+    <div class="modal-footer">
+      <button id="disconnectBtn" class="disconnect-btn">Disconnect</button>
+    </div>
+  </div>
+</div>
+
+<section id="hero-section">
+    <h2 class="hero-title"><span class="highlight-text">Faylotto Spin Battle V4</span></h2>
+    <div class="pool-info">Pool: <span id="pool-usd-value">$0.00</span></div>
+</section>
+
+<div class="app-body">
+    <div class="donut-wrap">
+        <div class="donut-pointer"></div>
+        <canvas id="donutCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <button id="placeBetBtn" class="main-btn">PLACE BET</button>
+        <button id="finalizeBtn" class="main-btn" style="display: none; background: linear-gradient(90deg, #ff00e6, #ff5555);">SPIN NOW!</button>
+        <div class="status" id="statusText">Connect wallet to play</div>
+        <div class="timer" id="timerText">00:00</div>
+    </div>
+
+    <div class="lists-wrapper">
+        <div class="list-container">
+            <h3>Live Bets</h3>
+            <div id="bet-list" style="text-align:center; color:#888;">No bets yet.</div>
+        </div>
+        <div class="list-container">
+            <h3>Winners</h3>
+            <div id="winner-list" style="text-align:center; color:#888;">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="bet-modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>Place Bet</h2>
+      <button class="modal-close-btn" id="bet-modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body">
+        <div style="margin-bottom: 15px; font-size: 13px; color: #aaa;">
+            <div class="balance-line"><img src="eth.svg"> <span id="modalEthBalance">0</span> ETH</div>
+            <div class="balance-line"><img src="usdt.svg"> <span id="modalUsdtBalance">0</span> USDT</div>
+            <div class="balance-line"><img src="bb.svg"> <span id="modalBabyDogeBalance">0</span> BabyDoge</div>
+            <div class="balance-line" style="color:#00ff88;"><img src="bb.svg" style="filter: hue-rotate(90deg);"> <span id="modalFreeBalance">0</span> FREE</div>
+        </div>
+
+        <div class="input-group">
+            <div class="input-icon-wrapper" style="flex-grow: 1;">
+                <input type="number" id="betAmountInput" placeholder="Amount">
+            </div>
+            <div class="input-icon-wrapper" style="width: 40%;">
+                 <img src="eth.svg" class="input-icon" id="currency-icon" alt="">
+                 <select id="betCurrencySelect" style="padding-left: 35px; width: 100%;">
+                    <option value="ETH" data-icon="eth.svg">ETH</option>
+                    <option value="USDT" data-icon="usdt.svg">USDT</option>
+                    <option value="BABYDOGE" data-icon="bb.svg">BabyDoge</option>
+                    <option value="FREE" data-icon="bb.svg">FREE</option>
+                </select>
+            </div>
+        </div>
+        <div class="percent-buttons">
+            <button class="percent-btn" data-percent="0.10">MIN</button> 
+            <button class="percent-btn" data-percent="0.25">25%</button>
+            <button class="percent-btn" data-percent="0.50">50%</button>
+            <button class="percent-btn" data-percent="0.75">75%</button>
+            <button class="percent-btn" data-percent="1.00">MAX</button>
+        </div>
+        <div style="font-size: 11px; color: #666; text-align: center; margin-top: 10px;">
+            Min: 0.00005 ETH | 0.5 USDT | 1M BabyDoge | 1M Free<br>
+            Max: 0.00265 ETH | 10 USDT | 10B BabyDoge | 10B Free
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button id="confirmBetBtn" class="main-btn">Confirm Bet</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="referral-modal-overlay">
+    <div class="modal">
+        <div class="modal-header"><h2>Referral</h2><button class="modal-close-btn" id="referral-modal-close-btn">&times;</button></div>
+        <div class="modal-body">
+            <div class="ref-section">
+                <p>My Nickname: <b id="myNickname">-</b></p>
+                <input type="text" id="nicknameInput" placeholder="New Nickname" style="width:100%; padding:8px; margin:5px 0; background:#000; border:1px solid #444; color:#fff;">
+                <button id="createNicknameBtn" class="percent-btn" style="width:100%">Set Nickname</button>
+            </div>
+            <hr style="border-color:#333">
+            <div class="ref-section">
+                <p>Rewards:</p>
+                <div style="font-size:13px; color:#aaa;">
+                    ETH: <span id="ethRewards">0</span><br>
+                    USDT: <span id="usdtRewards">0</span><br>
+                    BabyDoge: <span id="babyDogeRewards">0</span>
+                </div>
+                <button id="claimRewardsBtn" class="main-btn" style="margin-top:10px;">Claim Rewards</button>
+            </div>
+             <div class="ref-section" id="referralLinkSection" style="display: none; margin-top:10px;">
+                <input type="text" id="referralLinkInput" readonly style="width:100%; padding:8px; background:#000; border:1px solid #444; color:#fff;">
+                <button id="copyReferralBtn" class="percent-btn" style="width:100%; margin-top:5px;">Copy Link</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="profile-modal-overlay">
+    <div class="modal">
+        <div class="modal-header"><h2>Profile</h2><button class="modal-close-btn" id="profile-modal-close-btn">&times;</button></div>
+        <div class="modal-body" style="text-align:center;">
+            <img id="profileAvatar" src="" style="width:80px; height:80px; border-radius:50%; border:2px solid var(--cyan-main); margin-bottom:10px;">
+            <h3 id="profileNickname" style="color:var(--cyan-main); margin:0;">-</h3>
+            <p id="profileAddress" style="font-size:12px; color:#888; cursor:pointer;" onclick="copyToClipboard(this.innerText)">0x...</p>
+            <div style="display:flex; justify-content:space-around; margin-top:15px; background:#000; padding:10px; border-radius:8px;">
+                <div><small>Ref Count</small><br><b id="profileRefCount">-</b></div>
+                <div><small>Status</small><br><span style="color:#0f0">Active</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="victory-overlay">
+    <div class="victory-title">YOU WIN!</div>
+    <button class="claim-victory-btn" onclick="document.getElementById('victory-overlay').classList.remove('show')">CONTINUE</button>
+</div>
+
+<section class="leaderboard-section">
+    <h2 class="section-title">Top Pilot</h2>
+    <div class="leaderboard-container">
+        <div class="lb-header">
+            <span>Rank</span><span>Pilot</span><span>Win</span><span>ETH</span><span>USDT</span>
+        </div>
+        <div id="leaderboard-list">
+            <div class="lb-loading">> Loading data...</div>
+        </div>
+    </div>
+  </section>
+
+<div id="toast-container"></div>
+
+<audio id="sfx-click" src="clickI.mp3"></audio>
+<audio id="sfx-spin" src="spinI.mp3"></audio>
+<audio id="sfx-win" src="winI.mp3"></audio>
+<audio id="sfx-coin" src="coin.mp3"></audio>
+
+<script>
+    // ==================================================================
+    // 1. KONFIGURASI KONTRAK V4 (BASE SEPOLIA)
+    // ==================================================================
+    
+    // ⚠️ Update Alamat Kontrak V4 Baru Anda Disini
+    const FAYLOTTO_ADDRESS = "0xF03B681c434CDaf559601549e10eE7d51407Dc54"; 
+    
+    const USDT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2";
+    const BABYDOGE_ADDRESS = "0xba63AFBf0060a9123aAAc1213b587d0462bD4d45"; 
+    
+    const BASE_SEPOLIA_CHAIN_ID = '0x14A34'; // 84532
+    const BASE_SEPOLIA_RPC = "https://sepolia.base.org";
+    const WSS_URL = "wss://base-sepolia.drpc.org"; 
+    const HTTPS_URL = BASE_SEPOLIA_RPC; 
+    
+    const ETH_LOGO_PATH = "eth.svg"; 
+    const USDT_LOGO_PATH = "usdt.svg"; 
+    const BABYDOGE_LOGO_PATH = "bb.svg"; 
+
+    const AUTO_CONNECT_KEY = "faylotto_v3_session";
+    const AUTO_CONNECT_DURATION = 30 * 24 * 60 * 60 * 1000;
+
+    const USDT_ABI = ["function balanceOf(address) view returns (uint256)","function decimals() view returns (uint8)","function approve(address,uint256) returns (bool)","function allowance(address,address) view returns (uint256)"];
+    
+    // [ABI V4 LENGKAP]
+    const FAYLOTTO_ABI = [{"inputs":[{"internalType":"address","name":"_usdtToken","type":"address"},{"internalType":"address","name":"_babyDogeToken","type":"address"},{"internalType":"address","name":"_feeCollector","type":"address"},{"internalType":"address","name":"_nativeUsdPriceFeedAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"usdWeight","type":"uint256"}],"name":"BetBabyDoge","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BetFree","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"usdWeight","type":"uint256"}],"name":"BetNative","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"usdWeight","type":"uint256"}],"name":"BetUSDT","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"spinId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"text","type":"string"}],"name":"FreeSpinCommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"spinId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"newText","type":"string"}],"name":"FreeSpinCommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"spinId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"FreeSpinLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"FreeSpinNoPrize","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"prizeTier","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FreeSpinWon","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"NicknameCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"ethAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"usdtAmount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"babyDogeAmount","type":"uint256"}],"name":"ReferralRewardClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralSet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"startTime","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"endTime","type":"uint256"}],"name":"RoundCreated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardUSDT","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardBabyDoge","type":"uint256"}],"name":"RoundFinalized","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"bool","name":"liked","type":"bool"}],"name":"WinnerLiked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"winnerId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"rewardETH","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardUSDT","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"rewardBabyDoge","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"WinnerRecorded","type":"event"},{"inputs":[],"name":"MAX_BETS_PER_PLAYER","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_BABYDOGE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_FREE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_NATIVE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_BET_USDT_UNSCALED","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MAX_PLAYERS","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_BET_BABYDOGE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_BET_FREE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"spinId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToFreeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"string","name":"text","type":"string"}],"name":"addCommentToWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawBabyDoge","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"adminWithdrawUSDT","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"babyDogeDecimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"babyDogeToken","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"babyDogeUsdPrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"claimReferralRewards","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"nickname","type":"string"}],"name":"createNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"spinId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnFreeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"commentId","type":"uint256"},{"internalType":"string","name":"newText","type":"string"}],"name":"editCommentOnWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feeBP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"finalizeRound","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeBalances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"freeBetCost","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"freeSpinHistory","outputs":[{"internalType":"uint256","name":"spinId","type":"uint256"},{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"prizeTier","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"freeSpinLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"freeSpinLiked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"freeSpinLikedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"spinId","type":"uint256"}],"name":"getAllCommentsForFreeSpin","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllCommentsForWinner","outputs":[{"components":[{"internalType":"address","name":"user","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAllLikes","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getAverageRatingForWinner","outputs":[{"internalType":"uint256","name":"avgTimes1e18","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"spinId","type":"uint256"}],"name":"getCommentCountForFreeSpin","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getCommentCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"count","type":"uint256"}],"name":"getFreeSpinHistory","outputs":[{"components":[{"internalType":"uint256","name":"spinId","type":"uint256"},{"internalType":"address","name":"user","type":"address"},{"internalType":"uint256","name":"prizeTier","type":"uint256"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.FreeSpinWinner[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getLatestNativePrice","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getLikeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"spinId","type":"uint256"}],"name":"getLikeCountFreeSpin","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"},{"internalType":"address","name":"player","type":"address"}],"name":"getPlayerDeposits","outputs":[{"internalType":"uint256","name":"ethAmount","type":"uint256"},{"internalType":"uint256","name":"usdtAmount","type":"uint256"},{"internalType":"uint256","name":"babyDogeAmount","type":"uint256"},{"internalType":"uint256","name":"usdWeight","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"getRatingCountForWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralList","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getReferralRewards","outputs":[{"internalType":"uint256","name":"ethReward","type":"uint256"},{"internalType":"uint256","name":"usdtReward","type":"uint256"},{"internalType":"uint256","name":"babyDogeReward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundBasic","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"uint256","name":"startTime","type":"uint256"},{"internalType":"uint256","name":"endTime","type":"uint256"},{"internalType":"bool","name":"finalized","type":"bool"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"totalETH","type":"uint256"},{"internalType":"uint256","name":"totalUSDT","type":"uint256"},{"internalType":"uint256","name":"totalBabyDoge","type":"uint256"},{"internalType":"uint256","name":"playersCount","type":"uint256"},{"internalType":"uint256","name":"totalWeight","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"rid","type":"uint256"}],"name":"getRoundPlayers","outputs":[{"internalType":"address[]","name":"","type":"address[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"count","type":"uint256"}],"name":"getWinners","outputs":[{"components":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardUSDT","type":"uint256"},{"internalType":"uint256","name":"rewardBabyDoge","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSpinBattle.WinnerInfo[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"isFreeSpinPaused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"liked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"likedBy","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nativeUsdDecimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextFreeSpinId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"nextRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"","type":"string"}],"name":"nicknameOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"nicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pauseFreeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetBabyDoge","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetFree","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"placeBetNative","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"placeBetUSDT","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"quotaTier1","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier2","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier3","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier4","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier5","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier6","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier7","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier8","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"quotaTier9","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint8","name":"stars","type":"uint8"}],"name":"rateWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingCountByWinner","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratingTotalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"ratings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsBabyDoge","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referralRewardsUSDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"referrals","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"referrerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"roundLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setBabyDoge","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newPrice","type":"uint256"}],"name":"setBabyDogePrice","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFeeBP","type":"uint256"}],"name":"setFeeBP","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"cost","type":"uint256"}],"name":"setFreeBetCost","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"refNickname","type":"string"}],"name":"setReferralByNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"secs","type":"uint256"}],"name":"setRoundLength","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"}],"name":"setUSDT","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"spinCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"spinFree","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"spinId","type":"uint256"}],"name":"toggleLikeFreeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"}],"name":"toggleLikeWinner","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpauseFreeSpin","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"usdtDecimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"usdtToken","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winnerList","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardUSDT","type":"uint256"},{"internalType":"uint256","name":"rewardBabyDoge","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"winners","outputs":[{"internalType":"uint256","name":"winnerId","type":"uint256"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"address","name":"winner","type":"address"},{"internalType":"uint256","name":"rewardETH","type":"uint256"},{"internalType":"uint256","name":"rewardUSDT","type":"uint256"},{"internalType":"uint256","name":"rewardBabyDoge","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
+        
+        
+    // State
+    let provider, signer, userAddress;
+    let faylottoContract, usdtContract, babyDogeContract;
+    let rawEth=ethers.BigNumber.from(0), rawUsdt=ethers.BigNumber.from(0), rawBaby=ethers.BigNumber.from(0), rawFree=ethers.BigNumber.from(0);
+    let usdtDecimals = 6, babyDogeDecimals = 18;
+    let currentRoundId, isSpinning=false, isFinalizing=false, visualTimer;
+    let players={}, playersArray=[], totalWeight=ethers.BigNumber.from(0);
+    let ctx, cw, ch, cx, cy, outerR, innerR, currentRotation=0;
+    let myCurrentEthDeposit=ethers.BigNumber.from(0), myCurrentUsdtDeposit=ethers.BigNumber.from(0), myCurrentBabyDogeDeposit=ethers.BigNumber.from(0);
+    let pendingReferrerNickname = null;
+    let currentEthPrice = 3000;
+    const PLAYER_COLORS = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#F9D423", "#FFA62B", "#7B72E9", "#3DCC91", "#FF90B3", "#C0E218", "#3498DB"];
+
+    // --- INIT RESPONSIVE CANVAS ---
+    function initResponsiveCanvas() {
+        const canvas = document.getElementById('donutCanvas');
+        const container = document.querySelector('.donut-wrap');
+        if (!canvas || !container) return;
+        ctx = canvas.getContext('2d');
+        
+        function resizeCanvas() {
+            const boxWidth = container.clientWidth;
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = boxWidth * dpr;
+            canvas.height = boxWidth * dpr;
+            canvas.style.width = `${boxWidth}px`;
+            canvas.style.height = `${boxWidth}px`;
+            ctx.scale(dpr, dpr);
+            
+            cw = boxWidth; ch = boxWidth;
+            cx = cw / 2; cy = ch / 2;
+            outerR = cw * 0.49; innerR = cw * 0.25;
+            drawDonut(currentRotation);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+    }
+
+    // --- DOM CONTENT LOADED ---
+    document.addEventListener("DOMContentLoaded", () => {
+        console.log("🚀 Faylotto V4 Initializing...");
+        
+        initResponsiveCanvas();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const refNick = urlParams.get('ref');
+        if (refNick) pendingReferrerNickname = refNick;
+
+        // Init Provider Read-Only
+        provider = new ethers.providers.JsonRpcProvider(HTTPS_URL);
+        faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+        usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, provider);
+        babyDogeContract = new ethers.Contract(BABYDOGE_ADDRESS, USDT_ABI, provider);
+
+        // Load Initial Data
+        fetchAndDisplayRoundData();
+        fetchAndDisplayWinners();
+        fetchAndRenderLeaderboard();
+        checkAutoConnect(); 
+
+        // === Event Listeners ===
+        walletBtn.addEventListener("click", () => { if (!userAddress) toggleWallet(); else showWalletModal(); });
+        placeBetBtn.addEventListener("click", showBetModal);
+        finalizeBtn.addEventListener("click", callFinalizeRound);
+
+        const profileCloseBtn = document.getElementById('profile-modal-close-btn');
+        if (profileCloseBtn) profileCloseBtn.addEventListener('click', hideProfileModal);
+        const profileOverlay = document.getElementById('profile-modal-overlay');
+        if (profileOverlay) profileOverlay.addEventListener('click', hideProfileModal);
+
+        betModalCloseBtn.addEventListener("click", hideBetModal);
+        betModalOverlay.addEventListener("click", hideBetModal);
+        confirmBetBtn.addEventListener("click", confirmBet);
+        percentButtons.forEach(button => {
+            button.addEventListener("click", () => {
+                setAmountByPercent(parseFloat(button.dataset.percent));
+            });
+        });
+
+        if (referralBtn) referralBtn.addEventListener("click", showReferralModal);
+        if (referralModalCloseBtn) referralModalCloseBtn.addEventListener("click", hideReferralModal);
+        if (referralModalOverlay) referralModalOverlay.addEventListener("click", hideReferralModal);
+        if (createNicknameBtn) createNicknameBtn.addEventListener("click", callCreateNickname);
+        if (claimRewardsBtn) claimRewardsBtn.addEventListener("click", callClaimRewards);
+
+        if (walletModalCloseBtn) walletModalCloseBtn.addEventListener("click", hideWalletModal);
+        if (walletModalOverlay) walletModalOverlay.addEventListener("click", (e) => {
+            if (e.target.id === "wallet-modal-overlay") hideWalletModal();
+        });
+        if (disconnectBtn) disconnectBtn.addEventListener("click", disconnectWallet);
+
+        setupEventListeners();
+        document.getElementById("year").textContent = new Date().getFullYear();
+
+        const copyBtn = document.getElementById("copyReferralBtn");
+        if (copyBtn) {
+            copyBtn.addEventListener("click", () => {
+                const linkInput = document.getElementById("referralLinkInput");
+                if (linkInput) {
+                    navigator.clipboard.writeText(linkInput.value).then(() => showStatus("Link copied!", "success"));
+                }
+            });
+        }
+
+        const currencySelect = document.getElementById('betCurrencySelect');
+        const currencyIcon = document.getElementById('currency-icon');
+        if (currencySelect && currencyIcon) {
+            currencySelect.addEventListener('change', (e) => {
+                const selectedIconPath = e.target.options[e.target.selectedIndex].dataset.icon;
+                if (selectedIconPath) currencyIcon.src = selectedIconPath;
+            });
+        }
+
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => playSound('sfx-click'));
+        });
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === 'visible') handleCanvasRedraw();
+        });
+        window.addEventListener("focus", handleCanvasRedraw);
+    });
+
+    // --- FUNCTIONS ---
+
+    async function toggleWallet(isAutoConnect = false) {
+        if (userAddress) return; 
+        if (!window.ethereum) return showStatus("Please install MetaMask!", "error");
+        try {
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            if (isAutoConnect) {
+                const accounts = await provider.listAccounts();
+                if (accounts.length === 0) { localStorage.removeItem(AUTO_CONNECT_KEY); return; }
+                signer = provider.getSigner(accounts[0]);
+            } else {
+                await provider.send("eth_requestAccounts", []);
+                signer = provider.getSigner();
+            }
+            const network = await provider.getNetwork();
+            if (network.chainId !== 84532) { // Base Sepolia
+                try {
+                    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }] });
+                } catch(e) { showStatus("Switch to Base Sepolia!", "warning"); return; }
+            }
+            userAddress = await signer.getAddress();
+            if (!isAutoConnect) showStatus("Wallet Connected!", "success");
+            localStorage.setItem(AUTO_CONNECT_KEY, "true");
+
+            // Re-init with signer
+            usdtContract = new ethers.Contract(USDT_ADDRESS, USDT_ABI, signer);
+            babyDogeContract = new ethers.Contract(BABYDOGE_ADDRESS, USDT_ABI, signer);
+            faylottoContract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, signer);
+
+            walletBtn.innerText = "Dashboard";
+            referralBtn.style.display = "block"; 
+            await updateUserBalances();
+            await fetchAndDisplayRoundData();
+            await fetchReferralData();
+            setupEventListeners();
+
+        } catch (err) { console.error(err); }
+    }
+
+    function checkAutoConnect() {
+        if (localStorage.getItem(AUTO_CONNECT_KEY)) toggleWallet(true);
+    }
+
+    function disconnectWallet() {
+        localStorage.removeItem(AUTO_CONNECT_KEY);
+        window.location.reload();
+    }
+
+    // --- CORE GAME LOGIC ---
+
+    async function fetchAndDisplayRoundData() {
+        let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+        if (!contract) return;
+        try {
+            statusText.innerText = "Syncing...";
+            if (currentEthPrice === 0) await fetchTokenPrices();
+
+            currentRoundId = await contract.currentRoundId();
+            const roundInfo = await contract.getRoundBasic(currentRoundId);
+            
+            // Reset
+            players = {}; playersArray = []; totalWeight = ethers.BigNumber.from(0);
+            if(ctx) drawDonut();
+            betList.innerHTML = "";
+
+            const playersList = await contract.getRoundPlayers(currentRoundId);
+            for (const playerAddress of playersList) {
+                const deposits = await contract.getPlayerDeposits(currentRoundId, playerAddress);
+                // Args: addr, eth, usdt, baby, free, weight, isNew
+                addBetToState(playerAddress, deposits.ethAmount, deposits.usdtAmount, deposits.babyDogeAmount, ethers.BigNumber.from(0), deposits.usdWeight, false);
+            }
+            updateBetList();
+            if (userAddress) await updateMyDeposits();
+
+            const ethPool = parseFloat(ethers.utils.formatEther(roundInfo[5]));
+            const usdtPool = parseFloat(ethers.utils.formatUnits(roundInfo[6], usdtDecimals));
+            const totalUsd = usdtPool + (ethPool * currentEthPrice); // simplified
+            document.getElementById('pool-usd-value').innerText = "$" + totalUsd.toFixed(2);
+
+            const contractEndTime = roundInfo[2].toNumber() * 1000;
+            startVisualTimer(contractEndTime); 
+
+            if (Date.now() < contractEndTime) {
+                statusText.innerText = `Round ${currentRoundId} Live!`;
+                if (signer) placeBetBtn.disabled = false;
+                isFinalizing = false;
+            } else {
+                statusText.innerText = "Waiting for winner...";
+                showFinalizeButton();
+            }
+        } catch (err) { console.error("Sync Error:", err); }
+    }
+
+    function addBetToState(playerAddress, ethAmount, usdtAmount, babyDogeAmount, freeAmount, usdWeight, isNewBet) {
+        const key = playerAddress.toLowerCase();
+        if (!players[key]) {
+            players[key] = {
+                id: playerAddress,
+                eth: ethers.BigNumber.from(0), usdt: ethers.BigNumber.from(0), baby: ethers.BigNumber.from(0), free: ethers.BigNumber.from(0),
+                weight: ethers.BigNumber.from(0),
+                color: PLAYER_COLORS[Object.keys(players).length % PLAYER_COLORS.length]
+            };
+        }
+        players[key].eth = players[key].eth.add(ethAmount);
+        players[key].usdt = players[key].usdt.add(usdtAmount);
+        players[key].baby = players[key].baby.add(babyDogeAmount);
+        players[key].free = players[key].free.add(freeAmount);
+        
+        if (isNewBet) {
+            players[key].weight = players[key].weight.add(usdWeight);
+            totalWeight = totalWeight.add(usdWeight);
+        } else {
+            players[key].weight = usdWeight; // From sync
+            totalWeight = totalWeight.add(usdWeight);
+        }
+    }
+
+    function updateBetList() {
+        betList.innerHTML = "";
+        if (Object.keys(players).length === 0) {
+            betList.innerHTML = "<div style='text-align:center;color:#888'>No bets yet.</div>";
+            rebuildPlayersArrayAndDraw();
+            return;
+        }
+
+        playersArray = [];
+        totalWeight = ethers.BigNumber.from(0);
+        for (const key in players) {
+            playersArray.push({ addr: players[key].id, ...players[key] });
+            totalWeight = totalWeight.add(players[key].weight);
+        }
+        playersArray.sort((a, b) => b.weight.sub(a.weight).gt(0) ? 1 : -1);
+
+        const fragment = document.createDocumentFragment();
+        for (const p of playersArray) {
+            const shortId = (userAddress && p.addr.toLowerCase() === userAddress.toLowerCase()) ? "You" : (p.addr.slice(0, 6) + "..." + p.addr.slice(-4));
+            const item = document.createElement("div");
+            item.className = "bet-list-item";
+            item.style.borderLeft = `3px solid ${p.color}`;
+            
+            let depositsHTML = "";
+            if (p.eth.gt(0)) depositsHTML += `<span>${parseFloat(ethers.utils.formatEther(p.eth)).toFixed(4)} ETH</span><br>`;
+            if (p.usdt.gt(0)) depositsHTML += `<span>${parseFloat(ethers.utils.formatUnits(p.usdt, usdtDecimals)).toFixed(2)} USDT</span><br>`;
+            if (p.baby.gt(0)) depositsHTML += `<span>${parseFloat(ethers.utils.formatUnits(p.baby, babyDogeDecimals)).toFixed(0)} Baby</span><br>`;
+            if (p.free.gt(0)) depositsHTML += `<span style="color:#00ff88;">${parseFloat(ethers.utils.formatUnits(p.free, babyDogeDecimals)).toFixed(0)} Free</span>`;
+
+            item.innerHTML = `<div class="player-id" onclick="showPlayerProfile('${p.addr}')">${shortId}</div><div class="player-bets">${depositsHTML}</div>`;
+            fragment.appendChild(item);
+        }
+        betList.appendChild(fragment);
+        rebuildPlayersArrayAndDraw();
+    }
+
+    // --- BETTING & WALLET HELPERS ---
+
+    async function updateUserBalances() {
+        if (!provider || !userAddress) return;
+        try {
+            rawEthBalance = await provider.getBalance(userAddress);
+            if(document.getElementById("ethBalance")) document.getElementById("ethBalance").innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
+            if(document.getElementById("modalEthBalance")) document.getElementById("modalEthBalance").innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
+            
+            if (usdtContract) {
+                usdtDecimals = await usdtContract.decimals();
+                rawUsdtBalance = await usdtContract.balanceOf(userAddress);
+                const u = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
+                if(document.getElementById("usdtBalance")) document.getElementById("usdtBalance").innerText = u;
+                if(document.getElementById("modalUsdtBalance")) document.getElementById("modalUsdtBalance").innerText = u;
+            }
+            if (babyDogeContract) {
+                babyDogeDecimals = await babyDogeContract.decimals();
+                rawBabyDogeBalance = await babyDogeContract.balanceOf(userAddress);
+                const b = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
+                if(document.getElementById("babyDogeBalance")) document.getElementById("babyDogeBalance").innerText = b;
+                if(document.getElementById("modalBabyDogeBalance")) document.getElementById("modalBabyDogeBalance").innerText = b;
+            }
+            if (faylottoContract) {
+                rawFreeBalance = await faylottoContract.freeBalances(userAddress);
+                const f = parseFloat(ethers.utils.formatUnits(rawFreeBalance, babyDogeDecimals)).toFixed(0);
+                if(document.getElementById("freeBalance")) document.getElementById("freeBalance").innerText = f;
+                if(document.getElementById("modalFreeBalance")) document.getElementById("modalFreeBalance").innerText = f;
+            }
+        } catch (err) { console.log("Bal err", err); }
+    }
+
+    async function updateMyDeposits() {
+        if (!faylottoContract || !currentRoundId || !userAddress) return;
+        try {
+            // 1. Deposit asli dari kontrak
+            const d = await faylottoContract.getPlayerDeposits(currentRoundId, userAddress);
+            document.getElementById("myEthDeposit").innerText = parseFloat(ethers.utils.formatEther(d.ethAmount)).toFixed(5);
+            document.getElementById("myUsdtDeposit").innerText = parseFloat(ethers.utils.formatUnits(d.usdtAmount, usdtDecimals)).toFixed(2);
+            document.getElementById("myBabyDogeDeposit").innerText = parseFloat(ethers.utils.formatUnits(d.babyDogeAmount, babyDogeDecimals)).toFixed(0);
+
+            // 2. Deposit FREE dari state lokal (karena getPlayerDeposits belum return free)
+            const key = userAddress.toLowerCase();
+            if (players[key] && players[key].free) {
+                const freeFmt = parseFloat(ethers.utils.formatUnits(players[key].free, babyDogeDecimals)).toFixed(0);
+                document.getElementById("myFreeDeposit").innerText = freeFmt;
+            } else {
+                document.getElementById("myFreeDeposit").innerText = "0";
+            }
+        } catch(e){ console.log("Dep err", e); }
+    }
+
+    async function showBetModal() {
+        if (!signer) return showStatus("Connect wallet first!", "error");
+        if (isFinalizing) return showStatus("Round is ending...", "warning");
+        
+        await updateUserBalances();
+        betAmountInput.value = "";
+        betCurrencySelect.value = "ETH";
+        document.getElementById('currency-icon').src = "eth.svg";
+        betModalOverlay.classList.add("show");
+        betModal.classList.add("show");
+    }
+
+    function hideBetModal() {
+        betModalOverlay.classList.remove("show");
+        betModal.classList.remove("show");
+    }
+
+    function setAmountByPercent(percent) {
+        const currency = betCurrencySelect.value;
+        let min, max, decimals, userBalanceBN;
+
+        if (currency === 'ETH') {
+            userBalanceBN = rawEthBalance; decimals = 18; min = 0.00005; max = 0.00265;
+        } else if (currency === 'USDT') {
+            userBalanceBN = rawUsdtBalance; decimals = usdtDecimals; min = 0.5; max = 10.0;
+        } else if (currency === 'BABYDOGE') {
+            userBalanceBN = rawBabyDogeBalance; decimals = babyDogeDecimals; min = 1000000; max = 10000000000;
+        } else if (currency === 'FREE') {
+            userBalanceBN = rawFreeBalance; decimals = babyDogeDecimals; min = 1000000; max = 10000000000;
+        } else return;
+
+        const minBN = ethers.utils.parseUnits(min.toString(), decimals);
+        const maxBN = ethers.utils.parseUnits(max.toString(), decimals);
+        let amountToSetBN;
+
+        if (percent === 0.10) amountToSetBN = minBN;
+        else if (percent === 1.00) amountToSetBN = userBalanceBN.lt(maxBN) ? userBalanceBN : maxBN;
+        else amountToSetBN = userBalanceBN.mul(Math.floor(percent * 100)).div(100);
+
+        if (amountToSetBN.lt(minBN)) amountToSetBN = minBN;
+        if (amountToSetBN.gt(maxBN)) amountToSetBN = maxBN;
+        if (amountToSetBN.gt(userBalanceBN)) amountToSetBN = userBalanceBN;
+
+        betAmountInput.value = ethers.utils.formatUnits(amountToSetBN, decimals);
+    }
+
+    async function confirmBet() {
+        const amt = betAmountInput.value;
+        const cur = betCurrencySelect.value;
+        if (!amt || parseFloat(amt) <= 0) return showStatus("Invalid amount", "warning");
+
+        confirmBetBtn.disabled = true; confirmBetBtn.innerText = "Processing...";
+        showStatus("Sending...", "load");
+
+        try {
+            let tx;
+            if (cur === 'ETH') {
+                tx = await faylottoContract.placeBetNative({value: ethers.utils.parseEther(amt)});
+            } else if (cur === 'USDT') {
+                const wei = ethers.utils.parseUnits(amt, usdtDecimals);
+                const allow = await usdtContract.allowance(userAddress, FAYLOTTO_ADDRESS);
+                if (allow.lt(wei)) { 
+                    const atx = await usdtContract.approve(FAYLOTTO_ADDRESS, ethers.constants.MaxUint256); await atx.wait(); 
+                }
+                tx = await faylottoContract.placeBetUSDT(wei);
+            } else if (cur === 'BABYDOGE') {
+                const wei = ethers.utils.parseUnits(amt, babyDogeDecimals);
+                const allow = await babyDogeContract.allowance(userAddress, FAYLOTTO_ADDRESS);
+                if (allow.lt(wei)) { 
+                    const atx = await babyDogeContract.approve(FAYLOTTO_ADDRESS, ethers.constants.MaxUint256); await atx.wait(); 
+                }
+                tx = await faylottoContract.placeBetBabyDoge(wei);
+            } else if (cur === 'FREE') {
+                const wei = ethers.utils.parseUnits(amt, babyDogeDecimals);
+                tx = await faylottoContract.placeBetFree(wei);
+            }
+            await tx.wait();
+            showStatus("Confirmed!", "success");
+            playSound('sfx-coin');
+            hideBetModal();
+            updateUserBalances();
+        } catch (e) {
+            console.error(e);
+            showStatus("Failed: " + (e.reason || e.message).slice(0,50), "error");
+        } finally {
+            confirmBetBtn.disabled = false; confirmBetBtn.innerText = "Confirm Bet";
+        }
+    }
+
+    // --- DRAWING ---
+    function drawDonut(deg = currentRotation) {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(deg * Math.PI / 180);
+        
+        if (!playersArray || playersArray.length === 0) {
+            const gr = ctx.createRadialGradient(0, 0, innerR, 0, 0, outerR);
+            gr.addColorStop(0, '#ff00e6'); gr.addColorStop(1, '#000');
+            ctx.beginPath(); ctx.arc(0, 0, outerR, 0, Math.PI * 2); ctx.fillStyle = gr; ctx.fill();
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.restore();
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 16px Ubuntu'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('No Bets', cx, cy);
+            return;
+        }
+
+        playersArray.forEach(p => {
+            ctx.beginPath(); ctx.moveTo(0, 0);
+            ctx.arc(0, 0, outerR, p.startAngle, p.endAngle);
+            ctx.closePath(); ctx.fillStyle = p.color; ctx.fill();
+        });
+
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI * 2); ctx.fill();
+        ctx.globalCompositeOperation = 'source-over';
+        
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Ubuntu'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+
+        playersArray.forEach(p => {
+            ctx.beginPath(); 
+            ctx.moveTo(Math.cos(p.startAngle)*(innerR), Math.sin(p.startAngle)*(innerR));
+            ctx.lineTo(Math.cos(p.startAngle)*outerR, Math.sin(p.startAngle)*outerR);
+            ctx.stroke();
+
+            const mid = (p.startAngle + p.endAngle) / 2;
+            const tr = innerR + (outerR - innerR)/2;
+            ctx.save(); ctx.rotate(mid);
+            ctx.fillText(p.addr.slice(0,4), tr, 0);
+            ctx.restore();
+        });
+        ctx.restore();
+    }
+
+    function rebuildPlayersArrayAndDraw() {
+        playersArray = [];
+        for (const k in players) playersArray.push(players[k]);
+        let cur = 0;
+        playersArray.forEach(p => {
+            const share = totalWeight.gt(0) ? p.weight.mul(1000).div(totalWeight).toNumber()/1000 : 0;
+            p.startAngle = cur;
+            p.endAngle = cur + (share * Math.PI * 2);
+            cur = p.endAngle;
+        });
+        drawDonut();
+    }
+
+    // --- MISC HELPERS ---
+    function startVisualTimer(endTime) {
+        if (visualTimer) clearInterval(visualTimer);
+        visualTimer = setInterval(() => {
+            const left = endTime - Date.now();
+            if (left <= 0) {
+                clearInterval(visualTimer);
+                timerText.innerText = "00:00";
+                showFinalizeButton();
+            } else {
+                const m = Math.floor(left / 60000);
+                const s = Math.floor((left % 60000) / 1000);
+                timerText.innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            }
+        }, 1000);
+    }
+
+    function showFinalizeButton() {
+        isFinalizing = true;
+        placeBetBtn.style.display = "none";
+        finalizeBtn.style.display = "block";
+        finalizeBtn.disabled = false;
+        statusText.innerText = "Round Ended";
+    }
+
+    async function callFinalizeRound() {
+        if (!signer) return showStatus("Connect Wallet!", "error");
+        finalizeBtn.disabled = true;
+        try {
+            const tx = await faylottoContract.finalizeRound(currentRoundId);
+            showStatus("Finalizing...", "info");
+            await tx.wait();
+        } catch(e) { 
+            finalizeBtn.disabled = false; 
+            showStatus("Finalize Error", "error");
+        }
+    }
+
+    function setupEventListeners() {
+        if (!faylottoContract) return;
+        faylottoContract.removeAllListeners();
+        
+        const refresh = () => fetchAndDisplayRoundData();
+        faylottoContract.on("BetNative", refresh);
+        faylottoContract.on("BetUSDT", refresh);
+        faylottoContract.on("BetBabyDoge", refresh);
+        faylottoContract.on("BetFree", (rid, player, amt) => {
+            if(currentRoundId && rid.eq(currentRoundId)) {
+                 addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), amt, ethers.BigNumber.from(0), true);
+                 updateBetList();
+            }
+        });
+        faylottoContract.on("WinnerRecorded", (wid, rid, win) => {
+            if (currentRoundId && rid.eq(currentRoundId)) handleRoundFinalized(rid, win);
+        });
+    }
+
+    async function handleRoundFinalized(rid, winner) {
+        isSpinning = true; isFinalizing = true;
+        placeBetBtn.style.display = "none"; finalizeBtn.style.display = "none";
+        timerText.innerText = "WINNER!";
+        
+        // Simple Spin
+        let target = 0;
+        if(players[winner.toLowerCase()]) {
+            const p = players[winner.toLowerCase()];
+            const mid = (p.startAngle + p.endAngle)/2;
+            target = 360 - (mid * 180 / Math.PI) + 90; // +90 offset
+        } else target = Math.random() * 360;
+
+        let rot = currentRotation;
+        const final = rot + 3600 + target;
+        const start = performance.now();
+        playSound('sfx-spin');
+
+        function animate(t) {
+            const p = Math.min((t-start)/8000, 1);
+            const e = 1 - Math.pow(1-p, 4);
+            currentRotation = rot + (final-rot)*e;
+            drawDonut(currentRotation);
+            if(p<1) requestAnimationFrame(animate);
+            else {
+                playSound('sfx-win');
+                document.getElementById("victory-overlay").classList.add("show");
+                setTimeout(()=>{
+                    document.getElementById("victory-overlay").classList.remove("show");
+                    resetRound();
+                }, 5000);
+            }
+        }
+        requestAnimationFrame(animate);
+    }
+
+    async function resetRound() {
+        isSpinning = false; isFinalizing = false;
+        await fetchAndDisplayRoundData();
+        fetchAndDisplayWinners();
+    }
+
+    async function fetchTokenPrices() {
+         // Mock or Fetch API
+    }
+
+    async function fetchAndDisplayWinners() {
+        let contractInstance = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+        try {
+            winnerList.innerHTML = "";
+            const winnersArray = await contractInstance.getWinners(10); 
+            if (winnersArray.length === 0) {
+                winnerList.innerHTML = "No winners yet";
+                return;
+            }
+            
+            let html = "";
+            for (const w of winnersArray) {
+                 html += `<div class="winner-list-item">
+                    <span>#${w.roundId}</span>
+                    <span>${w.winner.slice(0,6)}...</span>
+                 </div>`;
+            }
+            winnerList.innerHTML = html;
+        } catch(e) {}
+    }
+
+    async function fetchAndRenderLeaderboard() {
+        // Logic to fetch leaderboard
+    }
+    
+    async function fetchReferralData() {
+        // Logic referral
+    }
+    
+    function playSound(id) { document.getElementById(id).play().catch(()=>{}); }
+    function showStatus(msg, type) {
+        const t = document.createElement("div");
+        t.className = `toast-notification ${type}`; t.innerText = msg;
+        document.getElementById("toast-container").appendChild(t);
+        setTimeout(()=>t.remove(), 3000);
+    }
+    function hideProfileModal() {
+        document.getElementById('profile-modal').classList.remove('show');
+        document.getElementById('profile-modal-overlay').classList.remove('show');
+    }
+    function showReferralModal() { document.getElementById("referral-modal-overlay").classList.add("show"); document.getElementById("referral-modal").classList.add("show"); }
+    function hideReferralModal() { document.getElementById("referral-modal-overlay").classList.remove("show"); document.getElementById("referral-modal").classList.remove("show"); }
+    function showWalletModal() { document.getElementById("wallet-modal-overlay").classList.add("show"); document.getElementById("wallet-modal").classList.add("show"); }
+    function hideWalletModal() { document.getElementById("wallet-modal-overlay").classList.remove("show"); document.getElementById("wallet-modal").classList.remove("show"); }
+    function handleCanvasRedraw() { if(ctx) drawDonut(currentRotation); }
+</script>
+</body>
+</html>
