@@ -3234,6 +3234,145 @@ async function rateWinner(winnerId, stars) {
         }, 10); 
     }
 
+  // --- (Update Saldo V3: Tambah BabyDoge DAN Saldo Gratis) ---
+async function updateUserBalances() {
+  if (!provider || !userAddress) return;
+  try {
+    rawEthBalance = await provider.getBalance(userAddress);
+    ethBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
+    modalEthBalance.innerText = parseFloat(ethers.utils.formatEther(rawEthBalance)).toFixed(5);
+    
+    if (usdtContract) {
+        usdtDecimals = await usdtContract.decimals();
+        rawUsdtBalance = await usdtContract.balanceOf(userAddress);
+        usdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
+        modalUsdtBalance.innerText = parseFloat(ethers.utils.formatUnits(rawUsdtBalance, usdtDecimals)).toFixed(2);
+    }
+    if (babyDogeContract) {
+        babyDogeDecimals = await babyDogeContract.decimals();
+        rawBabyDogeBalance = await babyDogeContract.balanceOf(userAddress);
+        babyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
+        modalBabyDogeBalance.innerText = parseFloat(ethers.utils.formatUnits(rawBabyDogeBalance, babyDogeDecimals)).toFixed(2);
+    }
+
+    if (faylottoContract) {
+        const freeBalanceEl = document.getElementById("freeBalance"); // Ambil elemen modal wallet
+        
+        // Ambil saldo gratis dari kontrak
+        const rawFreeBalanceBN = await faylottoContract.freeBalances(userAddress);
+        
+        // Simpan ke variabel global
+        rawFreeBalance = rawFreeBalanceBN; 
+        
+        if (freeBalanceEl) {
+            // Tampilkan di modal wallet
+            const formattedFree = parseFloat(ethers.utils.formatEther(rawFreeBalanceBN)).toFixed(0); 
+            freeBalanceEl.innerText = formattedFree;
+        }
+    }
+  } catch (err) { 
+    console.error("Failed fetching balances:", err.message);
+    showStatus("Failed to fetch balances.", "error");
+  }
+}
+
+
+    // --- (Update Deposit V3: Tambah BabyDoge) ---
+async function updateMyDeposits() {
+    if (!faylottoContract || !currentRoundId || !userAddress) {
+        document.getElementById("myEthDeposit").innerText = "0";
+        document.getElementById("myUsdtDeposit").innerText = "0";
+        document.getElementById("myBabyDogeDeposit").innerText = "0";
+        document.getElementById("myFreeDeposit").innerText = "0";
+        return;
+    }
+
+    try {
+        // 1. Ambil data deposit asli dari kontrak
+        const d = await faylottoContract.getPlayerDeposits(currentRoundId, userAddress);
+        document.getElementById("myEthDeposit").innerText = parseFloat(ethers.utils.formatEther(d.ethAmount)).toFixed(5);
+        document.getElementById("myUsdtDeposit").innerText = parseFloat(ethers.utils.formatUnits(d.usdtAmount, usdtDecimals)).toFixed(2);
+        document.getElementById("myBabyDogeDeposit").innerText = parseFloat(ethers.utils.formatUnits(d.babyDogeAmount, babyDogeDecimals)).toFixed(0);
+
+        // 2. [BARU] Ambil data deposit FREE dari state lokal 'players'
+        // (Karena 'getPlayerDeposits' di kontrak belum return free amount)
+        const key = userAddress.toLowerCase();
+        if (players[key] && players[key].free) {
+            const freeFmt = parseFloat(ethers.utils.formatUnits(players[key].free, babyDogeDecimals)).toFixed(0);
+            document.getElementById("myFreeDeposit").innerText = freeFmt;
+        } else {
+            document.getElementById("myFreeDeposit").innerText = "0";
+        }
+
+    } catch(e) {
+        console.error("Error update deposits", e);
+    }
+}
+
+  function startVisualTimer(endTime) {
+  // ... (Tidak ada perubahan pada fungsi ini) ...
+  if (visualTimer) clearInterval(visualTimer);
+  visualTimer = setInterval(() => {
+    const now = Date.now();
+    const timeLeft = endTime - now;
+    if (timeLeft <= 0) {
+      clearInterval(visualTimer);
+      timerText.innerText = "00:00";
+      showFinalizeButton(); 
+      return;
+    }
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    timerText.innerText = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }, 1000);
+  }
+
+  // [BARU] Fungsi untuk menampilkan/menyembunyikan Modal Wallet
+function showWalletModal() {
+    // ... (Tidak ada perubahan pada fungsi ini) ...
+    walletModalOverlay.classList.add("show");
+    walletModal.classList.add("show");
+}
+function hideWalletModal() {
+    // ... (Tidak ada perubahan pada fungsi ini) ...
+    walletModalOverlay.classList.remove("show");
+    walletModal.classList.remove("show");
+}
+
+    // Function Disconnect Wallet
+function disconnectWallet() {
+    userAddress = null; provider = null; signer = null;
+    walletBtn.innerText = "Connect Wallet";
+    referralBtn.style.display = "none";
+    statusText.innerText = "Wallet not connected";
+    
+    hideWalletModal(); 
+    
+    localStorage.removeItem(AUTO_CONNECT_KEY);
+    
+    if (visualTimer) clearInterval(visualTimer);
+    if (faylottoContract) {
+        faylottoContract.removeAllListeners();
+        faylottoContract = null; 
+    }
+    
+    resetRoundUI();
+    myEthDeposit.innerText = "0"; 
+    myUsdtDeposit.innerText = "0";
+    winnerList.innerHTML = "";
+    winnerList.appendChild(winnerListPlaceholder);
+
+    // Reset info di modal
+    walletAddress.innerText = "-";
+    ethBalance.innerText = "0";
+    usdtBalance.innerText = "0";
+    
+    fetchAndDisplayRoundData();
+    fetchAndDisplayWinners();
+    // [FIX] Ganti showToast ke showStatus
+    showStatus("Wallet disconnected.", "info");
+      }
+
     // DOM Ready
     document.addEventListener("DOMContentLoaded", () => {
         initCanvas();
