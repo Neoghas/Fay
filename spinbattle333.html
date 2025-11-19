@@ -3505,83 +3505,103 @@ function stopVictoryConfetti() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
     
-// --- (Fungsi Leaderboard V3: Tambah BabyDoge) ---
-    async function fetchAndRenderLeaderboard() {
-        const list = leaderboardList;
-        if (!list) return;
-        let providerToUse = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
-        let contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerToUse);
+// GANTI FUNGSI LAMA fetchAndRenderLeaderboard DENGAN INI
+async function fetchAndRenderLeaderboard() {
+    const list = document.getElementById("leaderboard-list");
+    if (!list) return;
+
+    // Gunakan provider read-only atau yang sudah terkoneksi
+    let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+
+    try {
+        // 1. Ambil decimals token untuk formatting
+        let usdtDec = 6, babyDec = 18; // Default
         try {
-            let usdtDecimalsLB = 6, babyDecimalsLB = 18; // Default
-            try {
-                // [PERBAIKAN 2] Gunakan USDT_ABI
-                usdtDecimalsLB = await (new ethers.Contract(USDT_ADDRESS, USDT_ABI, providerToUse)).decimals();
-                babyDecimalsLB = await (new ethers.Contract(BABYDOGE_ADDRESS, USDT_ABI, providerToUse)).decimals();
-            } catch (e) {}
+            if (usdtContract) usdtDec = await usdtContract.decimals();
+            if (babyDogeContract) babyDec = await babyDogeContract.decimals();
+        } catch (e) {}
 
-            const currentBlock = await providerToUse.getBlockNumber();
-            const fromBlock = Math.max(0, currentBlock - 500000); 
-            
-            const filter = contract.filters.WinnerRecorded();
-            const logs = await contract.queryFilter(filter, fromBlock, "latest");
+        // 2. [METODE BARU] Ambil daftar semua pemain dari kontrak
+        // Pastikan ABI Anda memiliki fungsi: "function getLeaderboardPlayers() view returns (address[])"
+        // Dan: "function leaderboardStats(address) view returns (int256, int256, int256, int256, uint256, uint256, uint256, uint256)"
+        
+        // Jika fungsi getLeaderboardPlayers belum ada di ABI JS Anda, tambahkan dulu.
+        // Jika kontrak belum punya fungsi ini (hanya mapping private/internal),
+        // Anda harus kembali ke metode scan event (tapi dengan blok lebih sedikit).
+        
+        // Berdasarkan kode kontrak yang Anda kirim, Anda PUNYA fungsi 'getLeaderboardPlayers'!
+        const playersList = await contract.getLeaderboardPlayers();
 
-            const stats = {};
-            logs.forEach(log => {
-                const { winner, rewardETH, rewardUSDT, rewardBabyDoge } = log.args;
-                if (!stats[winner]) {
-                    stats[winner] = { 
-                        wins: 0, 
-                        totalEth: ethers.BigNumber.from(0),
-                        totalUsdt: ethers.BigNumber.from(0),
-                        totalBabyDoge: ethers.BigNumber.from(0) 
-                    };
-                }
-                stats[winner].wins += 1;
-                stats[winner].totalEth = stats[winner].totalEth.add(rewardETH);
-                stats[winner].totalUsdt = stats[winner].totalUsdt.add(rewardUSDT);
-                stats[winner].totalBabyDoge = stats[winner].totalBabyDoge.add(rewardBabyDoge);
-            });
-
-            const sortedLeaderboard = Object.entries(stats)
-                .map(([addr, data]) => ({ addr, ...data }))
-                .sort((a, b) => b.wins - a.wins) 
-                .slice(0, 10); 
-
-            if (sortedLeaderboard.length === 0) {
-                list.innerHTML = "<div class 'lb-loading' style='animation:none;'>NO DATA YET.</div>";
-                return;
-            }
-
-            list.innerHTML = ""; 
-            sortedLeaderboard.forEach((player, index) => {
-                const rank = index + 1;
-                const shortAddr = player.addr.slice(0, 6) + "..." + player.addr.slice(-4);
-                const ethTotal = parseFloat(ethers.utils.formatEther(player.totalEth)).toFixed(4);
-                const usdtTotal = parseFloat(ethers.utils.formatUnits(player.totalUsdt, usdtDecimalsLB)).toFixed(2);
-                const babyTotal = parseFloat(ethers.utils.formatUnits(player.totalBabyDoge, babyDecimalsLB)).toFixed(0); 
-                
-                const isMe = userAddress && player.addr.toLowerCase() === userAddress.toLowerCase();
-                const displayName = isMe ? "YOU" : shortAddr;
-
-                // Perbarui HTML Leaderboard untuk V3
-                list.innerHTML += `
-                    <div class="lb-item rank-${rank}" style="${isMe ? 'color:var(--cyan-main);' : ''}">
-                        <div class="lb-rank">#${rank}</div>
-                        <div style="cursor:pointer;" onclick="showPlayerProfile('${player.addr}')">${displayName}</div>
-                        <div>${player.wins}</div>
-                        <div>${ethTotal} ETH</div>
-                        <div>
-                            ${usdtTotal} USDT
-                            <br><small style="color:#aaa">${babyTotal} BabyDoge</small>
-                        </div> 
-                    </div>
-                `;
-            });
-        } catch (err) {
-            console.error("Leaderboard error:", err);
-            list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>FAILED TO LOAD. RPC TIMEOUT.</div>";
+        if (playersList.length === 0) {
+            list.innerHTML = "<div class='lb-loading' style='animation:none; text-align:center;'>NO DATA YET.</div>";
+            return;
         }
+
+        // 3. Ambil statistik untuk setiap pemain
+        let leaderboardData = [];
+        
+        for (let playerAddr of playersList) {
+            const stats = await contract.leaderboardStats(playerAddr);
+            
+            // stats[0] = netEth, stats[1] = netUsdt, stats[2] = netBabyDoge, stats[3] = netUsdScore (ini yang penting buat ranking)
+            // stats[7] = referralCount (untuk info tambahan)
+
+            leaderboardData.push({
+                addr: playerAddr,
+                netEth: stats[0],
+                netUsdt: stats[1],
+                netBabyDoge: stats[2],
+                score: stats[3], // Net USD Score
+                wins: 0 // Kita bisa hitung wins dari event jika perlu, atau abaikan dulu
+            });
+        }
+
+        // 4. Urutkan berdasarkan Skor USD (Terbesar ke Terkecil)
+        leaderboardData.sort((a, b) => {
+            if (b.score.gt(a.score)) return 1;
+            if (b.score.lt(a.score)) return -1;
+            return 0;
+        });
+
+        // 5. Ambil Top 10
+        const top10 = leaderboardData.slice(0, 10);
+
+        // 6. Render HTML
+        list.innerHTML = "";
+        top10.forEach((p, index) => {
+            const rank = index + 1;
+            const shortAddr = p.addr.slice(0, 6) + "..." + p.addr.slice(-4);
+            const isMe = userAddress && p.addr.toLowerCase() === userAddress.toLowerCase();
+            const displayName = isMe ? "YOU" : shortAddr;
+
+            // Format angka (gunakan Math.max(0, ...) agar tidak minus di tampilan jika rugi)
+            const ethVal = parseFloat(ethers.utils.formatEther(p.netEth));
+            const usdtVal = parseFloat(ethers.utils.formatUnits(p.netUsdt, usdtDec));
+            const babyVal = parseFloat(ethers.utils.formatUnits(p.netBabyDoge, babyDec));
+
+            // Tampilkan "-" jika negatif
+            const ethStr = ethVal.toFixed(4);
+            const usdtStr = usdtVal.toFixed(2);
+            
+            list.innerHTML += `
+                <div class="lb-item rank-${rank}" style="${isMe ? 'color:var(--cyan-main);' : ''}">
+                    <div class="lb-rank">#${rank}</div>
+                    <div style="cursor:pointer;" onclick="showPlayerProfile('${p.addr}')">${displayName}</div>
+                    <div>${(parseFloat(ethers.utils.formatUnits(p.score, 18))).toFixed(2)} $</div> <div>${ethStr} ETH</div>
+                    <div>
+                        ${usdtStr} USDT
+                        <br><small style="color:#aaa">${babyVal.toFixed(0)} Baby</small>
+                    </div> 
+                </div>
+            `;
+        });
+
+    } catch (err) {
+        console.error("Leaderboard fetch error:", err);
+        // Fallback ke pesan error yang sopan
+        list.innerHTML = "<div class='lb-loading' style='color:#ff5555; text-align:center;'>Retry later...</div>";
     }
+}
     
 // Fungsi Tutup Modal Profil
 function hideProfileModal() {
