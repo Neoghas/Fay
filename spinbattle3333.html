@@ -2221,12 +2221,11 @@
     function resetRoundUI() {
         console.log("Resetting UI for New Round...");
         
-        // 1. Simpan ID Ronde Lama untuk perbandingan
+        // 1. Simpan ID Ronde Lama
         const oldRoundId = currentRoundId; 
 
         // 2. Reset State Global
-        // PENTING: Set currentRoundId ke null agar fetcher tidak mengira ini ronde duplikat
-        currentRoundId = null; 
+        currentRoundId = null; // Penting: Kosongkan ID agar fetcher tidak bingung
         isSpinning = false;
         isFinalizing = false;
         
@@ -2236,15 +2235,12 @@
         totalWeight = ethers.BigNumber.from(0);
         currentRotation = 0;
         
-        // Kosongkan tampilan list dan roda
         updateBetList();
 
-        // 3. FORCE TAMPILAN KE MODE "NEW ROUND" (Optimistic UI)
-        // Sembunyikan tombol Finalize
+        // 3. TAMPILAN "LOADING"
         const finalizeBtn = document.getElementById("finalizeBtn");
         if (finalizeBtn) finalizeBtn.style.display = "none";
 
-        // Tampilkan tombol Place Bet (Disable dulu sampai data on-chain masuk)
         const placeBetBtn = document.getElementById("placeBetBtn");
         if (placeBetBtn) {
             placeBetBtn.style.display = "block";
@@ -2252,9 +2248,8 @@
             placeBetBtn.innerText = "Loading Round...";
         }
 
-        // Reset Teks Status
         const statusEl = document.getElementById("statusText");
-        if (statusEl) statusEl.innerText = "Syncing new round from blockchain...";
+        if (statusEl) statusEl.innerText = "Syncing new round...";
         document.getElementById("timerText").innerText = "--:--";
 
         // Reset Deposit Saya
@@ -2263,33 +2258,26 @@
         if(document.getElementById("myBabyDogeDeposit")) document.getElementById("myBabyDogeDeposit").innerText = "0";
         if(document.getElementById("myFreeDeposit")) document.getElementById("myFreeDeposit").innerText = "0";
 
-        // 4. MEKANISME POLLING (PENGECEKAN BERULANG)
-        // Kita akan cek setiap 2 detik apakah ID ronde baru sudah muncul
+        // 4. LOOPING PENGECEKAN (POLLING)
         let attempts = 0;
-        const maxAttempts = 30; // Coba selama 60 detik (30x2)
+        const maxAttempts = 30; // Cek selama 60 detik
 
         const waitForNewRound = async () => {
             attempts++;
-            console.log(`Polling for new round (Attempt ${attempts})...`);
-            
             try {
-                // Gunakan provider read-only agar cepat
+                // Gunakan provider read-only (cepat)
                 const providerValid = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL); 
                 const contract = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, providerValid);
                 
-                // Ambil ID terbaru langsung dari blockchain
+                // Panggil 'currentRoundId' sesuai ABI yang baru
                 const latestId = await contract.currentRoundId();
 
-                // LOGIKA KUNCI:
-                // Jika latestId > oldRoundId, berarti node sudah update!
-                // Atau jika oldRoundId undefined (awal load), kita anggap sukses.
+                // Jika ID baru > ID lama, atau ini load pertama
                 if (!oldRoundId || latestId.gt(oldRoundId)) {
                     console.log("✅ New Round Detected:", latestId.toString());
                     
-                    // Panggil fetcher utama untuk mengisi semua data
+                    // Load semua data
                     await fetchAndDisplayRoundData(); 
-                    
-                    // Update leaderboard & winner list sekalian
                     fetchAndDisplayWinners(); 
                     fetchAndRenderLeaderboard();
                     
@@ -2298,28 +2286,29 @@
                         placeBetBtn.disabled = false;
                         placeBetBtn.innerText = "Place Bet";
                     }
-                    if (statusEl) statusEl.innerText = `Round ${latestId} is Live!`;
+                    if (statusEl) statusEl.innerText = `Round ${latestId} Live!`;
 
                 } else {
-                    // Jika ID masih sama dengan yang lama, berarti RPC belum update.
-                    // Coba lagi dalam 2 detik.
+                    // Belum update, coba lagi dalam 2 detik
                     if (attempts < maxAttempts) {
-                        if (statusEl) statusEl.innerText = `Waiting for block... (${attempts})`;
+                        if (statusEl) statusEl.innerText = `Waiting block... (${attempts})`;
                         setTimeout(waitForNewRound, 2000); 
                     } else {
-                        // Jika timeout, paksa load apa adanya
-                        console.warn("Polling timeout, forcing load.");
+                        // Timeout, paksa load
                         fetchAndDisplayRoundData();
+                        if (placeBetBtn) {
+                            placeBetBtn.disabled = false;
+                            placeBetBtn.innerText = "Place Bet";
+                        }
                     }
                 }
             } catch (err) {
                 console.error("Polling error:", err);
-                // Tetap lanjut coba meski error koneksi sesaat
                 if (attempts < maxAttempts) setTimeout(waitForNewRound, 2000);
             }
         };
 
-        // Mulai polling setelah jeda singkat 1 detik
+        // Mulai polling
         setTimeout(waitForNewRound, 1000);
     }
 
