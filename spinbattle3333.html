@@ -2525,34 +2525,48 @@
     // 8. UTILS & INITIALIZATION
     // ==================================================================
 
-    function showStatus(msg, type) {
+    function showStatus(message, type = 'info', duration = 10000) { 
         const container = document.getElementById('toast-container');
-        const div = document.createElement('div');
-        div.className = `toast-notification ${type} show`;
-        div.innerText = msg;
-        container.appendChild(div);
-        setTimeout(() => { div.remove(); }, 5000);
+        if (!container) return;
+        let iconName = 'info-icon.svg'; 
+        if (type === 'success') iconName = 'success.svg';
+        else if (type === 'error') iconName = 'error.svg';
+        else if (type === 'load') iconName = 'load.svg';
+        else if (type === 'warning') iconName = 'warning.svg';
+        else if (type === 'spin') iconName = 'spin.svg';
+        else if (type === 'wolf') iconName = 'wolf.svg';
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${type}`;
+        const icon = document.createElement('img');
+        icon.src = `${iconName}`; 
+        icon.alt = "status icon";
+        const text = document.createElement('span');
+        text.textContent = message;
+        const closeButton = document.createElement('button');
+        closeButton.className = 'toast-close-btn';
+        closeButton.innerHTML = '&times;'; 
+        toast.appendChild(icon);
+        toast.appendChild(text);
+        toast.appendChild(closeButton);
+        function removeToast() {
+          toast.classList.remove('show');
+          toast.classList.add('hide');
+          toast.addEventListener('transitionend', () => {
+            if (toast.parentNode === container) {
+                container.removeChild(toast);
+            }
+          }, { once: true });
+        }
+        const hideTimeout = setTimeout(removeToast, duration);
+        closeButton.onclick = () => {
+          clearTimeout(hideTimeout); 
+          removeToast(); 
+        };
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.classList.add('show');
+        }, 10); 
     }
-    
-    // Set Percent Button Logic
-    document.querySelectorAll('.percent-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const pct = parseFloat(e.target.dataset.percent);
-            const cur = document.getElementById("betCurrencySelect").value;
-            let bal = ethers.BigNumber.from(0);
-            let dec = 18;
-
-            if(!userAddress) return;
-            
-            if(cur === 'ETH') { bal = rawEthBalance; dec = 18; }
-            else if(cur === 'USDT') { bal = rawUsdtBalance; dec = usdtDecimals; }
-            else if(cur === 'BABYDOGE') { bal = rawBabyDogeBalance; dec = babyDogeDecimals; }
-            else if(cur === 'FREE') { bal = rawFreeBalance; dec = 18; }
-
-            const amtBN = bal.mul(Math.floor(pct * 100)).div(100);
-            document.getElementById("betAmountInput").value = ethers.utils.formatUnits(amtBN, dec);
-        });
-    });
 
     // DOM Ready
     document.addEventListener("DOMContentLoaded", () => {
