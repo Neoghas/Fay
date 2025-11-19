@@ -428,8 +428,10 @@
     let rawBalances = { eth: 0, usdt: 0, baby: 0, free: 0 };
     let currentRoundId, currentLbMode = 'score';
     let players = {}; 
+    let globalTotalWeight = ethers.BigNumber.from(0); // Disimpan global untuk animasi
     let visualTimer = null;
     let ctx, cw, ch, cx, cy, outerR, innerR;
+    let wheelRotation = 0; // Variabel untuk rotasi animasi
 
     // ================= INITIALIZATION =================
     window.addEventListener('DOMContentLoaded', async () => {
@@ -446,9 +448,9 @@
         babyDogeContract = new ethers.Contract(BABYDOGE_ADDRESS, ERC20_ABI, provider);
 
         initCanvas();
+        animateWheel(); // Start Animation Loop
 
-        // ================= [FIX] UI LISTENERS DIPINDAHKAN KE ATAS =================
-        // Ini agar tombol berfungsi meskipun data belum selesai dimuat/network lambat
+        // ================= UI LISTENERS =================
         document.getElementById('walletBtn').addEventListener('click', connectWallet);
         document.getElementById('referralBtn').addEventListener('click', showReferralModal);
         document.getElementById('referral-modal-close-btn').addEventListener('click', () => document.getElementById('referral-modal').classList.remove('show'));
@@ -465,10 +467,9 @@
         });
         
         document.getElementById('betCurrencySelect').addEventListener('change', updateModalBalanceDisplay);
-
         // ================= END UI LISTENERS =================
         
-        // Load Data Awal (Network Calls - bisa lambat)
+        // Load Data Awal
         await fetchAndDisplayRoundData();
         fetchAndDisplayWinners();
         fetchAndRenderLeaderboard();
@@ -477,7 +478,7 @@
         setInterval(fetchAndDisplayRoundData, 10000); 
     });
 
-    // ================= CONNECT WALLET (FIXED) =================
+    // ================= CONNECT WALLET =================
     async function connectWallet() {
         if (!window.ethereum) return showStatus("Install MetaMask", "error");
         try {
@@ -486,7 +487,6 @@
             signer = provider.getSigner();
             userAddress = await signer.getAddress();
             
-            // Hubungkan ulang kontrak dengan Signer
             faylottoContract = faylottoContract.connect(signer);
             usdtContract = usdtContract.connect(signer);
             babyDogeContract = babyDogeContract.connect(signer);
@@ -512,7 +512,6 @@
             const r = await contract.getRoundBasic(rid);
             // r: id, startTime, endTime, finalized, winner, totalETH, totalUSDT, totalBabyDoge, playersCount, totalWeight
             
-            // Update Timer
             const endTime = r.endTime.toNumber() * 1000;
             startVisualTimer(endTime);
             
@@ -526,21 +525,20 @@
                 document.getElementById('finalizeBtn').style.display = 'flex';
             }
 
-            // [FIX] Tampilkan juga Pool BabyDoge
             const poolText = `${parseFloat(ethers.utils.formatEther(r.totalETH)).toFixed(4)} ETH + ${parseFloat(ethers.utils.formatUnits(r.totalUSDT, 6)).toFixed(2)} USDT + ${parseFloat(ethers.utils.formatUnits(r.totalBabyDoge, 18)).toFixed(0)} Baby`;
             document.getElementById('pool-usd-value').innerText = poolText;
 
             // Fetch Players for Wheel
             const playerList = await contract.getRoundPlayers(rid);
-            players = {}; 
+            let newPlayers = {}; 
             let totalWeight = ethers.BigNumber.from(0);
 
             for (const pAddr of playerList) {
                 const deps = await contract.getPlayerDeposits(rid, pAddr);
-                players[pAddr] = {
+                newPlayers[pAddr] = {
                     id: pAddr,
                     weight: deps.usdWeight,
-                    color: PLAYER_COLORS[Object.keys(players).length % PLAYER_COLORS.length],
+                    color: PLAYER_COLORS[Object.keys(newPlayers).length % PLAYER_COLORS.length],
                     eth: deps.ethAmount,
                     usdt: deps.usdtAmount,
                     baby: deps.babyDogeAmount
@@ -548,19 +546,20 @@
                 totalWeight = totalWeight.add(deps.usdWeight);
             }
             
+            players = newPlayers;
+            globalTotalWeight = totalWeight;
             updateBetList();
-            drawDonut(players, totalWeight);
+            // Note: Wheel diupdate via animateWheel loop
 
         } catch (e) {
             console.error("Sync Error:", e);
         }
     }
 
-    // [FIX] TOMBOL SPIN LOGIC
     async function callFinalizeRound() {
         if(!signer) { showStatus("Connect Wallet to Spin!", "warning"); return; }
         
-        showStatus("Calculating Winner...", "info"); // Feedback Klik
+        showStatus("Calculating Winner...", "info"); 
 
         try {
             const tx = await faylottoContract.finalizeRound(currentRoundId);
@@ -571,7 +570,6 @@
             fetchAndDisplayWinners();
         } catch(e) {
             console.error(e);
-            // Tampilkan alasan error jika ada
             let msg = "Spin Failed";
             if (e.reason) msg += ": " + e.reason;
             showStatus(msg, "error"); 
@@ -614,7 +612,7 @@
         });
     }
 
-    // ================= CANVAS WHEEL =================
+    // ================= [FIX] CANVAS WHEEL & NAMES =================
     function initCanvas() {
         const canvas = document.getElementById('donutCanvas');
         const container = document.querySelector('.donut-wrap');
@@ -627,28 +625,63 @@
         cw = rect.width; ch = rect.height;
         cx = cw / 2; cy = ch / 2;
         outerR = cw * 0.45; innerR = cw * 0.25;
-        drawDonut({}, ethers.BigNumber.from(0));
     }
 
-    function drawDonut(playersMap, totalWeight) {
+    // Loop animasi untuk membuat roda berputar pelan
+    function animateWheel() {
+        wheelRotation += 0.005; // Kecepatan putar idle
+        drawDonut(players, globalTotalWeight, wheelRotation);
+        requestAnimationFrame(animateWheel);
+    }
+
+    function drawDonut(playersMap, totalWeight, rotationOffset) {
         if (!ctx) return;
         ctx.clearRect(0, 0, cw, ch);
         ctx.save();
         ctx.translate(cx, cy);
-        ctx.rotate(-Math.PI / 2);
+        ctx.rotate(rotationOffset); // Apply rotation
+
         const pKeys = Object.keys(playersMap);
+        
         if (pKeys.length === 0 || totalWeight.eq(0)) {
+            // Roda kosong
             ctx.beginPath(); ctx.arc(0, 0, outerR, 0, Math.PI*2); ctx.fillStyle = '#222'; ctx.fill();
             ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI*2); ctx.fillStyle = '#000'; ctx.fill();
         } else {
             let currentAngle = 0;
             pKeys.forEach(k => {
                 const p = playersMap[k];
-                const slice = p.weight.mul(10000).div(totalWeight).toNumber() / 10000;
-                const endAngle = currentAngle + (slice * Math.PI * 2);
-                ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0, 0, outerR, currentAngle, endAngle); ctx.fillStyle = p.color; ctx.fill();
+                const weightNum = parseFloat(p.weight.toString()); // Safe convert
+                const totalNum = parseFloat(totalWeight.toString());
+                const slice = (weightNum / totalNum) * Math.PI * 2;
+                const endAngle = currentAngle + slice;
+                
+                // 1. Gambar Slice
+                ctx.beginPath(); 
+                ctx.moveTo(0,0); 
+                ctx.arc(0, 0, outerR, currentAngle, endAngle); 
+                ctx.fillStyle = p.color; 
+                ctx.fill();
+                
+                // 2. [FIX] Gambar Nama Pemain (Text)
+                if(slice > 0.1) { // Hanya gambar teks jika slice cukup besar
+                    ctx.save();
+                    const midAngle = currentAngle + slice / 2;
+                    ctx.rotate(midAngle); // Putar konteks ke tengah slice
+                    ctx.textAlign = "right";
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "bold 12px Ubuntu";
+                    ctx.shadowColor = "rgba(0,0,0,0.8)";
+                    ctx.shadowBlur = 4;
+                    // Tulis nama agak menjorok dari tepi luar
+                    ctx.fillText(p.id.substring(0,4) + "...", outerR - 10, 4);
+                    ctx.restore();
+                }
+
                 currentAngle = endAngle;
             });
+            
+            // Lubang tengah
             ctx.beginPath(); ctx.arc(0, 0, innerR, 0, Math.PI*2); ctx.fillStyle = '#0b0b12'; ctx.fill();
         }
         ctx.restore();
@@ -747,21 +780,17 @@
     
     async function loadReferralInfo() {
         try {
-            // Load nickname
             const nick = await faylottoContract.nicknames(userAddress);
             document.getElementById('myNickname').innerText = nick || "Not Set";
             if(nick) {
                 document.getElementById('referralLinkSection').style.display = 'block';
-                // Construct link with query param
                 const origin = window.location.origin + window.location.pathname;
                 document.getElementById('referralLinkInput').value = `${origin}?ref=${nick}`;
             }
             
-            // Load referrer
             const referrer = await faylottoContract.referrerOf(userAddress);
             document.getElementById('myReferrer').innerText = (referrer === ethers.constants.AddressZero) ? "None" : referrer.slice(0,6)+"...";
             
-            // Load Rewards
             const ethRew = await faylottoContract.referralRewardsETH(userAddress);
             const usdtRew = await faylottoContract.referralRewardsUSDT(userAddress);
             const babyRew = await faylottoContract.referralRewardsBabyDoge(userAddress);
@@ -772,7 +801,7 @@
             document.getElementById('babyDogeRewards').innerText = parseFloat(ethers.utils.formatUnits(babyRew, 18)).toFixed(0);
             document.getElementById('referralCount').innerText = refCount.toString();
             
-            const totalRew = ethRew.add(usdtRew).add(babyRew); // Crude check
+            const totalRew = ethRew.add(usdtRew).add(babyRew);
             document.getElementById('claimRewardsBtn').disabled = totalRew.eq(0);
             
         } catch(e) { console.error(e); }
@@ -800,29 +829,10 @@
         } catch(e) { showStatus("Claim Failed", "error"); }
     }
 
-    // Check for Ref in URL on Load
-    async function checkUrlReferral() {
-         const params = new URLSearchParams(window.location.search);
-         const refNick = params.get('ref');
-         if(refNick && signer) {
-             try {
-                 // Cek apakah user sudah punya referrer
-                 const existing = await faylottoContract.referrerOf(userAddress);
-                 if(existing === ethers.constants.AddressZero) {
-                     const tx = await faylottoContract.setReferralByNickname(refNick);
-                     await tx.wait();
-                     showStatus("Referrer set to " + refNick, "success");
-                 }
-             } catch(e) {}
-         }
-    }
-
-    // ================= LEADERBOARD & WINNERS =================
+    // ================= LEADERBOARD & WINNERS [FIXED] =================
     async function fetchAndDisplayWinners() {
         try {
             const list = document.getElementById('winner-list');
-            const count = await faylottoContract.currentRoundId(); // Just use round ID as rough cap or fetch length
-            // Use helper to get last 5 winners
             const winners = await faylottoContract.getWinners(5);
             
             if(winners.length === 0) {
@@ -833,7 +843,14 @@
             list.innerHTML = "";
             // Reverse to show newest first
             [...winners].reverse().forEach(w => {
-                const eth = parseFloat(ethers.utils.formatEther(w.rewardETH)).toFixed(4);
+                // LOGIKA BARU: Cek semua jenis reward
+                let prizeStr = "";
+                if(w.rewardETH.gt(0)) prizeStr += parseFloat(ethers.utils.formatEther(w.rewardETH)).toFixed(4) + " ETH ";
+                if(w.rewardUSDT.gt(0)) prizeStr += parseFloat(ethers.utils.formatUnits(w.rewardUSDT, 6)).toFixed(2) + " USDT ";
+                if(w.rewardBabyDoge.gt(0)) prizeStr += parseFloat(ethers.utils.formatUnits(w.rewardBabyDoge, 18)).toFixed(0) + " Baby ";
+                
+                if(prizeStr === "") prizeStr = "0.00"; // Fallback
+
                 list.innerHTML += `
                 <div class="winner-list-item">
                    <div class="winner-main-content">
@@ -841,7 +858,7 @@
                       <div class="winner-info-text">
                           <div style="color:var(--cyan-main); font-weight:bold;">Round #${w.roundId}</div>
                           <div>Winner: ${w.winner.slice(0,6)}...</div>
-                          <div style="color:#00ff88;">Won: ${eth} ETH + ...</div>
+                          <div style="color:#00ff88; font-size:11px;">Won: ${prizeStr}</div>
                       </div>
                    </div>
                 </div>`;
@@ -871,17 +888,14 @@
         container.innerHTML = '<div class="lb-loading">Loading data...</div>';
         
         try {
-             // Ambil list pemain
              const players = await faylottoContract.getLeaderboardPlayers();
              let data = [];
              
              for(const p of players) {
                  const stats = await faylottoContract.leaderboardStats(p);
-                 // stats: netEth, netUsdt, netBabyDoge, netUsdScore, totalReferral...
-                 
                  let sortVal = 0;
                  if(currentLbMode === 'score') {
-                     sortVal = parseFloat(ethers.utils.formatEther(stats.netUsdScore)); // Assuming 18 decimals for score
+                     sortVal = parseFloat(ethers.utils.formatEther(stats.netUsdScore));
                  } else {
                      sortVal = stats.referralCount.toNumber();
                  }
@@ -893,7 +907,6 @@
                  });
              }
              
-             // Sort Descending
              data.sort((a,b) => b.sortVal - a.sortVal);
              
              container.innerHTML = "";
@@ -905,11 +918,10 @@
                  
                  if(currentLbMode === 'score') {
                      col3 = `<span style="color:${d.sortVal >= 0 ? '#00ff88':'#ff4d4d'}">${d.sortVal.toFixed(2)}</span>`;
-                     // Simple assets summary
                      col4 = `<small style="color:#aaa;">ETH/USDT/Baby</small>`;
                  } else {
                      col3 = `<span style="color:#fff;">${d.stats.referralCount}</span>`;
-                     const totalRefEarn = parseFloat(ethers.utils.formatEther(d.stats.totalReferralEthClaimed)).toFixed(3); // Simplified
+                     const totalRefEarn = parseFloat(ethers.utils.formatEther(d.stats.totalReferralEthClaimed)).toFixed(3);
                      col4 = `<span style="color:gold;">${totalRefEarn} ETH+</span>`;
                  }
                  
