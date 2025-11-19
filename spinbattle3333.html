@@ -1633,7 +1633,6 @@
     </p>
   </footer>
 
-  <script src="https://cdn.ethers.io/lib/ethers-5.7.2.umd.min.js"></script>
 <script>
     // ==================================================================
     // 1. KONFIGURASI & ABI (SUDAH DILENGKAPI)
@@ -2158,55 +2157,107 @@
         ctx.fill();
     }
 
+    // 1. LOGIKA SETELAH SPIN SELESAI (Memastikan transisi otomatis)
     async function handleRoundFinalized(winnerAddr) {
         isSpinning = true;
+        
+        // Cari pemain di data lokal
         const target = playersArray.find(p => p.id.toLowerCase() === winnerAddr.toLowerCase());
+        
+        // Jika data lokal belum sync (pemain tidak ketemu), paksa reset langsung
         if (!target) {
-            // Fallback jika winner data belum tersync
-            setTimeout(() => { isSpinning = false; resetRoundUI(); }, 3000);
+            console.warn("Winner not found locally, resetting...");
+            isSpinning = false; 
+            isFinalizing = false;
+            resetRoundUI(); 
             return;
         }
 
-        // Kalkulasi putaran
+        // Logika Animasi Putaran
         const midRad = (target.startAngle + target.endAngle) / 2;
         const midDeg = midRad * 180 / Math.PI;
-        // Target pointer ada di atas (270 deg), jadi kita putar canvas agar segmen ada di 270
         const targetRotation = 270 - midDeg; 
         const spins = 5 * 360; // 5 putaran penuh
         const finalRot = spins + targetRotation;
         
         const start = performance.now();
-        const duration = 6000; // 6 detik
+        const duration = 6000; // Durasi putaran 6 detik
 
         function animate(time) {
             const elapsed = time - start;
             const t = Math.min(1, elapsed / duration);
-            // Easing function (easeOutCubic)
+            // Efek Easing (melambat di akhir)
             const ease = 1 - Math.pow(1 - t, 3);
             
             currentRotation = ease * finalRot;
             drawDonut(currentRotation);
 
-            if (t < 1) requestAnimationFrame(animate);
-            else {
+            if (t < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // --- BAGIAN PERBAIKAN BUG DISINI ---
                 isSpinning = false;
-                showVictoryScreen();
+                isFinalizing = false; // PENTING: Reset status finalisasi
+
+                showVictoryScreen(); // Tampilkan overlay menang
+                
+                // Mainkan suara menang
+                playSound('sfx-win');
                 showStatus(`Winner: ${winnerAddr.slice(0,6)}...`, "success");
-                setTimeout(resetRoundUI, 5000);
+                
+                // TUNGGU 5 DETIK, LALU OTOMATIS BUKA RONDE BARU
+                setTimeout(() => {
+                    hideVictoryScreen(); // Tutup layar menang
+                    resetRoundUI();      // Mulai ronde baru
+                }, 5000);
             }
         }
         requestAnimationFrame(animate);
     }
 
+    // 2. LOGIKA RESET UI (Memaksa Tombol Kembali ke Awal)
     function resetRoundUI() {
+        console.log("Resetting UI for New Round...");
+        
+        // Reset State Global
+        isSpinning = false;
+        isFinalizing = false;
         players = {};
         playersArray = [];
         totalWeight = ethers.BigNumber.from(0);
         currentRotation = 0;
+
+        // Update Tampilan Wheel jadi kosong
         updateBetList();
-        fetchAndDisplayRoundData();
-        fetchAndDisplayWinners();
-        fetchAndRenderLeaderboard();
+
+        // --- PERBAIKAN UI TOMBOL DISINI ---
+        // Sembunyikan tombol Finalize
+        const finalizeBtn = document.getElementById("finalizeBtn");
+        finalizeBtn.style.display = "none";
+        finalizeBtn.disabled = false; // Reset disabled state untuk ronde berikutnya
+
+        // Tampilkan tombol Place Bet (tapi disable dulu sampai data termuat)
+        const placeBetBtn = document.getElementById("placeBetBtn");
+        placeBetBtn.style.display = "block";
+        placeBetBtn.disabled = true; 
+
+        // Update Status Teks
+        document.getElementById("statusText").innerText = "Starting new round...";
+        document.getElementById("timerText").innerText = "--:--";
+
+        // Reset Deposit Saya
+        document.getElementById("myEthDeposit").innerText = "0";
+        document.getElementById("myUsdtDeposit").innerText = "0";
+        document.getElementById("myBabyDogeDeposit").innerText = "0";
+        document.getElementById("myFreeDeposit").innerText = "0";
+
+        // AMBIL DATA BARU DARI BLOCKCHAIN
+        // Beri jeda sedikit agar node blockchain sempat update status ronde baru
+        setTimeout(() => {
+            fetchAndDisplayRoundData();
+            fetchAndDisplayWinners(); // Update list pemenang di bawah
+            fetchAndRenderLeaderboard();
+        }, 1000);
     }
 
     // ==================================================================
