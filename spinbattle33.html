@@ -2669,46 +2669,96 @@
     }
     
     async function fetchAndDisplayWinners() {
-        const list = document.getElementById("winner-list");
-        if (!list) return;
-        let contractInstance = faylottoContract;
-        if (!contractInstance) {
-           const tempProvider = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
-           contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, tempProvider);
+    const list = document.getElementById("winner-list");
+    if (!list) return;
+    
+    let contractInstance = faylottoContract;
+    if (!contractInstance) {
+        const tempProvider = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+        contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, tempProvider);
+    }
+    
+    try {
+        const winnersArray = await contractInstance.getWinners(10);
+        list.innerHTML = "";
+        
+        if (winnersArray.length === 0) {
+            list.innerHTML = "<p style='text-align:center;'>No winners yet.</p>";
+            return;
         }
+        
+        let usdtDec = 6, babyDec = 18;
         try {
-            const winnersArray = await contractInstance.getWinners(10); 
-            list.innerHTML = ""; 
-            if (winnersArray.length === 0) {
-                list.innerHTML = "<p style='text-align:center;'>No winners yet.</p>"; return;
-            }
-            let usdtDec = 6, babyDec = 18; 
-            try { 
-                if (usdtContract) usdtDec = await usdtContract.decimals(); 
-                if (babyDogeContract) babyDec = await babyDogeContract.decimals();
-            } catch (e) {}
-            const renderArray = [...winnersArray].reverse(); 
-            for (const winner of renderArray) {
-                try {
-                    const winnerId = winner.winnerId.toString();
-                    const roundId = winner.roundId.toString();
-                    const winnerAddr = winner.winner;
-                    const timestamp = winner.timestamp ? winner.timestamp.toNumber() : Date.now()/1000;
-                    const shortId = winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4);
-                    const date = new Date(timestamp * 1000).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute:'2-digit' });
-                    const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700`;
-                    const ethAmt = parseFloat(ethers.utils.formatEther(winner.rewardETH || 0)).toFixed(4);
-                    const usdtAmt = parseFloat(ethers.utils.formatUnits(winner.rewardUSDT || 0, usdtDec)).toFixed(2);
-                    const babyAmt = parseFloat(ethers.utils.formatUnits(winner.rewardBabyDoge || 0, babyDec)).toFixed(0);
-                    let iconsHtml = '<div class="asset-icon-group">';
-                    if (winner.rewardETH.gt(0)) iconsHtml += `<img src="${ETH_LOGO_PATH}" class="asset-icon" title="ETH">`;
-                    if (winner.rewardUSDT.gt(0)) iconsHtml += `<img src="${USDT_LOGO_PATH}" class="asset-icon" title="USDT">`;
-                    if (winner.rewardBabyDoge.gt(0)) iconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" class="asset-icon" title="BabyDoge">`;
-                    iconsHtml += '</div>';
+            if (usdtContract) usdtDec = await usdtContract.decimals();
+            if (babyDogeContract) babyDec = await babyDogeContract.decimals();
+        } catch (e) {}
+        
+        const renderArray = [...winnersArray].reverse();
+        
+        for (const winner of renderArray) {
+            try {
+                // --- 1. SIAPKAN DATA DASAR ---
+                const winnerId = winner.winnerId.toString();
+                const roundId = winner.roundId.toString();
+                const winnerAddr = winner.winner;
+                const timestamp = winner.timestamp ? winner.timestamp.toNumber() : Date.now() / 1000;
+                const shortId = winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4);
+                
+                // Format Tanggal
+                const date = new Date(timestamp * 1000).toLocaleString('id-ID', {
+                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                });
+                
+                // Avatar
+                const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}&baseColor=f0f4f8&backgroundColor=e0f2f7&mouthColor=ffc0cb&faceColor=a7d9f7&sidesColor=ffd700`;
 
-                    const item = document.createElement("div");
-                    item.className = "winner-list-item";
-                    item.innerHTML = `
+                // --- 2. SIAPKAN JUMLAH (AMOUNT) ---
+                const ethAmt = parseFloat(ethers.utils.formatEther(winner.rewardETH || 0)).toFixed(4);
+                const usdtAmt = parseFloat(ethers.utils.formatUnits(winner.rewardUSDT || 0, usdtDec)).toFixed(2);
+                const babyAmt = parseFloat(ethers.utils.formatUnits(winner.rewardBabyDoge || 0, babyDec)).toFixed(0);
+                
+                // [FIX 1] Definisikan freeAmt (Wajib ada karena dipanggil di HTML)
+                const freeAmt = "0"; 
+
+                // [FIX 2] Definisikan displayName
+                let displayName = shortId; 
+                // Opsional: Coba ambil nickname jika ada cache, tapi default ke shortId biar aman
+                
+                // --- 3. SIAPKAN BOOLEAN (LOGIKA TAMPILAN) ---
+                // HTML Anda menggunakan ${hasEth ? ...} jadi ini harus boolean
+                const hasEth = winner.rewardETH.gt(0);
+                const hasUsdt = winner.rewardUSDT.gt(0);
+                const hasBaby = winner.rewardBabyDoge.gt(0);
+                const hasFree = false; // Set false agar bagian free tidak error
+
+                // --- 4. SIAPKAN ICON HTML ---
+                // [FIX 3] Nama variabel harus 'assetIconsHtml' sesuai yang dipanggil di HTML bawah
+                let assetIconsHtml = '<div class="asset-icon-group">';
+                if (hasEth) assetIconsHtml += `<img src="${ETH_LOGO_PATH}" class="asset-icon" title="ETH">`;
+                if (hasUsdt) assetIconsHtml += `<img src="${USDT_LOGO_PATH}" class="asset-icon" title="USDT">`;
+                if (hasBaby) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" class="asset-icon" title="BabyDoge">`;
+                assetIconsHtml += '</div>';
+
+                // --- 5. SIAPKAN DATA SOSIAL (Supaya tidak crash) ---
+                // Kita set default 0 dulu agar HTML bisa dirender instan
+                let likes = 0;
+                let ratingCount = 0; 
+                let commentCount = 0;
+                let isLikedByMe = false; 
+                let myRating = 0;
+                
+                // Kita fetch data asli secara asynchronous (try-catch agar tidak memblokir render)
+                try {
+                     if(contractInstance.getLikeCount) likes = (await contractInstance.getLikeCount(winnerId)).toNumber();
+                     if(contractInstance.getCommentCountForWinner) commentCount = (await contractInstance.getCommentCountForWinner(winnerId)).toNumber();
+                     if(contractInstance.getRatingCountForWinner) ratingCount = (await contractInstance.getRatingCountForWinner(winnerId)).toNumber();
+                } catch(e) { /* Abaikan error sosial data agar list tetap muncul */ }
+
+                const item = document.createElement("div");
+                item.className = "winner-list-item";
+                
+                // --- 6. INI HTML ASLI ANDA (TIDAK DIUBAH) ---
+                item.innerHTML = `
               <div class="winner-main-content">
                   <img src="${avatarUrl}" alt="Avatar" 
                        class="winner-avatar-small"
@@ -2765,13 +2815,15 @@
                   </div>
               </div>
             `;
-            winnerList.appendChild(item);
-                } catch (errInner) { console.error(errInner); }
+                winnerList.appendChild(item);
+            } catch (errInner) {
+                console.error("Error rendering item:", errInner);
             }
-        } catch (err) {
-            console.error("Fetch Winners Error:", err);
-            list.innerHTML = `<p style="color:#ff5555; text-align:center;">Failed to load data.</p>`;
         }
+    } catch (err) {
+        console.error("Fetch Winners Error:", err);
+        list.innerHTML = `<p style="color:#ff5555; text-align:center;">Failed to load data.</p>`;
+    }
     }
 
   // Comment Function
