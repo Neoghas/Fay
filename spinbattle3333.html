@@ -2739,7 +2739,70 @@ function toggleComments(winnerId, winnerAddr) {
     } else {
         terminal.style.display = 'none';
     }
-              }
+    }
+
+    // Like
+    async function toggleLike(winnerId) {
+  // 1. Ganti alert() dengan showStatus()
+  if (!signer || !faylottoContract) {
+    showStatus("Please connect wallet first.", "warning");
+    return;
+  }
+  
+  // 2. Tambahkan toast 'load'
+  showStatus("Processing Like/Unlike...", "load", 3000); // Tampil 3 detik
+
+  try {
+    const tx = await faylottoContract.toggleLikeWinner(winnerId);
+    await tx.wait();
+    
+    // 3. Tambahkan toast 'success' (opsional)
+    // showStatus("Like updated!", "success", 3000);
+    
+    fetchAndDisplayWinners(); // Refresh setelah sukses
+  } catch (err) {
+    console.error("Like failed:", err);
+    
+    // 4. Tambahkan toast 'error'
+    let userMessage = "Like failed.";
+    const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    else if (err.code === 'ACTION_REJECTED') userMessage = "Transaction rejected.";
+    
+    showStatus(userMessage, "error");
+  }
+}
+
+async function rateWinner(winnerId, stars) {
+  // 1. Ganti alert() dengan showStatus()
+  if (!signer || !faylottoContract) {
+    showStatus("Please connect wallet first.", "warning");
+    return;
+  }
+  
+  // 2. Tambahkan toast 'load'
+  showStatus("Sending your rating...", "load");
+
+  try {
+    const tx = await faylottoContract.rateWinner(winnerId, stars);
+    await tx.wait();
+    
+    // 3. Tambahkan toast 'success'
+    showStatus("Rating successfully saved!", "success");
+    
+    fetchAndDisplayWinners(); // Refresh setelah sukses
+  } catch (err) {
+    console.error("Rating failed:", err);
+    
+    // 4. Tambahkan toast 'error'
+    let userMessage = "Rating failed.";
+    const reason = err.reason || (err.data ? faylottoContract?.interface?.parseError(err.data)?.args[0] : null) || err.message;
+    if (reason) userMessage = `Error: ${reason.substring(0, 100)}`;
+    else if (err.code === 'ACTION_REJECTED') userMessage = "Transaction rejected.";
+    
+    showStatus(userMessage, "error");
+  }
+}
   
     // ==================================================================
     // 8. UTILS & INITIALIZATION
