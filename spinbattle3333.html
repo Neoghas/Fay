@@ -2166,56 +2166,92 @@ function setAmountByPercent(percent) {
     betAmountInput.value = parseFloat(formattedAmount).toFixed(decimalsToDisplay);
 }
 
-
     async function confirmBet() {
         const amt = document.getElementById("betAmountInput").value;
         const cur = document.getElementById("betCurrencySelect").value;
         if (!amt || parseFloat(amt) <= 0) return showStatus("Invalid amount", "warning");
 
         const btn = document.getElementById("confirmBetBtn");
-        btn.disabled = true; btn.innerText = "Sending...";
+        btn.disabled = true; 
+        btn.innerText = "Processing..."; // Default text
         
         try {
             let tx;
             if (cur === 'ETH') {
+                btn.innerText = "Sign Transaction..."; // UX Update
                 tx = await faylottoContract.placeBetNative({value: ethers.utils.parseEther(amt)});
             } else if (cur === 'USDT') {
                 const wei = ethers.utils.parseUnits(amt, usdtDecimals);
+                
+                // Cek Allowance
+                showStatus("Checking allowance...", "load");
                 const allow = await usdtContract.allowance(userAddress, FAYLOTTO_ADDRESS);
+                
                 if (allow.lt(wei)) {
-                     showStatus("Approving USDT...", "load");
-                     await (await usdtContract.approve(FAYLOTTO_ADDRESS, ethers.constants.MaxUint256)).wait();
+                     btn.innerText = "Approving USDT..."; // UX Update
+                     showStatus("Please Approve USDT in Wallet...", "warning"); // Minta user cek wallet
+                     
+                     const approveTx = await usdtContract.approve(FAYLOTTO_ADDRESS, ethers.constants.MaxUint256);
+                     showStatus("Waiting for Approval...", "load");
+                     await approveTx.wait(); // Tunggu mined
+                     
+                     showStatus("Approval Success! Now confirming bet...", "success");
                 }
+                
+                btn.innerText = "Sign Bet...";
                 tx = await faylottoContract.placeBetUSDT(wei);
+                
             } else if (cur === 'BABYDOGE') {
                 const wei = ethers.utils.parseUnits(amt, babyDogeDecimals);
+                
+                showStatus("Checking allowance...", "load");
                 const allow = await babyDogeContract.allowance(userAddress, FAYLOTTO_ADDRESS);
+                
                 if (allow.lt(wei)) {
-                     showStatus("Approving BabyDoge...", "load");
-                     await (await babyDogeContract.approve(FAYLOTTO_ADDRESS, ethers.constants.MaxUint256)).wait();
+                     btn.innerText = "Approving BabyDoge...";
+                     showStatus("Please Approve BabyDoge...", "warning");
+                     
+                     const approveTx = await babyDogeContract.approve(FAYLOTTO_ADDRESS, ethers.constants.MaxUint256);
+                     showStatus("Waiting for Approval...", "load");
+                     await approveTx.wait();
+                     
+                     showStatus("Approval Success!", "success");
                 }
+                
+                btn.innerText = "Sign Bet...";
                 tx = await faylottoContract.placeBetBabyDoge(wei);
+                
             } else if (cur === 'FREE') {
-                // Free biasanya 18 decimals atau sesuai token asli
-                // Asumsi smart contract handle 18 decimals untuk free logic
                 const wei = ethers.utils.parseUnits(amt, 18); 
+                btn.innerText = "Sign Free Bet...";
                 tx = await faylottoContract.placeBetFree(wei);
             }
 
-            showStatus("Transaction Sent...", "load");
+            showStatus("Transaction Sent! Waiting...", "load");
             await tx.wait();
+            
+            // SUKSES
             showStatus("Bet Placed Successfully!", "success");
             hideBetModal();
-            updateUserBalances();
+            updateUserBalances(); // Refresh saldo segera
+            
+            // Opsional: Refresh data ronde agar bet langsung muncul di list
+            setTimeout(fetchAndDisplayRoundData, 2000); 
+
         } catch (e) {
             console.error(e);
-            const msg = e.reason || e.message || "Transaction Failed";
+            // Parsing error message biar enak dibaca user
+            let msg = e.reason || e.message || "Transaction Failed";
+            if (msg.includes("user rejected")) msg = "Transaction rejected by user.";
+            if (msg.includes("insufficient funds")) msg = "Insufficient funds for gas/bet.";
+            
             showStatus(msg.slice(0,60), "error");
         } finally {
-            btn.disabled = false; btn.innerText = "Confirm Bet";
+            btn.disabled = false; 
+            btn.innerText = "Confirm Bet"; // Reset tombol
         }
     }
-
+    
     async function callFinalizeRound() {
         if (!userAddress || !faylottoContract) return showStatus("Connect wallet first", "error");
         
@@ -2622,10 +2658,6 @@ function setAmountByPercent(percent) {
     }
 
     // Leaderboard Fetcher
-    // Variabel Global untuk menyimpan mode leaderboard saat ini
-let currentLbMode = 'pilot'; // 'pilot' atau 'referral'
-
-// Fungsi untuk ganti Tab
 function switchLeaderboard(mode) {
     currentLbMode = mode;
     
