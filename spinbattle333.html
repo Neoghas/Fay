@@ -2429,91 +2429,117 @@ function updateBetList() {
 
 // GANTI FUNGSI LAMA DENGAN INI
 async function fetchAndDisplayRoundData() {
-    // Gunakan kontrak yang sudah ada atau buat baru
+    // Pastikan kontrak sudah terinisialisasi
     let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
     if (!contract) return;
 
-    // Jangan ganggu jika roda sedang berputar
+    // Jangan refresh data jika roda sedang berputar (agar animasi tidak patah)
     if (isSpinning) return;
 
     try {
-        document.getElementById("statusText").innerText = "Syncing...";
-        
-        // Update harga coin jika belum ada
-        if (currentEthPrice === 0) await fetchTokenPrices();
+        document.getElementById("statusText").innerText = "Syncing round data...";
 
-        // 1. Cek ID Ronde Terbaru
+        // [FIX 1] Jangan gunakan 'await' untuk harga. Biarkan berjalan di background.
+        // Agar jika API harga down, aplikasi tidak macet total.
+        if (currentEthPrice === 0) fetchTokenPrices(); 
+
+        // 1. Ambil ID Ronde Terbaru dari Blockchain
         const latestRoundId = await contract.currentRoundId();
         
-        // Deteksi jika ronde berubah (New Round)
+        // 2. Deteksi Ronde Baru
+        // Jika ID di blockchain beda dengan ID di aplikasi, reset tampilan.
         if (currentRoundId && !latestRoundId.eq(currentRoundId)) {
             console.log("New Round Detected:", latestRoundId.toString());
-            resetRoundUI(); // Reset tampilan bersih
+            resetRoundUI(); 
         }
         currentRoundId = latestRoundId;
 
-        // 2. Ambil Data Ronde
+        // 3. Ambil Detail Ronde
+        // returns: [id, startTime, endTime, finalized, winner, totalETH, totalUSDT, totalBabyDoge, playersCount, totalWeight]
         const roundInfo = await contract.getRoundBasic(currentRoundId);
-        // roundInfo: [id, startTime, endTime, finalized, winner, totalETH, totalUSDT, totalBabyDoge, playersCount, totalWeight]
 
-        // 3. Cek Konsistensi Data Lokal vs Blockchain
-        // Jika jumlah pemain di blockchain beda dengan lokal, tarik ulang semua data
-        if (roundInfo[8].toNumber() !== playersArray.length) {
-            resetRoundUI(); // Bersihkan dulu
+        // 4. Sinkronisasi Pemain (Hanya jika data lokal belum lengkap)
+        // Jika jumlah pemain di blockchain beda dengan di layar, ambil ulang semua.
+        if (playersArray.length !== roundInfo[8].toNumber()) {
             const playersList = await contract.getRoundPlayers(currentRoundId);
             
+            // Reset data lokal sebelum isi ulang
+            players = {}; 
+            playersArray = [];
+            totalWeight = ethers.BigNumber.from(0);
+
             for (const playerAddress of playersList) {
                 const deposits = await contract.getPlayerDeposits(currentRoundId, playerAddress);
                 
-                // Masukkan ke state lokal. 
-                // Parameter ke-5 (freeAmount) kita set 0 karena belum ada di return value getPlayerDeposits kontrak V4,
-                // tapi itu tidak masalah untuk kalkulasi roda karena kita pakai usdWeight (deposits.usdWeight).
+                // deposits returns: [ethAmount, usdtAmount, babyDogeAmount, usdWeight]
+                // Kita masukkan ke addBetToState.
+                // Parameter ke-5 (Free Amount) kita isi 0 dulu karena fungsi getPlayerDeposits di kontrak V4
+                // belum mengembalikan data 'freeAmount' secara terpisah.
                 addBetToState(
                     playerAddress, 
-                    deposits.ethAmount, 
-                    deposits.usdtAmount, 
-                    deposits.babyDogeAmount, 
-                    ethers.BigNumber.from(0), 
-                    deposits.usdWeight, 
-                    false // isNewBet = false (karena ini sync)
+                    deposits[0], // ETH
+                    deposits[1], // USDT
+                    deposits[2], // BabyDoge
+                    ethers.BigNumber.from(0), // Free Amount (Placeholder)
+                    deposits[3], // USD Weight
+                    false // isNewBet = false (karena ini sinkronisasi data lama)
                 );
             }
-            updateBetList(); // Gambar ulang
+            updateBetList(); // Gambar ulang daftar dan roda
         }
 
+        // 5. Update Deposit Saya (Jika sudah connect wallet)
         if (userAddress) await updateMyDeposits();
 
-        // 4. Update UI Pool
+        // 6. Update Tampilan Pool Hadiah
+        // Gunakan harga default (3000) jika fetchTokenPrices belum selesai
+        let ethPrice = currentEthPrice > 0 ? currentEthPrice : 3000;
+        
         const ethPool = parseFloat(ethers.utils.formatEther(roundInfo[5]));
         const usdtPool = parseFloat(ethers.utils.formatUnits(roundInfo[6], usdtDecimals));
-        const totalUsd = usdtPool + (ethPool * currentEthPrice);
-        document.getElementById('pool-usd-value').innerText = "$" + totalUsd.toFixed(2);
+        
+        // Hitung estimasi total dalam USD
+        const totalUsd = usdtPool + (ethPool * ethPrice);
+        
+        const poolEl = document.getElementById('pool-usd-value');
+        if(poolEl) poolEl.innerText = "$" + totalUsd.toFixed(2);
 
-        // 5. Update Timer & Status
+        // 7. Atur Timer & Status Game
         const contractEndTime = roundInfo[2].toNumber() * 1000;
         startVisualTimer(contractEndTime); 
 
         const now = Date.now();
-        if (roundInfo[3] === true) {
-            // Jika di blockchain sudah finalized tapi di sini belum reset
-            document.getElementById("statusText").innerText = "Round Finalizing... Please wait.";
-            // Paksa cek lagi dalam 3 detik untuk menangkap ronde baru
+        const isFinalized = roundInfo[3];
+
+        if (isFinalized) {
+            // Jika ronde sudah selesai & difinalisasi di blockchain
+            document.getElementById("statusText").innerText = "Round Finalized. Preparing new round...";
+            // Cek lagi dalam 3 detik untuk melihat apakah ronde baru sudah dibuat
             setTimeout(fetchAndDisplayRoundData, 3000); 
+            
         } else if (now < contractEndTime) {
-            document.getElementById("statusText").innerText = `Round ${currentRoundId.toString()} Live!`;
-            if (signer) placeBetBtn.disabled = false;
+            // Jika ronde masih berjalan
+            document.getElementById("statusText").innerText = `Round ${currentRoundId.toString()} is Live!`;
+            if (signer) {
+                const btn = document.getElementById("placeBetBtn");
+                if(btn) btn.disabled = false;
+            }
             isFinalizing = false;
+            
         } else {
+            // Jika waktu habis tapi belum difinalisasi
             document.getElementById("statusText").innerText = "Round Ended. Waiting for Spin...";
             showFinalizeButton();
         }
 
     } catch (err) {
         console.error("Sync Error:", err.message);
-        // Jangan stuck, coba lagi otomatis setelah 3 detik
+        // [PENTING] Anti-Stuck: Jika error (misal RPC timeout), coba lagi otomatis setelah 3 detik
+        document.getElementById("statusText").innerText = "Network slow, retrying...";
         setTimeout(fetchAndDisplayRoundData, 3000);
     }
 }
+
 
     
 
