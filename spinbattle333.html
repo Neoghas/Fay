@@ -1694,6 +1694,51 @@
     let qrCodeObject = null; 
     let userFreeSpinState = { eligible: false, remaining: 0 }; // Untuk spin gratis
 
+function initResponsiveCanvas() {
+        const canvas = document.getElementById('donutCanvas');
+        const container = document.querySelector('.donut-wrap');
+        
+        if (!canvas || !container) {
+            console.error("Canvas element not found!");
+            return;
+        }
+
+        ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            const boxWidth = container.clientWidth;
+            // Set resolusi tinggi untuk ketajaman
+            const dpr = window.devicePixelRatio || 1;
+            
+            canvas.width = boxWidth * dpr;
+            canvas.height = boxWidth * dpr;
+            
+            // Atur ukuran tampilan CSS
+            canvas.style.width = `${boxWidth}px`;
+            canvas.style.height = `${boxWidth}px`;
+            
+            // Scale context agar gambar tajam
+            ctx.scale(dpr, dpr);
+
+            cw = boxWidth;
+            ch = boxWidth;
+            cx = cw / 2;
+            cy = ch / 2;
+
+            // Atur Radius Roda
+            outerR = cw * 0.45; 
+            innerR = cw * 0.20;
+
+            // Gambar ulang roda segera
+            drawDonut(currentRotation);
+        }
+
+        // Jalankan resize pertama kali
+        resizeCanvas();
+        // Pasang listener jika layar berubah
+        window.addEventListener('resize', resizeCanvas);
+}
+    
 function getProvider() {
     // Cek apakah user punya wallet (misal MetaMask)
     if (window.ethereum) {
@@ -2385,6 +2430,46 @@ function updateBetList() {
     rebuildPlayersArrayAndDraw();
 }
 
+function addBetToState(playerAddr, ethAmt, usdtAmt, babyAmt, freeAmt, weight, isNewBet) {
+        if (!players) players = {}; // Safety check jika players undefined
+        
+        const key = playerAddr.toLowerCase();
+
+        // 1. Jika pemain belum ada, buat baru
+        if (!players[key]) {
+            const color = PLAYER_COLORS[Object.keys(players).length % PLAYER_COLORS.length];
+            players[key] = {
+                id: playerAddr,
+                eth: ethers.BigNumber.from(0),
+                usdt: ethers.BigNumber.from(0),
+                baby: ethers.BigNumber.from(0),
+                free: ethers.BigNumber.from(0),
+                weight: ethers.BigNumber.from(0),
+                color: color
+            };
+        }
+
+        // 2. Tambahkan deposit (Gunakan .add karena BigNumber)
+        // Pastikan nilai yang masuk adalah BigNumber, jika tidak konversi dulu
+        players[key].eth = players[key].eth.add(ethAmt || 0);
+        players[key].usdt = players[key].usdt.add(usdtAmt || 0);
+        players[key].baby = players[key].baby.add(babyAmt || 0);
+        players[key].free = players[key].free.add(freeAmt || 0);
+        players[key].weight = players[key].weight.add(weight || 0);
+
+        // 3. Update total berat global
+        if (!totalWeight) totalWeight = ethers.BigNumber.from(0);
+        totalWeight = totalWeight.add(weight || 0);
+
+        // 4. Efek suara & update UI
+        if (isNewBet) {
+            playSound('sfx-coin');
+            if (userAddress && key === userAddress.toLowerCase()) {
+                updateMyDeposits();
+            }
+        }
+}
+
 
 // GANTI FUNGSI LAMA DENGAN INI
 async function fetchAndDisplayRoundData() {
@@ -2794,47 +2879,6 @@ async function confirmBet() {
         showStatus("Failed: " + msg.slice(0,50), "error");
     } finally {
         confirmBetBtn.disabled = false; confirmBetBtn.innerText = "Confirm Bet";
-    }
-}
-
-    // ============================================================
-// [FIX MASALAH 1 & 2] FUNGSI PENTING YANG HILANG
-// ============================================================
-function addBetToState(playerAddr, ethAmt, usdtAmt, babyAmt, freeAmt, weight, isNewBet) {
-    const key = playerAddr.toLowerCase();
-
-    // 1. Jika pemain belum ada di memori, buat baru
-    if (!players[key]) {
-        // Pilih warna acak untuk roda
-        const color = PLAYER_COLORS[Object.keys(players).length % PLAYER_COLORS.length];
-        players[key] = {
-            id: playerAddr,
-            eth: ethers.BigNumber.from(0),
-            usdt: ethers.BigNumber.from(0),
-            baby: ethers.BigNumber.from(0),
-            free: ethers.BigNumber.from(0),
-            weight: ethers.BigNumber.from(0),
-            color: color
-        };
-    }
-
-    // 2. Tambahkan jumlah deposit ke data pemain
-    // (Gunakan .add() karena ini adalah BigNumber)
-    players[key].eth = players[key].eth.add(ethAmt);
-    players[key].usdt = players[key].usdt.add(usdtAmt);
-    players[key].baby = players[key].baby.add(babyAmt);
-    players[key].free = players[key].free.add(freeAmt);
-    players[key].weight = players[key].weight.add(weight);
-
-    // 3. Tambahkan ke total berat global (untuk hitungan persen roda)
-    totalWeight = totalWeight.add(weight);
-
-    // 4. Jika ini bet baru (realtime), mainkan suara dan update tampilan saya
-    if (isNewBet) {
-        playSound('sfx-coin');
-        if (userAddress && key === userAddress.toLowerCase()) {
-            updateMyDeposits(); // Update info deposit di modal wallet
-        }
     }
 }
 
