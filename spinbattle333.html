@@ -1934,113 +1934,155 @@ async function toggleWallet(isAutoConnect = false) {
 // [FIX MASALAH 3] MENGHAPUS VARIABEL 'rewardFree' YANG TIDAK ADA
 // ============================================================
 async function fetchAndDisplayWinners() {
-    const list = document.getElementById("winner-list");
-    if (!list) return;
-    
-    let contractInstance = faylottoContract;
-    if (!contractInstance) {
-       const tempProvider = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
-       contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, tempProvider);
-    }
-
-    try {
-        list.innerHTML = ""; // Reset list
+        const list = document.getElementById("winner-list");
+        if (!list) return;
         
-        // Ambil data pemenang dari kontrak
-        const winnersArray = await contractInstance.getWinners(10); 
-        
-        if (winnersArray.length === 0) {
-            list.appendChild(document.getElementById("winner-list-placeholder"));
-            return;
+        let contractInstance = faylottoContract;
+        if (!contractInstance) {
+           const tempProvider = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+           contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, tempProvider);
         }
-
-        let usdtDecimalsWinner = 6; 
-        let babyDecimalsWinner = 18;
-        try { 
-            if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals(); 
-            if (babyDogeContract) babyDecimalsWinner = await babyDogeContract.decimals();
-        } catch (e) {}
-
-        // Loop data pemenang (dari yang terbaru)
-        for (let i = winnersArray.length - 1; i >= 0; i--) {
-            const winner = winnersArray[i];
-
-            const winnerId = winner.winnerId.toString();
-            const roundId = winner.roundId.toString();
-            const winnerAddr = winner.winner;
-            
-            // [PERBAIKAN DISINI] Kita hanya ambil data yang ADA di kontrak
-            const ethAmtBigNum = winner.rewardETH;
-            const usdtAmtBigNum = winner.rewardUSDT;
-            const babyDogeAmtBigNum = winner.rewardBabyDoge;
-            // HAPUS: const freeAmtBigNum = winner.rewardFree; (Ini bikin error!)
-
-            const ethAmt = parseFloat(ethers.utils.formatEther(ethAmtBigNum)).toFixed(4);
-            const usdtAmt = parseFloat(ethers.utils.formatUnits(usdtAmtBigNum, usdtDecimalsWinner)).toFixed(2);
-            const babyDogeAmt = parseFloat(ethers.utils.formatUnits(babyDogeAmtBigNum, babyDecimalsWinner)).toFixed(0);
-
-            // Cek aset mana yang dimenangkan
-            const hasEth = ethAmtBigNum.gt(0);
-            const hasUsdt = usdtAmtBigNum.gt(0);
-            const hasBaby = babyDogeAmtBigNum.gt(0);
-
-            // Buat Icon
-            let assetIconsHtml = '<div class="asset-icon-group">';
-            if (hasEth) assetIconsHtml += `<img src="${ETH_LOGO_PATH}" class="asset-icon">`;
-            if (hasUsdt) assetIconsHtml += `<img src="${USDT_LOGO_PATH}" class="asset-icon">`;
-            if (hasBaby) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" class="asset-icon">`;
-            assetIconsHtml += '</div>';
-
-            // Format Waktu
-            const date = new Date(winner.timestamp.toNumber() * 1000).toLocaleString();
-
-            // Nama Display
-            let displayName = winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4);
-            if (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) {
-                displayName = "You";
+        
+        try {
+            list.innerHTML = "";
+            const winnersArray = await contractInstance.getWinners(10); 
+            if (winnersArray.length === 0) {
+                list.innerHTML = "<p>No winners yet.</p>"; return;
             }
 
-            // HTML Item Pemenang
-            const item = document.createElement("div");
-            item.className = "winner-list-item";
-            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}`;
+            let usdtDecWinners = 6, babyDecWinners = 18;
+            try { 
+                if (usdtContract) usdtDecWinners = await usdtContract.decimals(); 
+                if (babyDogeContract) babyDecWinners = await babyDogeContract.decimals();
+            } catch (e) {}
 
-            item.innerHTML = `
-              <div class="winner-main-content">
-                  <img src="${avatarUrl}" class="winner-avatar-small" onclick="showPlayerProfile('${winnerAddr}')">              
-                  <div class="winner-info-text">
-                      <div class="winner-id" style="display: flex; justify-content: space-between;">
-                        <span>Round: #${roundId}</span>  
-                        <div style="text-align: right;">        
+            // Loop reverse agar yang terbaru diatas (atau sesuai array)
+            for (let i = winnersArray.length - 1; i >= 0; i--) {
+                const winner = winnersArray[i];
+                const winnerId = winner.winnerId.toString();
+                const roundId = winner.roundId.toString();
+                const winnerAddr = winner.winner;
+                
+                const ethAmtBigNum = winner.rewardETH;
+                const usdtAmtBigNum = winner.rewardUSDT;
+                const babyDogeAmtBigNum = winner.rewardBabyDoge;
+                
+                // FIX: RewardFree tidak ada di kontrak, set ke 0
+                const freeAmtBigNum = ethers.BigNumber.from(0); 
+
+                const ethAmt = parseFloat(ethers.utils.formatEther(ethAmtBigNum)).toFixed(4);
+                const usdtAmt = parseFloat(ethers.utils.formatUnits(usdtAmtBigNum, usdtDecWinners)).toFixed(2);
+                const babyDogeAmt = parseFloat(ethers.utils.formatUnits(babyDogeAmtBigNum, babyDecWinners)).toFixed(0);
+                const freeAmt = "0"; 
+
+                let assetIconsHtml = '';
+                const hasEth = ethAmtBigNum.gt(0);
+                const hasUsdt = usdtAmtBigNum.gt(0);
+                const hasBaby = babyDogeAmtBigNum.gt(0);
+                const hasFree = freeAmtBigNum.gt(0);
+
+                if (hasEth || hasUsdt || hasBaby || hasFree) {
+                    assetIconsHtml += '<div class="asset-icon-group">';
+                    if (hasEth) assetIconsHtml += `<img src="${ETH_LOGO_PATH}" class="asset-icon">`;
+                    if (hasUsdt) assetIconsHtml += `<img src="${USDT_LOGO_PATH}" class="asset-icon">`;
+                    if (hasBaby) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" class="asset-icon">`;
+                    if (hasFree) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" style="border:1px solid #00ff88; border-radius:50%;" class="asset-icon">`; 
+                    assetIconsHtml += '</div>';
+                }
+
+                // Data Sosial
+                let likes = 0, ratingCount = 0, commentCount = 0;
+                let isLikedByMe = false, myRating = 0;
+
+                try {
+                    likes = (await contractInstance.getLikeCount(winnerId)).toNumber();
+                    ratingCount = (await contractInstance.getRatingCountForWinner(winnerId)).toNumber();
+                    commentCount = (await contractInstance.getCommentCountForWinner(winnerId)).toNumber();
+                } catch (e) {}
+
+                if (userAddress && faylottoContract) { 
+                    try {
+                        // Gunakan instance yang tersambung signer untuk cek data personal
+                        isLikedByMe = await faylottoContract.liked(winnerId, userAddress);
+                        myRating = await faylottoContract.ratings(winnerId, userAddress);
+                    } catch (e) {}
+                }
+                
+                let winnerNickname = null;
+                try { winnerNickname = await contractInstance.nicknames(winnerAddr); } catch(e) {}
+                
+                const shortId = winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4);
+                const displayName = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) 
+                                    ? "You" : (winnerNickname || shortId);
+                
+                // Define Variables sebelum dipakai di HTML
+                const date = new Date(winner.timestamp.toNumber() * 1000).toLocaleString();
+                const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}`;
+
+                const item = document.createElement("div");
+                item.className = "winner-list-item";
+                
+                // HTML Structure sesuai request Anda
+                item.innerHTML = `
+                  <div class="winner-main-content">
+                      <img src="${avatarUrl}" alt="Avatar" class="winner-avatar-small" onclick="showPlayerProfile('${winnerAddr}')">              
+                      <div class="winner-info-text">
+                          <div class="winner-id" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                            <span>Round: #${roundId}</span>  
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">        
                             <small style="color: #888; font-size: 10px;">${date}</small>
                             ${assetIconsHtml} 
-                        </div>
+                         </div>
                      </div>
-                      <div style="font-weight: bold; color: var(--cyan-main); cursor: pointer;" onclick="showPlayerProfile('${winnerAddr}')">
-                         Winner: ${displayName}
-                      </div>
-                      <div class="prize-line" style="color: #00dd00; font-weight: bold; font-size:13px; margin-top:5px;">
-                         Prize: 
-                         ${hasEth ? ethAmt + ' ETH ' : ''} 
-                         ${hasUsdt ? '+ ' + usdtAmt + ' USDT ' : ''}
-                         ${hasBaby ? '+ ' + babyDogeAmt + ' BabyDoge ' : ''}
+                          <div style="margin-top: 4px; margin-bottom: 4px; font-weight: bold; font-size:14px; color: var(--cyan-main); cursor: pointer;" onclick="showPlayerProfile('${winnerAddr}')">
+                             Winner: ${displayName}
+                          </div><br>
+                          <div class="prize-line" style="color: #00dd00; font-weight: bold; font-size:15px;">
+                     Prize: 
+                     ${hasEth ? ethAmt + ' ETH ' : ''} 
+                     ${hasUsdt ? '+ ' + usdtAmt + ' USDT ' : ''}
+                     ${hasBaby ? '+ ' + babyDogeAmt + ' BabyDoge ' : ''}
+                     ${hasFree ? `<br><span style="color:#00ff88;">+ ${freeAmt} Free BabyDoge</span>` : ''}
+                </div><br>
                       </div>
                   </div>
-              </div>
-              <div class="winner-social" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(120,0,255,0.2); display:flex; justify-content:space-between;">
-                  <button class="like-btn" onclick="toggleLike(${winnerId})">Like</button>
-                  <button class="terminal-btn" onclick="toggleComments(${winnerId}, '${winnerAddr}')">Log</button>
-              </div>
-              <div class="comments-terminal" id="terminal-${winnerId}" style="display: none;"></div>
-            `;
-            list.appendChild(item);
+                  <div class="winner-social" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(120,0,255,0.2); display:flex; justify-content:space-between; align-items:center;">
+                      <button class="like-btn" style="background:none; border:none; cursor:pointer; color: ${isLikedByMe ? '#ff00e6' : '#888'}; font-size:14px; display:flex; align-items:center; gap:4px;" onclick="toggleLike(${winnerId})">
+                        <img src="like.svg" style="width:25px; height:25px; vertical-align:middle;">
+                        <span style="color:${isLikedByMe ? '#ff00e6' : '#888'}">Like (${likes})</span>
+                      </button>
+                      <div style="display:flex; align-items:center; gap:6px;">
+                          <div class="rating-stars">
+                             ${[1, 2, 3, 4, 5].map(star => `
+                                <span class="star-icon ${star <= myRating ? 'active' : ''}" style="cursor:pointer; color:${star <= myRating ? 'gold' : 'gray'}" onclick="rateWinner(${winnerId}, ${star})">★</span>
+                             `).join('')}
+                          </div>
+                          <span style="font-size: 12px; color: #888;">(${ratingCount})</span>
+                      </div>
+                      <button class="terminal-btn" id="comm-btn-${winnerId}" 
+                            style="background:none; border:none; color:var(--cyan-main); font-size:14px; cursor:pointer; display:flex; align-items:center; gap:5px;" 
+                            onclick="toggleComments(${winnerId}, '${winnerAddr}')">
+                        <img src="comment.svg" style="width:25px; height:25px; vertical-align:middle;">Log
+                        <span>(${commentCount})</span>
+                      </button>
+                  </div>
+                  <div class="comments-terminal" id="terminal-${winnerId}" style="display: none; margin-top: 10px;">
+                      <div class="terminal-header">> Log For Winner: ${winnerAddr.slice(0,10)}...</div>
+                      <div class="comments-list"></div>
+                      <div class="new-comment-section" style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(120, 0, 255, 0.2); display: flex; gap: 5px; align-items: center;">
+                          <span style="color: var(--cyan-main);">></span>
+                          <textarea class="terminal-input" id="new-comment-${winnerId}" placeholder="Transmit data..." rows="1" style="resize: none; overflow-y: hidden;" oninput="this.style.height = '';this.style.height = this.scrollHeight + 'px'"></textarea>
+                          <button class="terminal-btn" onclick="submitComment(${winnerId})">[ SEND ]</button>
+                      </div>
+                  </div>
+                `;
+                list.appendChild(item);
+            }
+        } catch (err) {
+            console.error("Failed fetching winners:", err.message);
         }
-    } catch (err) {
-        console.error("Failed fetching winners:", err);
-        list.innerHTML = "<p style='color:red; text-align:center;'>Failed to load winners.</p>";
-    }
 }
-
+    
 // ... (Tidak ada perubahan pada fungsi-fungsi ini) ...
 async function toggleLike(winnerId) {
   // 1. Ganti alert() dengan showStatus()
