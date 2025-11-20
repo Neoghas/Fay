@@ -1693,7 +1693,8 @@
     let referralModalTimeout = null; 
     let qrCodeObject = null; 
     let userFreeSpinState = { eligible: false, remaining: 0 }; // Untuk spin gratis
-
+    let listeningContract = null;
+    
 function getProvider() {
     // Cek apakah user punya wallet (misal MetaMask)
     if (window.ethereum) {
@@ -2303,65 +2304,67 @@ function toggleComments(winnerId, winnerAddr) {
 }
 
 // GANTI SELURUH FUNGSI setupEventListeners DENGAN INI:
-
 function setupEventListeners() {
-    // Gunakan kontrak yang sudah ada atau buat provider baru jika belum connect
-    let contractToListen = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-    
-    if (!contractToListen) return; 
-    
-    // Hapus listener lama agar tidak double trigger
-    contractToListen.removeAllListeners(); 
-    console.log("Setting up listeners...");
+    // 1. Tentukan kontrak mana yang akan dipakai (Wallet Signer atau Provider Read-only)
+    // Kita prioritaskan faylottoContract yang aktif, jika tidak ada, buat baru dari provider
+    let currentContractSource = faylottoContract;
+    if (!currentContractSource) {
+         // Jika belum connect wallet, gunakan provider read-only
+         const tempProvider = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+         currentContractSource = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, tempProvider);
+    }
 
-    // 1. Listener ETH (Native)
-    contractToListen.on("BetNative", (roundId, player, amount, usdWeight) => {
+    // 2. MATIKAN Listener Lama (KUNCI PERBAIKAN BUG GANDA)
+    // Kita cek variabel global 'listeningContract' bukan lokal
+    if (listeningContract) {
+        console.log("Deleting old listeners...");
+        listeningContract.removeAllListeners(); 
+    }
+
+    // 3. Update variabel global dengan kontrak sumber yang baru
+    listeningContract = currentContractSource;
+
+    if (!listeningContract) return; 
+    
+    console.log("Installing a new listener...");
+
+    // 4. Pasang Listener pada 'listeningContract' (bukan contractToListen lokal lagi)
+
+    // A. Listener ETH (Native)
+    listeningContract.on("BetNative", (roundId, player, amount, usdWeight) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            // Parameter terakhir 'false' = Mode Accumulate (Realtime)
-            addBetToState(player, amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, false);
-            updateBetList();
-            
-            // Update log status kecil
+            addBetToState(player, amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, true);
+            // Tidak perlu panggil updateBetList() disini karena addBetToState sudah melakukannya (isRealtime = true)
             if(statusText) statusText.innerText = "New ETH Bet detected!";
         }
     });
 
-    // 2. Listener USDT
-    contractToListen.on("BetUSDT", (roundId, player, amount, usdWeight) => {
+    // B. Listener USDT
+    listeningContract.on("BetUSDT", (roundId, player, amount, usdWeight) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            // Parameter terakhir 'false' = Mode Accumulate (Realtime)
-            addBetToState(player, ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, false);
-            updateBetList();
-            
+            addBetToState(player, ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), ethers.BigNumber.from(0), usdWeight, true);
             if(statusText) statusText.innerText = "New USDT Bet detected!";
         }
     });
 
-    // 3. Listener BabyDoge
-    contractToListen.on("BetBabyDoge", (roundId, player, amount, usdWeight) => {
+    // C. Listener BabyDoge
+    listeningContract.on("BetBabyDoge", (roundId, player, amount, usdWeight) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            // Parameter terakhir 'false' = Mode Accumulate (Realtime)
-            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), usdWeight, false);
-            updateBetList();
-            
+            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), usdWeight, true);
             if(statusText) statusText.innerText = "New BabyDoge Bet detected!";
         }
     });
     
-    // 4. Listener Free Bet
-    contractToListen.on("BetFree", (roundId, player, amount) => {
+    // D. Listener Free Bet
+    listeningContract.on("BetFree", (roundId, player, amount) => {
         if (currentRoundId && roundId.eq(currentRoundId)) {
-            // Parameter Free Amount ada di posisi ke-5
-            // Weight 0 karena Free Bet tidak menambah bobot USD
-            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), false);
-            updateBetList();
-            
+            addBetToState(player, ethers.BigNumber.from(0), ethers.BigNumber.from(0), ethers.BigNumber.from(0), amount, ethers.BigNumber.from(0), true);
             if(statusText) statusText.innerText = "New Free Bet detected!";
         }
     });
 
-    // 5. Listener Pemenang (Finalize)
-    contractToListen.on("WinnerRecorded", (winnerId, roundId, winner) => {
+    // E. Listener Pemenang
+    listeningContract.on("WinnerRecorded", (winnerId, roundId, winner) => {
         if (currentRoundId && roundId.eq(currentRoundId) && !isSpinning) {
              console.log("Winner Event Received:", winner);
              handleRoundFinalized(roundId, winner);
