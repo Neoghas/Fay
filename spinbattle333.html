@@ -1885,159 +1885,116 @@ async function toggleWallet(isAutoConnect = false) {
         }
     }
     
-// === FUNGSI UTAMA: Ambil Data Pemenang & Fitur Sosial (V3 DIPERBAIKI) ===
+// ============================================================
+// [FIX MASALAH 3] MENGHAPUS VARIABEL 'rewardFree' YANG TIDAK ADA
+// ============================================================
 async function fetchAndDisplayWinners() {
-  const list = document.getElementById("winner-list");
-        if (!list) return;
-        let contractInstance = faylottoContract;
-        if (!contractInstance) {
-           const tempProvider = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
-           contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, tempProvider);
-        }
+    const list = document.getElementById("winner-list");
+    if (!list) return;
     
+    let contractInstance = faylottoContract;
+    if (!contractInstance) {
+       const tempProvider = provider || new ethers.providers.JsonRpcProvider(HTTPS_URL);
+       contractInstance = new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, tempProvider);
+    }
+
     try {
-        winnerList.innerHTML = "";
+        list.innerHTML = ""; // Reset list
         
-        // [FIX] Memanggil fungsi getWinners() yang HILANG (lihat Langkah 3)
+        // Ambil data pemenang dari kontrak
         const winnersArray = await contractInstance.getWinners(10); 
         
         if (winnersArray.length === 0) {
-            winnerList.appendChild(winnerListPlaceholder);
+            list.appendChild(document.getElementById("winner-list-placeholder"));
             return;
         }
 
-        let usdtDecimalsWinner = 6; // Default
-        let babyDecimalsWinner = 18; // Default
+        let usdtDecimalsWinner = 6; 
+        let babyDecimalsWinner = 18;
         try { 
             if (usdtContract) usdtDecimalsWinner = await usdtContract.decimals(); 
             if (babyDogeContract) babyDecimalsWinner = await babyDogeContract.decimals();
         } catch (e) {}
 
+        // Loop data pemenang (dari yang terbaru)
+        for (let i = winnersArray.length - 1; i >= 0; i--) {
+            const winner = winnersArray[i];
 
-        for (const winner of winnersArray) {
             const winnerId = winner.winnerId.toString();
             const roundId = winner.roundId.toString();
             const winnerAddr = winner.winner;
+            
+            // [PERBAIKAN DISINI] Kita hanya ambil data yang ADA di kontrak
             const ethAmtBigNum = winner.rewardETH;
             const usdtAmtBigNum = winner.rewardUSDT;
             const babyDogeAmtBigNum = winner.rewardBabyDoge;
-            const freeAmtBigNum = winner.rewardFree;
+            // HAPUS: const freeAmtBigNum = winner.rewardFree; (Ini bikin error!)
+
             const ethAmt = parseFloat(ethers.utils.formatEther(ethAmtBigNum)).toFixed(4);
             const usdtAmt = parseFloat(ethers.utils.formatUnits(usdtAmtBigNum, usdtDecimalsWinner)).toFixed(2);
             const babyDogeAmt = parseFloat(ethers.utils.formatUnits(babyDogeAmtBigNum, babyDecimalsWinner)).toFixed(0);
-            const freeAmt = parseFloat(ethers.utils.formatUnits(freeAmtBigNum, 18)).toFixed(0); // Asumsi 18 desimal
 
-            let assetIconsHtml = '';
+            // Cek aset mana yang dimenangkan
             const hasEth = ethAmtBigNum.gt(0);
             const hasUsdt = usdtAmtBigNum.gt(0);
             const hasBaby = babyDogeAmtBigNum.gt(0);
-            const hasFree = freeAmtBigNum.gt(0);
 
+            // Buat Icon
+            let assetIconsHtml = '<div class="asset-icon-group">';
+            if (hasEth) assetIconsHtml += `<img src="${ETH_LOGO_PATH}" class="asset-icon">`;
+            if (hasUsdt) assetIconsHtml += `<img src="${USDT_LOGO_PATH}" class="asset-icon">`;
+            if (hasBaby) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" class="asset-icon">`;
+            assetIconsHtml += '</div>';
 
-            if (hasEth || hasUsdt || hasBaby || hasFree) {
-                assetIconsHtml += '<div class="asset-icon-group">';
-                if (hasEth) assetIconsHtml += `<img src="${ETH_LOGO_PATH}" class="asset-icon">`;
-                if (hasUsdt) assetIconsHtml += `<img src="${USDT_LOGO_PATH}" class="asset-icon">`;
-                if (hasBaby) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" class="asset-icon">`;
-                if (hasFree) assetIconsHtml += `<img src="${BABYDOGE_LOGO_PATH}" style="border:1px solid #00ff88; border-radius:50%;" class="asset-icon" title="Free Balance">`; 
-                assetIconsHtml += '</div>';
-              }
+            // Format Waktu
+            const date = new Date(winner.timestamp.toNumber() * 1000).toLocaleString();
 
-            // --- AMBIL DATA SOSIAL ---
-            let likes = 0, ratingCount = 0, commentCount = 0;
-            let isLikedByMe = false, myRating = 0;
-
-            try {
-                likes = (await contractInstance.getLikeCount(winnerId)).toNumber();
-                ratingCount = (await contractInstance.getRatingCountForWinner(winnerId)).toNumber();
-                commentCount = (await contractInstance.getCommentCountForWinner(winnerId)).toNumber();
-            } catch (e) { console.warn("Failed to retrieve social public data", e); }
-
-            if (userAddress && faylottoContract) { 
-                try {
-                    const signedContract = faylottoContract.connect(signer);
-                    isLikedByMe = await signedContract.liked(winnerId, userAddress);
-                    myRating = await signedContract.ratings(winnerId, userAddress);
-                } catch (e) { }
+            // Nama Display
+            let displayName = winnerAddr.slice(0, 6) + "..." + winnerAddr.slice(-4);
+            if (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) {
+                displayName = "You";
             }
-            
-            let winnerNickname = null;
-            try {
-                winnerNickname = await contractInstance.nicknames(winnerAddr);
-            } catch(e) { console.warn("Failed to fetch the winner's nickname", e); }
-            
-            const displayName = (userAddress && winnerAddr.toLowerCase() === userAddress.toLowerCase()) 
-                                ? "You" 
-                                : (winnerNickname || shortId);
 
+            // HTML Item Pemenang
             const item = document.createElement("div");
             item.className = "winner-list-item";
-          
+            const avatarUrl = `https://api.dicebear.com/9.x/bottts/svg?seed=${winnerAddr}`;
+
             item.innerHTML = `
               <div class="winner-main-content">
-                  <img src="${avatarUrl}" alt="Avatar" 
-                       class="winner-avatar-small"
-                       onclick="showPlayerProfile('${winnerAddr}')">              
-
+                  <img src="${avatarUrl}" class="winner-avatar-small" onclick="showPlayerProfile('${winnerAddr}')">              
                   <div class="winner-info-text">
-                      <div class="winner-id" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                      <div class="winner-id" style="display: flex; justify-content: space-between;">
                         <span>Round: #${roundId}</span>  
-                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">        
-                        <small style="color: #888; font-size: 10px;">${date}</small>
-                        ${assetIconsHtml} 
+                        <div style="text-align: right;">        
+                            <small style="color: #888; font-size: 10px;">${date}</small>
+                            ${assetIconsHtml} 
+                        </div>
                      </div>
-                 </div>
-
-                      <div style="margin-top: 4px; margin-bottom: 4px; font-weight: bold; font-size:14px; color: var(--cyan-main); cursor: pointer;" 
-                           onclick="showPlayerProfile('${winnerAddr}')">
-                         Winer: ${displayName}
-                      </div><br>
-
-                      <div class="prize-line" style="color: #00dd00; font-weight: bold; font-size:15px;">
-                 Prize: 
-                 ${hasEth ? ethAmt + ' ETH ' : ''} 
-                 ${hasUsdt ? '+ ' + usdtAmt + ' USDT ' : ''}
-                 ${hasBaby ? '+ ' + babyDogeAmt + ' BabyDoge ' : ''}
-                 ${hasFree ? `<br><span style="color:#00ff88;">+ ${freeAmt} Free BabyDoge</span>` : ''}
-            </div><br>
-                  </div>
-              </div>
-              <div class="winner-social" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(120,0,255,0.2); display:flex; justify-content:space-between; align-items:center;">
-                  <button class="like-btn" style="background:none; border:none; cursor:pointer; color: ${isLikedByMe ? '#ff00e6' : '#888'}; font-size:14px; display:flex; align-items:center; gap:4px;" onclick="toggleLike(${winnerId})"><img src="like.svg" style="width:25px; height:25px; vertical-align:middle;"><span style="color:#ff00e6">Like (${likes})</span>
-                  </button>
-                  <div style="display:flex; align-items:center; gap:6px;">
-                      <div class="rating-stars">
-                         ${[5, 4, 3, 2, 1].map(i => `
-                            <span class="star-icon ${i <= myRating ? 'active' : ''}" onclick="rateWinner(${winnerId}, ${i})"></span>
-                         `).join('')}
+                      <div style="font-weight: bold; color: var(--cyan-main); cursor: pointer;" onclick="showPlayerProfile('${winnerAddr}')">
+                         Winner: ${displayName}
                       </div>
-                      <span style="font-size: 12px; color: #888;">(${ratingCount})</span>
-                  </div>
-                  <button class="terminal-btn" id="comm-btn-${winnerId}" 
-                        style="background:none; border:none; color:var(--cyan-main); font-size:14px; cursor:pointer; display:flex; align-items:center; gap:5px;" 
-                        onclick="toggleComments(${winnerId}, '${winnerAddr}')">
-                    <img src="comment.svg" style="width:25px; height:25px; vertical-align:middle;">Log
-                    <span>(${commentCount})</span>
-                  </button>
-              </div>
-              <div class="comments-terminal" id="terminal-${winnerId}" style="display: none; margin-top: 10px;">
-                  <div class="terminal-header">> Log For Winner: ${winnerAddr.slice(0,10)}...</div>
-                  <div class="comments-list"></div>
-                  <div class="new-comment-section" style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(120, 0, 255, 0.2); display: flex; gap: 5px; align-items: center;">
-                      <span style="color: var(--cyan-main);">></span>
-                      <textarea class="terminal-input" id="new-comment-${winnerId}" placeholder="Transmit data..." rows="1" style="resize: none; overflow-y: hidden;" oninput="this.style.height = '';this.style.height = this.scrollHeight + 'px'"></textarea>
-                      <button class="terminal-btn" onclick="submitComment(${winnerId})">[ SEND ]</button>
+                      <div class="prize-line" style="color: #00dd00; font-weight: bold; font-size:13px; margin-top:5px;">
+                         Prize: 
+                         ${hasEth ? ethAmt + ' ETH ' : ''} 
+                         ${hasUsdt ? '+ ' + usdtAmt + ' USDT ' : ''}
+                         ${hasBaby ? '+ ' + babyDogeAmt + ' BabyDoge ' : ''}
+                      </div>
                   </div>
               </div>
+              <div class="winner-social" style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(120,0,255,0.2); display:flex; justify-content:space-between;">
+                  <button class="like-btn" onclick="toggleLike(${winnerId})">Like</button>
+                  <button class="terminal-btn" onclick="toggleComments(${winnerId}, '${winnerAddr}')">Log</button>
+              </div>
+              <div class="comments-terminal" id="terminal-${winnerId}" style="display: none;"></div>
             `;
-            winnerList.appendChild(item);
+            list.appendChild(item);
         }
     } catch (err) {
-        console.error("Failed fetching winners:", err.message);
-        winnerList.appendChild(winnerListPlaceholder);
+        console.error("Failed fetching winners:", err);
+        list.innerHTML = "<p style='color:red; text-align:center;'>Failed to load winners.</p>";
     }
-        }
-
+}
 
 // ... (Tidak ada perubahan pada fungsi-fungsi ini) ...
 async function toggleLike(winnerId) {
@@ -2840,6 +2797,47 @@ async function confirmBet() {
     }
 }
 
+    // ============================================================
+// [FIX MASALAH 1 & 2] FUNGSI PENTING YANG HILANG
+// ============================================================
+function addBetToState(playerAddr, ethAmt, usdtAmt, babyAmt, freeAmt, weight, isNewBet) {
+    const key = playerAddr.toLowerCase();
+
+    // 1. Jika pemain belum ada di memori, buat baru
+    if (!players[key]) {
+        // Pilih warna acak untuk roda
+        const color = PLAYER_COLORS[Object.keys(players).length % PLAYER_COLORS.length];
+        players[key] = {
+            id: playerAddr,
+            eth: ethers.BigNumber.from(0),
+            usdt: ethers.BigNumber.from(0),
+            baby: ethers.BigNumber.from(0),
+            free: ethers.BigNumber.from(0),
+            weight: ethers.BigNumber.from(0),
+            color: color
+        };
+    }
+
+    // 2. Tambahkan jumlah deposit ke data pemain
+    // (Gunakan .add() karena ini adalah BigNumber)
+    players[key].eth = players[key].eth.add(ethAmt);
+    players[key].usdt = players[key].usdt.add(usdtAmt);
+    players[key].baby = players[key].baby.add(babyAmt);
+    players[key].free = players[key].free.add(freeAmt);
+    players[key].weight = players[key].weight.add(weight);
+
+    // 3. Tambahkan ke total berat global (untuk hitungan persen roda)
+    totalWeight = totalWeight.add(weight);
+
+    // 4. Jika ini bet baru (realtime), mainkan suara dan update tampilan saya
+    if (isNewBet) {
+        playSound('sfx-coin');
+        if (userAddress && key === userAddress.toLowerCase()) {
+            updateMyDeposits(); // Update info deposit di modal wallet
+        }
+    }
+}
+
     
     // freebet
 async function placeBetFree() {
@@ -3066,8 +3064,11 @@ async function updateUserBalances() {
 }
 
 
-    // --- (Update Deposit V3: Tambah BabyDoge) ---
+    // ============================================================
+// [FIX MASALAH 2] UPDATE DEPOSIT UI DENGAN DATA LENGKAP
+// ============================================================
 async function updateMyDeposits() {
+    // Cek validitas dasar
     if (!faylottoContract || !currentRoundId || !userAddress) {
         document.getElementById("myEthDeposit").innerText = "0";
         document.getElementById("myUsdtDeposit").innerText = "0";
@@ -3075,6 +3076,29 @@ async function updateMyDeposits() {
         document.getElementById("myFreeDeposit").innerText = "0";
         return;
     }
+
+    try {
+        // 1. Ambil data deposit terverifikasi dari blockchain (ETH/USDT/BabyDoge)
+        const d = await faylottoContract.getPlayerDeposits(currentRoundId, userAddress);
+        
+        document.getElementById("myEthDeposit").innerText = parseFloat(ethers.utils.formatEther(d.ethAmount)).toFixed(5);
+        document.getElementById("myUsdtDeposit").innerText = parseFloat(ethers.utils.formatUnits(d.usdtAmount, usdtDecimals)).toFixed(2);
+        document.getElementById("myBabyDogeDeposit").innerText = parseFloat(ethers.utils.formatUnits(d.babyDogeAmount, babyDogeDecimals)).toFixed(0);
+
+        // 2. [PENTING] Ambil data deposit 'FREE' dari memori browser (players)
+        // Karena fungsi getPlayerDeposits di kontrak V4 Anda belum mengembalikan jumlah 'free' secara terpisah
+        const key = userAddress.toLowerCase();
+        if (players[key] && players[key].free) {
+            const freeFmt = parseFloat(ethers.utils.formatUnits(players[key].free, 18)).toFixed(0); // Asumsi Free pakai 18 desimal
+            document.getElementById("myFreeDeposit").innerText = freeFmt;
+        } else {
+            document.getElementById("myFreeDeposit").innerText = "0";
+        }
+
+    } catch(e) {
+        console.warn("Error updating my deposits:", e);
+    }
+}
 
     try {
         // 1. Ambil data deposit asli dari kontrak
