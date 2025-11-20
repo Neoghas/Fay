@@ -2427,47 +2427,6 @@ function updateBetList() {
     rebuildPlayersArrayAndDraw();
 }
 
-function addBetToState(playerAddr, ethAmt, usdtAmt, babyAmt, freeAmt, weight, isNewBet) {
-        if (!players) players = {}; // Safety check jika players undefined
-        
-        const key = playerAddr.toLowerCase();
-
-        // 1. Jika pemain belum ada, buat baru
-        if (!players[key]) {
-            const color = PLAYER_COLORS[Object.keys(players).length % PLAYER_COLORS.length];
-            players[key] = {
-                id: playerAddr,
-                eth: ethers.BigNumber.from(0),
-                usdt: ethers.BigNumber.from(0),
-                baby: ethers.BigNumber.from(0),
-                free: ethers.BigNumber.from(0),
-                weight: ethers.BigNumber.from(0),
-                color: color
-            };
-        }
-
-        // 2. Tambahkan deposit (Gunakan .add karena BigNumber)
-        // Pastikan nilai yang masuk adalah BigNumber, jika tidak konversi dulu
-        players[key].eth = players[key].eth.add(ethAmt || 0);
-        players[key].usdt = players[key].usdt.add(usdtAmt || 0);
-        players[key].baby = players[key].baby.add(babyAmt || 0);
-        players[key].free = players[key].free.add(freeAmt || 0);
-        players[key].weight = players[key].weight.add(weight || 0);
-
-        // 3. Update total berat global
-        if (!totalWeight) totalWeight = ethers.BigNumber.from(0);
-        totalWeight = totalWeight.add(weight || 0);
-
-        // 4. Efek suara & update UI
-        if (isNewBet) {
-            playSound('sfx-coin');
-            if (userAddress && key === userAddress.toLowerCase()) {
-                updateMyDeposits();
-            }
-        }
-}
-
-
 // GANTI FUNGSI LAMA DENGAN INI
 async function fetchAndDisplayRoundData() {
     // Pastikan kontrak sudah terinisialisasi
