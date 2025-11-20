@@ -3909,65 +3909,6 @@ innerR = displayWidth * 0.20; // <-- [PERBAIKAN] Angka ini dinaikkan dari 100
         });
     }
 
-     // ==========================================
-// PERBAIKAN STABILITAS RODA (CANVAS)
-// ==========================================
-
-function initResponsiveCanvas() {
-    const canvas = document.getElementById('donutCanvas');
-    const container = document.querySelector('.donut-wrap');
-    
-    if (!canvas || !container) return;
-
-    ctx = canvas.getContext('2d');
-
-    // Fungsi untuk mengatur ukuran canvas secara dinamis
-    function resizeCanvas() {
-        // 1. Ambil lebar container saat ini
-        const boxWidth = container.clientWidth;
-        
-        // 2. Atur resolusi internal canvas (agar tajam di HP retina)
-        canvas.width = boxWidth;
-        canvas.height = boxWidth; // Buat kotak sempurna
-
-        // 3. Update variabel global
-        cw = canvas.width;
-        ch = canvas.height;
-        cx = cw / 2;
-        cy = ch / 2;
-
-        // 4. ATUR RADIUS SECARA RELATIF (KUNCI STABILITAS)
-        // Radius luar = 40% dari lebar canvas
-        // Radius dalam = 25% dari lebar canvas
-        outerR = cw * 0.4; 
-        innerR = cw * 0.25;
-
-        // 5. Gambar ulang segera
-        drawDonut(currentRotation);
-    }
-
-    // Panggil saat pertama kali load
-    resizeCanvas();
-
-    // Panggil setiap kali layar diubah ukurannya
-    window.addEventListener('resize', resizeCanvas);
-    
-    // Panggil saat orientasi HP berubah (Potrait/Landscape)
-    window.addEventListener('orientationchange', () => {
-        setTimeout(resizeCanvas, 100);
-    });
-}
-
-// PANGGIL FUNGSI INI DI DALAM DOMContentLoaded
-document.addEventListener("DOMContentLoaded", () => {
-    // ... (kode inisialisasi wallet dll biarkan saja) ...
-
-    // INSIALISASI KANVAS BARU
-    initResponsiveCanvas();
-    
-    // ... (sisa kode event listener Anda) ...
-});
-
      // Tambahkan suara klik ke semua tombol
     document.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', () => playSound('sfx-click'));
