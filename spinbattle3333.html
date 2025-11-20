@@ -1934,61 +1934,69 @@
     }
 
     async function fetchAndDisplayRoundData() {
-        let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-        if (!contract || isSpinning) return;
+    let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    if (!contract || isSpinning) return;
 
-        try {
-            const latestRoundId = await contract.currentRoundId();
+    try {
+        const latestRoundId = await contract.currentRoundId();
+        
+        if (currentRoundId && !latestRoundId.eq(currentRoundId)) {
+            resetRoundUI(); 
+        }
+        currentRoundId = latestRoundId;
+        
+        // [id, start, end, finalized, winner, eth, usdt, baby, playerCount, weight]
+        const roundInfo = await contract.getRoundBasic(currentRoundId);
+
+        // === [PERBAIKAN 1: SYNC DATA] ===
+        // Kita HAPUS 'if (Object.keys...)' agar data selalu di-refresh setiap kali fungsi ini jalan.
+        // Ini untuk mencegah bug saldo ganda saat refresh browser.
+        const playersList = await contract.getRoundPlayers(currentRoundId);
+        
+        // Reset state lokal dulu agar bersih
+        players = {}; 
+        totalWeight = ethers.BigNumber.from(0);
+
+        for (const pAddr of playersList) {
+            const d = await contract.getPlayerDeposits(currentRoundId, pAddr);
+            // Masukkan data bersih dari blockchain ke state
+            addBetToState(pAddr, d[0], d[1], d[2], ethers.BigNumber.from(0), d[3], false);
+        }
+        updateBetList(); 
+        // ==================================
+
+        updateMyDeposits();
+
+        // Timer Logic
+        const endTime = roundInfo[2].toNumber() * 1000;
+        const isFinalized = roundInfo[3];
+        
+        if (visualTimer) clearInterval(visualTimer);
+        
+        if (isFinalized) {
+            document.getElementById("statusText").innerText = "Round Finalized. Waiting new round...";
+            setTimeout(fetchAndDisplayRoundData, 3000);
+        } else if (Date.now() < endTime) {
+            // === [PERBAIKAN 2: TOMBOL MACET] ===
+            document.getElementById("statusText").innerText = `Round #${currentRoundId} Live!`;
             
-            if (currentRoundId && !latestRoundId.eq(currentRoundId)) {
-                resetRoundUI(); 
-            }
-            currentRoundId = latestRoundId;
+            const btn = document.getElementById("placeBetBtn");
+            btn.style.display = "block";
             
-            // [id, start, end, finalized, winner, eth, usdt, baby, playerCount, weight]
-            const roundInfo = await contract.getRoundBasic(currentRoundId);
-
-            // Sync Players jika jumlah berbeda
-            const onChainCount = roundInfo[8].toNumber(); // index 8 is playerCount in V4/V3
-            if (Object.keys(players).length !== onChainCount) {
-                const playersList = await contract.getRoundPlayers(currentRoundId);
-                players = {}; 
-                
-                for (const pAddr of playersList) {
-                    // [eth, usdt, baby, weight]
-                    const d = await contract.getPlayerDeposits(currentRoundId, pAddr);
-                    // Catatan: Smart contract menggabungkan Free & Real BabyDoge di index 2
-                    // Kita masukkan ke 'baby' di state, 'free' dibiarkan 0 untuk data lama (karena sulit dipisah via view function ini)
-                    addBetToState(pAddr, d[0], d[1], d[2], ethers.BigNumber.from(0), d[3], false);
-                }
-                updateBetList();
-            }
-
-            updateMyDeposits();
-
-            // Timer Logic
-            const endTime = roundInfo[2].toNumber() * 1000;
-            const isFinalized = roundInfo[3];
+            // INI YANG KURANG: Kita paksa tombol hidup lagi!
+            btn.disabled = false; 
             
-            if (visualTimer) clearInterval(visualTimer);
-            
-            if (isFinalized) {
-                document.getElementById("statusText").innerText = "Round Finalized. Waiting new round...";
-                setTimeout(fetchAndDisplayRoundData, 3000);
-            } else if (Date.now() < endTime) {
-                document.getElementById("statusText").innerText = `Round #${currentRoundId} Live!`;
-                document.getElementById("placeBetBtn").style.display = "block";
-                document.getElementById("finalizeBtn").style.display = "none";
-                startVisualTimer(endTime);
-            } else {
-                document.getElementById("statusText").innerText = "Round Ended!";
-                document.getElementById("timerText").innerText = "00:00";
-                document.getElementById("placeBetBtn").style.display = "none";
-                document.getElementById("finalizeBtn").style.display = "block";
-                isFinalizing = true;
-            }
+            document.getElementById("finalizeBtn").style.display = "none";
+            startVisualTimer(endTime);
+        } else {
+            document.getElementById("statusText").innerText = "Round Ended!";
+            document.getElementById("timerText").innerText = "00:00";
+            document.getElementById("placeBetBtn").style.display = "none";
+            document.getElementById("finalizeBtn").style.display = "block";
+            isFinalizing = true;
+        }
 
-        } catch (e) { console.error("Sync Error", e); }
+    } catch (e) { console.error("Sync Error", e); }
     }
 
     function startVisualTimer(endTime) {
