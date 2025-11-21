@@ -3620,19 +3620,17 @@ async function fetchAndRenderLeaderboard() {
     const header = document.getElementById("lb-header-row");
     if (!list) return;
 
-    // Update Header agar sesuai konteks
     if (currentLbTab === 'winners') {
         if(header) header.innerHTML = `<span>Rank</span><span>Pilot</span><span>Total Won ($)</span><span>Loot</span>`;
     } else {
         if(header) header.innerHTML = `<span>Rank</span><span>Inviter</span><span>Total Reward ($)</span><span>Assets</span>`;
     }
 
-    list.innerHTML = "<div class='lb-loading' style='animation:none; text-align:center;'>Calculating History...</div>";
+    list.innerHTML = "<div class='lb-loading' style='animation:none; text-align:center;'>Scanning History...</div>";
 
     let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
 
     try {
-        // 1. Ambil Decimals & Harga untuk konversi
         let usdtDec = 6, babyDec = 18;
         try {
             if (usdtContract) usdtDec = await usdtContract.decimals();
@@ -3643,27 +3641,34 @@ async function fetchAndRenderLeaderboard() {
         let rawData = [];
 
         if (currentLbTab === 'winners') {
-            // ============================================================
-            // LOGIKA BARU: SCAN RIWAYAT KEMENANGAN (Murni Akumulasi)
-            // ============================================================
-            
-            // A. Ambil semua event "WinnerRecorded" dari block awal sampai sekarang
-            // Catatan: "fromBlock: 0" bisa diganti dengan block number saat deploy agar lebih cepat
+            // === PERBAIKAN SYNC FAILED ===
             const filter = contract.filters.WinnerRecorded();
-            const events = await contract.queryFilter(filter, 0, "latest");
+            
+            // GANTI '0' DENGAN BLOCK DEPLOYMENT KONTRAK ANDA!
+            // Jika Anda tidak tahu, gunakan block saat ini dikurangi 50.000 (hanya ambil history baru)
+            // Agar aman dan tidak error timeout.
+            
+            const currentBlock = await provider.getBlockNumber();
+            const startBlock = currentBlock - 1500000; // Scan 50rb blok terakhir saja agar ringan
+            // Kalau mau semua history, ganti startBlock dengan angka pasti, misal: 18000000
+            
+            // Pastikan tidak minus
+            const safeStartBlock = startBlock > 0 ? startBlock : 0;
+
+            console.log(`Scanning from block ${safeStartBlock} to latest...`);
+            
+            const events = await contract.queryFilter(filter, safeStartBlock, "latest");
 
             if (events.length === 0) {
-                list.innerHTML = "<div class='lb-loading' style='text-align:center;'>No Winners Yet.</div>";
+                list.innerHTML = "<div class='lb-loading' style='text-align:center;'>No recent winners found.</div>";
                 return;
             }
 
-            // B. Akumulasi Data (Grouping by User)
             const winnersMap = {};
 
             events.forEach(ev => {
                 const { winner, rewardETH, rewardUSDT, rewardBabyDoge } = ev.args;
                 
-                // Inisialisasi jika user belum ada di map
                 if (!winnersMap[winner]) {
                     winnersMap[winner] = {
                         addr: winner,
@@ -3672,29 +3677,22 @@ async function fetchAndRenderLeaderboard() {
                         accBaby: ethers.BigNumber.from(0)
                     };
                 }
-
-                // Tambahkan hadiah ke saldo akumulasi (TIDAK ADA PENGURANGAN MODAL DISINI)
                 winnersMap[winner].accEth = winnersMap[winner].accEth.add(rewardETH);
                 winnersMap[winner].accUsdt = winnersMap[winner].accUsdt.add(rewardUSDT);
                 winnersMap[winner].accBaby = winnersMap[winner].accBaby.add(rewardBabyDoge);
             });
 
-            // C. Konversi Map ke Array & Hitung Nilai USD
             Object.values(winnersMap).forEach(p => {
-                // Hitung Estimasi USD
                 const ethVal = parseFloat(ethers.utils.formatEther(p.accEth)) * (currentEthPrice || 3000);
-                const usdtVal = parseFloat(ethers.utils.formatUnits(p.accUsdt, usdtDec)); // Asumsi 1 USDT = 1 USD
+                const usdtVal = parseFloat(ethers.utils.formatUnits(p.accUsdt, usdtDec));
                 const babyVal = parseFloat(ethers.utils.formatUnits(p.accBaby, babyDec)) * (currentBabyDogePrice || 0);
                 
                 const totalUsd = ethVal + usdtVal + babyVal;
 
-                // Hanya masukkan jika total kemenangan > 0
                 if (totalUsd > 0) {
                     rawData.push({
                         addr: p.addr,
-                        // Simpan sebagai float untuk sorting mudah
                         sortValue: totalUsd, 
-                        // Simpan BigNumber untuk display presisi
                         eth: p.accEth,
                         usdt: p.accUsdt,
                         baby: p.accBaby
@@ -3703,18 +3701,13 @@ async function fetchAndRenderLeaderboard() {
             });
 
         } else {
-            // ============================================================
-            // LOGIKA LAMA: REFERRAL (Tetap ambil dari Mapping Contract)
-            // ============================================================
+            // LOGIKA REFERRAL (TIDAK PERLU UBAH)
             const playersList = await contract.getLeaderboardPlayers();
             for (let playerAddr of playersList) {
                 const stats = await contract.leaderboardStats(playerAddr);
-                
-                // Mapping: [4]=refEth, [5]=refUsdt, [6]=refBaby
                 const ethVal = parseFloat(ethers.utils.formatEther(stats[4])) * (currentEthPrice || 3000);
                 const usdtVal = parseFloat(ethers.utils.formatUnits(stats[5], usdtDec));
                 const babyVal = parseFloat(ethers.utils.formatUnits(stats[6], babyDec)) * (currentBabyDogePrice || 0);
-                
                 const totalRefUsd = ethVal + usdtVal + babyVal;
 
                 if (totalRefUsd > 0.000001) {
@@ -3729,7 +3722,6 @@ async function fetchAndRenderLeaderboard() {
             }
         }
 
-        // 4. Sorting (Terbesar ke Terkecil)
         rawData.sort((a, b) => b.sortValue - a.sortValue);
 
         if (rawData.length === 0) {
@@ -3737,11 +3729,8 @@ async function fetchAndRenderLeaderboard() {
             return;
         }
 
-        // 5. Render HTML
-        const topList = rawData.slice(0, 20); // Top 20
+        const topList = rawData.slice(0, 20); 
         list.innerHTML = "";
-
-        // Helper Format Angka
         const fmt = (bn, dec, fix) => parseFloat(ethers.utils.formatUnits(bn, dec)).toFixed(fix);
 
         topList.forEach((p, index) => {
@@ -3752,15 +3741,8 @@ async function fetchAndRenderLeaderboard() {
             list.innerHTML += `
                 <div class="lb-item rank-${rank}" style="${isMe ? 'background:rgba(0,255,255,0.05); border-left: 3px solid var(--cyan-main);' : ''}">
                     <div class="lb-rank" style="color:${rank<=3 ? 'gold' : '#fff'}">#${rank}</div>
-                    
-                    <div style="cursor:pointer; color:${isMe ? 'var(--cyan-main)' : '#ccc'}; font-weight:bold;" onclick="showPlayerProfile('${p.addr}')">
-                        ${displayName}
-                    </div>
-                    
-                    <div style="color:#00ff88; font-weight:bold;">
-                        $ ${p.sortValue.toFixed(2)}
-                    </div>
-                    
+                    <div style="cursor:pointer; color:${isMe ? 'var(--cyan-main)' : '#ccc'}; font-weight:bold;" onclick="showPlayerProfile('${p.addr}')">${displayName}</div>
+                    <div style="color:#00ff88; font-weight:bold;">$ ${p.sortValue.toFixed(2)}</div>
                     <div style="font-size: 11px; color:#aaa; line-height:1.4;">
                         ${p.eth.gt(0) ? `<span style="color:#fff">${fmt(p.eth, 18, 4)} ETH</span><br>` : ''}
                         ${p.usdt.gt(0) ? `<span style="color:#fff">${fmt(p.usdt, usdtDec, 2)} USDT</span><br>` : ''}
@@ -3771,11 +3753,11 @@ async function fetchAndRenderLeaderboard() {
         });
 
     } catch (err) {
-        console.error("Leaderboard error:", err);
-        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>Sync Failed.</div>";
+        // AGAR TAHU ERRORNYA APA:
+        console.error("Leaderboard error details:", err);
+        list.innerHTML = `<div class='lb-loading' style='color:#ff5555;'>Sync Failed: ${err.code || err.message.slice(0,20)}...</div>`;
     }
 }
-
     
 // Fungsi Tutup Modal Profil
 function hideProfileModal() {
