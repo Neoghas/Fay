@@ -2046,7 +2046,7 @@ async function switchOrAddNetwork() {
 
 async function toggleWallet(isAutoConnect = false) {
         if (userAddress) return; 
-        if (!window.ethereum) return showStatus("Please install MetaMask!", "error");
+        if (!window.ethereum) return showStatus("Please install MetaMask!", "wolf");
         
         try {
             provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -4246,54 +4246,48 @@ document.addEventListener("DOMContentLoaded", () => {
     initResponsiveCanvas();
 
   // --- Listener Tombol Refresh Wheel ---
-    const btnRefresh = document.getElementById("refreshWheelBtn");
-    
-    if (btnRefresh) {
-        // Cek di console browser apakah tombol terdeteksi
-        console.log("Tombol Refresh Siap!"); 
+    // --- LOGIKA: TOMBOL REFRESH -> CANVAS ---
+const btnRefresh = document.getElementById("refreshWheelBtn");
+const canvasTarget = document.getElementById("donutCanvas");
 
-        btnRefresh.addEventListener("click", async (e) => {
-            e.preventDefault(); // Mencegah perilaku default jika ada
-            console.log("Tombol Refresh Diklik...");
+if (btnRefresh && canvasTarget) {
+    console.log("Tombol Refresh terhubung ke Canvas.");
 
-            // 1. Tambah kelas animasi
-            btnRefresh.classList.add("spinning");
+    btnRefresh.addEventListener("click", async (e) => {
+        e.preventDefault();
+        
+        // 1. Efek Visual: Tombol berputar
+        btnRefresh.classList.add("spinning");
+        
+        // 2. Efek UX: Tampilkan status
+        const statusEl = document.getElementById("statusText");
+        if(statusEl) statusEl.innerText = "Redrawing Wheel...";
+
+        try {
+            // 3. AMBIL DATA BARU DARI BLOCKCHAIN
+            // Fungsi ini otomatis memanggil updateBetList() -> yang memanggil drawDonut()
+            await fetchAndDisplayRoundData();
             
-            // 2. Ubah teks status sementara
-            const statusEl = document.getElementById("statusText");
-            if(statusEl) statusEl.innerText = "Syncing data...";
-
-            try {
-                // 3. Paksa ambil data baru
-                await fetchAndDisplayRoundData();
-                
-                // 4. Sekalian refresh winner list & leaderboard biar sinkron semua
-                await fetchAndDisplayWinners();
-                
-                // Opsional: Refresh leaderboard jika fungsi tersedia
-                if (typeof fetchAndRenderLeaderboard === 'function') {
-                     await fetchAndRenderLeaderboard();
-                }
-
-                // 5. Notifikasi Sukses
-                if (typeof showStatus === 'function') {
-                    showStatus("Data Synced Successfully!", "success");
-                }
-            } catch (error) {
-                console.error("Sync Error:", error);
-                if (typeof showStatus === 'function') {
-                    showStatus("Sync Failed!", "error");
-                }
+            // 4. [PENTING] PAKSA GAMBAR ULANG CANVAS
+            // Ini inti dari permintaan Anda: me-refresh ID donutCanvas
+            if (typeof drawDonut === 'function') {
+                // Reset rotasi agar animasi mulus (opsional)
+                // currentRotation = 0; 
+                drawDonut(); 
+                console.log("Canvas (donutCanvas) berhasil direfresh manual.");
             }
 
-            // 6. Hapus animasi setelah jeda singkat
-            setTimeout(() => {
-                btnRefresh.classList.remove("spinning");
-            }, 800);
-        });
-    } else {
-        console.error("ERROR: Tombol dengan ID 'refreshWheelBtn' tidak ditemukan di HTML!");
-    }
+        } catch (error) {
+            console.error("Gagal refresh canvas:", error);
+        }
+
+        // 5. Matikan animasi tombol
+        setTimeout(() => {
+            btnRefresh.classList.remove("spinning");
+            if(statusEl) statusEl.innerText = `Round #${currentRoundId} Live!`;
+        }, 800);
+    });
+}
     
     // ... (sisa kode event listener Anda) ...
 });
