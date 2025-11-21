@@ -3605,310 +3605,177 @@ function stopVictoryConfetti() {
 function switchLeaderboard(tabName) {
 
     currentLbTab = tabName;
-
-    
-
     // Update UI Tombol
-
     const btns = document.querySelectorAll('.lb-tab-btn');
-
     btns.forEach(b => b.classList.remove('active'));
-
     // Cari tombol yang diklik (cara sederhana)
-
     if(tabName === 'winners') btns[0].classList.add('active');
-
     else btns[1].classList.add('active');
-
-
-
     // Refresh data
-
     fetchAndRenderLeaderboard();
-
 }
 
-
-
 async function fetchAndRenderLeaderboard() {
-
     const list = document.getElementById("leaderboard-list");
-
     const header = document.getElementById("lb-header-row");
-
     if (!list) return;
 
+    // Update Header agar sesuai konteks
+    if (currentLbTab === 'winners') {
+        if(header) header.innerHTML = `<span>Rank</span><span>Pilot</span><span>Total Won ($)</span><span>Loot</span>`;
+    } else {
+        if(header) header.innerHTML = `<span>Rank</span><span>Inviter</span><span>Total Reward ($)</span><span>Assets</span>`;
+    }
 
-
-    list.innerHTML = "<div class='lb-loading' style='animation:none; text-align:center;'>Scanning Blockchain...</div>";
-
-
+    list.innerHTML = "<div class='lb-loading' style='animation:none; text-align:center;'>Calculating History...</div>";
 
     let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
 
-
-
     try {
-
-        // 1. Ambil Decimals & Harga (Penting untuk konversi)
-
+        // 1. Ambil Decimals & Harga untuk konversi
         let usdtDec = 6, babyDec = 18;
-
         try {
-
             if (usdtContract) usdtDec = await usdtContract.decimals();
-
             if (babyDogeContract) babyDec = await babyDogeContract.decimals();
-
-            // Pastikan harga terbaru terupdate (sudah ada di global var dari fungsi fetchTokenPrices)
-
-            if (!currentEthPrice) await fetchTokenPrices(); 
-
+            if (!currentEthPrice) await fetchTokenPrices();
         } catch (e) {}
-
-
-
-        // 2. Ambil Player List
-
-        const playersList = await contract.getLeaderboardPlayers();
-
-        if (playersList.length === 0) {
-
-            list.innerHTML = "<div class='lb-loading' style='text-align:center;'>NO DATA YET.</div>";
-
-            return;
-
-        }
-
-
 
         let rawData = [];
 
-        
-
-        // 3. Loop Data & Hitung
-
-        for (let playerAddr of playersList) {
-
-            const stats = await contract.leaderboardStats(playerAddr);
-
+        if (currentLbTab === 'winners') {
+            // ============================================================
+            // LOGIKA BARU: SCAN RIWAYAT KEMENANGAN (Murni Akumulasi)
+            // ============================================================
             
+            // A. Ambil semua event "WinnerRecorded" dari block awal sampai sekarang
+            // Catatan: "fromBlock: 0" bisa diganti dengan block number saat deploy agar lebih cepat
+            const filter = contract.filters.WinnerRecorded();
+            const events = await contract.queryFilter(filter, 0, "latest");
 
-            // Stats Mapping:
-
-            // [0]netEth, [1]netUsdt, [2]netBaby, [3]netScore
-
-            // [4]refEth, [5]refUsdt, [6]refBaby, [7]refCount
-
-
-
-            if (currentLbTab === 'winners') {
-
-                // --- LOGIKA TAB WINNERS ---
-
-                // HANYA AMBIL YANG PROFIT (Score > 0)
-
-                if (stats[3].gt(0)) { 
-
-                    rawData.push({
-
-                        addr: playerAddr,
-
-                        totalVal: stats[3], // Ini Net Score dari kontrak
-
-                        eth: stats[0],      // Net ETH
-
-                        usdt: stats[1],     // Net USDT
-
-                        baby: stats[2]      // Net BabyDoge
-
-                    });
-
-                }
-
-            } else {
-
-                // --- LOGIKA TAB REFERRAL ---
-
-                // Hitung Total Estimasi USD Manual untuk Referral
-
-                // Rumus: (Eth * Price) + (USDT) + (Baby * Price)
-
-                
-
-                // Hitung Nilai ETH dalam USD
-
-                const ethValUsd = parseFloat(ethers.utils.formatEther(stats[4])) * (currentEthPrice || 3000);
-
-                
-
-                // Hitung Nilai USDT (asumsi 1 USDT = 1 USD)
-
-                const usdtValUsd = parseFloat(ethers.utils.formatUnits(stats[5], usdtDec));
-
-                
-
-                // Hitung Nilai BabyDoge (Sangat kecil, hati-hati floating point)
-
-                const babyValRaw = parseFloat(ethers.utils.formatUnits(stats[6], babyDec));
-
-                const babyValUsd = babyValRaw * (currentBabyDogePrice || 0);
-
-                
-
-                const totalRefUsd = ethValUsd + usdtValUsd + babyValUsd;
-
-
-
-                // Hanya masukkan jika pernah dapat reward referral > 0
-
-                if (totalRefUsd > 0.000001) {
-
-                    rawData.push({
-
-                        addr: playerAddr,
-
-                        totalVal: ethers.utils.parseUnits(totalRefUsd.toFixed(6), 18), // Konversi balik ke BigNumber utk sorting mudah
-
-                        eth: stats[4], // Ref ETH
-
-                        usdt: stats[5], // Ref USDT
-
-                        baby: stats[6], // Ref Baby
-
-                        isRef: true     // Flag penanda
-
-                    });
-
-                }
-
+            if (events.length === 0) {
+                list.innerHTML = "<div class='lb-loading' style='text-align:center;'>No Winners Yet.</div>";
+                return;
             }
 
-        }
+            // B. Akumulasi Data (Grouping by User)
+            const winnersMap = {};
 
+            events.forEach(ev => {
+                const { winner, rewardETH, rewardUSDT, rewardBabyDoge } = ev.args;
+                
+                // Inisialisasi jika user belum ada di map
+                if (!winnersMap[winner]) {
+                    winnersMap[winner] = {
+                        addr: winner,
+                        accEth: ethers.BigNumber.from(0),
+                        accUsdt: ethers.BigNumber.from(0),
+                        accBaby: ethers.BigNumber.from(0)
+                    };
+                }
 
+                // Tambahkan hadiah ke saldo akumulasi (TIDAK ADA PENGURANGAN MODAL DISINI)
+                winnersMap[winner].accEth = winnersMap[winner].accEth.add(rewardETH);
+                winnersMap[winner].accUsdt = winnersMap[winner].accUsdt.add(rewardUSDT);
+                winnersMap[winner].accBaby = winnersMap[winner].accBaby.add(rewardBabyDoge);
+            });
 
-        // 4. Update Header sesuai Tab
+            // C. Konversi Map ke Array & Hitung Nilai USD
+            Object.values(winnersMap).forEach(p => {
+                // Hitung Estimasi USD
+                const ethVal = parseFloat(ethers.utils.formatEther(p.accEth)) * (currentEthPrice || 3000);
+                const usdtVal = parseFloat(ethers.utils.formatUnits(p.accUsdt, usdtDec)); // Asumsi 1 USDT = 1 USD
+                const babyVal = parseFloat(ethers.utils.formatUnits(p.accBaby, babyDec)) * (currentBabyDogePrice || 0);
+                
+                const totalUsd = ethVal + usdtVal + babyVal;
 
-        if (currentLbTab === 'winners') {
-
-            header.innerHTML = `<span>Rank</span><span>Pilot</span><span>Net Profit ($)</span><span>Win Assets</span>`;
+                // Hanya masukkan jika total kemenangan > 0
+                if (totalUsd > 0) {
+                    rawData.push({
+                        addr: p.addr,
+                        // Simpan sebagai float untuk sorting mudah
+                        sortValue: totalUsd, 
+                        // Simpan BigNumber untuk display presisi
+                        eth: p.accEth,
+                        usdt: p.accUsdt,
+                        baby: p.accBaby
+                    });
+                }
+            });
 
         } else {
+            // ============================================================
+            // LOGIKA LAMA: REFERRAL (Tetap ambil dari Mapping Contract)
+            // ============================================================
+            const playersList = await contract.getLeaderboardPlayers();
+            for (let playerAddr of playersList) {
+                const stats = await contract.leaderboardStats(playerAddr);
+                
+                // Mapping: [4]=refEth, [5]=refUsdt, [6]=refBaby
+                const ethVal = parseFloat(ethers.utils.formatEther(stats[4])) * (currentEthPrice || 3000);
+                const usdtVal = parseFloat(ethers.utils.formatUnits(stats[5], usdtDec));
+                const babyVal = parseFloat(ethers.utils.formatUnits(stats[6], babyDec)) * (currentBabyDogePrice || 0);
+                
+                const totalRefUsd = ethVal + usdtVal + babyVal;
 
-            header.innerHTML = `<span>Rank</span><span>Inviter</span><span>Total Reward ($)</span><span>Assets Breakdown</span>`;
-
+                if (totalRefUsd > 0.000001) {
+                    rawData.push({
+                        addr: playerAddr,
+                        sortValue: totalRefUsd,
+                        eth: stats[4],
+                        usdt: stats[5],
+                        baby: stats[6]
+                    });
+                }
+            }
         }
 
-
-
-        // 5. Sorting & Rendering
+        // 4. Sorting (Terbesar ke Terkecil)
+        rawData.sort((a, b) => b.sortValue - a.sortValue);
 
         if (rawData.length === 0) {
-
             list.innerHTML = "<div class='lb-loading' style='text-align:center;'>No Pilots qualified yet.</div>";
-
             return;
-
         }
 
-
-
-        // Sort Highest Value First
-
-        rawData.sort((a, b) => {
-
-            if (b.totalVal.gt(a.totalVal)) return 1;
-
-            if (b.totalVal.lt(a.totalVal)) return -1;
-
-            return 0;
-
-        });
-
-
-
-        const topList = rawData.slice(0, 20); // Ambil Top 20
-
+        // 5. Render HTML
+        const topList = rawData.slice(0, 20); // Top 20
         list.innerHTML = "";
 
-
-
-        // Helper format angka simpel
-
+        // Helper Format Angka
         const fmt = (bn, dec, fix) => parseFloat(ethers.utils.formatUnits(bn, dec)).toFixed(fix);
 
-
-
         topList.forEach((p, index) => {
-
             const rank = index + 1;
-
             const isMe = userAddress && p.addr.toLowerCase() === userAddress.toLowerCase();
-
             const displayName = isMe ? "YOU" : (p.addr.slice(0, 4) + "..." + p.addr.slice(-4));
 
-            
-
-            // Total Estimasi USD (Gunakan 18 decimals karena logic di atas konversi ke 18)
-
-            // Kecuali NetScore dari kontrak yang sudah 18 decimals (atau sesuaikan dengan kontrak Anda, biasanya 18)
-
-            let totalUsdShow = parseFloat(ethers.utils.formatUnits(p.totalVal, 18)).toFixed(2);
-
-
-
             list.innerHTML += `
-
                 <div class="lb-item rank-${rank}" style="${isMe ? 'background:rgba(0,255,255,0.05); border-left: 3px solid var(--cyan-main);' : ''}">
-
                     <div class="lb-rank" style="color:${rank<=3 ? 'gold' : '#fff'}">#${rank}</div>
-
                     
-
                     <div style="cursor:pointer; color:${isMe ? 'var(--cyan-main)' : '#ccc'}; font-weight:bold;" onclick="showPlayerProfile('${p.addr}')">
-
                         ${displayName}
-
                     </div>
-
                     
-
                     <div style="color:#00ff88; font-weight:bold;">
-
-                        $ ${totalUsdShow}
-
+                        $ ${p.sortValue.toFixed(2)}
                     </div>
-
                     
-
                     <div style="font-size: 11px; color:#aaa; line-height:1.4;">
-
                         ${p.eth.gt(0) ? `<span style="color:#fff">${fmt(p.eth, 18, 4)} ETH</span><br>` : ''}
-
                         ${p.usdt.gt(0) ? `<span style="color:#fff">${fmt(p.usdt, usdtDec, 2)} USDT</span><br>` : ''}
-
                         ${p.baby.gt(0) ? `<span style="color:#fff">${fmt(p.baby, babyDec, 0)} Baby</span>` : ''}
-
                     </div> 
-
                 </div>
-
             `;
-
         });
 
-
-
     } catch (err) {
-
         console.error("Leaderboard error:", err);
-
-        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>Failed to load data</div>";
-
+        list.innerHTML = "<div class='lb-loading' style='color:#ff5555;'>Sync Failed.</div>";
     }
-
 }
+
     
 // Fungsi Tutup Modal Profil
 function hideProfileModal() {
