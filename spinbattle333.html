@@ -1929,8 +1929,12 @@
     let isFinalizing = false;
     let players = {};
     let totalWeight = ethers.BigNumber.from(0);
-    let ctx, cw, ch, cx, cy;
-    let outerR, innerR, currentRotation = 0;
+    // Variabel Global Canvas (Taruh di paling atas script, sebelum function apapun)
+    let canvas, ctx;
+    let cw, ch, cx, cy;                     // Dimensi & Titik Tengah
+    let outerR, innerR;                     // Radius
+    let dpr = window.devicePixelRatio || 1; // Deteksi layar Retina/HP
+    let currentRotation = 0;                // Posisi putaran saat ini
     let playersArray = [];
     let myCurrentEthDeposit = ethers.BigNumber.from(0);
     let myCurrentUsdtDeposit = ethers.BigNumber.from(0);
@@ -3450,112 +3454,113 @@ function showFinalizeButton() {
     }
     // [FIX 2] Fungsi drawDonut di-upgrade untuk menampilkan teks
    function drawDonut(rotationDeg = currentRotation) {
-    if (!ctx) return;
+    if (!ctx || !canvas) return;
 
-    // Bersihkan seluruh area canvas (Gunakan cw dan ch asli)
-    ctx.clearRect(0, 0, cw, ch);
+    // === [BARIS AJAIB: WAJIB ADA] ===
+    // Ini mereset posisi kuas ke 0,0 setiap kali menggambar.
+    // Tanpa ini, roda akan lari/mengecil setiap kali refresh.
+    ctx.setTransform(1, 0, 0, 1, 0, 0); 
 
+    // 1. Bersihkan seluruh area canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 2. Terapkan Skala Retina (agar tajam di HP)
+    // Pastikan variabel 'dpr' sudah didefinisikan di global (let dpr = window.devicePixelRatio || 1;)
+    ctx.scale(dpr, dpr);
+
+    // 3. Simpan state sebelum geser
     ctx.save();
     
-    // [FIX 1] Pindahkan titik pusat ke tengah (cx, cy)
+    // 4. Pindahkan titik pusat ke TENGAH (cx, cy)
     ctx.translate(cx, cy);
     
-    // [FIX 2] Terapkan rotasi
+    // 5. Putar Roda
     ctx.rotate(rotationDeg * Math.PI / 180);
     
-    // [FIX 3] JANGAN translate kembali ke (0,0). 
-    // Sekarang, (0,0) adalah titik tengah canvas.
+    // === LOGIKA GAMBAR ===
 
-    // Jika tidak ada player, gambar wheel default
+    // Jika belum ada pemain
     if (!playersArray || playersArray.length === 0) {
-        // Gambar gradien dari (0,0) [titik tengah baru]
+        // Gambar Lingkaran Kosong (Gradien)
         const gradient = ctx.createRadialGradient(0, 0, innerR, 0, 0, outerR); 
-        gradient.addColorStop(0, '#ff00e6');    // Pink
-        gradient.addColorStop(0.7, '#6200ff');  // Ungu
-        gradient.addColorStop(1, '#0b0b12');    // Tepi gelap
+        gradient.addColorStop(0, '#ff00e6');    
+        gradient.addColorStop(0.7, '#6200ff');  
+        gradient.addColorStop(1, '#0b0b12');    
 
         ctx.beginPath();
-        // [FIX 4] Gambar arc di (0,0) [titik tengah baru]
         ctx.arc(0, 0, outerR, 0, Math.PI * 2); 
         ctx.fillStyle = gradient;
         ctx.fill();
         
-        // Potong lingkaran tengah (inner circle)
+        // Potong Tengah
+        ctx.save();
         ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
-        // [FIX 5] Potong lubang di (0,0) [titik tengah baru]
         ctx.arc(0, 0, innerR, 0, Math.PI * 2);
         ctx.fill();
-        ctx.globalCompositeOperation = 'source-over'; // Kembalikan mode
+        ctx.restore();
 
-        ctx.restore(); // Hapus rotasi dan translasi
-
-        // Gambar teks "No bets yet" di tengah (gunakan cx, cy asli)
+        // Teks "No bets yet" (Putar balik agar lurus)
+        ctx.save();
+        ctx.rotate(-rotationDeg * Math.PI / 180); 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 16px Ubuntu'; // Font sedikit lebih besar
+        ctx.font = 'bold 14px Ubuntu';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('No bets yet', cx, cy); // Teks tetap digambar di koordinat asli
-        return;
-    }
+        ctx.fillText('No bets yet', 0, 0); 
+        ctx.restore();
+    } else {
+        // Jika ada pemain
+        // A. Gambar Segmen
+        for (let i = 0; i < playersArray.length; i++) {
+            const p = playersArray[i];
+            ctx.beginPath();
+            ctx.moveTo(0, 0); 
+            ctx.arc(0, 0, outerR, p.startAngle, p.endAngle, false);
+            ctx.closePath();
+            ctx.fillStyle = p.color;
+            ctx.fill();
+        }
 
-    // 3. Loop 1: Gambar segmen warna
-    for (let i = 0; i < playersArray.length; i++) {
-        const p = playersArray[i];
-        const sa = p.startAngle;
-        const ea = p.endAngle;
+        // B. Potong Tengah
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
         ctx.beginPath();
-        ctx.moveTo(0, 0); // [FIX 6] Mulai dari (0,0) [titik tengah baru]
-        ctx.arc(0, 0, outerR, sa, ea, false); // [FIX 7] Gambar arc di (0,0)
-        ctx.closePath();
-        ctx.fillStyle = p.color;
+        ctx.arc(0, 0, innerR, 0, Math.PI * 2); 
         ctx.fill();
+        ctx.restore();
+
+        // C. Garis & Teks
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)'; 
+        ctx.lineWidth = 2; 
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "bold 10px Ubuntu";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        for (let i = 0; i < playersArray.length; i++) {
+            const p = playersArray[i];
+            const midAngle = (p.startAngle + p.endAngle) / 2;
+            const textRadius = innerR + (outerR - innerR) / 1.8; 
+
+            // Garis
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(p.startAngle) * innerR, Math.sin(p.startAngle) * innerR);
+            ctx.lineTo(Math.cos(p.startAngle) * outerR, Math.sin(p.startAngle) * outerR);
+            ctx.stroke();
+
+            // Teks
+            ctx.save(); 
+            ctx.rotate(midAngle); 
+            const shortAddr = p.addr.slice(0, 4) + ".." + p.addr.slice(-2);
+            ctx.fillText(shortAddr, textRadius, 0); 
+            ctx.restore(); 
+        }
     }
 
-    // 4. Potong lingkaran tengah
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.arc(0, 0, innerR, 0, Math.PI * 2); // [FIX 8] Potong lubang di (0,0)
-    ctx.fill();
-
-    // 5. Loop 2: Gambar Teks dan Garis Pemisah
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; // Garis lebih gelap agar terlihat
-    ctx.lineWidth = 2; // Garis lebih tebal
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 10px Ubuntu";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
-    for (let i = 0; i < playersArray.length; i++) {
-        const p = playersArray[i];
-        const midAngle = (p.startAngle + p.endAngle) / 2;
-        
-        // Tentukan radius (jarak) untuk teks
-        const textRadius = innerR + (outerR - innerR) / 2.5; 
-
-        // 5a. Gambar garis pemisah
-        ctx.beginPath();
-        // [FIX 9] Gambar garis dari lubang dalam ke luar
-        ctx.moveTo(Math.cos(p.startAngle) * (innerR + 2), Math.sin(p.startAngle) * (innerR + 2));
-        ctx.lineTo(Math.cos(p.startAngle) * outerR, Math.sin(p.startAngle) * outerR);
-        ctx.stroke();
-
-        // 5b. Gambar teks
-        ctx.save(); // Simpan state (hanya rotasi wheel)
-        
-        // Rotasi canvas ke tengah segmen
-        ctx.rotate(midAngle); 
-        
-        // Tulis teks di posisi (radius, 0)
-        const shortAddr = p.addr.slice(0, 4) + "..." + p.addr.slice(-3);
-        ctx.fillText(shortAddr, textRadius, 0); 
-        
-        ctx.restore(); // Hapus rotasi segmen (kembali ke rotasi wheel)
-    }
-
-    ctx.restore(); // Hapus rotasi wheel utama
-    }
+    ctx.restore(); // Kembalikan state ke sebelum translate/rotate
+   }
     
     if (!CanvasRenderingContext2D.prototype.roundRect) {
       CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r){
