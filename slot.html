@@ -5,198 +5,203 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Faylotto Spin Battle - Base Sepolia</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
-    <style>
-        :root {
-            --primary: #0052ff; /* Base color */
-            --accent: #00d1ff;
-            --bg: #0f111a;
-            --panel: #1e2130;
-            --text: #ffffff;
-            --danger: #ff4b4b;
-            --success: #00d26a;
-        }
+<style>
+    /* 1. RESET GLOBAL: Wajib agar ukuran simetris */
+    * {
+        box-sizing: border-box;
+    }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding-bottom: 50px;
-        }
+    :root {
+        --primary: #0052ff;
+        --accent: #00d1ff;
+        --bg: #0f111a;
+        --panel: #1e2130;
+        --text: #ffffff;
+        --danger: #ff4b4b;
+        --success: #00d26a;
+    }
 
-        /* Header & Wallet */
-        header {
-            width: 100%;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(0,0,0,0.5);
-            box-sizing: border-box;
-            border-bottom: 1px solid var(--panel);
-        }
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        padding-bottom: 50px;
+        overflow-x: hidden; /* Mencegah scroll samping */
+    }
 
-        .wallet-btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: 0.3s;
-        }
+    /* Header & Wallet */
+    header {
+        width: 100%;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0,0,0,0.5);
+        border-bottom: 1px solid var(--panel);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        backdrop-filter: blur(5px);
+    }
 
-        .wallet-btn:hover { background: var(--accent); }
-        .wallet-btn.connected { background: var(--success); cursor: default; }
+    .wallet-btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 0.9rem;
+        transition: 0.3s;
+    }
 
-        /* Slot Machine Visual */
-        .slot-machine {
-            margin-top: 30px;
-            background: var(--panel);
-            padding: 20px;
-            border-radius: 15px;
-            border: 4px solid #333;
-            box-shadow: 0 0 20px rgba(0, 82, 255, 0.2);
-        }
+    .wallet-btn:hover { background: var(--accent); }
+    .wallet-btn.connected { background: var(--success); cursor: default; }
 
-        .reels-container {
-            display: flex;
-            gap: 10px;
-            background: #000;
-            padding: 10px;
-            border-radius: 8px;
-        }
+    /* Slot Machine Visual */
+    .slot-machine {
+        margin-top: 30px;
+        background: var(--panel);
+        padding: 20px;
+        border-radius: 15px;
+        border: 4px solid #333;
+        box-shadow: 0 0 20px rgba(0, 82, 255, 0.2);
+        /* Agar tidak melebar di HP */
+        max-width: 90%; 
+    }
 
-        .reel {
-            width: 80px;
-            height: 100px;
-            background: #fff;
-            border-radius: 5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-        }
+    .reels-container {
+        display: flex;
+        gap: 10px;
+        background: #000;
+        padding: 10px;
+        border-radius: 8px;
+        justify-content: center; /* Pastikan reel di tengah */
+    }
 
-        /* Style untuk gambar di dalam Reel Slot */
-        .reel-img {
-            width: 70px;
-            height: 70px;
-            object-fit: contain;
-        }
+    .reel {
+        width: 70px; /* Sedikit dikecilkan untuk HP */
+        height: 90px;
+        background: #fff;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    }
 
-        /* Betting Area */
-        .betting-section {
-            margin-top: 30px;
-            width: 100%;
-            max-width: 600px;
-            padding: 0 20px;
-            text-align: center;
-        }
+    .reel-img {
+        width: 60px;
+        height: 60px;
+        object-fit: contain;
+    }
 
-        .bet-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-top: 15px;
-        }
+    /* Betting Area - FIX POSISI DISINI */
+    .betting-section {
+        margin-top: 30px;
+        width: 100%;
+        max-width: 500px; /* Batasi lebar agar tidak terlalu lebar di desktop */
+        padding: 0 20px; /* Padding kiri kanan seimbang */
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Paksa semua anak elemen ke tengah */
+    }
 
-        /* Item Card */
-        .bet-card {
-            background: var(--panel);
-            border: 2px solid transparent;
-            border-radius: 10px;
-            padding: 15px;
-            cursor: pointer;
-            transition: 0.2s;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    .bet-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); /* 3 Kolom Presisi */
+        gap: 12px; /* Jarak antar kartu */
+        width: 100%; /* Full width mengikuti parent */
+        margin-top: 15px;
+    }
 
-        .bet-card:hover { transform: translateY(-3px); border-color: var(--accent); }
-        .bet-card.selected { border-color: var(--success); background: rgba(0, 210, 106, 0.1); }
-        
-        /* Style untuk gambar di kartu taruhan */
-        .bet-icon-img {
-            width: 64px;
-            height: 64px;
-            object-fit: contain;
-            margin-bottom: 10px;
-            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3)); /* Efek bayangan agar PNG menonjol */
-        }
+    /* Item Card */
+    .bet-card {
+        background: var(--panel);
+        border: 2px solid transparent;
+        border-radius: 12px;
+        padding: 10px 5px; /* Padding atas bawah 10, kiri kanan 5 */
+        cursor: pointer;
+        transition: 0.2s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        aspect-ratio: 1/1.2; /* Agar bentuk kartu konsisten kotak/persegi panjang */
+    }
 
-        .name { font-size: 14px; font-weight: bold; text-transform: uppercase; }
-        .quota-badge {
-            font-size: 10px;
-            color: #aaa;
-            margin-top: 5px;
-            display: block;
-        }
+    .bet-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+    .bet-card.selected { border-color: var(--success); background: rgba(0, 210, 106, 0.1); }
+    
+    .bet-icon-img {
+        width: 50px; /* Ukuran icon pas di HP */
+        height: 50px;
+        object-fit: contain;
+        margin-bottom: 8px;
+        filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
+    }
 
-        /* Control Panel */
-        .controls {
-            margin-top: 20px;
-            background: var(--panel);
-            padding: 15px;
-            border-radius: 10px;
-            width: 100%;
-            max-width: 560px; /* Sesuaikan dengan lebar grid */
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-        }
+    .name { font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;}
+    .quota-badge { font-size: 9px; color: #aaa; }
 
-        .total-cost {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        .cost-val { color: var(--accent); }
+    /* Control Panel - FIX AGAR SEJAJAR GRID */
+    .controls {
+        margin-top: 20px;
+        background: var(--panel);
+        padding: 15px;
+        border-radius: 12px;
+        width: 100%; /* Samakan lebarnya dengan grid */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 
-        .spin-btn {
-            background: linear-gradient(45deg, #ff0055, #ff5e00);
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 50px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 0, 85, 0.4);
-            transition: 0.3s;
-        }
-        .spin-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 6px 20px rgba(255, 0, 85, 0.6); }
-        .spin-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+    .total-cost {
+        font-size: 16px;
+        font-weight: bold;
+    }
+    .cost-val { color: var(--accent); }
 
-        /* Toast Notification */
-        #toast {
-            visibility: hidden;
-            min-width: 250px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 4px;
-            padding: 16px;
-            position: fixed;
-            z-index: 1;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+    .spin-btn {
+        background: linear-gradient(45deg, #ff0055, #ff5e00);
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        border-radius: 50px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(255, 0, 85, 0.4);
+    }
+    .spin-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
 
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-    </style>
+    /* Toast Notification */
+    #toast {
+        visibility: hidden;
+        min-width: 250px;
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        border-radius: 4px;
+        padding: 16px;
+        position: fixed;
+        z-index: 999;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+
+    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+    @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+</style>
 </head>
 <body>
 
