@@ -1621,11 +1621,6 @@
         <canvas id="donutCanvas"></canvas>
     </div>
 
-    <button id="refreshWheelBtn" class="wheel-refresh-btn">
-        <i class="fa-solid fa-rotate"></i>
-        <span>Refresh Wheel</span>
-    </button>
-
     <div class="controls">
       
       <div class="pool-info-panel">
@@ -4244,50 +4239,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // INSIALISASI KANVAS BARU
     initResponsiveCanvas();
-
-  // --- Listener Tombol Refresh Wheel ---
-    // --- LOGIKA: TOMBOL REFRESH -> CANVAS ---
-const btnRefresh = document.getElementById("refreshWheelBtn");
-const canvasTarget = document.getElementById("donutCanvas");
-
-if (btnRefresh && canvasTarget) {
-    console.log("Tombol Refresh terhubung ke Canvas.");
-
-    btnRefresh.addEventListener("click", async (e) => {
-        e.preventDefault();
-        
-        // 1. Efek Visual: Tombol berputar
-        btnRefresh.classList.add("spinning");
-        
-        // 2. Efek UX: Tampilkan status
-        const statusEl = document.getElementById("statusText");
-        if(statusEl) statusEl.innerText = "Redrawing Wheel...";
-
-        try {
-            // 3. AMBIL DATA BARU DARI BLOCKCHAIN
-            // Fungsi ini otomatis memanggil updateBetList() -> yang memanggil drawDonut()
-            await fetchAndDisplayRoundData();
-            
-            // 4. [PENTING] PAKSA GAMBAR ULANG CANVAS
-            // Ini inti dari permintaan Anda: me-refresh ID donutCanvas
-            if (typeof drawDonut === 'function') {
-                // Reset rotasi agar animasi mulus (opsional)
-                // currentRotation = 0; 
-                drawDonut(); 
-                console.log("Canvas (donutCanvas) berhasil direfresh manual.");
-            }
-
-        } catch (error) {
-            console.error("Gagal refresh canvas:", error);
-        }
-
-        // 5. Matikan animasi tombol
-        setTimeout(() => {
-            btnRefresh.classList.remove("spinning");
-            if(statusEl) statusEl.innerText = `Round #${currentRoundId} Live!`;
-        }, 800);
-    });
-}
     
     // ... (sisa kode event listener Anda) ...
 });
