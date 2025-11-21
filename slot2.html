@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faylotto Spin Battle - Base Sepolia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+<style>
+    /* --- CSS GLOBAL --- */
+    * { box-sizing: border-box; }
+    :root {
+        --primary: #0052ff; --accent: #00d1ff; --bg: #0f111a;
+        --panel: #1e2130; --text: #ffffff; --danger: #ff4b4b; --success: #00d26a;
+        --gold: #FFD700;
+        --shib-color: #FFA409; --usdt-color: #26A17B; --eth-color: #627EEA;
+    }
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg); color: var(--text); margin: 0;
+        display: flex; flex-direction: column; align-items: center;
+        min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
+    }
+    header {
+        width: 100%; padding: 15px 20px; display: flex; justify-content: space-between;
+        align-items: center; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--panel);
+        position: sticky; top: 0; z-index: 100; backdrop-filter: blur(5px);
+    }
+    .wallet-btn {
+        background: var(--primary); color: white; border: none; padding: 8px 16px;
+        border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s;
+    }
+    .wallet-btn.connected { background: var(--success); cursor: default; }
+
+    /* SLOT MACHINE */
+    .slot-machine {
+        margin-top: 30px; background: var(--panel); padding: 20px;
+        border-radius: 15px; border: 4px solid #333;
+        box-shadow: 0 0 20px rgba(0, 82, 255, 0.2); max-width: 90%;
+        display: flex; flex-direction: column; align-items: center;
+    }
+    .reels-container {
+        display: flex; gap: 10px; background: #000; padding: 10px;
+        border-radius: 8px; justify-content: center; margin-bottom: 15px;
+    }
+    .reel {
+        width: 70px; height: 90px; background: #fff; border-radius: 5px;
+        display: flex; align-items: center; justify-content: center;
+        overflow: hidden; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    }
+    .reel-img { width: 60px; height: 60px; object-fit: contain; }
+
+    /* TOMBOL DRAW NOW (BARU) */
+    .draw-section {
+        width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .btn-draw {
+        background: linear-gradient(45deg, #333, #555); /* Default Disabled Color */
+        color: #888;
+        border: 2px solid #444;
+        padding: 15px 40px; border-radius: 50px;
+        font-size: 1.2em; font-weight: 900; letter-spacing: 2px;
+        cursor: not-allowed; transition: 0.3s;
+        box-shadow: none; text-transform: uppercase;
+        width: 100%; max-width: 300px;
+    }
+    
+    /* Style saat Aktif (Ready) */
+    .btn-draw.ready {
+        background: linear-gradient(45deg, #ff0000, #ff8800);
+        color: white; border: 2px solid #ffaa00;
+        cursor: pointer;
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+        animation: pulse 1.5s infinite;
+    }
+    .btn-draw.ready:hover { transform: scale(1.05); }
+
+    @keyframes pulse {
+        0% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
+        50% { box-shadow: 0 0 25px rgba(255, 100, 0, 0.8); }
+        100% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
+    }
+
+    .status-text { font-size: 0.9em; color: var(--accent); font-weight: bold; }
+    .status-text.ready { color: var(--success); }
+
+    /* BETTING AREA */
+    .betting-section {
+        margin-top: 30px; width: 100%; max-width: 500px;
+        padding: 0 20px; display: flex; flex-direction: column; align-items: center;
+    }
+    .bet-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+        width: 100%; margin-top: 15px;
+    }
+    .bet-card {
+        background: var(--panel); border: 2px solid transparent;
+        border-radius: 12px; padding: 10px 5px; cursor: pointer; transition: 0.2s;
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; aspect-ratio: 1/1.2; position: relative;
+    }
+    .bet-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+    .bet-icon-img {
+        width: 50px; height: 50px; object-fit: contain; margin-bottom: 8px;
+        filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
+    }
+    .name { font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;}
+    
+    /* Indikator Jumlah Pasukan */
+    .team-count {
+        font-size: 10px; color: #aaa; background: rgba(0,0,0,0.3);
+        padding: 2px 6px; border-radius: 4px; margin-top: 5px;
+    }
+    .team-count.filled { color: var(--success); border: 1px solid var(--success); }
+
+    .btn-action {
+        font-size: 10px; background: var(--primary); color: white;
+        padding: 4px 8px; border-radius: 4px; margin-top: 5px;
+    }
+
+    /* MODAL & TOAST (SAMA) */
+    .modal-overlay {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;
+        backdrop-filter: blur(3px);
+    }
+    .modal-content {
+        background: var(--panel); width: 90%; max-width: 400px;
+        padding: 25px; border-radius: 15px; text-align: center;
+        border: 1px solid var(--accent); box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+    .modal-title { font-size: 1.2em; font-weight: bold; margin-bottom: 20px; }
+    .modal-title span { color: var(--accent); text-transform: uppercase; }
+    .pay-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .pay-btn {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 15px; border: none; border-radius: 8px;
+        color: white; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px;
+    }
+    .pay-btn:hover { transform: scale(1.02); filter: brightness(1.1); }
+    .btn-eth { background: var(--eth-color); }
+    .btn-usdt { background: var(--usdt-color); }
+    .btn-shib { background: var(--shib-color); }
+    .free-bet-panel {
+        background: rgba(255, 255, 255, 0.05); border-radius: 8px;
+        padding: 15px; margin-top: 15px; border: 1px dashed var(--success);
+    }
+    .free-balance { font-size: 0.9em; color: #aaa; margin-bottom: 8px; }
+    .free-val { color: var(--success); font-weight: bold; font-size: 1.1em; }
+    .btn-free {
+        width: 100%; background: var(--success); color: #000;
+        border: none; padding: 10px; border-radius: 6px; font-weight: bold;
+        cursor: pointer; margin-top: 5px;
+    }
+    .btn-free:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .close-modal {
+        margin-top: 15px; background: transparent; border: none;
+        color: #aaa; cursor: pointer; text-decoration: underline;
+    }
+    #toast {
+        visibility: hidden; min-width: 250px; background-color: #333;
+        color: #fff; text-align: center; border-radius: 4px; padding: 16px;
+        position: fixed; z-index: 999; bottom: 30px; left: 50%; transform: translateX(-50%);
+    }
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+    @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+</style>
+</head>
+<body>
+
+    <header>
+        <div style="font-weight:bold; font-size:1.2em;">Faylotto <span style="color:var(--accent)">Battle</span></div>
+        <button id="connectBtn" class="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
+    </header>
+
+    <div class="slot-machine">
+        <div class="reels-container">
+            <div class="reel" id="reel1"><img id="imgReel1" src="" class="reel-img"></div>
+            <div class="reel" id="reel2"><img id="imgReel2" src="" class="reel-img"></div>
+            <div class="reel" id="reel3"><img id="imgReel3" src="" class="reel-img"></div>
+        </div>
+
+        <div class="draw-section">
+            <button id="drawBtn" class="btn-draw" onclick="executeDraw()" disabled>DRAW NOW!</button>
+            <div id="drawStatus" class="status-text">Waiting for players... (0/6 Teams Active)</div>
+        </div>
+    </div>
+
+    <div class="betting-section">
+        <h3>CHOOSE ANIMAL TO BET</h3>
+        
+        <div class="bet-grid">
+            <div class="bet-card" onclick="openModal('tuna', 0)">
+                <img id="img-tuna" src="" class="bet-icon-img" alt="Tuna">
+                <span class="name">Tuna</span>
+                <span id="count-0" class="team-count">0/2</span>
+                <div class="btn-action">BET</div>
+            </div>
+            <div class="bet-card" onclick="openModal('crab', 1)">
+                 <img id="img-crab" src="" class="bet-icon-img" alt="Crab">
+                <span class="name">Crab</span>
+                <span id="count-1" class="team-count">0/2</span>
+                <div class="btn-action">BET</div>
+            </div>
+            <div class="bet-card" onclick="openModal('shark', 2)">
+                 <img id="img-shark" src="" class="bet-icon-img" alt="Shark">
+                <span class="name">Shark</span>
+                <span id="count-2" class="team-count">0/2</span>
+                <div class="btn-action">BET</div>
+            </div>
+            <div class="bet-card" onclick="openModal('octopus', 3)">
+                 <img id="img-octopus" src="" class="bet-icon-img" alt="Octopus">
+                <span class="name">Octopus</span>
+                <span id="count-3" class="team-count">0/2</span>
+                <div class="btn-action">BET</div>
+            </div>
+            <div class="bet-card" onclick="openModal('shrimp', 4)">
+                 <img id="img-shrimp" src="" class="bet-icon-img" alt="Shrimp">
+                <span class="name">Shrimp</span>
+                <span id="count-4" class="team-count">0/2</span>
+                <div class="btn-action">BET</div>
+            </div>
+            <div class="bet-card" onclick="openModal('orcha', 5)">
+                 <img id="img-orcha" src="" class="bet-icon-img" alt="Orcha">
+                <span class="name">Orcha</span>
+                <span id="count-5" class="team-count">0/2</span>
+                <div class="btn-action">BET</div>
+            </div>
+        </div>
+        <p style="margin-top:20px; color:#aaa; font-size:0.8em;">*Min 5 teams required to Draw</p>
+    </div>
+
+    <div id="paymentModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">BET ON <span id="modalAnimalName">ANIMAL</span></div>
+            <div class="pay-options">
+                <button class="pay-btn btn-eth" onclick="processPayment('ETH')"><span>ETH</span> <span>0.0005 ETH</span></button>
+                <button class="pay-btn btn-usdt" onclick="processPayment('USDT')"><span>USDT</span> <span>10 USDT</span></button>
+                <button class="pay-btn btn-shib" onclick="processPayment('SHIB')"><span>SHIB</span> <span>110,000 SHIB</span></button>
+            </div>
+            <div class="free-bet-panel">
+                <div class="free-balance">Your Credit / Free Balance:</div>
+                <div class="free-val"><span id="userCreditBalance">0</span> SHIB</div>
+                <button id="btnFreeBet" class="btn-free" onclick="processPayment('FREE')" disabled>Use Credit Bet (10k SHIB)</button>
+                <div style="font-size:0.7em; color:#aaa; margin-top:5px;">*Eligible from referral/winnings</div>
+            </div>
+            <button class="close-modal" onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+
+    <div id="toast">Notification</div>
+
+    <script>
+        const ITEM_IMAGES = { tuna: "tuna.svg", crab: "crab.svg", shark: "shark.svg", octopus: "octo.svg", shrimp: "shrimp.svg", orcha: "orcha.svg" };
+        const REEL_INITIAL_IMG = "https://placehold.co/64x64/cccccc/969696?text=?";
+        
+        let provider, signer, userAddress;
+        let isConnected = false;
+        let currentSelectedAnimal = { name: '', index: -1 };
+        let userFreeCredit = 0; 
+        
+        // --- STATE SIMULASI JUMLAH PEMAIN (0 = Kosong, 1 = Ada 1 orang, 2 = Penuh) ---
+        // Index 0-5 (Tuna - Orcha)
+        let teamStatus = [0, 0, 0, 0, 0, 0]; 
+
+        window.onload = async () => {
+            loadImages();
+            checkLocalStorageAuth();
+            updateDrawButtonState(); // Cek status tombol saat load
+        };
+
+        function loadImages() {
+            document.getElementById('imgReel1').src = REEL_INITIAL_IMG;
+            document.getElementById('imgReel2').src = REEL_INITIAL_IMG;
+            document.getElementById('imgReel3').src = REEL_INITIAL_IMG;
+            for (const [key, url] of Object.entries(ITEM_IMAGES)) {
+                const imgEl = document.getElementById(`img-${key}`);
+                if (imgEl) imgEl.src = url;
+            }
+        }
+
+        // --- LOGIKA TOMBOL DRAW ---
+        function updateDrawButtonState() {
+            // Hitung berapa tim yang punya MINIMAL 1 pemain
+            let activeTeams = teamStatus.filter(count => count > 0).length;
+            
+            const btn = document.getElementById("drawBtn");
+            const status = document.getElementById("drawStatus");
+
+            if (activeTeams >= 5) {
+                // SYARAT TERPENUHI
+                btn.disabled = false;
+                btn.classList.add("ready");
+                status.innerText = "BATTLE READY! CLICK TO DRAW!";
+                status.classList.add("ready");
+            } else {
+                // BELUM CUKUP
+                btn.disabled = true;
+                btn.classList.remove("ready");
+                status.innerText = `Waiting for players... (${activeTeams}/6 Teams Active)`;
+                status.classList.remove("ready");
+            }
+
+            // Update UI Kartu (0/2)
+            for(let i=0; i<6; i++) {
+                const badge = document.getElementById(`count-${i}`);
+                badge.innerText = `${teamStatus[i]}/2`;
+                if(teamStatus[i] === 2) badge.classList.add("filled");
+                else badge.classList.remove("filled");
+            }
+        }
+
+        async function executeDraw() {
+            if (!isConnected) { showToast("Connect Wallet First!"); return; }
+            
+            showToast("Initiating Draw Sequence...");
+            // Disini nanti panggil contract.executeDraw()
+            
+            // Simulasi Efek
+            setTimeout(() => {
+                startSpinAnimation();
+                // Reset setelah draw (Dummy reset)
+                setTimeout(() => {
+                    teamStatus = [0,0,0,0,0,0]; 
+                    updateDrawButtonState();
+                    showToast("Round Ended!");
+                }, 3000);
+            }, 1000);
+        }
+
+        // --- LOGIKA BET & MODAL ---
+        function openModal(animalName, animalIndex) {
+            if (!isConnected) { showToast("Please connect wallet first!"); return; }
+            
+            // Cek apakah tim penuh (Max 2)
+            if (teamStatus[animalIndex] >= 2) {
+                showToast("This Team is FULL!");
+                return;
+            }
+
+            currentSelectedAnimal = { name: animalName, index: animalIndex };
+            document.getElementById("modalAnimalName").innerText = animalName;
+            document.getElementById("userCreditBalance").innerText = userFreeCredit.toLocaleString();
+            
+            const freeCost = 10000;
+            if (userFreeCredit >= freeCost) {
+                document.getElementById("btnFreeBet").disabled = false;
+                document.getElementById("btnFreeBet").innerHTML = `Use Credit Bet (10k SHIB)`;
+            } else {
+                document.getElementById("btnFreeBet").disabled = true;
+                document.getElementById("btnFreeBet").innerHTML = `Not Enough Credit`;
+            }
+            document.getElementById("paymentModal").style.display = "flex";
+        }
+
+        function closeModal() { document.getElementById("paymentModal").style.display = "none"; }
+
+        async function processPayment(currency) {
+            if (currentSelectedAnimal.index === -1) return;
+            closeModal(); 
+
+            showToast(`Processing Bet...`);
+            
+            try {
+                // Simulasi Transaksi Sukses
+                setTimeout(() => {
+                    showToast("Bet Placed!");
+                    
+                    // Update State: Tambah pemain di tim tersebut
+                    teamStatus[currentSelectedAnimal.index] += 1;
+                    
+                    // Cek apakah tombol Draw sekarang aktif?
+                    updateDrawButtonState();
+                }, 1500);
+
+            } catch (err) { console.error(err); }
+        }
+
+        // --- WALLET & VISUALS (Sama seperti sebelumnya) ---
+        async function connectWallet() {
+            if (!window.ethereum) { showToast("MetaMask not installed!"); return; }
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                const accounts = await provider.send("eth_requestAccounts", []);
+                userAddress = accounts[0];
+                signer = await provider.getSigner();
+                setConnectedState(true);
+                showToast("Wallet Connected");
+            } catch (error) { showToast("Connection failed"); }
+        }
+        function setConnectedState(status) { isConnected = status; const btn = document.getElementById("connectBtn"); if (status) { btn.innerText = userAddress.substring(0, 6) + "..."; btn.classList.add("connected"); } else { btn.innerText = "Connect Wallet"; btn.classList.remove("connected"); } }
+        
+        function startSpinAnimation() {
+            const reels = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
+            const imageUrls = Object.values(ITEM_IMAGES);
+            reels.forEach((reelImg, i) => {
+                let counter = 0;
+                const interval = setInterval(() => {
+                    reelImg.src = imageUrls[Math.floor(Math.random() * imageUrls.length)];
+                    counter++; if (counter > 10 + (i * 5)) clearInterval(interval);
+                }, 100);
+            });
+        }
+        function showToast(msg) { const x = document.getElementById("toast"); x.innerText = msg; x.className = "show"; setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000); }
+    </script>
+</body>
+              </html>
