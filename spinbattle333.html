@@ -1401,6 +1401,55 @@
   flex-grow: 1; /* Biarkan teks mengambil sisa ruang */
   word-wrap: break-word;
 }
+
+  /* Tombol Refresh Model Pil (Teks + Ikon) */
+.wheel-refresh-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    
+    /* Ukuran menyesuaikan teks */
+    padding: 8px 15px;
+    border-radius: 20px; /* Bentuk Pil */
+    
+    background: rgba(0, 0, 0, 0.7); /* Lebih gelap biar teks terbaca */
+    border: 1px solid var(--cyan-main);
+    color: var(--cyan-main);
+    
+    cursor: pointer;
+    z-index: 20;
+    
+    /* Flexbox agar ikon dan teks sejajar */
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Jarak antara ikon dan teks */
+    
+    /* Styling Teks */
+    font-family: "Ubuntu", sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    
+    transition: all 0.3s ease;
+}
+
+.wheel-refresh-btn:hover {
+    background: var(--cyan-main);
+    color: #000;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.6);
+    transform: translateY(-2px); /* Efek naik sedikit saat hover */
+}
+
+/* Animasi putar ikon */
+.wheel-refresh-btn.spinning i {
+    animation: spinIcon 1s linear infinite;
+}
+
+@keyframes spinIcon {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
   
   @media (min-width: 768px) {
   #donutCanvas {
@@ -1470,8 +1519,14 @@
   <div class="app-body" style="margin-top: 80px;"> 
     
     <div class="donut-wrap">
-        <div class="donut-pointer"></div>
-        <canvas id="donutCanvas"></canvas>
+    <div class="donut-pointer"></div>
+    
+    <button id="refreshWheelBtn" class="wheel-refresh-btn">
+        <i class="fa-solid fa-rotate"></i>
+        <span>Refresh Wheel</span>
+    </button>
+
+    <canvas id="donutCanvas"></canvas>
     </div>
 
     <div class="controls">
@@ -4021,6 +4076,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // INSIALISASI KANVAS BARU
     initResponsiveCanvas();
+
+  // --- Listener Tombol Refresh Wheel ---
+    const refreshWheelBtn = document.getElementById("refreshWheelBtn");
+    if (refreshWheelBtn) {
+        refreshWheelBtn.addEventListener("click", async () => {
+            // 1. Efek Visual (Putar Ikon)
+            refreshWheelBtn.classList.add("spinning");
+            
+            // 2. Panggil Fungsi Sync Utama
+            // Ini akan mengambil ulang data dari blockchain & menggambar ulang roda
+            await fetchAndDisplayRoundData(); 
+
+            // 3. Berhenti Putar Ikon & Kasih Notif
+            setTimeout(() => {
+                refreshWheelBtn.classList.remove("spinning");
+                showStatus("Wheel synced!", "success", 2000);
+            }, 500);
+        });
+    }
     
     // ... (sisa kode event listener Anda) ...
 });
