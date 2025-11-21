@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faylotto Spin Battle - Base Sepolia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #0052ff; /* Base color */
+            --accent: #00d1ff;
+            --bg: #0f111a;
+            --panel: #1e2130;
+            --text: #ffffff;
+            --danger: #ff4b4b;
+            --success: #00d26a;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding-bottom: 50px;
+        }
+
+        /* Header & Wallet */
+        header {
+            width: 100%;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.5);
+            box-sizing: border-box;
+            border-bottom: 1px solid var(--panel);
+        }
+
+        .wallet-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .wallet-btn:hover { background: var(--accent); }
+        .wallet-btn.connected { background: var(--success); cursor: default; }
+
+        /* Slot Machine Visual */
+        .slot-machine {
+            margin-top: 30px;
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 15px;
+            border: 4px solid #333;
+            box-shadow: 0 0 20px rgba(0, 82, 255, 0.2);
+        }
+
+        .reels-container {
+            display: flex;
+            gap: 10px;
+            background: #000;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .reel {
+            width: 80px;
+            height: 100px;
+            background: #fff;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* Style untuk gambar di dalam Reel Slot */
+        .reel-img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+        }
+
+        /* Betting Area */
+        .betting-section {
+            margin-top: 30px;
+            width: 100%;
+            max-width: 600px;
+            padding: 0 20px;
+            text-align: center;
+        }
+
+        .bet-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        /* Item Card */
+        .bet-card {
+            background: var(--panel);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .bet-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+        .bet-card.selected { border-color: var(--success); background: rgba(0, 210, 106, 0.1); }
+        
+        /* Style untuk gambar di kartu taruhan */
+        .bet-icon-img {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3)); /* Efek bayangan agar PNG menonjol */
+        }
+
+        .name { font-size: 14px; font-weight: bold; text-transform: uppercase; }
+        .quota-badge {
+            font-size: 10px;
+            color: #aaa;
+            margin-top: 5px;
+            display: block;
+        }
+
+        /* Control Panel */
+        .controls {
+            margin-top: 20px;
+            background: var(--panel);
+            padding: 15px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 560px; /* Sesuaikan dengan lebar grid */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .total-cost {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .cost-val { color: var(--accent); }
+
+        .spin-btn {
+            background: linear-gradient(45deg, #ff0055, #ff5e00);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 0, 85, 0.4);
+            transition: 0.3s;
+        }
+        .spin-btn:hover:not(:disabled) { transform: scale(1.05); box-shadow: 0 6px 20px rgba(255, 0, 85, 0.6); }
+        .spin-btn:disabled { opacity: 0.5; cursor: not-allowed; filter: grayscale(1); }
+
+        /* Toast Notification */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div style="font-weight:bold; font-size:1.2em;">Faylotto <span style="color:var(--accent)">Battle</span></div>
+        <button id="connectBtn" class="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
+    </header>
+
+    <div class="slot-machine">
+        <div class="reels-container">
+            <div class="reel" id="reel1"><img id="imgReel1" src="" class="reel-img"></div>
+            <div class="reel" id="reel2"><img id="imgReel2" src="" class="reel-img"></div>
+            <div class="reel" id="reel3"><img id="imgReel3" src="" class="reel-img"></div>
+        </div>
+    </div>
+
+    <div class="betting-section">
+        <h3>PLACE YOUR BETS</h3>
+        <p style="font-size:0.9em; color:#aaa;">Max 3 items per user. Cost: 0.001 ETH per item.</p>
+        
+        <div class="bet-grid">
+            <div class="bet-card" onclick="toggleBet('tuna')" id="btn-tuna">
+                <img id="img-tuna" src="" class="bet-icon-img" alt="Tuna">
+                <span class="name">Tuna</span>
+                <span class="quota-badge">Quota: Open</span>
+            </div>
+            
+            <div class="bet-card" onclick="toggleBet('crab')" id="btn-crab">
+                 <img id="img-crab" src="" class="bet-icon-img" alt="Crab">
+                <span class="name">Crab</span>
+                <span class="quota-badge">Quota: Open</span>
+            </div>
+
+            <div class="bet-card" onclick="toggleBet('shark')" id="btn-shark">
+                 <img id="img-shark" src="" class="bet-icon-img" alt="Shark">
+                <span class="name">Shark</span>
+                <span class="quota-badge">Quota: Open</span>
+            </div>
+
+            <div class="bet-card" onclick="toggleBet('octopus')" id="btn-octopus">
+                 <img id="img-octopus" src="" class="bet-icon-img" alt="Octopus">
+                <span class="name">Octopus</span>
+                <span class="quota-badge">Quota: Open</span>
+            </div>
+
+            <div class="bet-card" onclick="toggleBet('shrimp')" id="btn-shrimp">
+                 <img id="img-shrimp" src="" class="bet-icon-img" alt="Shrimp">
+                <span class="name">Shrimp</span>
+                <span class="quota-badge">Quota: Open</span>
+            </div>
+
+            <div class="bet-card" onclick="toggleBet('orcha')" id="btn-orcha">
+                 <img id="img-orcha" src="" class="bet-icon-img" alt="Orcha">
+                <span class="name">Orcha</span>
+                <span class="quota-badge">Quota: Open</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div class="total-cost">Total: <span class="cost-val" id="totalCost">0</span> ETH</div>
+            <button id="spinBtn" class="spin-btn" onclick="submitBet()" disabled>SPIN & BET</button>
+        </div>
+    </div>
+
+    <div id="toast">Notification</div>
+
+    <script>
+        // --- KONFIGURASI GAMBAR (GANTI DISINI) ---
+        // Ganti URL placeholder ini dengan path file PNG lokal Anda. 
+        // Contoh: "./images/tuna.png"
+        const ITEM_IMAGES = {
+            tuna: "https://placehold.co/64x64/0052ff/ffffff?text=TunaPNG",
+            crab: "https://placehold.co/64x64/ff4b4b/ffffff?text=CrabPNG",
+            shark: "https://placehold.co/64x64/333333/ffffff?text=SharkPNG",
+            octopus: "https://placehold.co/64x64/9900ff/ffffff?text=OctopusPNG",
+            shrimp: "https://placehold.co/64x64/ff5e00/ffffff?text=ShrimpPNG",
+            orcha: "https://placehold.co/64x64/00d1ff/ffffff?text=OrchaPNG"
+        };
+        // Gambar tanda tanya awal di mesin slot
+        const REEL_INITIAL_IMG = "https://placehold.co/64x64/cccccc/969696?text=?";
+
+        // --- KONFIGURASI BASE SEPOLIA ---
+        const BASE_SEPOLIA_ID = 84532; 
+        const BASE_SEPOLIA_HEX = "0x14a34"; 
+        const RPC_URL = "https://sepolia.base.org";
+        const EXPLORER_URL = "https://sepolia-explorer.base.org";
+        
+        const BET_PRICE = 0.001; 
+        const MAX_USER_BETS = 3;
+
+        // --- STATE ---
+        let provider, signer, userAddress;
+        let selectedItems = [];
+        let isConnected = false;
+
+        // --- INIT ---
+        window.onload = async () => {
+            loadImages(); // Muat gambar ke HTML
+            checkLocalStorageAuth();
+        };
+
+        // Fungsi untuk memasukkan URL gambar ke elemen IMG di HTML
+        function loadImages() {
+            // Set gambar awal reel
+            document.getElementById('imgReel1').src = REEL_INITIAL_IMG;
+            document.getElementById('imgReel2').src = REEL_INITIAL_IMG;
+            document.getElementById('imgReel3').src = REEL_INITIAL_IMG;
+
+            // Set gambar di kartu taruhan
+            for (const [key, url] of Object.entries(ITEM_IMAGES)) {
+                const imgEl = document.getElementById(`img-${key}`);
+                if (imgEl) imgEl.src = url;
+            }
+        }
+
+        // --- WALLET & AUTH LOGIC (Sama seperti sebelumnya) ---
+        async function connectWallet() {
+            if (!window.ethereum) {
+                showToast("MetaMask not installed!");
+                return;
+            }
+            try {
+                provider = new ethers.BrowserProvider(window.ethereum);
+                const accounts = await provider.send("eth_requestAccounts", []);
+                userAddress = accounts[0];
+                await switchNetwork();
+                signer = await provider.getSigner();
+
+                const storedAuth = localStorage.getItem(`auth_${userAddress}`);
+                if (storedAuth) {
+                    const authData = JSON.parse(storedAuth);
+                    const now = new Date().getTime();
+                    if (now < authData.expiry) {
+                        console.log("Session restored");
+                        setConnectedState(true);
+                        return;
+                    }
+                }
+                await requestSignature();
+            } catch (error) {
+                console.error(error);
+                showToast("Connection failed: " + error.message);
+            }
+        }
+
+        async function switchNetwork() {
+            const network = await provider.getNetwork();
+            if (Number(network.chainId) !== BASE_SEPOLIA_ID) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: BASE_SEPOLIA_HEX }],
+                    });
+                } catch (switchError) {
+                    if (switchError.code === 4902) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: BASE_SEPOLIA_HEX,
+                                    chainName: 'Base Sepolia Testnet',
+                                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                                    rpcUrls: [RPC_URL],
+                                    blockExplorerUrls: [EXPLORER_URL]
+                                }],
+                            });
+                        } catch (addError) { throw new Error("Failed to add network"); }
+                    } else { throw switchError; }
+                }
+            }
+        }
+
+        async function requestSignature() {
+            const now = new Date();
+            const timestamp = now.toLocaleString();
+            const message = `Welcome ${userAddress}\nDate: ${timestamp}\n\nPlease sign to verify ownership and login for 30 days.`;
+            try {
+                const signature = await signer.signMessage(message);
+                const expiryDate = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
+                const authData = { signature: signature, timestamp: timestamp, expiry: expiryDate };
+                localStorage.setItem(`auth_${userAddress}`, JSON.stringify(authData));
+                setConnectedState(true);
+                showToast("Login successful! Session saved.");
+            } catch (err) { showToast("User rejected signature"); }
+        }
+
+        function checkLocalStorageAuth() {
+            if(window.ethereum && window.ethereum.selectedAddress) { /* Optional auto-connect check */ }
+        }
+
+        function setConnectedState(status) {
+            isConnected = status;
+            const btn = document.getElementById("connectBtn");
+            if (status) {
+                btn.innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
+                btn.classList.add("connected");
+            } else {
+                btn.innerText = "Connect Wallet";
+                btn.classList.remove("connected");
+            }
+        }
+
+        // --- BETTING LOGIC ---
+        function toggleBet(itemKey) {
+            if (!isConnected) { showToast("Please connect wallet first!"); return; }
+            const index = selectedItems.indexOf(itemKey);
+            const card = document.getElementById(`btn-${itemKey}`);
+
+            if (index > -1) {
+                selectedItems.splice(index, 1);
+                card.classList.remove("selected");
+            } else {
+                if (selectedItems.length >= MAX_USER_BETS) {
+                    showToast(`Max ${MAX_USER_BETS} bets allowed per user!`); return;
+                }
+                selectedItems.push(itemKey);
+                card.classList.add("selected");
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            const total = selectedItems.length * BET_PRICE;
+            document.getElementById("totalCost").innerText = total.toFixed(3);
+            document.getElementById("spinBtn").disabled = selectedItems.length === 0;
+        }
+
+        async function submitBet() {
+            if (selectedItems.length === 0) return;
+            try {
+                const totalEth = (selectedItems.length * BET_PRICE).toString();
+                const amountInWei = ethers.parseEther(totalEth);
+                // DUMMY TRANSACTION (Send to self)
+                const tx = { to: userAddress, value: amountInWei };
+                showToast("Waiting for confirmation...");
+                const txResponse = await signer.sendTransaction(tx);
+                showToast("Transaction Sent! Spinning...");
+                
+                startSpinAnimation(); // Mulai animasi dengan gambar
+
+                await txResponse.wait();
+                showToast("Bet Confirmed on Blockchain!");
+            } catch (err) {
+                console.error(err);
+                showToast("Transaction Failed!");
+            }
+        }
+
+        // --- VISUALS (ANIMASI GAMBAR PNG) ---
+        function startSpinAnimation() {
+            const reels = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
+            // Ambil daftar URL gambar dari konfigurasi
+            const imageUrls = Object.values(ITEM_IMAGES);
+            
+            reels.forEach((reelImgElement, i) => {
+                let counter = 0;
+                const interval = setInterval(() => {
+                    // Ganti src gambar secara acak
+                    reelImgElement.src = imageUrls[Math.floor(Math.random() * imageUrls.length)];
+                    counter++;
+                    if (counter > 10 + (i * 5)) { // Berhenti berurutan
+                        clearInterval(interval);
+                        // Hasil akhir dummy
+                        reelImgElement.src = imageUrls[Math.floor(Math.random() * imageUrls.length)];
+                    }
+                }, 100); // Kecepatan putaran (ms)
+            });
+        }
+
+        function showToast(msg) {
+            const x = document.getElementById("toast");
+            x.innerText = msg;
+            x.className = "show";
+            setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+        }
+
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', () => window.location.reload());
+            window.ethereum.on('chainChanged', () => window.location.reload());
+        }
+    </script>
+</body>
+                  </html>
