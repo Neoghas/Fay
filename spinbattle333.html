@@ -4077,22 +4077,53 @@ document.addEventListener("DOMContentLoaded", () => {
     initResponsiveCanvas();
 
   // --- Listener Tombol Refresh Wheel ---
-    const refreshWheelBtn = document.getElementById("refreshWheelBtn");
-    if (refreshWheelBtn) {
-        refreshWheelBtn.addEventListener("click", async () => {
-            // 1. Efek Visual (Putar Ikon)
-            refreshWheelBtn.classList.add("spinning");
-            
-            // 2. Panggil Fungsi Sync Utama
-            // Ini akan mengambil ulang data dari blockchain & menggambar ulang roda
-            await fetchAndDisplayRoundData(); 
+    const btnRefresh = document.getElementById("refreshWheelBtn");
+    
+    if (btnRefresh) {
+        // Cek di console browser apakah tombol terdeteksi
+        console.log("Tombol Refresh Siap!"); 
 
-            // 3. Berhenti Putar Ikon & Kasih Notif
+        btnRefresh.addEventListener("click", async (e) => {
+            e.preventDefault(); // Mencegah perilaku default jika ada
+            console.log("Tombol Refresh Diklik...");
+
+            // 1. Tambah kelas animasi
+            btnRefresh.classList.add("spinning");
+            
+            // 2. Ubah teks status sementara
+            const statusEl = document.getElementById("statusText");
+            if(statusEl) statusEl.innerText = "Syncing data...";
+
+            try {
+                // 3. Paksa ambil data baru
+                await fetchAndDisplayRoundData();
+                
+                // 4. Sekalian refresh winner list & leaderboard biar sinkron semua
+                await fetchAndDisplayWinners();
+                
+                // Opsional: Refresh leaderboard jika fungsi tersedia
+                if (typeof fetchAndRenderLeaderboard === 'function') {
+                     await fetchAndRenderLeaderboard();
+                }
+
+                // 5. Notifikasi Sukses
+                if (typeof showStatus === 'function') {
+                    showStatus("Data Synced Successfully!", "success");
+                }
+            } catch (error) {
+                console.error("Sync Error:", error);
+                if (typeof showStatus === 'function') {
+                    showStatus("Sync Failed!", "error");
+                }
+            }
+
+            // 6. Hapus animasi setelah jeda singkat
             setTimeout(() => {
-                refreshWheelBtn.classList.remove("spinning");
-                showStatus("Wheel synced!", "success", 2000);
-            }, 500);
+                btnRefresh.classList.remove("spinning");
+            }, 800);
         });
+    } else {
+        console.error("ERROR: Tombol dengan ID 'refreshWheelBtn' tidak ditemukan di HTML!");
     }
     
     // ... (sisa kode event listener Anda) ...
