@@ -295,126 +295,518 @@
 
     <div id="toast">Notification</div>
 
-    <script>
-        const ITEM_IMAGES = { tuna: "https://raw.githubusercontent.com/Neoghas/Fay/refs/heads/main/tuna.svg", crab: "crab.svg", shark: "https://raw.githubusercontent.com/Neoghas/Fay/refs/heads/main/shark.svg", octopus: "octo.svg", shrimp: "shrimp.svg", orcha: "orcha.svg" };
+<script>
+
+        // --- KONFIGURASI GAMBAR ---
+
+        const ITEM_IMAGES = { tuna: "tuna.svg", crab: "crab.svg", shark: "shark.svg", octopus: "octo.svg", shrimp: "shrimp.svg", orcha: "orcha.svg" };
+
         const REEL_INITIAL_IMG = "https://placehold.co/64x64/cccccc/969696?text=?";
+
         
+
+        // --- KONFIGURASI BASE SEPOLIA (ADVANCED WALLET V1) ---
+
+        const BASE_SEPOLIA_ID = 84532; 
+
+        const BASE_SEPOLIA_HEX = "0x14a34"; 
+
+        const RPC_URL = "https://sepolia.base.org";
+
+        const EXPLORER_URL = "https://sepolia-explorer.base.org";
+
+
+
         let provider, signer, userAddress;
+
         let isConnected = false;
+
         let currentSelectedAnimal = { name: '', index: -1 };
+
         let userFreeCredit = 0; 
-        let teamStatus = [0, 0, 0, 0, 0, 0]; 
+
+        
+
+        // Data State: { total: 0, eth: 0, usdt: 0, shib: 0, free: 0 }
+
+        let teamData = Array(6).fill(null).map(() => ({ total: 0, eth: 0, usdt: 0, shib: 0, free: 0 }));
+
+
 
         window.onload = async () => {
+
             loadImages();
-            checkLocalStorageAuth();
+
+            checkLocalStorageAuth(); // Cek sesi login tersimpan
+
             updateDrawButtonState();
+
         };
 
+
+
         function loadImages() {
+
             document.getElementById('imgReel1').src = REEL_INITIAL_IMG;
+
             document.getElementById('imgReel2').src = REEL_INITIAL_IMG;
+
             document.getElementById('imgReel3').src = REEL_INITIAL_IMG;
+
             for (const [key, url] of Object.entries(ITEM_IMAGES)) {
+
                 const imgEl = document.getElementById(`img-${key}`);
+
                 if (imgEl) imgEl.src = url;
+
             }
+
         }
+
+
+
+        // --- WALLET & AUTH LOGIC (VERSI CANGGIH / V1) ---
+
+        async function connectWallet() {
+
+            if (!window.ethereum) {
+
+                showToast("MetaMask not installed!");
+
+                return;
+
+            }
+
+            try {
+
+                provider = new ethers.BrowserProvider(window.ethereum);
+
+                const accounts = await provider.send("eth_requestAccounts", []);
+
+                userAddress = accounts[0];
+
+                await switchNetwork(); // Auto switch network
+
+                signer = await provider.getSigner();
+
+
+
+                // Cek Login Session
+
+                const storedAuth = localStorage.getItem(`auth_${userAddress}`);
+
+                if (storedAuth) {
+
+                    const authData = JSON.parse(storedAuth);
+
+                    const now = new Date().getTime();
+
+                    if (now < authData.expiry) {
+
+                        console.log("Session restored");
+
+                        setConnectedState(true);
+
+                        return;
+
+                    }
+
+                }
+
+                // Jika tidak ada sesi, minta tanda tangan
+
+                await requestSignature();
+
+            } catch (error) {
+
+                console.error(error);
+
+                showToast("Connection failed: " + error.message);
+
+            }
+
+        }
+
+
+
+        async function switchNetwork() {
+
+            const network = await provider.getNetwork();
+
+            if (Number(network.chainId) !== BASE_SEPOLIA_ID) {
+
+                try {
+
+                    await window.ethereum.request({
+
+                        method: 'wallet_switchEthereumChain',
+
+                        params: [{ chainId: BASE_SEPOLIA_HEX }],
+
+                    });
+
+                } catch (switchError) {
+
+                    // Jika network belum ada, tambahkan
+
+                    if (switchError.code === 4902) {
+
+                        try {
+
+                            await window.ethereum.request({
+
+                                method: 'wallet_addEthereumChain',
+
+                                params: [{
+
+                                    chainId: BASE_SEPOLIA_HEX,
+
+                                    chainName: 'Base Sepolia Testnet',
+
+                                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+
+                                    rpcUrls: [RPC_URL],
+
+                                    blockExplorerUrls: [EXPLORER_URL]
+
+                                }],
+
+                            });
+
+                        } catch (addError) { throw new Error("Failed to add network"); }
+
+                    } else { throw switchError; }
+
+                }
+
+            }
+
+        }
+
+
+
+        async function requestSignature() {
+
+            const now = new Date();
+
+            const timestamp = now.toLocaleString();
+
+            const message = `Welcome ${userAddress}\nDate: ${timestamp}\n\nPlease sign to verify ownership and login for 30 days.`;
+
+            try {
+
+                const signature = await signer.signMessage(message);
+
+                // Simpan sesi 30 Hari
+
+                const expiryDate = new Date().getTime() + (30 * 24 * 60 * 60 * 1000);
+
+                const authData = { signature: signature, timestamp: timestamp, expiry: expiryDate };
+
+                localStorage.setItem(`auth_${userAddress}`, JSON.stringify(authData));
+
+                setConnectedState(true);
+
+                showToast("Login successful! Session saved.");
+
+            } catch (err) { showToast("User rejected signature"); }
+
+        }
+
+
+
+        function checkLocalStorageAuth() {
+
+            if(window.ethereum && window.ethereum.selectedAddress) { /* Optional auto-connect check */ }
+
+        }
+
+
+
+        function setConnectedState(status) {
+
+            isConnected = status;
+
+            const btn = document.getElementById("connectBtn");
+
+            if (status) {
+
+                btn.innerText = userAddress.substring(0, 6) + "..." + userAddress.substring(38);
+
+                btn.classList.add("connected");
+
+            } else {
+
+                btn.innerText = "Connect Wallet";
+
+                btn.classList.remove("connected");
+
+            }
+
+        }
+
+
+
+        // --- GAME LOGIC ---
 
         function selectAnimal(animalName, index) {
+
             currentSelectedAnimal = { name: animalName, index: index };
+
             for (let i = 0; i < 6; i++) {
+
                 document.getElementById(`card-${i}`).classList.remove('selected');
+
             }
+
             document.getElementById(`card-${index}`).classList.add('selected');
+
         }
+
+
 
         function triggerBetModal() {
+
             if (!isConnected) { showToast("Please connect wallet first!"); return; }
+
             if (currentSelectedAnimal.index === -1) { showToast("Please Select an Animal First!"); return; }
-            if (teamStatus[currentSelectedAnimal.index] >= 2) { showToast("This Team is FULL!"); return; }
+
+            if (teamData[currentSelectedAnimal.index].total >= 2) { showToast("This Team is FULL!"); return; }
+
+
 
             document.getElementById("modalAnimalName").innerText = currentSelectedAnimal.name.toUpperCase();
+
             document.getElementById("userCreditBalance").innerText = userFreeCredit.toLocaleString();
+
             
+
             const freeCost = 10000;
+
             if (userFreeCredit >= freeCost) {
+
                 document.getElementById("btnFreeBet").disabled = false;
+
                 document.getElementById("btnFreeBet").innerHTML = `Use Credit Bet (10k SHIB)`;
+
             } else {
+
                 document.getElementById("btnFreeBet").disabled = true;
+
                 document.getElementById("btnFreeBet").innerHTML = `Not Enough Credit`;
+
             }
+
             document.getElementById("paymentModal").style.display = "flex";
+
         }
+
+
 
         function closeModal() { document.getElementById("paymentModal").style.display = "none"; }
 
+
+
+        // --- LOGIKA WARNA KARTU & TOMBOL DRAW ---
+
         function updateDrawButtonState() {
-            let activeTeams = teamStatus.filter(count => count > 0).length;
+
+            let activeTeams = teamData.filter(t => t.total > 0).length;
+
+            
+
             const btn = document.getElementById("drawBtn");
+
             const status = document.getElementById("drawStatus");
+
+
+
             if (activeTeams >= 5) {
+
                 btn.disabled = false; btn.classList.add("ready");
+
                 status.innerText = "BATTLE READY! CLICK TO DRAW!"; status.classList.add("ready");
+
             } else {
+
                 btn.disabled = true; btn.classList.remove("ready");
+
                 status.innerText = `Waiting for players... (${activeTeams}/6 Teams Active)`; status.classList.remove("ready");
+
             }
+
+
+
             for(let i=0; i<6; i++) {
+
+                const total = teamData[i].total;
+
+                const card = document.getElementById(`card-${i}`);
+
                 const badge = document.getElementById(`count-${i}`);
-                badge.innerText = `${teamStatus[i]}/2`;
-                if(teamStatus[i] === 2) badge.classList.add("filled");
-                else badge.classList.remove("filled");
+
+
+
+                badge.innerText = `${total}/2`;
+
+                
+
+                card.classList.remove('has-bet', 'is-full');
+
+                badge.classList.remove('filled');
+
+
+
+                if (total === 1) {
+
+                    card.classList.add('has-bet'); // BIRU
+
+                } else if (total >= 2) {
+
+                    card.classList.add('is-full'); // UNGU
+
+                    badge.classList.add('filled');
+
+                }
+
+
+
+                document.getElementById(`eth-${i}`).innerText = teamData[i].eth;
+
+                document.getElementById(`usdt-${i}`).innerText = teamData[i].usdt;
+
+                document.getElementById(`shib-${i}`).innerText = teamData[i].shib;
+
             }
+
         }
+
+
+
+        // --- FUNGSI PEMBAYARAN ---
+
+        async function processPayment(currencyType) {
+
+            if (currentSelectedAnimal.index === -1) return;
+
+            closeModal(); 
+
+            showToast(`Processing ${currencyType} Bet...`);
+
+            
+
+            try {
+
+                setTimeout(() => {
+
+                    const idx = currentSelectedAnimal.index;
+
+                    teamData[idx].total += 1;
+
+                    if (currencyType === 'ETH') teamData[idx].eth += 1;
+
+                    else if (currencyType === 'USDT') teamData[idx].usdt += 1;
+
+                    else if (currencyType === 'SHIB') teamData[idx].shib += 1;
+
+                    else if (currencyType === 'FREE') teamData[idx].free += 1;
+
+
+
+                    showToast("Bet Placed Successfully!");
+
+                    updateDrawButtonState();
+
+                }, 1500);
+
+            } catch (err) { console.error(err); }
+
+        }
+
+
 
         async function executeDraw() {
+
             if (!isConnected) { showToast("Connect Wallet First!"); return; }
+
             showToast("Initiating Draw Sequence...");
+
             setTimeout(() => {
+
                 startSpinAnimation();
+
                 setTimeout(() => {
-                    teamStatus = [0,0,0,0,0,0]; updateDrawButtonState(); showToast("Round Ended!");
+
+                    teamData = Array(6).fill(null).map(() => ({ total: 0, eth: 0, usdt: 0, shib: 0, free: 0 }));
+
+                    updateDrawButtonState();
+
+                    showToast("Round Ended!");
+
                 }, 3000);
+
             }, 1000);
+
         }
 
-        async function processPayment(currency) {
-            if (currentSelectedAnimal.index === -1) return;
-            closeModal(); showToast(`Processing Bet...`);
-            try {
-                setTimeout(() => {
-                    showToast("Bet Placed!"); teamStatus[currentSelectedAnimal.index] += 1; updateDrawButtonState();
-                }, 1500);
-            } catch (err) { console.error(err); }
-        }
 
-        async function connectWallet() {
-            if (!window.ethereum) { showToast("MetaMask not installed!"); return; }
-            try {
-                provider = new ethers.BrowserProvider(window.ethereum);
-                const accounts = await provider.send("eth_requestAccounts", []);
-                userAddress = accounts[0];
-                signer = await provider.getSigner();
-                setConnectedState(true);
-                showToast("Wallet Connected");
-            } catch (error) { showToast("Connection failed"); }
-        }
-        function setConnectedState(status) { isConnected = status; const btn = document.getElementById("connectBtn"); if (status) { btn.innerText = userAddress.substring(0, 6) + "..."; btn.classList.add("connected"); } else { btn.innerText = "Connect Wallet"; btn.classList.remove("connected"); } }
-        
+
         function startSpinAnimation() {
+
             const reels = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
+
             const imageUrls = Object.values(ITEM_IMAGES);
+
             reels.forEach((reelImg, i) => {
+
                 let counter = 0;
+
                 const interval = setInterval(() => {
+
                     reelImg.src = imageUrls[Math.floor(Math.random() * imageUrls.length)];
+
                     counter++; if (counter > 10 + (i * 5)) clearInterval(interval);
+
                 }, 100);
+
             });
+
         }
-        function showToast(msg) { const x = document.getElementById("toast"); x.innerText = msg; x.className = "show"; setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000); }
+
+
+
+        // --- HOVER CHECK & TOAST ---
+
+        let toastTimeout;
+
+        function checkFullHover(index) {
+
+            if (teamData[index].total >= 2) {
+
+                showToast("Maaf kuota kartu hewan ini sudah penuh, silahkan pilih hewan lainnya.");
+
+            }
+
+        }
+
+
+
+        function showToast(msg) {
+
+            const x = document.getElementById("toast");
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+
+            x.innerText = msg;
+
+            x.className = "show";
+
+            toastTimeout = setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+
+        }
+
     </script>
+
 </body>
+
 </html>
