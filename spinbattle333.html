@@ -1629,7 +1629,7 @@
     <div class="controls">
       
       <div class="pool-info-panel">
-          <div class="pool-title">CURRENT POT VALUE</div>
+          <div class="pool-title">CURRENT POOLS VALUE</div>
           <div class="pool-usd" id="pool-usd-value">$ 0.00</div>
           
           <div class="pool-assets-row">
@@ -2718,113 +2718,121 @@ function updateBetList() {
     }
 
     async function fetchAndDisplayRoundData() {
-        let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
-        if (!contract || isSpinning) return;
+    let contract = faylottoContract || new ethers.Contract(FAYLOTTO_ADDRESS, FAYLOTTO_ABI, provider);
+    if (!contract || isSpinning) return;
 
+    try {
+        const latestRoundId = await contract.currentRoundId();
+        
+        if (currentRoundId && !latestRoundId.eq(currentRoundId)) {
+            resetRoundUI(); 
+        }
+        currentRoundId = latestRoundId;
+        
+        // [id, start, end, finalized, winner, eth, usdt, baby, playerCount, weight]
+        const roundInfo = await contract.getRoundBasic(currentRoundId);
+
+        // === BAGIAN SYNC PLAYER (Menggunakan logika reset agar tidak ganda) ===
+        // Kita ambil ulang semua data player setiap refresh agar akurat
+        const playersList = await contract.getRoundPlayers(currentRoundId);
+        
+        // Reset state lokal dulu
+        players = {}; 
+        totalWeight = ethers.BigNumber.from(0);
+
+        for (const pAddr of playersList) {
+            const d = await contract.getPlayerDeposits(currentRoundId, pAddr);
+            // Masukkan data bersih dari blockchain
+            addBetToState(pAddr, d[0], d[1], d[2], ethers.BigNumber.from(0), d[3], false);
+        }
+        updateBetList();
+        // =====================================================================
+
+        updateMyDeposits();
+
+        // === [BAGIAN HITUNG POOL YANG BIKIN MACET SUDAH DIPERBAIKI] ===
         try {
-            const latestRoundId = await contract.currentRoundId();
+            // Data dari getRoundBasic: 
+            // index 5 = totalETH, 6 = totalUSDT, 7 = totalBabyDoge
             
-            if (currentRoundId && !latestRoundId.eq(currentRoundId)) {
-                resetRoundUI(); 
-            }
-            currentRoundId = latestRoundId;
+            // PENGAMAN: Jika decimals belum ter-load, pakai default (6 & 18)
+            const safeUsdtDec = usdtDecimals || 6;
+            const safeBabyDec = babyDogeDecimals || 18;
+
+            // 1. Ambil Nilai Mentah
+            const rEth = parseFloat(ethers.utils.formatEther(roundInfo[5]));
+            const rUsdt = parseFloat(ethers.utils.formatUnits(roundInfo[6], safeUsdtDec));
+            const rBaby = parseFloat(ethers.utils.formatUnits(roundInfo[7], safeBabyDec));
             
-            // [id, start, end, finalized, winner, eth, usdt, baby, playerCount, weight]
-            const roundInfo = await contract.getRoundBasic(currentRoundId);
+            // 2. Update Teks Aset Individual
+            // Cek elemen ada atau tidak sebelum update untuk mencegah error null
+            const elEth = document.getElementById("pool-eth-total");
+            const elUsdt = document.getElementById("pool-usdt-total");
+            const elBaby = document.getElementById("pool-baby-total");
 
-            // Sync Players jika jumlah berbeda
-            const onChainCount = roundInfo[8].toNumber(); // index 8 is playerCount in V4/V3
-            if (Object.keys(players).length !== onChainCount) {
-                const playersList = await contract.getRoundPlayers(currentRoundId);
-                players = {}; 
-                
-                for (const pAddr of playersList) {
-                    // [eth, usdt, baby, weight]
-                    const d = await contract.getPlayerDeposits(currentRoundId, pAddr);
-                    // Catatan: Smart contract menggabungkan Free & Real BabyDoge di index 2
-                    // Kita masukkan ke 'baby' di state, 'free' dibiarkan 0 untuk data lama (karena sulit dipisah via view function ini)
-                    addBetToState(pAddr, d[0], d[1], d[2], ethers.BigNumber.from(0), d[3], false);
-                }
-                updateBetList();
-            }
-
-            updateMyDeposits();
-
-          try {
-                // Data dari getRoundBasic: 
-                // index 5 = totalETH, 6 = totalUSDT, 7 = totalBabyDoge
-                
-                // 1. Ambil Nilai Mentah
-                const rEth = parseFloat(ethers.utils.formatEther(roundInfo[5]));
-                const rUsdt = parseFloat(ethers.utils.formatUnits(roundInfo[6], usdtDecimals));
-                const rBaby = parseFloat(ethers.utils.formatUnits(roundInfo[7], babyDogeDecimals));
-                
-                // 2. Update Teks Aset Individual
-                document.getElementById("pool-eth-total").innerText = rEth > 0 ? rEth.toFixed(4) : "0.00";
-                document.getElementById("pool-usdt-total").innerText = rUsdt > 0 ? rUsdt.toFixed(2) : "0.00";
-                
-                // Format BabyDoge pakai 'k'/'M' biar gak kepanjangan
-                let babyShow = rBaby.toFixed(0);
-                if (rBaby > 1000000) babyShow = (rBaby / 1000000).toFixed(1) + "M";
-                else if (rBaby > 1000) babyShow = (rBaby / 1000).toFixed(1) + "k";
-                document.getElementById("pool-baby-total").innerText = babyShow;
-
-                // 3. Hitung Estimasi Total USD
-                // Pastikan harga sudah terfetch. Jika belum, pakai default 0.
-                const pEth = currentEthPrice || 0;
-                const pBaby = currentBabyDogePrice || 0;
-                
-                // Rumus: (ETH * Harga) + USDT + (Baby * Harga)
-                const totalEstUsd = (rEth * pEth) + rUsdt + (rBaby * pBaby);
-                
-                // Update Teks Utama
-                document.getElementById("pool-usd-value").innerText = "$ " + totalEstUsd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                
-            } catch(errPool) {
-                console.log("Err Pool Calc", errPool);
-            }
-            // ====================================
-
-            // Timer Logic
-            // ... kode selanjutnya ...
-Hasilnya:
-Setiap kali data ronde di-refresh (baik otomatis atau lewat tombol refresh), kotak di atas tombol bet akan menampilkan:
-
-Angka Besar Hijau: $ 154.20 (Contoh total estimasi)
-
-Baris Kecil: Ikon ETH 0.05, Ikon USDT 10.00, Ikon BabyDoge 50M
-
-Ini akan membuat user lebih bersemangat melakukan bet karena melihat angka hadiahnya bertambah.
-
-            // Timer Logic
-            const endTime = roundInfo[2].toNumber() * 1000;
-            const isFinalized = roundInfo[3];
+            if (elEth) elEth.innerText = rEth > 0 ? rEth.toFixed(4) : "0.00";
+            if (elUsdt) elUsdt.innerText = rUsdt > 0 ? rUsdt.toFixed(2) : "0.00";
             
-            if (visualTimer) clearInterval(visualTimer);
+            // Format BabyDoge pakai 'k'/'M' biar gak kepanjangan
+            let babyShow = rBaby.toFixed(0);
+            if (rBaby > 1000000000) babyShow = (rBaby / 1000000000).toFixed(1) + "B";
+            else if (rBaby > 1000000) babyShow = (rBaby / 1000000).toFixed(1) + "M";
+            else if (rBaby > 1000) babyShow = (rBaby / 1000).toFixed(1) + "k";
             
-            if (isFinalized) {
-                document.getElementById("statusText").innerText = "Round Finalized. Waiting new round...";
-                setTimeout(fetchAndDisplayRoundData, 3000);
-            } else if (Date.now() < endTime) {
-                document.getElementById("statusText").innerText = `Round #${currentRoundId} Live!`;
-                const btn = document.getElementById("placeBetBtn");
-            btn.style.display = "block";
-              btn.disabled = false;
-                document.getElementById("finalizeBtn").style.display = "none";
-                startVisualTimer(endTime);
-            } else {
-                document.getElementById("statusText").innerText = "Round Ended!";
-                document.getElementById("timerText").innerText = "00:00";
-                document.getElementById("placeBetBtn").style.display = "none";
-                document.getElementById("finalizeBtn").style.display = "block";
-                isFinalizing = true;
+            if (elBaby) elBaby.innerText = babyShow;
+
+            // 3. Hitung Estimasi Total USD
+            const pEth = currentEthPrice || 0;
+            const pBaby = currentBabyDogePrice || 0;
+            
+            // Rumus: (ETH * Harga) + USDT + (Baby * Harga)
+            const totalEstUsd = (rEth * pEth) + rUsdt + (rBaby * pBaby);
+            
+            // Update Teks Utama
+            const elUsdVal = document.getElementById("pool-usd-value");
+            if (elUsdVal) {
+                elUsdVal.innerText = "$ " + totalEstUsd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             }
+            
+        } catch(errPool) {
+            console.warn("Info: Pool calc pending...", errPool);
+        }
+        // ================================================================
 
-        } catch (e) { console.error("Sync Error", e); }
-    }
+        // Timer Logic
+        const endTime = roundInfo[2].toNumber() * 1000;
+        const isFinalized = roundInfo[3];
+        
+        if (visualTimer) clearInterval(visualTimer);
+        
+        if (isFinalized) {
+            document.getElementById("statusText").innerText = "Round Finalized. Waiting new round...";
+            setTimeout(fetchAndDisplayRoundData, 3000);
+        } else if (Date.now() < endTime) {
+            document.getElementById("statusText").innerText = `Round #${currentRoundId} Live!`;
+            
+            const btn = document.getElementById("placeBetBtn");
+            if(btn) {
+                btn.style.display = "block";
+                btn.disabled = false; // Pastikan tombol hidup
+            }
+            
+            document.getElementById("finalizeBtn").style.display = "none";
+            startVisualTimer(endTime);
+        } else {
+            document.getElementById("statusText").innerText = "Round Ended!";
+            document.getElementById("timerText").innerText = "00:00";
+            
+            const btn = document.getElementById("placeBetBtn");
+            if(btn) btn.style.display = "none";
+            
+            document.getElementById("finalizeBtn").style.display = "block";
+            isFinalizing = true;
+        }
 
+    } catch (e) { console.error("Sync Error", e); }
+              }
     
-
 // === FUNGSI UTAMA: Handle Finalisasi ===
 async function handleRoundFinalized(roundId, winnerAddr) {
     // ... (Tidak ada perubahan pada fungsi ini) ...
