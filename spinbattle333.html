@@ -1450,6 +1450,104 @@
 .wheel-refresh-btn.spinning i {
     animation: spinIcon 1s linear infinite;
 }
+
+  /* Pool */
+
+.pool-info-panel {
+
+    background: rgba(0, 0, 0, 0.6);
+
+    border: 1px solid rgba(120, 0, 255, 0.3);
+
+    border-radius: 12px;
+
+    padding: 10px 15px;
+
+    margin-bottom: 15px; /* Jarak ke tombol Place Bet */
+
+    width: 100%;
+
+    box-sizing: border-box;
+
+    text-align: center;
+
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+
+}
+
+
+
+.pool-title {
+
+    font-size: 10px;
+
+    color: #888;
+
+    letter-spacing: 1px;
+
+    margin-bottom: 2px;
+
+    text-transform: uppercase;
+
+}
+
+
+
+.pool-usd {
+
+    font-size: 24px;
+
+    font-weight: bold;
+
+    color: #00ff88; /* Hijau duit */
+
+    text-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+
+    margin-bottom: 8px;
+
+    font-family: "Ubuntu", sans-serif;
+
+}
+
+
+
+.pool-assets-row {
+
+    display: flex;
+
+    justify-content: center;
+
+    gap: 15px;
+
+    border-top: 1px solid rgba(255,255,255,0.1);
+
+    padding-top: 8px;
+
+}
+
+
+
+.p-asset {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 4px;
+
+    font-size: 11px;
+
+    color: #ccc;
+
+}
+
+
+
+.p-asset span {
+
+    font-family: 'Courier Prime', monospace;
+
+}
   
   @media (min-width: 768px) {
   #donutCanvas {
@@ -1529,6 +1627,23 @@
     </button>
 
     <div class="controls">
+      
+      <div class="pool-info-panel">
+          <div class="pool-title">CURRENT POT VALUE</div>
+          <div class="pool-usd" id="pool-usd-value">$ 0.00</div>
+          
+          <div class="pool-assets-row">
+              <div class="p-asset">
+                  <img src="eth.svg" width="14"> <span id="pool-eth-total">0.0000</span>
+              </div>
+              <div class="p-asset">
+                  <img src="usdt.svg" width="14"> <span id="pool-usdt-total">0.00</span>
+              </div>
+              <div class="p-asset">
+                  <img src="bb.svg" width="14"> <span id="pool-baby-total">0</span>
+              </div>
+          </div>
+      </div>
       <button id="placeBetBtn" class="main-btn">Place Bet</button>
       <button id="finalizeBtn" class="main-btn">Finalize Round</button>
       <div class="status" id="statusText">Wallet not connected</div>
@@ -2634,6 +2749,52 @@ function updateBetList() {
             }
 
             updateMyDeposits();
+
+          try {
+                // Data dari getRoundBasic: 
+                // index 5 = totalETH, 6 = totalUSDT, 7 = totalBabyDoge
+                
+                // 1. Ambil Nilai Mentah
+                const rEth = parseFloat(ethers.utils.formatEther(roundInfo[5]));
+                const rUsdt = parseFloat(ethers.utils.formatUnits(roundInfo[6], usdtDecimals));
+                const rBaby = parseFloat(ethers.utils.formatUnits(roundInfo[7], babyDogeDecimals));
+                
+                // 2. Update Teks Aset Individual
+                document.getElementById("pool-eth-total").innerText = rEth > 0 ? rEth.toFixed(4) : "0.00";
+                document.getElementById("pool-usdt-total").innerText = rUsdt > 0 ? rUsdt.toFixed(2) : "0.00";
+                
+                // Format BabyDoge pakai 'k'/'M' biar gak kepanjangan
+                let babyShow = rBaby.toFixed(0);
+                if (rBaby > 1000000) babyShow = (rBaby / 1000000).toFixed(1) + "M";
+                else if (rBaby > 1000) babyShow = (rBaby / 1000).toFixed(1) + "k";
+                document.getElementById("pool-baby-total").innerText = babyShow;
+
+                // 3. Hitung Estimasi Total USD
+                // Pastikan harga sudah terfetch. Jika belum, pakai default 0.
+                const pEth = currentEthPrice || 0;
+                const pBaby = currentBabyDogePrice || 0;
+                
+                // Rumus: (ETH * Harga) + USDT + (Baby * Harga)
+                const totalEstUsd = (rEth * pEth) + rUsdt + (rBaby * pBaby);
+                
+                // Update Teks Utama
+                document.getElementById("pool-usd-value").innerText = "$ " + totalEstUsd.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+            } catch(errPool) {
+                console.log("Err Pool Calc", errPool);
+            }
+            // ====================================
+
+            // Timer Logic
+            // ... kode selanjutnya ...
+Hasilnya:
+Setiap kali data ronde di-refresh (baik otomatis atau lewat tombol refresh), kotak di atas tombol bet akan menampilkan:
+
+Angka Besar Hijau: $ 154.20 (Contoh total estimasi)
+
+Baris Kecil: Ikon ETH 0.05, Ikon USDT 10.00, Ikon BabyDoge 50M
+
+Ini akan membuat user lebih bersemangat melakukan bet karena melihat angka hadiahnya bertambah.
 
             // Timer Logic
             const endTime = roundInfo[2].toNumber() * 1000;
