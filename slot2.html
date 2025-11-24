@@ -121,6 +121,29 @@
     .dash-val { font-size: 0.9em; font-weight: bold; }
     .btn-disconnect { background: var(--danger); width: 100%; padding: 10px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
 
+    /* --- REFERRAL PANEL (DI BAWAH TOMBOL BET) --- */
+.referral-panel {
+    margin-top: 25px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #333;
+    text-align: center;
+    display: none; /* Hidden default, muncul pas login */
+}
+.ref-label { font-size: 0.7em; color: var(--accent); letter-spacing: 1px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+.ref-nick { font-size: 1.3em; color: var(--gold); font-weight: bold; margin-bottom: 10px; }
+.ref-box {
+    background: #000; padding: 8px 12px; border-radius: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.8em; color: #888; border: 1px solid #333;
+}
+.btn-copy-small {
+    background: var(--primary); color: white; border: none;
+    padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.9em; margin-left: 8px;
+}
+    
     /* TOAST */
     #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 999; bottom: 30px; left: 50%; transform: translateX(-50%); }
     #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
@@ -175,6 +198,30 @@
         </div>
     </div>
 
+    <div id="referralPanel" class="referral-panel">
+
+    <div class="ref-label">Player Profile</div>
+
+    <div class="ref-nick" id="displayNick">Loading...</div>
+
+    
+
+    <div class="ref-label" style="margin-top:10px;">Your Referral Link</div>
+
+    <div class="ref-box">
+
+        <span id="displayRefLink" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 200px;">...</span>
+
+        <button class="btn-copy-small" onclick="copyRefLink()">Copy</button>
+
+    </div>
+
+</div>
+
+
+
+<p style="margin-top:20px; color:#aaa; font-size:0.8em;">*Min 5 teams required to Draw</p>
+
     <div id="paymentModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-title">BET ON <span id="modalAnimalName">ANIMAL</span></div>
@@ -206,41 +253,23 @@
     </div>
 
     <div id="walletInfoModal" class="modal-overlay">
-        <div class="modal-content">
-            <button class="close-modal" style="position:absolute; top:10px; right:15px; margin:0; text-decoration:none; font-size:1.5em;" onclick="closeModal('walletInfoModal')">&times;</button>
-            
-            <div class="dash-profile">
-                <div class="dash-nick" id="dashNick">Loading...</div>
-                <div style="font-size:0.8em; color:#aaa;" id="dashAddress">0x00...0000</div>
-                
-                <div class="dash-ref-box">
-                    <span id="dashRefLink" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">...</span>
-                    <button class="dash-copy" onclick="copyRefLink()">Copy</button>
-                </div>
-            </div>
-
-            <div class="dash-balance-grid">
-                <div class="dash-item">
-                    <span class="dash-label">ETH Balance</span>
-                    <span class="dash-val stat-eth" id="balETH">0.000</span>
-                </div>
-                <div class="dash-item">
-                    <span class="dash-label">USDT Balance</span>
-                    <span class="dash-val stat-usdt" id="balUSDT">0.00</span>
-                </div>
-                <div class="dash-item">
-                    <span class="dash-label">SHIB Balance</span>
-                    <span class="dash-val stat-shib" id="balSHIB">0.00</span>
-                </div>
-                <div class="dash-item">
-                    <span class="dash-label">Free Credits (SHIB)</span>
-                    <span class="dash-val stat-shib" id="balFree">0.00</span>
-                </div>
-            </div>
-            
-            <div style="font-size:0.8em; color:#888; margin-bottom:10px;">*Info Deposit/Bet based on available balance</div>
-            <button class="btn-disconnect" onclick="disconnectWallet()">DISCONNECT</button>
+    <div class="modal-content">
+        <button class="close-modal" style="position:absolute; top:10px; right:15px; margin:0; text-decoration:none; font-size:1.5em;" onclick="closeModal('walletInfoModal')">&times;</button>
+        
+        <div class="dash-profile">
+            <div style="font-size:1.1em; font-weight:bold; color:white; margin-bottom:5px;">WALLET INFO</div>
+            <div style="font-size:0.85em; color:#aaa; background:#111; padding:5px 10px; border-radius:20px; display:inline-block;" id="dashAddress">0x00...0000</div>
         </div>
+
+        <div class="dash-balance-grid">
+            <div class="dash-item"> <span class="dash-label">ETH Balance</span> <span class="dash-val stat-eth" id="balETH">0.000</span> </div>
+            <div class="dash-item"> <span class="dash-label">USDT Balance</span> <span class="dash-val stat-usdt" id="balUSDT">0.00</span> </div>
+            <div class="dash-item"> <span class="dash-label">SHIB Balance</span> <span class="dash-val stat-shib" id="balSHIB">0.00</span> </div>
+            <div class="dash-item"> <span class="dash-label">Free Credits (SHIB)</span> <span class="dash-val stat-shib" id="balFree">0.00</span> </div>
+        </div>
+        
+        <button class="btn-disconnect" onclick="disconnectWallet()">DISCONNECT</button>
+    </div>
     </div>
 
     <div id="toast">Notification</div>
@@ -376,58 +405,42 @@
 
     // 3. DASHBOARD LOGIC
     async function openWalletDashboard() {
-        document.getElementById('walletInfoModal').style.display = 'flex';
-        document.getElementById('dashAddress').innerText = userAddress;
-        
-        // Load Nickname & Ref Link
-        try {
-            const userData = await gameContract.users(userAddress);
-            const nickname = userData.nickname || "Unknown";
-            document.getElementById('dashNick').innerText = nickname;
-            
-            // Generate Link: website.com?ref=nickname
-            const baseUrl = window.location.origin + window.location.pathname;
-            const refUrl = `${baseUrl}?ref=${nickname}`;
-            document.getElementById('dashRefLink').innerText = refUrl;
-        } catch(e) { document.getElementById('dashNick').innerText = "Error"; }
+    document.getElementById('walletInfoModal').style.display = 'flex';
+    document.getElementById('dashAddress').innerText = userAddress;
+    
+    try {
+        const balEth = await provider.getBalance(userAddress);
+        document.getElementById('balETH').innerText = parseFloat(ethers.formatEther(balEth)).toFixed(4);
 
-        // Load Balances
-        try {
-            // ETH
-            const balEth = await provider.getBalance(userAddress);
-            document.getElementById('balETH').innerText = parseFloat(ethers.formatEther(balEth)).toFixed(4);
+        const usdtContract = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, provider);
+        const balUsdt = await usdtContract.balanceOf(userAddress);
+        document.getElementById('balUSDT').innerText = parseFloat(ethers.formatUnits(balUsdt, 6)).toFixed(2);
 
-            // USDT
-            const usdtContract = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, provider);
-            const balUsdt = await usdtContract.balanceOf(userAddress);
-            document.getElementById('balUSDT').innerText = parseFloat(ethers.formatUnits(balUsdt, 6)).toFixed(2);
+        const shibContract = new ethers.Contract(SHIB_ADDRESS, ERC20_ABI, provider);
+        const balShib = await shibContract.balanceOf(userAddress);
+        document.getElementById('balSHIB').innerText = parseFloat(ethers.formatEther(balShib)).toFixed(2);
 
-            // SHIB
-            const shibContract = new ethers.Contract(SHIB_ADDRESS, ERC20_ABI, provider);
-            const balShib = await shibContract.balanceOf(userAddress);
-            document.getElementById('balSHIB').innerText = parseFloat(ethers.formatEther(balShib)).toFixed(2);
-
-            // Free Credits
-            const bonus = await gameContract.getBonusBalance(userAddress);
-            document.getElementById('balFree').innerText = parseFloat(ethers.formatEther(bonus)).toFixed(2);
-
-        } catch(e) { console.error("Load balance error", e); }
+        const bonus = await gameContract.getBonusBalance(userAddress);
+        document.getElementById('balFree').innerText = parseFloat(ethers.formatEther(bonus)).toFixed(2);
+    } catch(e) { console.error(e); }
     }
 
     function copyRefLink() {
-        const text = document.getElementById('dashRefLink').innerText;
-        navigator.clipboard.writeText(text).then(() => showToast("Link Copied!"));
+    const text = document.getElementById('displayRefLink').innerText;
+    navigator.clipboard.writeText(text).then(() => showToast("Link Copied!"));
     }
 
     function disconnectWallet() {
-        isConnected = false;
-        localStorage.removeItem(`auth_${userAddress}`);
-        userAddress = null;
-        signer = null;
-        gameContract = null;
-        setConnectedState(false);
-        closeModal('walletInfoModal');
-        showToast("Disconnected");
+    isConnected = false;
+    localStorage.removeItem(`auth_${userAddress}`);
+    userAddress = null; signer = null; gameContract = null;
+    setConnectedState(false);
+    closeModal('walletInfoModal');
+    
+    // Hide panel referral
+    document.getElementById('referralPanel').style.display = 'none';
+    
+    showToast("Disconnected");
     }
 
     // Register User (Use Detected Referrer)
@@ -450,42 +463,90 @@
 
     // ... (Sisa Logika Game, Bet, Draw sama seperti sebelumnya) ...
     
-    async function refreshGameData() {
-        if(!gameContract) return;
-        try {
-            const bonus = await gameContract.getBonusBalance(userAddress);
-            document.getElementById('userBonusBalance').innerText = ethers.formatEther(bonus);
-            
-            const costFree = ethers.parseEther("10000"); 
-            const btnFree = document.getElementById('btnFreeBet');
-            if(bonus >= costFree) {
-                btnFree.disabled = false; btnFree.innerText = "Use Bonus Bet (10k SHIB)";
-            } else {
-                btnFree.disabled = true; btnFree.innerText = "Insufficient Bonus";
-            }
+async function refreshGameData() {
 
-            let activeCount = 0;
-            for(let i=0; i<6; i++) {
-                const count = await gameContract.activeTeamCounts(i);
-                teamData[i] = Number(count);
-                if(teamData[i] > 0) activeCount++;
-                const badge = document.getElementById(`count-${i}`);
-                badge.innerText = `${teamData[i]}/2`;
-                if(teamData[i] >= 2) badge.classList.add('filled'); else badge.classList.remove('filled');
-            }
-            
-            const btnDraw = document.getElementById('drawBtn');
-            const statText = document.getElementById('drawStatus');
-            if(activeCount >= 5) {
-                btnDraw.disabled = false; btnDraw.classList.add('ready');
-                statText.innerText = "BATTLE READY! CLICK TO DRAW!"; statText.classList.add('ready');
-            } else {
-                btnDraw.disabled = true; btnDraw.classList.remove('ready');
-                statText.innerText = `Waiting for players... (${activeCount}/6 Teams Active)`; statText.classList.remove('ready');
-            }
-        } catch(e) { console.error(e); }
-    }
+    if(!gameContract) return;
 
+    try {
+
+        // --- LOGIC BARU: TAMPILKAN REFERRAL DI HALAMAN DEPAN ---
+
+        const userData = await gameContract.users(userAddress);
+
+        if(userData.isRegistered) {
+
+            document.getElementById('referralPanel').style.display = 'block';
+
+            document.getElementById('displayNick').innerText = userData.nickname;
+
+            
+
+            const baseUrl = window.location.origin + window.location.pathname;
+
+            document.getElementById('displayRefLink').innerText = `${baseUrl}?ref=${userData.nickname}`;
+
+        }
+
+
+
+        // ... (Sisa logika refresh bonus & draw button tetap sama seperti sebelumnya) ...
+
+        const bonus = await gameContract.getBonusBalance(userAddress);
+
+        document.getElementById('userBonusBalance').innerText = ethers.formatEther(bonus);
+
+        // ... dst (kode lama tetap ada)
+
+        const costFree = ethers.parseEther("10000"); 
+
+        const btnFree = document.getElementById('btnFreeBet');
+
+        if(bonus >= costFree) { btnFree.disabled = false; btnFree.innerText = "Use Bonus Bet (10k SHIB)"; } 
+
+        else { btnFree.disabled = true; btnFree.innerText = "Insufficient Bonus"; }
+
+
+
+        let activeCount = 0;
+
+        for(let i=0; i<6; i++) {
+
+            const count = await gameContract.activeTeamCounts(i);
+
+            teamData[i] = Number(count);
+
+            if(teamData[i] > 0) activeCount++;
+
+            const badge = document.getElementById(`count-${i}`);
+
+            badge.innerText = `${teamData[i]}/2`;
+
+            if(teamData[i] >= 2) badge.classList.add('filled'); else badge.classList.remove('filled');
+
+        }
+
+        const btnDraw = document.getElementById('drawBtn');
+
+        const statText = document.getElementById('drawStatus');
+
+        if(activeCount >= 5) {
+
+            btnDraw.disabled = false; btnDraw.classList.add('ready');
+
+            statText.innerText = "BATTLE READY! CLICK TO DRAW!"; statText.classList.add('ready');
+
+        } else {
+
+            btnDraw.disabled = true; btnDraw.classList.remove('ready');
+
+            statText.innerText = `Waiting for players... (${activeCount}/6 Teams Active)`; statText.classList.remove('ready');
+
+        }
+
+    } catch(e) { console.error(e); }
+
+}
+    
     async function processPayment(currencyType) {
         if (currentSelectedAnimal.index === -1) return;
         const idx = currentSelectedAnimal.index;
