@@ -31,14 +31,14 @@
     }
     .wallet-btn.connected { background: var(--success); border: 1px solid #fff; cursor: default; }
 
-    /* Fix Layout Simetris: Gunakan flex column dan width yang konsisten */
+    /* Fix Layout Simetris */
     .layout-container { 
         width: 94%; 
         max-width: 480px; 
         display: flex; 
         flex-direction: column; 
         align-items: center;
-        margin: 0 auto; /* Tengah */
+        margin: 0 auto; 
     }
 
     /* SLOT MACHINE */
@@ -56,7 +56,7 @@
     .draw-section { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
     .btn-draw {
         background: linear-gradient(45deg, #333, #555); color: #888; border: 2px solid #444;
-        padding: 12px 0; width: 60%; border-radius: 30px;
+        padding: 12px 0; width: 70%; border-radius: 30px;
         font-size: 0.9em; font-weight: 800; letter-spacing: 1px;
         cursor: not-allowed; transition: 0.3s; box-shadow: none; text-transform: uppercase;
     }
@@ -99,7 +99,7 @@
     .c-stat { display: flex; align-items: center; gap: 2px; }
 
     /* BUTTON BET */
-    .main-bet-btn { margin-top: 15px; background: var(--primary); color: white; border: 3px solid #0027b3; padding: 13px 0; width: 60%; border-radius: 50px; font-size: 0.9em; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 82, 255, 0.4); }
+    .main-bet-btn { margin-top: 15px; background: var(--primary); color: white; border: 3px solid #0027b3; padding: 13px 0; width: 70%; border-radius: 50px; font-size: 0.9em; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 82, 255, 0.4); }
     .main-bet-btn:hover { background: var(--accent); transform: translateY(-2px); }
     
     /* MODALS */
@@ -119,11 +119,16 @@
     .dash-label { font-size: 0.65em; color: #aaa; display: block; }
     .dash-val { font-size: 0.85em; font-weight: bold; }
     .btn-disconnect { background: var(--danger); width: 100%; padding: 10px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; }
-
+    
     /* REFERRAL PANEL */
     .referral-panel { margin-top: 20px; width: 100%; background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; border: 1px solid #333; text-align: center; display: none; }
     .ref-box { background: #000; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; margin-top: 5px; font-size: 0.8em; color: #888; }
     .btn-copy { background: var(--primary); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.9em; }
+
+    /* WITHDRAW SECTION */
+    .withdraw-section { margin-top:15px; padding-top:10px; border-top:1px dashed #444; text-align:left; }
+    .withdraw-title { font-size:0.8em; color:#aaa; margin-bottom:5px; }
+    .btn-withdraw-small { background: var(--success); color:black; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; cursor:pointer; font-size:0.8em; float:right; }
 
     #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 999; bottom: 30px; left: 50%; transform: translateX(-50%); }
     #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
@@ -182,11 +187,11 @@
                 </div>
             </div>
 
-            <div style="width:100%; margin-top:20px; font-size:0.7em; color:#aaa; text-align:left;">CURRENT ROUND POOLS</div>
+            <div style="width:100%; margin-top:20px; font-size:0.7em; color:#aaa; text-align:left;">ESTIMATED POOLS (ROUND)</div>
             <div class="pool-dashboard">
-                <div class="pool-box"><span class="pool-title">ETH POOL</span><span class="pool-value text-eth" id="poolTotalETH">0.0000</span></div>
-                <div class="pool-box"><span class="pool-title">USDT POOL</span><span class="pool-value text-usdt" id="poolTotalUSDT">0.00</span></div>
-                <div class="pool-box"><span class="pool-title">SHIB POOL</span><span class="pool-value text-shib" id="poolTotalSHIB">0</span></div>
+                <div class="pool-box"><span class="pool-title">ETH</span><span class="pool-value text-eth" id="poolTotalETH">0.0000</span></div>
+                <div class="pool-box"><span class="pool-title">USDT</span><span class="pool-value text-usdt" id="poolTotalUSDT">0.00</span></div>
+                <div class="pool-box"><span class="pool-title">SHIB</span><span class="pool-value text-shib" id="poolTotalSHIB">0</span></div>
             </div>
 
             <button id="mainBetBtn" class="main-bet-btn" onclick="triggerBetModal()">PLACE BET</button>
@@ -233,15 +238,35 @@
         <div class="modal-content">
             <button class="close-modal" onclick="closeModal('walletInfoModal')">&times;</button>
             <div class="dash-profile">
-                <div style="font-weight:bold; margin-bottom:5px;">WALLET CONNECTED</div>
+                <div style="font-weight:bold; margin-bottom:5px;">WALLET & WINNINGS</div>
                 <div style="font-size:0.8em; color:#aaa; background:#111; padding:5px; border-radius:4px;" id="dashAddress">...</div>
             </div>
+            
+            <div style="font-size:0.7em; color:#888; margin-bottom:5px;">WALLET BALANCE</div>
             <div class="dash-balance-grid">
                 <div class="dash-item"><span class="dash-label">ETH</span><span class="dash-val text-eth" id="balETH">0.000</span></div>
                 <div class="dash-item"><span class="dash-label">USDT</span><span class="dash-val text-usdt" id="balUSDT">0.00</span></div>
                 <div class="dash-item"><span class="dash-label">SHIB</span><span class="dash-val text-shib" id="balSHIB">0.00</span></div>
-                <div class="dash-item"><span class="dash-label">CREDIT</span><span class="dash-val text-shib" id="balFree">0.00</span></div>
             </div>
+
+            <div class="withdraw-section">
+                <div class="withdraw-title">GAME CREDIT / WINNINGS (IN CONTRACT)</div>
+                <div class="dash-balance-grid">
+                    <div class="dash-item">
+                        <span class="dash-label">ETH Credit</span><span class="dash-val text-eth" id="credETH">0.000</span>
+                        <button class="btn-withdraw-small" onclick="withdraw('ETH')">W/D</button>
+                    </div>
+                    <div class="dash-item">
+                        <span class="dash-label">USDT Credit</span><span class="dash-val text-usdt" id="credUSDT">0.00</span>
+                        <button class="btn-withdraw-small" onclick="withdraw('USDT')">W/D</button>
+                    </div>
+                    <div class="dash-item">
+                        <span class="dash-label">SHIB Credit</span><span class="dash-val text-shib" id="credSHIB">0.00</span>
+                        <button class="btn-withdraw-small" onclick="withdraw('SHIB')">W/D</button>
+                    </div>
+                </div>
+            </div>
+
             <button class="btn-disconnect" onclick="disconnectWallet()">DISCONNECT</button>
         </div>
     </div>
@@ -261,15 +286,16 @@
     
     // ERC20 ABI Standard (Decimals included)
     const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
-
+        
     const ITEM_IMAGES = { tuna: "tuna.svg", crab: "crab.svg", shark: "shark.svg", octopus: "octo.svg", shrimp: "shrimp.svg", orcha: "orcha.svg" };
-    
+    const IMAGE_LIST = Object.values(ITEM_IMAGES); // Array for indexing 0-5
+
     let provider, signer, userAddress, gameContract;
     let isConnected = false;
     let currentSelectedAnimal = { name: '', index: -1 };
     let detectedReferrer = "";
     
-    // State Lokal untuk Pool (Karena Kontrak tidak menyimpan total pool public secara detail, kita hitung manual dari event atau estimasi)
+    // State Lokal untuk Pool 
     let roundPools = { eth: 0, usdt: 0, shib: 0 };
 
     window.onload = async () => {
@@ -341,7 +367,7 @@
             if(user.isRegistered) {
                 document.getElementById('referralPanel').style.display = 'block';
                 document.getElementById('displayNick').innerText = user.nickname;
-                document.getElementById('displayRefLink').innerText = window.location.origin + "?ref=" + user.nickname;
+                document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + user.nickname;
             }
 
             // 2. Load Bonus
@@ -352,7 +378,7 @@
             if(bonus >= minFree) { btnFree.disabled = false; btnFree.style.background = "var(--success)"; }
             else { btnFree.disabled = true; btnFree.style.background = "#333"; }
 
-            // 3. Load Active Teams (Count Only)
+            // 3. Load Active Teams (Count Only - Fix Reset Bug)
             let activeCount = 0;
             for(let i=0; i<6; i++) {
                 const c = Number(await gameContract.activeTeamCounts(i));
@@ -365,7 +391,7 @@
             // 4. Update Draw Button
             const btnDraw = document.getElementById('drawBtn');
             const status = document.getElementById('drawStatus');
-            if(activeCount >= 5) { // Changed requirement to match contract logic (Min 5)
+            if(activeCount >= 5) { 
                 btnDraw.disabled = false; btnDraw.classList.add('ready');
                 status.innerText = "READY TO DRAW!"; status.classList.add('ready');
             } else {
@@ -373,27 +399,22 @@
                 status.innerText = `Waiting players (${activeCount}/6)...`; status.classList.remove('ready');
             }
 
-            // NOTE: Pool total tidak disimpan di kontrak public var, jadi ini reset ke 0 saat refresh.
-            // Agar persistent harus pakai The Graph atau backend indexer.
-            // Untuk sekarang kita biarkan reset atau simpan di localStorage sementara.
             updatePoolDisplay();
 
         } catch(e) { console.error(e); }
     }
 
     function updatePoolDisplay() {
+        // Menampilkan estimasi pool lokal yang diupdate saat bet
         document.getElementById('poolTotalETH').innerText = roundPools.eth.toFixed(4);
         document.getElementById('poolTotalUSDT').innerText = roundPools.usdt.toFixed(2);
         document.getElementById('poolTotalSHIB').innerText = roundPools.shib.toLocaleString();
     }
 
-    // --- BETTING LOGIC (FIXED DECIMALS) ---
+    // --- BETTING LOGIC (FIXED DYNAMIC DECIMALS) ---
     async function processPayment(currencyType) {
         if(currentSelectedAnimal.index === -1) return;
         const idx = currentSelectedAnimal.index;
-        
-        // Cek Local Limit (3 Hewan Max - Optional Logic Frontend)
-        // Implementasi simple: Cek history bet lokal user (bisa di-bypass via direct contract call, tapi cukup untuk UX)
         
         closeModal('paymentModal');
         showToast(`Processing ${currencyType}...`);
@@ -407,19 +428,20 @@
                 roundPools.eth += 0.0005;
             } 
             else if(currencyType === 'USDT') {
-                // Cek Decimals Token USDT Asli
+                // 1. Cek Decimals Token USDT Asli
                 const usdt = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, provider);
-                const dec = await usdt.decimals(); // Fetch decimals dynamic
-                const amount = ethers.parseUnits("10", dec); 
+                const dec = await usdt.decimals(); 
+                const amount = ethers.parseUnits("10", dec); // Dynamic, bisa 10e6 atau 10e18 tergantung tokennya
+                
                 await checkApprove(USDT_ADDRESS, amount);
                 tx = await gameContract.betToken(idx, 1, false); // Enum USDT = 1
                 roundPools.usdt += 10;
             }
             else if(currencyType === 'SHIB') {
-                // Cek Decimals Token SHIB
                 const shib = new ethers.Contract(SHIB_ADDRESS, ERC20_ABI, provider);
                 const dec = await shib.decimals();
                 const amount = ethers.parseUnits("110000", dec);
+                
                 await checkApprove(SHIB_ADDRESS, amount);
                 tx = await gameContract.betToken(idx, 2, false); // Enum SHIB = 2
                 roundPools.shib += 110000;
@@ -432,10 +454,8 @@
             await tx.wait();
             showToast("Bet Placed Successfully!");
             
-            // Update UI Counter & Pool Lokal
+            // Update UI
             updatePoolDisplay();
-            
-            // Update Small Counter di Kartu (Estimasi)
             const statId = currencyType === 'ETH' ? `c-eth-${idx}` : (currencyType === 'USDT' ? `c-usdt-${idx}` : `c-shib-${idx}`);
             const el = document.getElementById(statId);
             if(el) el.innerText = Number(el.innerText) + 1;
@@ -459,7 +479,7 @@
         }
     }
 
-    // --- DRAW & RESULT LOGIC (FIXED) ---
+    // --- DRAW & RESULT LOGIC (SYNC WITH BLOCKCHAIN) ---
     async function executeDraw() {
         if(!gameContract) return;
         try {
@@ -470,39 +490,70 @@
             showToast("Spinning...");
             startSpinAnimation();
             
-            // Tunggu 35 Detik, lalu fetch Result dari Blockchain
+            // Tunggu 10 detik animasi, lalu fetch REAL Result
             setTimeout(async () => {
                 await checkRoundResult();
                 refreshGameData();
-            }, 35000); 
+            }, 10000); 
 
         } catch(err) { showToast("Draw Error: " + err.reason); }
     }
 
     async function checkRoundResult() {
-        // Ambil Data Ronde Terakhir
-        const roundId = await gameContract.currentRoundId();
-        const prevRound = Number(roundId) - 1; 
+        // 1. Ambil ID Ronde Terakhir (-1 dari current karena executeDraw menaikkan ID)
+        const nextRoundId = await gameContract.currentRoundId();
+        const prevRound = Number(nextRoundId) - 1; 
         if(prevRound < 1) return;
 
+        // 2. Ambil Result dari Contract
         const result = await gameContract.getRoundResult(prevRound);
-        // result: [reels[3], outcome, timestamp, winner]
+        // result.reels = [idx1, idx2, idx3]
         
-        // Tampilkan Hasil Reel yang BENAR dari Blockchain
-        // (Mapping angka 0-5 ke Gambar)
-        const images = Object.values(ITEM_IMAGES);
-        document.getElementById('imgReel1').src = images[result[0][0]]; // Reel 1
-        document.getElementById('imgReel2').src = images[result[0][1]]; // Reel 2
-        document.getElementById('imgReel3').src = images[result[0][2]]; // Reel 3
+        // 3. Tampilkan Gambar Sesuai Blockchain
+        const r1 = Number(result[0][0]);
+        const r2 = Number(result[0][1]);
+        const r3 = Number(result[0][2]);
+        
+        stopSpinAnimation(r1, r2, r3);
 
-        // Tampilkan Notif Pemenang
-        showToast(`Result: ${result[1]}! Checking Winners...`);
+        showToast(`Result: ${result[1]}! Check your winnings.`);
         
-        // Cek Event WinDistributed untuk melihat apakah user ini menang
-        // (Fitur advanced butuh query logs, disini kita pakai toast simple dulu)
         // Reset Pool Lokal
         roundPools = { eth: 0, usdt: 0, shib: 0 };
         updatePoolDisplay();
+    }
+
+    let spinInterval;
+    function startSpinAnimation() {
+        const els = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
+        spinInterval = setInterval(() => {
+            els.forEach(el => el.src = IMAGE_LIST[Math.floor(Math.random()*6)]);
+        }, 100);
+    }
+
+    function stopSpinAnimation(i1, i2, i3) {
+        clearInterval(spinInterval);
+        document.getElementById('imgReel1').src = IMAGE_LIST[i1];
+        document.getElementById('imgReel2').src = IMAGE_LIST[i2];
+        document.getElementById('imgReel3').src = IMAGE_LIST[i3];
+    }
+
+    // --- WITHDRAW LOGIC ---
+    async function withdraw(curr) {
+        try {
+            showToast(`Withdrawing ${curr}...`);
+            // Enum: ETH=0, USDT=1, SHIB=2
+            let cIdx = curr === 'ETH' ? 0 : (curr === 'USDT' ? 1 : 2);
+            
+            // Withdraw semua saldo yang ada di credit
+            const bal = await gameContract.userCredits(userAddress, cIdx);
+            if(bal == 0) { showToast("No balance to withdraw"); return; }
+            
+            const tx = await gameContract.withdrawCredit(cIdx, bal);
+            await tx.wait();
+            showToast("Withdraw Success!");
+            openWalletDashboard(); // Refresh UI
+        } catch(err) { showToast("Withdraw Failed"); }
     }
 
     // --- HELPER FUNCTIONS ---
@@ -518,29 +569,46 @@
         document.getElementById('paymentModal').style.display = 'flex';
     }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function startSpinAnimation() {
-        const els = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
-        const imgs = Object.values(ITEM_IMAGES);
-        let count = 0;
-        const interval = setInterval(() => {
-            els.forEach(el => el.src = imgs[Math.floor(Math.random()*imgs.length)]);
-            count++;
-            if(count > 350) clearInterval(interval); // 35s duration
-        }, 100);
-    }
+    
     function showToast(msg) {
         const x = document.getElementById("toast");
         x.innerText = msg; x.className = "show";
         setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
     }
+    
     async function openWalletDashboard() {
         document.getElementById('walletInfoModal').style.display = 'flex';
         document.getElementById('dashAddress').innerText = userAddress;
-        // Fetch Balances
-        const balEth = await provider.getBalance(userAddress);
-        document.getElementById('balETH').innerText = parseFloat(ethers.formatEther(balEth)).toFixed(4);
-        // ... (Fetch Token Balances Logic same as before) ...
+        
+        try {
+            // Wallet Balance
+            const balEth = await provider.getBalance(userAddress);
+            document.getElementById('balETH').innerText = parseFloat(ethers.formatEther(balEth)).toFixed(4);
+            
+            const usdt = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, provider);
+            const balUsdt = await usdt.balanceOf(userAddress);
+            const decUsdt = await usdt.decimals();
+            document.getElementById('balUSDT').innerText = parseFloat(ethers.formatUnits(balUsdt, decUsdt)).toFixed(2);
+
+            const shib = new ethers.Contract(SHIB_ADDRESS, ERC20_ABI, provider);
+            const balShib = await shib.balanceOf(userAddress);
+            const decShib = await shib.decimals();
+            document.getElementById('balSHIB').innerText = parseFloat(ethers.formatUnits(balShib, decShib)).toFixed(2);
+
+            // Game Credits (Winnings)
+            const credEth = await gameContract.userCredits(userAddress, 0);
+            document.getElementById('credETH').innerText = parseFloat(ethers.formatEther(credEth)).toFixed(4);
+            
+            const credUsdt = await gameContract.userCredits(userAddress, 1);
+            // Note: userCredits simpan raw value. USDT di contract biasa 6 desimal.
+            document.getElementById('credUSDT').innerText = parseFloat(ethers.formatUnits(credUsdt, 6)).toFixed(2);
+            
+            const credShib = await gameContract.userCredits(userAddress, 2);
+            document.getElementById('credSHIB').innerText = parseFloat(ethers.formatEther(credShib)).toFixed(2);
+
+        } catch(e) { console.error(e); }
     }
+    
     function disconnectWallet() {
         localStorage.removeItem(`auth_${userAddress}`);
         location.reload();
@@ -561,4 +629,4 @@
     function checkLocalStorageAuth() { /* Auto-login logic inside onload */ }
 </script>
 </body>
-</html>
+    </html>
