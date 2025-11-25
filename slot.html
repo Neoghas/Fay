@@ -1,570 +1,469 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faylotto Ultimate - Base Sepolia</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <style>
-        :root {
-            --primary: #0052ff; /* Base Color */
-            --accent: #00ff9d;
-            --bg: #0a0b1e;
-            --card: #14162d;
-            --text: #ffffff;
-            --danger: #ff4d4d;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Faylotto Ultimate - Frontend</title>
 
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        
-        /* Layout Utilities */
-        .container { max-width: 1200px; margin: 0 auto; }
-        .grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-        .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .hidden { display: none !important; }
-        .row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
-        .col { flex: 1; }
+  <!-- Ethers.js v5 -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
 
-        /* Typography & Elements */
-        h1, h2, h3 { margin-top: 0; color: var(--accent); }
-        button {
-            background: var(--primary); color: white; border: none; padding: 10px 20px;
-            border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; width: 100%;
-        }
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
-        button:disabled { background: #555; cursor: not-allowed; }
-        button.secondary { background: #333; border: 1px solid #555; }
-        button.danger { background: var(--danger); }
-        
-        input, select, textarea {
-            width: 100%; padding: 10px; background: #000; border: 1px solid #444;
-            color: white; border-radius: 6px; box-sizing: border-box; margin-bottom: 10px;
-        }
-
-        /* Specific Modules */
-        #wallet-status { font-size: 0.9em; color: #aaa; margin-bottom: 20px; text-align: right; }
-        .animal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
-        .animal-btn { 
-            aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            border: 2px solid #333; background: #1a1a1a;
-        }
-        .animal-btn.selected { border-color: var(--accent); background: rgba(0, 255, 157, 0.1); }
-        
-        .reels-display { 
-            display: flex; justify-content: center; gap: 15px; font-size: 2em; 
-            background: #000; padding: 20px; border-radius: 10px; margin-bottom: 15px; border: 1px solid var(--accent);
-        }
-        .reel { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; background: #222; border-radius: 5px; }
-
-        .tabs { display: flex; gap: 10px; margin-bottom: 15px; }
-        .tab-btn { background: transparent; border-bottom: 2px solid transparent; border-radius: 0; }
-        .tab-btn.active { border-color: var(--accent); color: var(--accent); }
-
-        /* Toast Notification */
-        #toast {
-            visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center;
-            border-radius: 8px; padding: 16px; position: fixed; z-index: 1; bottom: 30px; right: 30px;
-        }
-        #toast.show { visibility: visible; -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-    </style>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa4b2;--accent:#6ee7b7}
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{margin:0;background:linear-gradient(180deg,#071021 0%,#071827 100%);color:#dbe7ef;min-height:100vh;padding:28px}
+    .container{max-width:1000px;margin:0 auto}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:16px;border-radius:12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .row{display:flex;gap:12px}
+    .col{flex:1}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input,select,button{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:inherit}
+    button{cursor:pointer}
+    .small{font-size:13px;color:var(--muted)}
+    .inline{display:flex;gap:8px;align-items:center}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn-primary{background:var(--accent);color:#042018;border:none}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+    .status{font-size:13px;color:var(--muted);margin-top:6px}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    pre{white-space:pre-wrap;background:rgba(0,0,0,0.2);padding:12px;border-radius:8px;overflow:auto;color:#cfeee1}
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+    @media(max-width:800px){.grid{grid-template-columns:repeat(1,1fr)} .row{flex-direction:column}}
+  </style>
 </head>
 <body>
+  <div class="container">
+    <header>
+      <h1>Faylotto Ultimate — Frontend</h1>
+      <div class="inline">
+        <div id="walletAddress" class="small">Not connected</div>
+        <button id="connectBtn" class="btn-ghost">Connect Wallet</button>
+      </div>
+    </header>
 
-<div class="container">
-    <div class="row">
-        <h1 class="col">🦁 Faylotto Ultimate</h1>
-        <div id="wallet-status">Belum terkoneksi</div>
-    </div>
-    
-    <button id="connectBtn" onclick="connectWallet()">🔌 Connect Wallet (Base Sepolia)</button>
-
-    <div id="registerSection" class="card hidden" style="margin-top: 20px; border-color: var(--danger);">
-        <h2>⚠️ Registrasi Diperlukan</h2>
-        <input type="text" id="regNickname" placeholder="Buat Nickname (Min 3 huruf)">
-        <input type="text" id="regReferrer" placeholder="Nickname Referrer (Opsional)">
-        <button onclick="registerUser()">Daftar Sekarang</button>
-    </div>
-
-    <div id="dashboard" class="hidden">
-        
-        <div class="grid" style="margin-top: 20px;">
-            <div class="card">
-                <h3>👤 Profil Saya</h3>
-                <p><strong>Nick:</strong> <span id="dispNick">-</span></p>
-                <p><strong>Bonus Ref (SHIB):</strong> <span id="dispBonus">0</span></p>
-                <p><strong>Pending Ref Count:</strong> <span id="dispPendingRef">0</span></p>
-                <button onclick="claimBonus()" class="secondary">Klaim Bonus Referral</button>
-            </div>
-            <div class="card">
-                <h3>💰 Saldo Kontrak (Winnings)</h3>
-                <div class="row">
-                    <span>ETH:</span> <span id="creditETH">0</span>
-                    <button class="secondary" style="width:auto; padding: 5px 10px;" onclick="withdraw('ETH')">WD</button>
-                </div>
-                <div class="row">
-                    <span>USDT:</span> <span id="creditUSDT">0</span>
-                    <button class="secondary" style="width:auto; padding: 5px 10px;" onclick="withdraw('USDT')">WD</button>
-                </div>
-                <div class="row">
-                    <span>SHIB:</span> <span id="creditSHIB">0</span>
-                    <button class="secondary" style="width:auto; padding: 5px 10px;" onclick="withdraw('SHIB')">WD</button>
-                </div>
-            </div>
+    <!-- Info Card -->
+    <div class="card">
+      <div class="row">
+        <div class="col">
+          <label>Contract</label>
+          <div id="contractInfo" class="small">CONTRACT_ADDRESS (set in script)</div>
+          <div class="status" id="networkStatus"></div>
         </div>
-
-        <div class="grid" style="margin-top: 20px;">
-            <div class="card">
-                <h3>🎲 Pasang Taruhan</h3>
-                
-                <label>Pilih Mata Uang:</label>
-                <select id="betCurrency">
-                    <option value="0">ETH (0.0005 ETH)</option>
-                    <option value="1">USDT (10 USDT)</option>
-                    <option value="2">SHIB (110,000 SHIB)</option>
-                </select>
-
-                <label style="display:flex; align-items:center; gap:10px; margin: 10px 0;">
-                    <input type="checkbox" id="isFreeBet" style="width:auto;"> Gunakan Free Credit (Khusus SHIB)
-                </label>
-
-                <p>Pilih Hewan:</p>
-                <div class="animal-grid" id="animalSelector">
-                    <button class="animal-btn" onclick="selectAnimal(0)">0<br>🐵</button>
-                    <button class="animal-btn" onclick="selectAnimal(1)">1<br>🦁</button>
-                    <button class="animal-btn" onclick="selectAnimal(2)">2<br>🐼</button>
-                    <button class="animal-btn" onclick="selectAnimal(3)">3<br>🐮</button>
-                    <button class="animal-btn" onclick="selectAnimal(4)">4<br>🐯</button>
-                    <button class="animal-btn" onclick="selectAnimal(5)">5<br>🐔</button>
-                </div>
-                <input type="hidden" id="selectedAnimal" value="-1">
-                
-                <div style="margin-top: 15px;">
-                    <button id="approveBtn" class="hidden" onclick="approveToken()">Approve Token</button>
-                    <button id="betBtn" onclick="placeBet()">Pasang Taruhan</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <h3>⚙️ Kontrol Permainan</h3>
-                <p>Round ID Saat Ini: <strong id="currentRoundId">#</strong></p>
-                <p>Tim Aktif: <strong id="activeTeams">0</strong> / 5 Min</p>
-                
-                <div class="reels-display">
-                    <div class="reel" id="reel1">❓</div>
-                    <div class="reel" id="reel2">❓</div>
-                    <div class="reel" id="reel3">❓</div>
-                </div>
-                <div style="text-align:center; color: var(--accent); margin-bottom:10px;" id="roundOutcome">
-                    Menunggu Putaran...
-                </div>
-
-                <button onclick="executeDraw()" id="drawBtn" class="danger">PUTAR RODA (Draw)</button>
-                <p style="font-size:0.8em; color:#666; margin-top:5px;">*Siapapun bisa memutar jika syarat terpenuhi</p>
-            </div>
+        <div class="col">
+          <label>Round</label>
+          <div id="currentRound" class="small">-</div>
+          <div class="status">Active Teams: <span id="activeTeams">-</span></div>
         </div>
-
-        <div class="card" style="margin-top: 20px;">
-            <h3>💬 Sosial & Reaksi (Round Terakhir)</h3>
-            <div class="tabs">
-                <button class="tab-btn active" onclick="showTab('comments')">Komentar</button>
-                <button class="tab-btn" onclick="showTab('rating')">Rating & Reaksi</button>
-            </div>
-
-            <div id="tab-comments">
-                <div id="commentsList" style="max-height: 200px; overflow-y:auto; margin-bottom:10px; border:1px solid #333; padding:10px;">
-                    </div>
-                <div class="row">
-                    <input type="text" id="commentText" placeholder="Tulis komentar...">
-                    <button style="width: auto;" onclick="submitComment()">Kirim</button>
-                </div>
-            </div>
-
-            <div id="tab-rating" class="hidden">
-                <div class="row">
-                    <button class="secondary" onclick="sendReaction(1)">👍 Like</button>
-                    <button class="secondary" onclick="sendReaction(2)">👎 Dislike</button>
-                </div>
-                <div class="row" style="margin-top:10px;">
-                    <select id="starRating">
-                        <option value="5">⭐⭐⭐⭐⭐</option>
-                        <option value="4">⭐⭐⭐⭐</option>
-                        <option value="3">⭐⭐⭐</option>
-                        <option value="2">⭐⭐</option>
-                        <option value="1">⭐</option>
-                    </select>
-                    <button style="width: auto;" onclick="submitRating()">Beri Rating</button>
-                </div>
-            </div>
+        <div class="col">
+          <label>User Credits</label>
+          <div class="small">ETH credit: <span id="creditETH">0</span></div>
+          <div class="small">USDT credit: <span id="creditUSDT">0</span></div>
+          <div class="small">SHIB credit: <span id="creditSHIB">0</span></div>
+          <div class="small">Free SHIB: <span id="freeSHIB">0</span></div>
         </div>
-
+      </div>
     </div>
-</div>
 
-<div id="toast">Notifikasi</div>
+    <!-- Register -->
+    <div class="card">
+      <h3 style="margin-top:0">Register / Referral</h3>
+      <div class="grid">
+        <div>
+          <label>Nickname</label>
+          <input id="nickname" placeholder="min 3 chars" />
+        </div>
+        <div>
+          <label>Referrer Nickname (optional)</label>
+          <input id="referrer" placeholder="nickname referrer" />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;justify-content:flex-end">
+          <button id="registerBtn" class="btn-primary">Register</button>
+          <div id="registerStatus" class="small"></div>
+        </div>
+      </div>
+    </div>
 
-<script>
-    // --- KONFIGURASI PENTING (GANTI ALAMAT DI SINI) ---
-    const CONTRACT_ADDRESS = "0x.....ALAMAT_KONTRAK_ANDA_DISINI....."; 
-    const USDT_ADDRESS = "0x.....ALAMAT_USDT_DISINI.....";
-    const SHIB_ADDRESS = "0x.....ALAMAT_SHIB_DISINI.....";
-    
-    // --- KONFIGURASI JARINGAN (BASE SEPOLIA) ---
-    const BASE_SEPOLIA_ID = "0x14a34"; // 84532
-    const BASE_SEPOLIA_CONFIG = {
-        chainId: BASE_SEPOLIA_ID,
-        chainName: "Base Sepolia Testnet",
-        rpcUrls: ["https://sepolia.base.org"],
-        blockExplorerUrls: ["https://sepolia.basescan.org"],
-        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }
-    };
+    <!-- Betting -->
+    <div class="card">
+      <h3 style="margin-top:0">Place Bet</h3>
+      <div class="row">
+        <div class="col">
+          <label>Currency</label>
+          <select id="currencySelect">
+            <option value="ETH">ETH</option>
+            <option value="USDT">USDT</option>
+            <option value="SHIB">SHIB</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Animal (0 - 5)</label>
+          <select id="animalSelect">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>Free Bet (SHIB only)</label>
+          <select id="freeBetSelect">
+            <option value="false">No</option>
+            <option value="true">Yes (SHIB free)</option>
+          </select>
+        </div>
+      </div>
 
-    // --- ABI (MINIMAL UNTUK UI) ---
-    const ABI = [
-        "function register(string, string) external",
-        "function users(address) view returns (string, bool, address, bool, uint256)",
-        "function betETH(uint8) external payable",
-        "function betToken(uint8, uint8, bool) external", // Currency enum: 0=ETH, 1=USDT, 2=SHIB
-        "function executeDraw() external",
-        "function claimReferralBonus() external",
-        "function withdrawCredit(uint8, uint256) external",
-        "function userCredits(address, uint8) view returns (uint256)",
-        "function freeShibCredits(address) view returns (uint256)",
-        "function currentRoundId() view returns (uint256)",
-        "function getActiveTeamCount() view returns (uint256)",
-        "function getRoundResult(uint256) view returns (tuple(uint8[3] reels, string outcome, uint256 timestamp, address winner))",
-        "function addComment(uint256, string) external",
-        "function setReaction(uint256, uint8) external",
-        "function submitRating(uint256, uint8) external",
-        "function roundComments(uint256, uint256) view returns (uint256, address, string, uint256, bool)",
-        "function commentCounts(uint256) view returns (uint256)",
-        "event BattleResult(uint8[3] reels, string outcome, uint256 roundId)"
+      <div style="margin-top:12px" class="actions">
+        <button id="approveBtn" class="btn-ghost">Approve Token (USDT/SHIB)</button>
+        <button id="betBtn" class="btn-primary">Place Bet</button>
+        <button id="executeBtn" class="btn-ghost">Execute Draw</button>
+      </div>
+      <div id="betStatus" class="status"></div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card">
+      <h3 style="margin-top:0">Actions</h3>
+      <div class="row">
+        <div class="col">
+          <label>Claim Referral Bonus (Free SHIB)</label>
+          <button id="claimBonusBtn" class="btn-primary">Claim Bonus</button>
+          <div id="claimStatus" class="small"></div>
+        </div>
+        <div class="col">
+          <label>Withdraw Internal Credit</label>
+          <select id="withdrawCurrency">
+            <option value="ETH">ETH</option>
+            <option value="USDT">USDT</option>
+            <option value="SHIB">SHIB</option>
+          </select>
+          <input id="withdrawAmount" placeholder="amount (wei for tokens/ETH as raw)" />
+          <button id="withdrawBtn" class="btn-primary">Withdraw</button>
+          <div id="withdrawStatus" class="small"></div>
+        </div>
+        <div class="col">
+          <label>Quick Info</label>
+          <div class="small">Gas & tx will show in MetaMask</div>
+          <div class="small">Jika kontrak butuh approve untuk token, tekan Approve</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Round history -->
+    <div class="card">
+      <h3 style="margin-top:0">Round History (recent)</h3>
+      <div id="historyArea"><pre id="historyText">-</pre></div>
+    </div>
+
+    <footer>Frontend sederhana untuk kontrak FaylottoUltimate — ubah constants di bawah sesuai kebutuhan</footer>
+  </div>
+
+  <script>
+  (async () => {
+    // ----- CONFIG: Ganti sesuai kontrak Anda -----
+    const CONTRACT_ADDRESS = "0xCONTRACT_ADDRESS_REPLACE_ME"; // <-- ganti
+    const USDT_ADDRESS = "0xUSDT_ADDRESS_REPLACE_ME"; // <-- ganti
+    const SHIB_ADDRESS = "0xSHIB_ADDRESS_REPLACE_ME"; // <-- ganti
+
+    // ABI minimal (sesuaikan jika Anda menambahkan fungsi / event)
+    const CONTRACT_ABI = [
+      // owner / info
+      "function currentRoundId() view returns (uint256)",
+      "function getRoundResult(uint256) view returns (tuple(uint8[3] reels,string outcome,uint256 timestamp,address winner))",
+      "function getActiveTeamCount() view returns (uint256)",
+      "function userCredits(address, uint8) view returns (uint256)",
+      "function freeShibCredits(address) view returns (uint256)",
+      // user actions
+      "function register(string,string) external",
+      "function claimReferralBonus() external",
+      "function betETH(uint8) payable external",
+      "function betToken(uint8, uint8, bool) external",
+      "function executeDraw() external",
+      "function withdrawCredit(uint8,uint256) external",
+      // events (optional)
+      "event NewBet(address indexed player, uint8 animalChoice, uint256 timestamp)",
+      "event BattleResult(uint8[3] reels, string outcome, uint256 roundId)",
+      "event WinDistributed(address indexed winner, uint256 amount, uint8 curr, bool isRealTransfer)"
     ];
+    // --------------------------------------------
 
-    const TOKEN_ABI = [
-        "function approve(address spender, uint256 amount) external returns (bool)",
-        "function allowance(address owner, address spender) view returns (uint256)"
-    ];
+    const provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+    let signer = null;
+    let contract = null;
+    let userAddress = null;
 
-    // --- STATE VARIABLES ---
-    let provider, signer, contract;
-    let userAddress;
-    let currentRound = 0;
-    
-    // --- 1. WALLET CONNECTION & NETWORK SWITCHING ---
-    async function connectWallet() {
-        if (!window.ethereum) return showToast("Metamask tidak terdeteksi!");
+    // DOM refs
+    const connectBtn = document.getElementById("connectBtn");
+    const walletAddress = document.getElementById("walletAddress");
+    const networkStatus = document.getElementById("networkStatus");
+    const contractInfo = document.getElementById("contractInfo");
+    contractInfo.innerText = CONTRACT_ADDRESS;
 
-        provider = new ethers.BrowserProvider(window.ethereum);
-        
-        try {
-            await provider.send("eth_requestAccounts", []);
-            const network = await provider.getNetwork();
+    const currentRoundEl = document.getElementById("currentRound");
+    const activeTeamsEl = document.getElementById("activeTeams");
+    const creditETH = document.getElementById("creditETH");
+    const creditUSDT = document.getElementById("creditUSDT");
+    const creditSHIB = document.getElementById("creditSHIB");
+    const freeSHIB = document.getElementById("freeSHIB");
 
-            // Cek Jaringan Base Sepolia
-            if (("0x" + network.chainId.toString(16)) !== BASE_SEPOLIA_ID) {
-                try {
-                    await window.ethereum.request({
-                        method: "wallet_switchEthereumChain",
-                        params: [{ chainId: BASE_SEPOLIA_ID }],
-                    });
-                } catch (switchError) {
-                    // Jika jaringan belum ada, tambahkan
-                    if (switchError.code === 4902) {
-                        try {
-                            await window.ethereum.request({
-                                method: "wallet_addEthereumChain",
-                                params: [BASE_SEPOLIA_CONFIG],
-                            });
-                        } catch (addError) {
-                            return showToast("Gagal menambahkan jaringan Base Sepolia.");
-                        }
-                    } else {
-                        return showToast("Gagal pindah jaringan.");
-                    }
-                }
-            }
+    const registerBtn = document.getElementById("registerBtn");
+    const nicknameInput = document.getElementById("nickname");
+    const refInput = document.getElementById("referrer");
+    const registerStatus = document.getElementById("registerStatus");
 
-            signer = await provider.getSigner();
-            userAddress = await signer.getAddress();
-            contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    const approveBtn = document.getElementById("approveBtn");
+    const betBtn = document.getElementById("betBtn");
+    const executeBtn = document.getElementById("executeBtn");
+    const betStatus = document.getElementById("betStatus");
+    const historyText = document.getElementById("historyText");
 
-            // Handle Signature Auth
-            await handleSignatureAuth();
+    const claimBonusBtn = document.getElementById("claimBonusBtn");
+    const claimStatus = document.getElementById("claimStatus");
 
-            document.getElementById('connectBtn').classList.add('hidden');
-            document.getElementById('wallet-status').innerText = `Connected: ${userAddress.substring(0,6)}...${userAddress.substring(38)}`;
-            
-            checkRegistration();
+    const withdrawBtn = document.getElementById("withdrawBtn");
+    const withdrawStatus = document.getElementById("withdrawStatus");
 
-        } catch (error) {
-            console.error(error);
-            showToast("Koneksi gagal: " + error.message);
-        }
+    // init
+    async function initContract(s) {
+      signer = s;
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
     }
 
-    // --- 2. SIGNATURE AUTHENTICATION (LOCAL STORAGE) ---
-    async function handleSignatureAuth() {
-        const storageKey = `auth_${userAddress}`;
-        const storedAuth = JSON.parse(localStorage.getItem(storageKey));
-        const now = Date.now();
+    // connect wallet
+    connectBtn.addEventListener("click", async () => {
+      try {
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        walletAddress.innerText = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+        connectBtn.innerText = "Connected";
+        await initContract(signer);
+        pollAll();
+      } catch (err) {
+        console.error(err);
+        walletAddress.innerText = "Connection failed";
+      }
+    });
 
-        // Cek apakah auth valid (kurang dari 30 hari)
-        if (storedAuth && storedAuth.expiry > now) {
-            console.log("Auth valid dari storage.");
-            return;
-        }
-
-        // Jika tidak ada atau expired, minta sign
-        const localTime = new Date().toLocaleString();
-        const message = `Welcome ${userAddress} ${localTime}`;
-        
-        try {
-            const signature = await signer.signMessage(message);
-            const expiry = now + (30 * 24 * 60 * 60 * 1000); // 30 Hari
-            
-            localStorage.setItem(storageKey, JSON.stringify({
-                signature: signature,
-                expiry: expiry,
-                message: message
-            }));
-            showToast("Login Berhasil (Disimpan 30 Hari)");
-        } catch (err) {
-            showToast("Signature ditolak user.");
-            throw new Error("Signature required");
-        }
+    // utility: show error
+    function showStatus(el, msg, isErr = false) {
+      el.innerText = msg;
+      el.style.color = isErr ? "#ff8a8a" : "";
+      setTimeout(()=>{ if(el.innerText === msg) el.innerText = ""; }, 7000);
     }
 
-    // --- 3. CORE GAME LOGIC ---
+    // register
+    registerBtn.addEventListener("click", async () => {
+      try {
+        const nick = nicknameInput.value.trim();
+        const ref = refInput.value.trim();
+        if (!nick || nick.length < 3) return showStatus(registerStatus, "Nickname min 3 chars", true);
+        const tx = await contract.register(nick, ref);
+        showStatus(registerStatus, "Waiting tx...");
+        await tx.wait();
+        showStatus(registerStatus, "Registered ✔");
+        await pollCredits();
+      } catch (err) {
+        console.error(err);
+        showStatus(registerStatus, "Register failed: " + (err?.message || err), true);
+      }
+    });
 
-    async function checkRegistration() {
-        const userData = await contract.users(userAddress);
-        if (userData[1] === true) { // isRegistered
-            document.getElementById('dashboard').classList.remove('hidden');
-            document.getElementById('registerSection').classList.add('hidden');
-            document.getElementById('dispNick').innerText = userData[0];
-            document.getElementById('dispPendingRef').innerText = userData[4];
-            loadGameData();
+    // approve token (max)
+    approveBtn.addEventListener("click", async () => {
+      try {
+        const currency = document.getElementById("currencySelect").value;
+        if (currency === "ETH") return showStatus(betStatus, "ETH tidak perlu approve");
+        const tokenAddr = currency === "USDT" ? USDT_ADDRESS : SHIB_ADDRESS;
+        const tokenAbi = ["function approve(address spender, uint256 amount) public returns (bool)"];
+        const token = new ethers.Contract(tokenAddr, tokenAbi, signer);
+        const max = ethers.constants.MaxUint256;
+        const tx = await token.approve(CONTRACT_ADDRESS, max);
+        showStatus(betStatus, "Approve pending...");
+        await tx.wait();
+        showStatus(betStatus, "Approve ok");
+      } catch (err) {
+        console.error(err);
+        showStatus(betStatus, "Approve failed: " + (err?.message || err), true);
+      }
+    });
+
+    // place bet
+    betBtn.addEventListener("click", async () => {
+      try {
+        if (!contract) return showStatus(betStatus, "Connect first", true);
+        const currency = document.getElementById("currencySelect").value;
+        const animal = parseInt(document.getElementById("animalSelect").value);
+        const isFree = document.getElementById("freeBetSelect").value === "true";
+
+        if (currency === "ETH") {
+          // COST_ETH = 0.0005 ether
+          const cost = ethers.utils.parseEther("0.0005");
+          const tx = await contract.betETH(animal, { value: cost });
+          showStatus(betStatus, "Bet ETH tx pending...");
+          await tx.wait();
+          showStatus(betStatus, "Bet placed (ETH) ✔");
+        } else if (currency === "USDT") {
+          if (isFree) return showStatus(betStatus, "USDT tidak mendukung free bet", true);
+          // COST_USDT = 10 * 10**6  (10 USDT with 6 decimals)
+          const cost = ethers.BigNumber.from("10000000"); // 10*10^6
+          const currEnum = 1; // Currency.USDT -> 1 (as enum)
+          const tx = await contract.betToken(animal, currEnum, false);
+          showStatus(betStatus, "Bet USDT tx pending...");
+          await tx.wait();
+          showStatus(betStatus, "Bet placed (USDT) ✔");
         } else {
-            document.getElementById('dashboard').classList.add('hidden');
-            document.getElementById('registerSection').classList.remove('hidden');
-        }
-    }
-
-    async function registerUser() {
-        const nick = document.getElementById('regNickname').value;
-        const ref = document.getElementById('regReferrer').value;
-        try {
-            const tx = await contract.register(nick, ref);
-            showToast("Mendaftarkan... Tunggu konfirmasi.");
+          // SHIB
+          const currEnum = 2; // Currency.SHIB -> 2
+          if (isFree) {
+            const tx = await contract.betToken(animal, currEnum, true);
+            showStatus(betStatus, "Bet SHIB (FREE) tx pending...");
             await tx.wait();
-            showToast("Berhasil Daftar!");
-            checkRegistration();
-        } catch (err) {
-            showToast("Gagal daftar: " + err.reason);
+            showStatus(betStatus, "Free SHIB bet placed ✔");
+          } else {
+            // COST_SHIB_MAIN = 110000 * 10**18
+            const tx = await contract.betToken(animal, currEnum, false);
+            showStatus(betStatus, "Bet SHIB (MAIN) tx pending...");
+            await tx.wait();
+            showStatus(betStatus, "Bet placed (SHIB) ✔");
+          }
         }
-    }
 
-    async function loadGameData() {
-        // Credits
-        const cETH = await contract.userCredits(userAddress, 0);
-        const cUSDT = await contract.userCredits(userAddress, 1);
-        const cSHIB = await contract.userCredits(userAddress, 2);
+        await pollAll();
+      } catch (err) {
+        console.error(err);
+        showStatus(betStatus, "Bet failed: " + (err?.data?.message || err?.message || err), true);
+      }
+    });
+
+    // execute draw (anyone)
+    executeBtn.addEventListener("click", async () => {
+      try {
+        if (!contract) return showStatus(betStatus, "Connect first", true);
+        const tx = await contract.executeDraw();
+        showStatus(betStatus, "Executing draw...");
+        await tx.wait();
+        showStatus(betStatus, "Draw executed ✔");
+        await pollAll();
+      } catch (err) {
+        console.error(err);
+        showStatus(betStatus, "Execute failed: " + (err?.message || err), true);
+      }
+    });
+
+    // claim referral
+    claimBonusBtn.addEventListener("click", async () => {
+      try {
+        if (!contract) return showStatus(claimStatus, "Connect first", true);
+        const tx = await contract.claimReferralBonus();
+        showStatus(claimStatus, "Claim tx pending...");
+        await tx.wait();
+        showStatus(claimStatus, "Claimed ✔");
+        await pollAll();
+      } catch (err) {
+        console.error(err);
+        showStatus(claimStatus, "Claim failed: " + (err?.message || err), true);
+      }
+    });
+
+    // withdraw internal credit
+    withdrawBtn.addEventListener("click", async () => {
+      try {
+        if (!contract) return showStatus(withdrawStatus, "Connect first", true);
+        const curr = document.getElementById("withdrawCurrency").value;
+        const amountRaw = document.getElementById("withdrawAmount").value.trim();
+        if (!amountRaw) return showStatus(withdrawStatus, "Masukkan jumlah", true);
+
+        const enumMap = { "ETH": 0, "USDT": 1, "SHIB": 2 };
+        const currEnum = enumMap[curr];
+        // NOTE: the contract expects raw uint256 amounts (wei for ETH, decimals for tokens)
+        const amount = ethers.BigNumber.from(amountRaw);
+        const tx = await contract.withdrawCredit(currEnum, amount);
+        showStatus(withdrawStatus, "Withdraw tx pending...");
+        await tx.wait();
+        showStatus(withdrawStatus, "Withdraw done ✔");
+        await pollAll();
+      } catch (err) {
+        console.error(err);
+        showStatus(withdrawStatus, "Withdraw failed: " + (err?.message || err), true);
+      }
+    });
+
+    // POLLING: fetch credits / round / history
+    async function pollAll(){
+      try {
+        if (!contract) return;
+        const roundIdBN = await contract.currentRoundId();
+        const roundId = roundIdBN.toNumber();
+        currentRoundEl.innerText = String(roundId);
+        const activeCount = await contract.getActiveTeamCount();
+        activeTeamsEl.innerText = String(activeCount);
+
+        // credits (contract uses enum Currency: ETH=0,USDT=1,SHIB=2)
+        const ethCredit = await contract.userCredits(userAddress, 0);
+        const usdtCredit = await contract.userCredits(userAddress, 1);
+        const shibCredit = await contract.userCredits(userAddress, 2);
         const freeShib = await contract.freeShibCredits(userAddress);
-        
-        document.getElementById('creditETH').innerText = ethers.formatEther(cETH);
-        document.getElementById('creditUSDT').innerText = ethers.formatUnits(cUSDT, 6); // USDT 6 decimals
-        document.getElementById('creditSHIB').innerText = ethers.formatUnits(cSHIB, 18);
-        document.getElementById('dispBonus').innerText = ethers.formatUnits(freeShib, 18);
 
-        // Game State
-        currentRound = await contract.currentRoundId();
-        document.getElementById('currentRoundId').innerText = currentRound.toString();
-        
-        const activeTeams = await contract.getActiveTeamCount();
-        document.getElementById('activeTeams').innerText = activeTeams.toString();
+        creditETH.innerText = ethCredit.toString();
+        creditUSDT.innerText = usdtCredit.toString();
+        creditSHIB.innerText = shibCredit.toString();
+        freeSHIB.innerText = freeShib.toString();
 
-        loadComments(currentRound - 1n); // Load comments round sebelumnya/aktif
-    }
-
-    function selectAnimal(index) {
-        document.querySelectorAll('.animal-btn').forEach(b => b.classList.remove('selected'));
-        document.querySelectorAll('.animal-btn')[index].classList.add('selected');
-        document.getElementById('selectedAnimal').value = index;
-    }
-
-    async function placeBet() {
-        const animal = document.getElementById('selectedAnimal').value;
-        if (animal == "-1") return showToast("Pilih hewan dulu!");
-        
-        const curr = document.getElementById('betCurrency').value; // 0, 1, 2
-        const isFree = document.getElementById('isFreeBet').checked;
-
-        try {
-            let tx;
-            if (curr == "0") { // ETH
-                tx = await contract.betETH(animal, { value: ethers.parseEther("0.0005") });
-            } else { // Token
-                // Cek allowance dulu jika USDT/SHIB Main Bet
-                if (!isFree) {
-                    const tokenAddr = (curr == "1") ? USDT_ADDRESS : SHIB_ADDRESS;
-                    const cost = (curr == "1") ? ethers.parseUnits("10", 6) : ethers.parseUnits("110000", 18);
-                    
-                    const tokenContract = new ethers.Contract(tokenAddr, TOKEN_ABI, signer);
-                    const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
-                    
-                    if (allowance < cost) {
-                        showToast("Perlu Approve Token Dulu!");
-                        document.getElementById('approveBtn').classList.remove('hidden');
-                        document.getElementById('approveBtn').onclick = () => approveToken(tokenAddr, cost);
-                        return;
-                    }
-                }
-                tx = await contract.betToken(animal, curr, isFree);
-            }
-            showToast("Mengirim taruhan...");
-            await tx.wait();
-            showToast("Taruhan Masuk!");
-            loadGameData();
-        } catch (err) {
-            console.error(err);
-            showToast("Bet Gagal: " + (err.reason || err.message));
+        // show last 5 rounds
+        const latest = Math.max(roundId - 1, 1);
+        let out = [];
+        for(let r = latest; r >= Math.max(1, latest - 4); r--) {
+          try {
+            const res = await contract.getRoundResult(r);
+            // res: { reels: [u8,u8,u8], outcome, timestamp, winner }
+            out.push(`#${r} — ${res.outcome} — reels: ${res.reels[0]},${res.reels[1]},${res.reels[2]} — winner: ${res.winner} — ${new Date(res.timestamp*1000).toLocaleString()}`);
+          } catch(e) {
+            // ignore
+          }
         }
+        historyText.innerText = out.join("\n") || "No rounds yet";
+      } catch (err) {
+        console.error(err);
+      }
     }
 
-    async function approveToken(tokenAddr, amount) {
-        try {
-            const tokenContract = new ethers.Contract(tokenAddr, TOKEN_ABI, signer);
-            const tx = await tokenContract.approve(CONTRACT_ADDRESS, amount);
-            showToast("Approving...");
-            await tx.wait();
-            showToast("Approved! Klik Pasang Taruhan lagi.");
-            document.getElementById('approveBtn').classList.add('hidden');
-        } catch (err) {
-            showToast("Approve Gagal");
+    // automatically poll every 12s if connected
+    setInterval(()=>{ if (contract && userAddress) pollAll(); }, 12000);
+
+    // detect network / account changes
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", async (accounts) => {
+        if (accounts.length === 0) {
+          walletAddress.innerText = "Not connected";
+        } else {
+          signer = provider.getSigner();
+          userAddress = await signer.getAddress();
+          walletAddress.innerText = `${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+          await initContract(signer);
+          pollAll();
         }
+      });
+      window.ethereum.on("chainChanged", (chainId) => {
+        networkStatus.innerText = "Chain changed: " + chainId;
+      });
+    } else {
+      networkStatus.innerText = "No Web3 provider found. Install MetaMask.";
     }
 
-    async function executeDraw() {
-        try {
-            const tx = await contract.executeDraw();
-            showToast("Memutar Roda... 🎰");
-            
-            // Listen event
-            contract.once("BattleResult", (reels, outcome, rId) => {
-                document.getElementById('reel1').innerText = getEmoji(reels[0]);
-                document.getElementById('reel2').innerText = getEmoji(reels[1]);
-                document.getElementById('reel3').innerText = getEmoji(reels[2]);
-                document.getElementById('roundOutcome').innerText = outcome;
-                showToast(`Hasil: ${outcome}`);
-                loadGameData();
-            });
+    // initial small attempt to get provider network
+    try {
+      const net = await provider.getNetwork();
+      networkStatus.innerText = `Network: ${net.name || net.chainId}`;
+    } catch(e) {}
 
-            await tx.wait();
-        } catch (err) {
-            showToast("Draw Gagal: " + err.reason);
-        }
-    }
-
-    async function claimBonus() {
-        try {
-            const tx = await contract.claimReferralBonus();
-            await tx.wait();
-            showToast("Bonus Diklaim!");
-            loadGameData();
-        } catch (e) { showToast("Gagal klaim"); }
-    }
-
-    async function withdraw(ticker) {
-        const amt = prompt(`Masukkan jumlah ${ticker} yg mau di WD:`);
-        if(!amt) return;
-        
-        let currId = 0, parsedAmt;
-        if(ticker === 'ETH') { currId = 0; parsedAmt = ethers.parseEther(amt); }
-        if(ticker === 'USDT') { currId = 1; parsedAmt = ethers.parseUnits(amt, 6); }
-        if(ticker === 'SHIB') { currId = 2; parsedAmt = ethers.parseUnits(amt, 18); }
-
-        try {
-            const tx = await contract.withdrawCredit(currId, parsedAmt);
-            await tx.wait();
-            showToast("Withdraw Berhasil!");
-            loadGameData();
-        } catch(e) { showToast("WD Gagal: " + e.reason); }
-    }
-
-    // --- 4. SOCIAL FEATURES ---
-    async function loadComments(rId) {
-        if (rId < 1) return;
-        const count = await contract.commentCounts(rId);
-        const list = document.getElementById('commentsList');
-        list.innerHTML = "";
-
-        // Load 10 komentar terakhir saja agar ringan
-        let start = count > 10n ? count - 10n : 0n;
-        for (let i = start; i < count; i++) {
-            const c = await contract.roundComments(rId, i);
-            const div = document.createElement('div');
-            div.style.borderBottom = "1px solid #444";
-            div.style.padding = "5px";
-            div.innerHTML = `<small style='color:#aaa'>${c[1].substring(0,6)}...</small><br>${c[2]}`;
-            list.appendChild(div);
-        }
-    }
-
-    async function submitComment() {
-        const txt = document.getElementById('commentText').value;
-        const roundId = currentRound > 1 ? currentRound - 1n : 1n; // Komentar untuk ronde yg baru selesai atau aktif
-        try {
-            const tx = await contract.addComment(roundId, txt);
-            await tx.wait();
-            document.getElementById('commentText').value = "";
-            loadComments(roundId);
-        } catch(e) { showToast("Gagal komen"); }
-    }
-
-    async function sendReaction(type) {
-        const roundId = currentRound > 1 ? currentRound - 1n : 1n;
-        try {
-            const tx = await contract.setReaction(roundId, type);
-            await tx.wait();
-            showToast("Reaksi terkirim");
-        } catch(e) { showToast("Gagal reaksi"); }
-    }
-
-    async function submitRating() {
-        const stars = document.getElementById('starRating').value;
-        const roundId = currentRound > 1 ? currentRound - 1n : 1n;
-        try {
-            const tx = await contract.submitRating(roundId, stars);
-            await tx.wait();
-            showToast("Rating terkirim");
-        } catch(e) { showToast("Gagal rating"); }
-    }
-
-    // --- UTILS ---
-    function getEmoji(num) {
-        const emojis = ['🐵','🦁','🐼','🐮','🐯','🐔'];
-        return emojis[num] || '❓';
-    }
-
-    function showTab(tabName) {
-        document.getElementById('tab-comments').classList.add('hidden');
-        document.getElementById('tab-rating').classList.add('hidden');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        
-        document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-        event.target.classList.add('active');
-    }
-
-    function showToast(msg) {
-        const x = document.getElementById("toast");
-        x.innerText = msg;
-        x.className = "show";
-        setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
-    }
-</script>
-
+    // NOTES for user (console)
+    console.log("Faylotto frontend ready. Make sure you replaced CONTRACT_ADDRESS, USDT_ADDRESS, SHIB_ADDRESS in the script.");
+  })();
+  </script>
 </body>
-                        </html>
+</html>
