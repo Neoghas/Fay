@@ -167,6 +167,45 @@
     #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
     @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
     @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+    /* --- EFEK WINNER GLAMOR --- */
+    .winner-glamour {
+        border-color: #FFD700 !important; /* Emas Solid */
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 165, 0, 0.2)) !important;
+        animation: glamourPulse 0.8s infinite alternate !important;
+        z-index: 10; /* Pastikan di atas layer lain */
+        transform-origin: center;
+    }
+
+    /* Animasi Denyut Emas */
+    @keyframes glamourPulse {
+        0% {
+            box-shadow: 0 0 10px #FFD700, inset 0 0 5px #FFD700;
+            transform: scale(1);
+            border-color: #FFD700;
+        }
+        100% {
+            box-shadow: 0 0 25px #FFD700, 0 0 40px #FF4500, inset 0 0 15px #FFD700; /* Glow Emas & Merah */
+            transform: scale(1.08); /* Sedikit membesar */
+            border-color: #FFF; /* Kilatan Putih */
+        }
+    }
+    
+    /* Tambahan: Winner Badge (Opsional, agar lebih jelas) */
+    .winner-glamour::before {
+        content: "🏆 WINNER";
+        position: absolute;
+        top: -12px;
+        background: linear-gradient(45deg, #FFD700, #FFA500);
+        color: #000;
+        font-weight: bold;
+        font-size: 0.7em;
+        padding: 2px 8px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        animation: bounce 0.8s infinite;
+    }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 </style>
 </head>
 <body>
@@ -567,33 +606,55 @@
     }
 
     async function checkRoundResult() {
+        // 1. Ambil Data
         const nextRoundId = await gameContract.currentRoundId();
         const prevRound = Number(nextRoundId) - 1; 
         if(prevRound < 1) return;
 
-        // Panggil Mapping roundHistory
-        // Result: [reels (array), outcome (string), timestamp (uint), winner (address)]
         const result = await gameContract.roundHistory(prevRound);
         
-        // Parsing Proxy Array dari Ethers v6
+        // 2. Parse Hasil
         const r1 = Number(result[0][0]);
         const r2 = Number(result[0][1]);
         const r3 = Number(result[0][2]);
-        const outcome = result[1];
+        const outcome = result[1]; // String outcome (TRIPLE, DOUBLE, etc)
         
+        // 3. Stop Animasi Slot
         stopSpinAnimation(r1, r2, r3);
-        showToast(`Result: ${outcome}! Check your winnings.`);
+        
+        // --- LOGIKA HIGHLIGHT WINNER (BARU) ---
+        
+        // A. Reset dulu efek winner dari ronde sebelumnya
+        for(let i=0; i<6; i++) {
+            document.getElementById(`card-${i}`).classList.remove('winner-glamour');
+        }
+
+        // B. Tentukan siapa pemenangnya berdasarkan Reels
+        // Pemenang adalah hewan yang muncul di Reel 1, Reel 2, ATAU Reel 3
+        const winners = [r1, r2, r3];
+        
+        // C. Loop hasil dan kasih efek ke kartu
+        winners.forEach(animalIndex => {
+            const card = document.getElementById(`card-${animalIndex}`);
+            if(card) {
+                card.classList.add('winner-glamour');
+            }
+        });
+
+        // --- END LOGIC ---
+
+        showToast(`Result: ${outcome}! Winners Highlighted.`);
         
         roundPools = { eth: 0, usdt: 0, shib: 0 };
         updatePoolDisplay();
-    }
-
-    let spinInterval;
-    function startSpinAnimation() {
-        const els = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
-        spinInterval = setInterval(() => {
-            els.forEach(el => el.src = IMAGE_LIST[Math.floor(Math.random()*6)]);
-        }, 100);
+        
+        // Opsional: Hapus efek winner setelah 5 detik agar bersih kembali
+        setTimeout(() => {
+            winners.forEach(idx => {
+               const c = document.getElementById(`card-${idx}`);
+               if(c) c.classList.remove('winner-glamour');
+            });
+        }, 8000); 
     }
 
     function stopSpinAnimation(i1, i2, i3) {
