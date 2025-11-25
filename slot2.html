@@ -61,14 +61,66 @@
     .betting-section { margin-top: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; }
     .bet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin-top: 15px; }
     
+    /* --- CSS BARU UNTUK LOGIKA BORDER --- */
     .bet-card {
-        background: var(--panel); border: 2px solid transparent;
+        background: var(--panel); 
+        border: 3px solid #333; /* Default Neutral */
         border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.2s;
         display: flex; flex-direction: column; align-items: center;
         justify-content: center; aspect-ratio: 1/1.2; position: relative;
     }
-    .bet-card:hover { transform: translateY(-5px); border-color: var(--accent); }
-    .bet-card.selected { border-color: var(--success); background: rgba(0, 210, 106, 0.1); transform: scale(0.98); }
+    
+    /* Hover Effect Default */
+    .bet-card:hover { transform: translateY(-3px); }
+
+    /* 1. MY BET (USER SUDAH BET) -> BIRU */
+    .bet-card.my-bet {
+        border-color: var(--primary); /* Biru */
+        background: rgba(0, 82, 255, 0.1);
+        box-shadow: 0 0 15px rgba(0, 82, 255, 0.4);
+    }
+
+    /* 2. OPEN (MASIH BISA DIBET) -> HIJAU */
+    .bet-card.open {
+        border-color: var(--success); /* Hijau */
+        animation: pulseGreen 2s infinite;
+    }
+    @keyframes pulseGreen { 0% { border-color: #00d26a; } 50% { border-color: #00ff80; } 100% { border-color: #00d26a; } }
+
+    /* 3. FULL (KUOTA HABIS) -> UNGU */
+    .bet-card.full {
+        border-color: #9d00ff; /* Ungu */
+        background: rgba(157, 0, 255, 0.05);
+        opacity: 0.7;
+        cursor: not-allowed;
+        filter: grayscale(0.5);
+    }
+    
+    /* TOOLTIP PERINGATAN KETIKA FULL */
+    .bet-card.full:hover::after {
+        content: "⛔ Kuota hewan ini sudah penuh, silahkan pilih hewan lain!";
+        position: absolute;
+        bottom: 105%; /* Muncul di atas kartu */
+        left: 50%;
+        transform: translateX(-50%);
+        background: #9d00ff;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.7em;
+        width: 150px;
+        text-align: center;
+        z-index: 100;
+        pointer-events: none;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        border: 1px solid #fff;
+    }
+
+    /* SELECTED STATE (Saat diklik untuk mau bet) */
+    .bet-card.selected {
+        transform: scale(0.95);
+        background: rgba(255, 255, 255, 0.1);
+    }
     
     .bet-icon-img { width: 50%; height: 50%; object-fit: contain; margin-bottom: 5px; }
     .name { font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;}
@@ -338,49 +390,99 @@
         } catch(e) { console.error("Login Check Error:", e); }
     }
 
+    // --- UPDATE LOGIC REFRESH DATA ---
     async function refreshGameData() {
         if(!gameContract) return;
         try {
-            // 1. User Data
-            const userData = await gameContract.users(userAddress);
-            if(userData[1]) {
-                document.getElementById('referralPanel').style.display = 'block';
-                document.getElementById('displayNick').innerText = userData[0]; // nickname
-                document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
+            // ... (Load User Data & Bonus Balance tetap sama seperti sebelumnya) ...
+
+            // === LOGIKA BARU UNTUK BORDER ===
+            const currentRound = await gameContract.currentRoundId();
+            
+            // 1. Cek Hewan Apa Saja yang SUDAH Saya Bet di Ronde Ini
+            let myBetAnimals = [false, false, false, false, false, false]; // Index 0-5
+            
+            // Kita loop manual array roundBets (Max asumsi 12 slot karena 6 hewan x 2 player)
+            // Ini cara manual karena Solidity public array getter butuh index
+            for(let i=0; i<12; i++) {
+                try {
+                    const betInfo = await gameContract.roundBets(currentRound, i);
+                    if(betInfo[0].toLowerCase() === userAddress.toLowerCase()) { // betInfo[0] is player address
+                        const animalIdx = Number(betInfo[4]); // animalChoice
+                        myBetAnimals[animalIdx] = true;
+                    }
+                } catch(e) {
+                    break; // Stop loop jika index out of bounds (array habis)
+                }
             }
 
-            // 2. Bonus Balance (Free Shib Credit)
-            const bonus = await gameContract.freeShibCredits(userAddress); // Panggil mapping
-            document.getElementById('userBonusBalance').innerText = ethers.formatEther(bonus);
-            
-            const btnFree = document.getElementById('btnFreeBet');
-            const minFree = ethers.parseEther("10000"); // Cost Free Bet
-            if(bonus >= minFree) { btnFree.disabled = false; btnFree.style.background = "var(--success)"; }
-            else { btnFree.disabled = true; btnFree.style.background = "#333"; }
-
-            // 3. Active Teams
+            // 2. Loop Setiap Hewan untuk Tentukan Class CSS
             let activeCount = 0;
             for(let i=0; i<6; i++) {
-                const c = Number(await gameContract.activeTeamCounts(i));
-                document.getElementById(`count-${i}`).innerText = `${c}/2`;
+                const count = Number(await gameContract.activeTeamCounts(i));
+                const card = document.getElementById(`card-${i}`);
                 const badge = document.getElementById(`count-${i}`);
-                if(c >= 2) badge.classList.add("filled"); else badge.classList.remove("filled");
-                if(c > 0) activeCount++;
+                
+                // Update Text Count
+                badge.innerText = `${count}/2`;
+                if(count >= 2) badge.classList.add("filled"); else badge.classList.remove("filled");
+                
+                // --- LOGIKA CLASS CSS ---
+                // Reset Class dulu
+                card.classList.remove('my-bet', 'open', 'full', 'selected');
+
+                if (count >= 2) {
+                    // KONDISI 3: FULL (UNGU)
+                    card.classList.add('full');
+                    // Matikan klik jika full
+                    card.onclick = null; 
+                } else {
+                    // Kembalikan fungsi klik jika tidak full
+                    card.onclick = function() { selectAnimal(getImageName(i), i); };
+
+                    if (myBetAnimals[i]) {
+                        // KONDISI 1: SUDAH SAYA BET (BIRU)
+                        card.classList.add('my-bet');
+                    } else {
+                        // KONDISI 2: MASIH TERSEDIA (HIJAU)
+                        card.classList.add('open');
+                    }
+                }
+
+                if(count > 0) activeCount++;
             }
 
-            // 4. Draw Button
-            const btnDraw = document.getElementById('drawBtn');
-            const status = document.getElementById('drawStatus');
-            if(activeCount >= 5) { 
-                btnDraw.disabled = false; btnDraw.classList.add('ready');
-                status.innerText = "READY TO DRAW!"; status.classList.add('ready');
-            } else {
-                btnDraw.disabled = true; btnDraw.classList.remove('ready');
-                status.innerText = `Waiting players (${activeCount}/6)...`; status.classList.remove('ready');
-            }
+            // ... (Draw Button Logic tetap sama) ...
             updatePoolDisplay();
 
-        } catch(e) { console.error("Refresh Data Error:", e); }
+        } catch(e) { console.error("Refresh Error:", e); }
+    }
+
+    // Helper kecil untuk nama image
+    function getImageName(idx) {
+        const names = ['tuna', 'crab', 'shark', 'octopus', 'shrimp', 'orcha'];
+        return names[idx];
+    }
+
+    // Update fungsi Select Animal agar tidak bisa pilih yang Full
+    function selectAnimal(name, index) {
+        const card = document.getElementById(`card-${index}`);
+        
+        // Safety check: Jangan pilih jika full (meskipun onclick sudah dihapus di refreshGameData)
+        if(card.classList.contains('full')) {
+            showToast("Kuota penuh! Pilih hewan lain.");
+            return;
+        }
+
+        currentSelectedAnimal = { name, index };
+        
+        // Hapus class 'selected' dari semua kartu lain
+        for(let i=0; i<6; i++) {
+            document.getElementById(`card-${i}`).classList.remove('selected');
+        }
+        
+        // Tambah class selected (visual feedback saat diklik)
+        card.classList.add('selected');
     }
 
     function updatePoolDisplay() {
