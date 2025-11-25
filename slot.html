@@ -3,540 +3,568 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faylotto Spin Battle - Base Sepolia</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
-<style>
-    /* --- CSS GLOBAL --- */
-    * { box-sizing: border-box; }
-    :root {
-        --primary: #0052ff; --accent: #00d1ff; --bg: #0f111a;
-        --panel: #1e2130; --text: #ffffff; --danger: #ff4b4b; --success: #00d26a;
-        --gold: #FFD700;
-        --shib-color: #FFA409; --usdt-color: #26A17B; --eth-color: #627EEA;
-        --purple: #bf00ff;
-    }
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: var(--bg); color: var(--text); margin: 0;
-        display: flex; flex-direction: column; align-items: center;
-        min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
-    }
-    header {
-        width: 100%; padding: 15px 20px; display: flex; justify-content: space-between;
-        align-items: center; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--panel);
-        position: sticky; top: 0; z-index: 100; backdrop-filter: blur(5px);
-    }
-    .wallet-btn {
-        background: var(--primary); color: white; border: none; padding: 8px 16px;
-        border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s;
-    }
-    .wallet-btn.connected { background: var(--success); cursor: default; }
+    <title>Faylotto Ultimate - Base Sepolia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #0052ff; /* Base Color */
+            --accent: #00ff9d;
+            --bg: #0a0b1e;
+            --card: #14162d;
+            --text: #ffffff;
+            --danger: #ff4d4d;
+        }
 
-    .layout-container {
-        width: 92%; max-width: 480px;
-        display: flex; flex-direction: column; align-items: center;
-    }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        
+        /* Layout Utilities */
+        .container { max-width: 1200px; margin: 0 auto; }
+        .grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .card { background: var(--card); padding: 20px; border-radius: 12px; border: 1px solid #333; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .hidden { display: none !important; }
+        .row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .col { flex: 1; }
 
-    /* SLOT MACHINE */
-    .slot-machine {
-        margin-top: 30px; background: var(--panel); padding: 20px;
-        border-radius: 15px; border: 4px solid #333;
-        box-shadow: 0 0 20px rgba(0, 82, 255, 0.2); 
-        width: 100%; display: flex; flex-direction: column; align-items: center;
-    }
-    .reels-container {
-        display: flex; gap: 8px; background: #000; padding: 10px;
-        border-radius: 8px; justify-content: center; margin-bottom: 15px;
-        width: 100%;
-    }
-    .reel {
-        flex: 1; height: 90px; background: #fff; border-radius: 5px;
-        display: flex; align-items: center; justify-content: center;
-        overflow: hidden; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-    }
-    .reel-img { width: 80%; height: 80%; object-fit: contain; }
+        /* Typography & Elements */
+        h1, h2, h3 { margin-top: 0; color: var(--accent); }
+        button {
+            background: var(--primary); color: white; border: none; padding: 10px 20px;
+            border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; width: 100%;
+        }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:disabled { background: #555; cursor: not-allowed; }
+        button.secondary { background: #333; border: 1px solid #555; }
+        button.danger { background: var(--danger); }
+        
+        input, select, textarea {
+            width: 100%; padding: 10px; background: #000; border: 1px solid #444;
+            color: white; border-radius: 6px; box-sizing: border-box; margin-bottom: 10px;
+        }
 
-    /* BUTTON DRAW */
-    .draw-section { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-    .btn-draw {
-        background: linear-gradient(45deg, #333, #555); color: #888; border: 2px solid #444;
-        padding: 11px 0; width: 40%; border-radius: 30px;
-        font-size: 0.6em; font-weight: 700; letter-spacing: 1px;
-        cursor: not-allowed; transition: 0.3s; box-shadow: none; text-transform: uppercase;
-    }
-    .btn-draw.ready {
-        background: linear-gradient(45deg, #ff0000, #ff8800); color: white; border: 2px solid #ffaa00;
-        cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
-        animation: pulse 1.5s infinite;
-    }
-    .btn-draw.ready:hover { transform: scale(1.02); }
-    @keyframes pulse {
-        0% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
-        50% { box-shadow: 0 0 25px rgba(255, 100, 0, 0.8); }
-        100% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
-    }
-    .status-text { font-size: 0.9em; color: var(--accent); font-weight: bold; text-align: center; }
-    .status-text.ready { color: var(--success); }
+        /* Specific Modules */
+        #wallet-status { font-size: 0.9em; color: #aaa; margin-bottom: 20px; text-align: right; }
+        .animal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; }
+        .animal-btn { 
+            aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 2px solid #333; background: #1a1a1a;
+        }
+        .animal-btn.selected { border-color: var(--accent); background: rgba(0, 255, 157, 0.1); }
+        
+        .reels-display { 
+            display: flex; justify-content: center; gap: 15px; font-size: 2em; 
+            background: #000; padding: 20px; border-radius: 10px; margin-bottom: 15px; border: 1px solid var(--accent);
+        }
+        .reel { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; background: #222; border-radius: 5px; }
 
-    /* BETTING AREA */
-    .betting-section { margin-top: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; }
-    .bet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin-top: 15px; }
-    
-    .bet-card {
-        background: var(--panel); border: 2px solid transparent;
-        border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.2s;
-        display: flex; flex-direction: column; align-items: center;
-        justify-content: center; aspect-ratio: 1/1.1; position: relative;
-    }
-    .bet-card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 5px 15px rgba(0, 209, 255, 0.2); }
-    .bet-card.selected { border-color: var(--success); background: rgba(0, 210, 106, 0.1); transform: scale(0.98); box-shadow: 0 0 15px rgba(0, 210, 106, 0.4); }
-    
-    .bet-icon-img { width: 50%; height: 50%; object-fit: contain; margin-bottom: 8px; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3)); }
-    .name { font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;}
-    
-    .team-count { font-size: 9px; color: #aaa; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; margin-top: 5px; }
-    .team-count.filled { color: var(--success); border: 1px solid var(--success); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab-btn { background: transparent; border-bottom: 2px solid transparent; border-radius: 0; }
+        .tab-btn.active { border-color: var(--accent); color: var(--accent); }
 
-    /* BUTTON BET */
-    .main-bet-btn {
-        margin-top: 25px; background: var(--primary); color: white; border: 3px solid #0027b3;
-        padding: 13px 0; width: 50%; border-radius: 50px; font-size: 0.9em;
-        font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0, 82, 255, 0.4);
-    }
-    .main-bet-btn:hover { background: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 209, 255, 0.5); }
-    .main-bet-btn:disabled { background: #444; cursor: not-allowed; box-shadow: none; color: #888; }
-
-    /* MODALS */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
-    .modal-content { background: var(--panel); width: 90%; max-width: 400px; padding: 25px; border-radius: 15px; text-align: center; border: 1px solid var(--accent); box-shadow: 0 0 30px rgba(0,0,0,0.5); }
-    .modal-title { font-size: 1.2em; font-weight: bold; margin-bottom: 20px; }
-    .modal-title span { color: var(--accent); text-transform: uppercase; }
-    .pay-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-    .pay-btn { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; font-size: 14px; }
-    .pay-btn:hover { transform: scale(1.02); filter: brightness(1.1); }
-    .btn-eth { background: var(--eth-color); } .btn-usdt { background: var(--usdt-color); } .btn-shib { background: var(--shib-color); }
-    .free-bet-panel { background: rgba(255, 255, 255, 0.05); border-radius: 8px; padding: 15px; margin-top: 15px; border: 1px dashed var(--success); }
-    .free-balance { font-size: 0.9em; color: #aaa; margin-bottom: 8px; }
-    .free-val { color: var(--success); font-weight: bold; font-size: 1.1em; }
-    .btn-free { width: 100%; background: var(--success); color: #000; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: 5px; }
-    .btn-free:disabled { background: #333; color: #666; cursor: not-allowed; }
-    .close-modal { margin-top: 15px; background: transparent; border: none; color: #aaa; cursor: pointer; text-decoration: underline; }
-    
-    /* INPUT FIELD FOR REGISTRATION */
-    .input-field { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; background: #0f111a; color: white; }
-
-    /* TOAST */
-    #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 999; bottom: 30px; left: 50%; transform: translateX(-50%); }
-    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-    @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-</style>
+        /* Toast Notification */
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center;
+            border-radius: 8px; padding: 16px; position: fixed; z-index: 1; bottom: 30px; right: 30px;
+        }
+        #toast.show { visibility: visible; -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
 </head>
 <body>
 
-    <header>
-        <div style="font-weight:bold; font-size:1.2em;">Faylotto <span style="color:var(--accent)">Battle</span></div>
-        <button id="connectBtn" class="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
-    </header>
+<div class="container">
+    <div class="row">
+        <h1 class="col">🦁 Faylotto Ultimate</h1>
+        <div id="wallet-status">Belum terkoneksi</div>
+    </div>
+    
+    <button id="connectBtn" onclick="connectWallet()">🔌 Connect Wallet (Base Sepolia)</button>
 
-    <div class="layout-container">
-        <div class="slot-machine">
-            <div class="reels-container">
-                <div class="reel" id="reel1"><img id="imgReel1" src="what.svg" class="reel-img"></div>
-                <div class="reel" id="reel2"><img id="imgReel2" src="what.svg" class="reel-img"></div>
-                <div class="reel" id="reel3"><img id="imgReel3" src="what.svg" class="reel-img"></div>
-            </div>
-            <div class="draw-section">
-                <button id="drawBtn" class="btn-draw" onclick="executeDraw()" disabled>DRAW NOW!</button>
-                <div id="drawStatus" class="status-text">Waiting for players... (0/6 Teams Active)</div>
-            </div>
-        </div>
-
-        <div class="betting-section">
-            <h3 style="margin-bottom:5px;">SELECT ANIMAL FIRST</h3>
-            
-            <div class="bet-grid">
-                <div class="bet-card" id="card-0" onclick="selectAnimal('tuna', 0)">
-                    <img id="img-tuna" src="" class="bet-icon-img" alt="Tuna">
-                    <span class="name">Tuna</span>
-                    <span id="count-0" class="team-count">0/2</span>
-                </div>
-                <div class="bet-card" id="card-1" onclick="selectAnimal('crab', 1)">
-                    <img id="img-crab" src="" class="bet-icon-img" alt="Crab">
-                    <span class="name">Crab</span>
-                    <span id="count-1" class="team-count">0/2</span>
-                </div>
-                <div class="bet-card" id="card-2" onclick="selectAnimal('shark', 2)">
-                    <img id="img-shark" src="" class="bet-icon-img" alt="Shark">
-                    <span class="name">Shark</span>
-                    <span id="count-2" class="team-count">0/2</span>
-                </div>
-                <div class="bet-card" id="card-3" onclick="selectAnimal('octopus', 3)">
-                    <img id="img-octopus" src="" class="bet-icon-img" alt="Octopus">
-                    <span class="name">Octopus</span>
-                    <span id="count-3" class="team-count">0/2</span>
-                </div>
-                <div class="bet-card" id="card-4" onclick="selectAnimal('shrimp', 4)">
-                    <img id="img-shrimp" src="" class="bet-icon-img" alt="Shrimp">
-                    <span class="name">Shrimp</span>
-                    <span id="count-4" class="team-count">0/2</span>
-                </div>
-                <div class="bet-card" id="card-5" onclick="selectAnimal('orcha', 5)">
-                    <img id="img-orcha" src="" class="bet-icon-img" alt="Orcha">
-                    <span class="name">Orcha</span>
-                    <span id="count-5" class="team-count">0/2</span>
-                </div>
-            </div>
-            
-            <button id="mainBetBtn" class="main-bet-btn" onclick="triggerBetModal()">PLACE BET</button>
-            <p style="margin-top:20px; color:#aaa; font-size:0.8em;">*Min 5 teams required to Draw</p>
-        </div>
+    <div id="registerSection" class="card hidden" style="margin-top: 20px; border-color: var(--danger);">
+        <h2>⚠️ Registrasi Diperlukan</h2>
+        <input type="text" id="regNickname" placeholder="Buat Nickname (Min 3 huruf)">
+        <input type="text" id="regReferrer" placeholder="Nickname Referrer (Opsional)">
+        <button onclick="registerUser()">Daftar Sekarang</button>
     </div>
 
-    <div id="paymentModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-title">BET ON <span id="modalAnimalName">ANIMAL</span></div>
-            <div class="pay-options">
-                <button class="pay-btn btn-eth" onclick="processPayment('ETH')"><span>ETH</span> <span>0.0005 ETH</span></button>
-                <button class="pay-btn btn-usdt" onclick="processPayment('USDT')"><span>USDT</span> <span>10 USDT</span></button>
-                <button class="pay-btn btn-shib" onclick="processPayment('SHIB')"><span>SHIB</span> <span>110,000 SHIB</span></button>
+    <div id="dashboard" class="hidden">
+        
+        <div class="grid" style="margin-top: 20px;">
+            <div class="card">
+                <h3>👤 Profil Saya</h3>
+                <p><strong>Nick:</strong> <span id="dispNick">-</span></p>
+                <p><strong>Bonus Ref (SHIB):</strong> <span id="dispBonus">0</span></p>
+                <p><strong>Pending Ref Count:</strong> <span id="dispPendingRef">0</span></p>
+                <button onclick="claimBonus()" class="secondary">Klaim Bonus Referral</button>
             </div>
-            <div class="free-bet-panel">
-                <div class="free-balance">Bonus Balance:</div>
-                <div class="free-val"><span id="userBonusBalance">0</span> SHIB</div>
-                <button id="btnFreeBet" class="btn-free" onclick="processPayment('FREE')" disabled>Use Bonus Bet (10k SHIB)</button>
-                <div style="font-size:0.7em; color:#aaa; margin-top:5px;">*From Referral Bonus</div>
+            <div class="card">
+                <h3>💰 Saldo Kontrak (Winnings)</h3>
+                <div class="row">
+                    <span>ETH:</span> <span id="creditETH">0</span>
+                    <button class="secondary" style="width:auto; padding: 5px 10px;" onclick="withdraw('ETH')">WD</button>
+                </div>
+                <div class="row">
+                    <span>USDT:</span> <span id="creditUSDT">0</span>
+                    <button class="secondary" style="width:auto; padding: 5px 10px;" onclick="withdraw('USDT')">WD</button>
+                </div>
+                <div class="row">
+                    <span>SHIB:</span> <span id="creditSHIB">0</span>
+                    <button class="secondary" style="width:auto; padding: 5px 10px;" onclick="withdraw('SHIB')">WD</button>
+                </div>
             </div>
-            <button class="close-modal" onclick="closeModal('paymentModal')">Cancel</button>
         </div>
-    </div>
 
-    <div id="registerModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-title">PLAYER REGISTRATION</div>
-            <p style="font-size:0.9em; color:#aaa;">You must register a nickname to play.</p>
-            <input type="text" id="regNickname" class="input-field" placeholder="Enter Nickname (min 3 chars)">
-            <input type="text" id="regReferrer" class="input-field" placeholder="Referrer Nickname (Optional)">
-            <button class="wallet-btn" style="width:100%; margin-top:10px;" onclick="registerUser()">REGISTER NOW</button>
+        <div class="grid" style="margin-top: 20px;">
+            <div class="card">
+                <h3>🎲 Pasang Taruhan</h3>
+                
+                <label>Pilih Mata Uang:</label>
+                <select id="betCurrency">
+                    <option value="0">ETH (0.0005 ETH)</option>
+                    <option value="1">USDT (10 USDT)</option>
+                    <option value="2">SHIB (110,000 SHIB)</option>
+                </select>
+
+                <label style="display:flex; align-items:center; gap:10px; margin: 10px 0;">
+                    <input type="checkbox" id="isFreeBet" style="width:auto;"> Gunakan Free Credit (Khusus SHIB)
+                </label>
+
+                <p>Pilih Hewan:</p>
+                <div class="animal-grid" id="animalSelector">
+                    <button class="animal-btn" onclick="selectAnimal(0)">0<br>🐵</button>
+                    <button class="animal-btn" onclick="selectAnimal(1)">1<br>🦁</button>
+                    <button class="animal-btn" onclick="selectAnimal(2)">2<br>🐼</button>
+                    <button class="animal-btn" onclick="selectAnimal(3)">3<br>🐮</button>
+                    <button class="animal-btn" onclick="selectAnimal(4)">4<br>🐯</button>
+                    <button class="animal-btn" onclick="selectAnimal(5)">5<br>🐔</button>
+                </div>
+                <input type="hidden" id="selectedAnimal" value="-1">
+                
+                <div style="margin-top: 15px;">
+                    <button id="approveBtn" class="hidden" onclick="approveToken()">Approve Token</button>
+                    <button id="betBtn" onclick="placeBet()">Pasang Taruhan</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>⚙️ Kontrol Permainan</h3>
+                <p>Round ID Saat Ini: <strong id="currentRoundId">#</strong></p>
+                <p>Tim Aktif: <strong id="activeTeams">0</strong> / 5 Min</p>
+                
+                <div class="reels-display">
+                    <div class="reel" id="reel1">❓</div>
+                    <div class="reel" id="reel2">❓</div>
+                    <div class="reel" id="reel3">❓</div>
+                </div>
+                <div style="text-align:center; color: var(--accent); margin-bottom:10px;" id="roundOutcome">
+                    Menunggu Putaran...
+                </div>
+
+                <button onclick="executeDraw()" id="drawBtn" class="danger">PUTAR RODA (Draw)</button>
+                <p style="font-size:0.8em; color:#666; margin-top:5px;">*Siapapun bisa memutar jika syarat terpenuhi</p>
+            </div>
         </div>
-    </div>
 
-    <div id="toast">Notification</div>
+        <div class="card" style="margin-top: 20px;">
+            <h3>💬 Sosial & Reaksi (Round Terakhir)</h3>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="showTab('comments')">Komentar</button>
+                <button class="tab-btn" onclick="showTab('rating')">Rating & Reaksi</button>
+            </div>
+
+            <div id="tab-comments">
+                <div id="commentsList" style="max-height: 200px; overflow-y:auto; margin-bottom:10px; border:1px solid #333; padding:10px;">
+                    </div>
+                <div class="row">
+                    <input type="text" id="commentText" placeholder="Tulis komentar...">
+                    <button style="width: auto;" onclick="submitComment()">Kirim</button>
+                </div>
+            </div>
+
+            <div id="tab-rating" class="hidden">
+                <div class="row">
+                    <button class="secondary" onclick="sendReaction(1)">👍 Like</button>
+                    <button class="secondary" onclick="sendReaction(2)">👎 Dislike</button>
+                </div>
+                <div class="row" style="margin-top:10px;">
+                    <select id="starRating">
+                        <option value="5">⭐⭐⭐⭐⭐</option>
+                        <option value="4">⭐⭐⭐⭐</option>
+                        <option value="3">⭐⭐⭐</option>
+                        <option value="2">⭐⭐</option>
+                        <option value="1">⭐</option>
+                    </select>
+                    <button style="width: auto;" onclick="submitRating()">Beri Rating</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div id="toast">Notifikasi</div>
 
 <script>
-    // ============================================================
-    // 1. KONFIGURASI ALAMAT & ABI
-    // ============================================================
-    const CONTRACT_ADDRESS = "0x72a20552267B4313f74003E25593592B15b76ad6"; // << ISI ALAMAT KONTRAK FAYLOTTOULTIMATE DISINI
-    const USDT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2";     // << ISI ALAMAT USDT DISINI
-    const SHIB_ADDRESS = "0xba63AFBf0060a9123aAAc1213b587d0462bD4d45";     // << ISI ALAMAT SHIB DISINI
+    // --- KONFIGURASI PENTING (GANTI ALAMAT DI SINI) ---
+    const CONTRACT_ADDRESS = "0x.....ALAMAT_KONTRAK_ANDA_DISINI....."; 
+    const USDT_ADDRESS = "0x.....ALAMAT_USDT_DISINI.....";
+    const SHIB_ADDRESS = "0x.....ALAMAT_SHIB_DISINI.....";
     
-    const BASE_SEPOLIA_ID = 84532; 
-    const BASE_SEPOLIA_HEX = "0x14a34"; 
-
-    // ABI Minimal untuk Interaksi
-    const GAME_ABI = [{"inputs":[{"internalType":"address","name":"_usdtToken","type":"address"},{"internalType":"address","name":"_shibToken","type":"address"},{"internalType":"address","name":"_priceFeedETH","type":"address"},{"internalType":"address","name":"_priceFeedUSDT","type":"address"},{"internalType":"address","name":"_priceFeedSHIB","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"indexed":false,"internalType":"string","name":"outcome","type":"string"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"}],"name":"BattleResult","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BonusClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"token","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"EmergencyWithdraw","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"oldCollector","type":"address"},{"indexed":false,"internalType":"address","name":"newCollector","type":"address"}],"name":"FeeCollectorUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint8","name":"animalChoice","type":"uint8"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NewBet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"RatingSubmitted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"reactionType","type":"uint8"}],"name":"ReactionUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"invitee","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralLinked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"UserRegistered","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"enum FaylottoUltimate.Currency","name":"curr","type":"uint8"},{"indexed":false,"internalType":"bool","name":"isRealTransfer","type":"bool"}],"name":"WinDistributed","type":"event"},{"inputs":[],"name":"COST_ETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"COST_SHIB_FREE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"COST_SHIB_MAIN","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"COST_USDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"FEE_PLATFORM_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"FEE_REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"FEE_TOTAL_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_TEAMS_ACTIVE","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BONUS_AMOUNT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"","type":"uint8"}],"name":"activeTeamCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"string","name":"_text","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"}],"name":"betETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"},{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"bool","name":"_isFreeBet","type":"bool"}],"name":"betToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralBonus","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"commentCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"dislikeCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint256","name":"_cId","type":"uint256"},{"internalType":"string","name":"_newText","type":"string"}],"name":"editComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"emergencyWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_token","type":"address"}],"name":"emergencyWithdrawToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"executeDraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeShibCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getActiveTeamCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getBonusBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"}],"name":"getLatestPrice","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"}],"name":"getRoundResult","outputs":[{"components":[{"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"internalType":"string","name":"outcome","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"address","name":"winner","type":"address"}],"internalType":"struct FaylottoUltimate.RoundResultData","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"globalWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nicknameToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nickname","type":"string"},{"internalType":"string","name":"_referrerNick","type":"string"}],"name":"register","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundBets","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"enum FaylottoUltimate.BetType","name":"bType","type":"uint8"},{"internalType":"uint8","name":"animalChoice","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundComments","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"author","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isEdited","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundHistory","outputs":[{"internalType":"string","name":"outcome","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"address","name":"winner","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_eth","type":"address"},{"internalType":"address","name":"_usdt","type":"address"},{"internalType":"address","name":"_shib","type":"address"}],"name":"setPriceFeeds","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint8","name":"_reaction","type":"uint8"}],"name":"setReaction","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"shibToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint8","name":"_stars","type":"uint8"}],"name":"submitRating","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"totalRatingCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"totalRatingScore","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"usdtToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"enum FaylottoUltimate.Currency","name":"","type":"uint8"}],"name":"userCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"userRatings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"userReactions","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"userWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"string","name":"nickname","type":"string"},{"internalType":"bool","name":"isRegistered","type":"bool"},{"internalType":"address","name":"referrer","type":"address"},{"internalType":"bool","name":"hasBet","type":"bool"},{"internalType":"uint256","name":"pendingRefBonusCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdrawCredit","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-
-    const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
-
-    const ITEM_IMAGES = { tuna: "tuna.svg", crab: "crab.svg", shark: "shark.svg", octopus: "octo.svg", shrimp: "shrimp.svg", orcha: "orcha.svg" };
-    const REEL_INITIAL_IMG = "what.svg";
-
-    // Global State
-    let provider, signer, userAddress, gameContract;
-    let isConnected = false;
-    let currentSelectedAnimal = { name: '', index: -1 };
-    let userBonusVal = 0n; // BigInt for calculations
-    let teamData = [0,0,0,0,0,0];
-
-    // ============================================================
-    // 2. INITIALIZATION & WALLET
-    // ============================================================
-    window.onload = async () => {
-        loadImages();
-        checkLocalStorageAuth();
+    // --- KONFIGURASI JARINGAN (BASE SEPOLIA) ---
+    const BASE_SEPOLIA_ID = "0x14a34"; // 84532
+    const BASE_SEPOLIA_CONFIG = {
+        chainId: BASE_SEPOLIA_ID,
+        chainName: "Base Sepolia Testnet",
+        rpcUrls: ["https://sepolia.base.org"],
+        blockExplorerUrls: ["https://sepolia.basescan.org"],
+        nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }
     };
 
-    function loadImages() {
-        document.getElementById('imgReel1').src = REEL_INITIAL_IMG;
-        document.getElementById('imgReel2').src = REEL_INITIAL_IMG;
-        document.getElementById('imgReel3').src = REEL_INITIAL_IMG;
-        for (const [key, url] of Object.entries(ITEM_IMAGES)) {
-            const imgEl = document.getElementById(`img-${key}`);
-            if (imgEl) imgEl.src = url;
-        }
-    }
+    // --- ABI (MINIMAL UNTUK UI) ---
+    const ABI = [
+        "function register(string, string) external",
+        "function users(address) view returns (string, bool, address, bool, uint256)",
+        "function betETH(uint8) external payable",
+        "function betToken(uint8, uint8, bool) external", // Currency enum: 0=ETH, 1=USDT, 2=SHIB
+        "function executeDraw() external",
+        "function claimReferralBonus() external",
+        "function withdrawCredit(uint8, uint256) external",
+        "function userCredits(address, uint8) view returns (uint256)",
+        "function freeShibCredits(address) view returns (uint256)",
+        "function currentRoundId() view returns (uint256)",
+        "function getActiveTeamCount() view returns (uint256)",
+        "function getRoundResult(uint256) view returns (tuple(uint8[3] reels, string outcome, uint256 timestamp, address winner))",
+        "function addComment(uint256, string) external",
+        "function setReaction(uint256, uint8) external",
+        "function submitRating(uint256, uint8) external",
+        "function roundComments(uint256, uint256) view returns (uint256, address, string, uint256, bool)",
+        "function commentCounts(uint256) view returns (uint256)",
+        "event BattleResult(uint8[3] reels, string outcome, uint256 roundId)"
+    ];
 
+    const TOKEN_ABI = [
+        "function approve(address spender, uint256 amount) external returns (bool)",
+        "function allowance(address owner, address spender) view returns (uint256)"
+    ];
+
+    // --- STATE VARIABLES ---
+    let provider, signer, contract;
+    let userAddress;
+    let currentRound = 0;
+    
+    // --- 1. WALLET CONNECTION & NETWORK SWITCHING ---
     async function connectWallet() {
-        if (!window.ethereum) { showToast("MetaMask not installed!"); return; }
-        try {
-            provider = new ethers.BrowserProvider(window.ethereum);
-            const accounts = await provider.send("eth_requestAccounts", []);
-            userAddress = accounts[0];
-            
-            await switchNetwork();
-            signer = await provider.getSigner();
-            gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, signer);
+        if (!window.ethereum) return showToast("Metamask tidak terdeteksi!");
 
-            // Auth & Register Check
-            const storedAuth = localStorage.getItem(`auth_${userAddress}`);
-            if (storedAuth) {
-                const authData = JSON.parse(storedAuth);
-                if (new Date().getTime() < authData.expiry) {
-                    await finalizeLogin();
-                    return;
+        provider = new ethers.BrowserProvider(window.ethereum);
+        
+        try {
+            await provider.send("eth_requestAccounts", []);
+            const network = await provider.getNetwork();
+
+            // Cek Jaringan Base Sepolia
+            if (("0x" + network.chainId.toString(16)) !== BASE_SEPOLIA_ID) {
+                try {
+                    await window.ethereum.request({
+                        method: "wallet_switchEthereumChain",
+                        params: [{ chainId: BASE_SEPOLIA_ID }],
+                    });
+                } catch (switchError) {
+                    // Jika jaringan belum ada, tambahkan
+                    if (switchError.code === 4902) {
+                        try {
+                            await window.ethereum.request({
+                                method: "wallet_addEthereumChain",
+                                params: [BASE_SEPOLIA_CONFIG],
+                            });
+                        } catch (addError) {
+                            return showToast("Gagal menambahkan jaringan Base Sepolia.");
+                        }
+                    } else {
+                        return showToast("Gagal pindah jaringan.");
+                    }
                 }
             }
-            await requestSignature();
+
+            signer = await provider.getSigner();
+            userAddress = await signer.getAddress();
+            contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+
+            // Handle Signature Auth
+            await handleSignatureAuth();
+
+            document.getElementById('connectBtn').classList.add('hidden');
+            document.getElementById('wallet-status').innerText = `Connected: ${userAddress.substring(0,6)}...${userAddress.substring(38)}`;
+            
+            checkRegistration();
 
         } catch (error) {
             console.error(error);
-            showToast("Connection failed: " + error.message);
+            showToast("Koneksi gagal: " + error.message);
         }
     }
 
-    async function switchNetwork() {
-        const network = await provider.getNetwork();
-        if (Number(network.chainId) !== BASE_SEPOLIA_ID) {
-            try {
-                await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_SEPOLIA_HEX }] });
-            } catch (err) {
-                if (err.code === 4902) { /* Add Chain Logic here if needed */ }
-            }
-        }
-    }
+    // --- 2. SIGNATURE AUTHENTICATION (LOCAL STORAGE) ---
+    async function handleSignatureAuth() {
+        const storageKey = `auth_${userAddress}`;
+        const storedAuth = JSON.parse(localStorage.getItem(storageKey));
+        const now = Date.now();
 
-    async function requestSignature() {
-        const message = `Login to Faylotto\nUser: ${userAddress}\nTime: ${new Date().toLocaleString()}`;
+        // Cek apakah auth valid (kurang dari 30 hari)
+        if (storedAuth && storedAuth.expiry > now) {
+            console.log("Auth valid dari storage.");
+            return;
+        }
+
+        // Jika tidak ada atau expired, minta sign
+        const localTime = new Date().toLocaleString();
+        const message = `Welcome ${userAddress} ${localTime}`;
+        
         try {
             const signature = await signer.signMessage(message);
-            const expiry = new Date().getTime() + (30 * 24 * 3600 * 1000);
-            localStorage.setItem(`auth_${userAddress}`, JSON.stringify({ signature, expiry }));
-            await finalizeLogin();
-        } catch (err) { showToast("Signature rejected"); }
-    }
-
-    async function finalizeLogin() {
-        setConnectedState(true);
-        showToast("Wallet Connected");
-        
-        // 1. Check Registration
-        try {
-            const userData = await gameContract.users(userAddress);
-            if (!userData.isRegistered) {
-                document.getElementById('registerModal').style.display = 'flex';
-            } else {
-                refreshGameData();
-            }
-        } catch(e) { console.error("Read user error", e); }
-    }
-
-    function setConnectedState(status) {
-        isConnected = status;
-        const btn = document.getElementById("connectBtn");
-        if (status) {
-            btn.innerText = userAddress.substring(0,6) + "..." + userAddress.slice(-4);
-            btn.classList.add("connected");
-        } else {
-            btn.innerText = "Connect Wallet";
-            btn.classList.remove("connected");
+            const expiry = now + (30 * 24 * 60 * 60 * 1000); // 30 Hari
+            
+            localStorage.setItem(storageKey, JSON.stringify({
+                signature: signature,
+                expiry: expiry,
+                message: message
+            }));
+            showToast("Login Berhasil (Disimpan 30 Hari)");
+        } catch (err) {
+            showToast("Signature ditolak user.");
+            throw new Error("Signature required");
         }
     }
 
-    // ============================================================
-    // 3. CONTRACT INTERACTION
-    // ============================================================
-    
-    // Register
+    // --- 3. CORE GAME LOGIC ---
+
+    async function checkRegistration() {
+        const userData = await contract.users(userAddress);
+        if (userData[1] === true) { // isRegistered
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('registerSection').classList.add('hidden');
+            document.getElementById('dispNick').innerText = userData[0];
+            document.getElementById('dispPendingRef').innerText = userData[4];
+            loadGameData();
+        } else {
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('registerSection').classList.remove('hidden');
+        }
+    }
+
     async function registerUser() {
         const nick = document.getElementById('regNickname').value;
         const ref = document.getElementById('regReferrer').value;
-        if(nick.length < 3) { showToast("Nickname too short"); return; }
-        
         try {
-            showToast("Registering...");
-            const tx = await gameContract.register(nick, ref);
+            const tx = await contract.register(nick, ref);
+            showToast("Mendaftarkan... Tunggu konfirmasi.");
             await tx.wait();
-            showToast("Registration Success!");
-            closeModal('registerModal');
-            refreshGameData();
-        } catch(err) { showToast("Reg Failed: " + err.reason || err.message); }
+            showToast("Berhasil Daftar!");
+            checkRegistration();
+        } catch (err) {
+            showToast("Gagal daftar: " + err.reason);
+        }
     }
 
-    // Refresh Data (Active Teams & Bonus)
-    async function refreshGameData() {
-        if(!gameContract) return;
-        try {
-            // Get Bonus Balance
-            const bonus = await gameContract.getBonusBalance(userAddress);
-            userBonusVal = bonus;
-            document.getElementById('userBonusBalance').innerText = ethers.formatEther(bonus);
-            
-            // Enable/Disable Free Bet Button
-            const costFree = ethers.parseEther("10000"); // 10k SHIB
-            const btnFree = document.getElementById('btnFreeBet');
-            if(bonus >= costFree) {
-                btnFree.disabled = false;
-                btnFree.innerText = "Use Bonus Bet (10k SHIB)";
-            } else {
-                btnFree.disabled = true;
-                btnFree.innerText = "Insufficient Bonus";
-            }
-
-            // Get Active Teams Status
-            let activeCount = 0;
-            for(let i=0; i<6; i++) {
-                const count = await gameContract.activeTeamCounts(i);
-                teamData[i] = Number(count);
-                if(teamData[i] > 0) activeCount++;
-                
-                // Update UI Badge
-                const badge = document.getElementById(`count-${i}`);
-                badge.innerText = `${teamData[i]}/2`;
-                if(teamData[i] >= 2) badge.classList.add('filled');
-                else badge.classList.remove('filled');
-            }
-
-            // Update Draw Button
-            const btnDraw = document.getElementById('drawBtn');
-            const statText = document.getElementById('drawStatus');
-            if(activeCount >= 5) {
-                btnDraw.disabled = false;
-                btnDraw.classList.add('ready');
-                statText.innerText = "BATTLE READY! CLICK TO DRAW!";
-                statText.classList.add('ready');
-            } else {
-                btnDraw.disabled = true;
-                btnDraw.classList.remove('ready');
-                statText.innerText = `Waiting for players... (${activeCount}/6 Teams Active)`;
-                statText.classList.remove('ready');
-            }
-
-        } catch(e) { console.error(e); }
-    }
-
-    // Betting Logic
-    async function processPayment(currencyType) {
-        if (currentSelectedAnimal.index === -1) return;
-        const idx = currentSelectedAnimal.index;
+    async function loadGameData() {
+        // Credits
+        const cETH = await contract.userCredits(userAddress, 0);
+        const cUSDT = await contract.userCredits(userAddress, 1);
+        const cSHIB = await contract.userCredits(userAddress, 2);
+        const freeShib = await contract.freeShibCredits(userAddress);
         
-        // Cek kuota lokal (untuk UX cepat)
-        if(teamData[idx] >= 2) { showToast("Team Full!"); return; }
+        document.getElementById('creditETH').innerText = ethers.formatEther(cETH);
+        document.getElementById('creditUSDT').innerText = ethers.formatUnits(cUSDT, 6); // USDT 6 decimals
+        document.getElementById('creditSHIB').innerText = ethers.formatUnits(cSHIB, 18);
+        document.getElementById('dispBonus').innerText = ethers.formatUnits(freeShib, 18);
 
-        closeModal('paymentModal');
-        showToast(`Processing ${currencyType} Bet...`);
+        // Game State
+        currentRound = await contract.currentRoundId();
+        document.getElementById('currentRoundId').innerText = currentRound.toString();
+        
+        const activeTeams = await contract.getActiveTeamCount();
+        document.getElementById('activeTeams').innerText = activeTeams.toString();
+
+        loadComments(currentRound - 1n); // Load comments round sebelumnya/aktif
+    }
+
+    function selectAnimal(index) {
+        document.querySelectorAll('.animal-btn').forEach(b => b.classList.remove('selected'));
+        document.querySelectorAll('.animal-btn')[index].classList.add('selected');
+        document.getElementById('selectedAnimal').value = index;
+    }
+
+    async function placeBet() {
+        const animal = document.getElementById('selectedAnimal').value;
+        if (animal == "-1") return showToast("Pilih hewan dulu!");
+        
+        const curr = document.getElementById('betCurrency').value; // 0, 1, 2
+        const isFree = document.getElementById('isFreeBet').checked;
 
         try {
             let tx;
-            // Enum Solidity: ETH=0, USDT=1, SHIB=2
-            
-            if (currencyType === 'ETH') {
-                // 0.0005 ETH
-                const val = ethers.parseEther("0.0005");
-                tx = await gameContract.betETH(idx, { value: val });
-            } 
-            else if (currencyType === 'USDT') {
-                // 10 USDT (6 decimals)
-                const amount = ethers.parseUnits("10", 6); 
-                await checkApprove(USDT_ADDRESS, amount);
-                // betToken(animal, curr=1, isFree=false)
-                tx = await gameContract.betToken(idx, 1, false);
+            if (curr == "0") { // ETH
+                tx = await contract.betETH(animal, { value: ethers.parseEther("0.0005") });
+            } else { // Token
+                // Cek allowance dulu jika USDT/SHIB Main Bet
+                if (!isFree) {
+                    const tokenAddr = (curr == "1") ? USDT_ADDRESS : SHIB_ADDRESS;
+                    const cost = (curr == "1") ? ethers.parseUnits("10", 6) : ethers.parseUnits("110000", 18);
+                    
+                    const tokenContract = new ethers.Contract(tokenAddr, TOKEN_ABI, signer);
+                    const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
+                    
+                    if (allowance < cost) {
+                        showToast("Perlu Approve Token Dulu!");
+                        document.getElementById('approveBtn').classList.remove('hidden');
+                        document.getElementById('approveBtn').onclick = () => approveToken(tokenAddr, cost);
+                        return;
+                    }
+                }
+                tx = await contract.betToken(animal, curr, isFree);
             }
-            else if (currencyType === 'SHIB') {
-                // 110,000 SHIB (18 decimals)
-                const amount = ethers.parseEther("110000");
-                await checkApprove(SHIB_ADDRESS, amount);
-                // betToken(animal, curr=2, isFree=false)
-                tx = await gameContract.betToken(idx, 2, false);
-            }
-            else if (currencyType === 'FREE') {
-                // betToken(animal, curr=2, isFree=true) -> Logic handles deduct
-                tx = await gameContract.betToken(idx, 2, true);
-            }
-
-            showToast("Transaction sent...");
+            showToast("Mengirim taruhan...");
             await tx.wait();
-            showToast("Bet Confirmed!");
-            
-            // Optimistic Update UI
-            teamData[idx]++;
-            refreshGameData(); // Fetch real data
-
+            showToast("Taruhan Masuk!");
+            loadGameData();
         } catch (err) {
             console.error(err);
-            showToast("Bet Failed: " + (err.reason || "Check console"));
+            showToast("Bet Gagal: " + (err.reason || err.message));
         }
     }
 
-    async function checkApprove(tokenAddr, amountNeeded) {
-        const token = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
-        const allowance = await token.allowance(userAddress, CONTRACT_ADDRESS);
-        if(allowance < amountNeeded) {
-            showToast("Approving Token...");
-            const tx = await token.approve(CONTRACT_ADDRESS, ethers.MaxUint256);
-            await tx.wait();
-            showToast("Approved!");
-        }
-    }
-
-    // Draw Logic
-    async function executeDraw() {
-        if(!gameContract) return;
+    async function approveToken(tokenAddr, amount) {
         try {
-            showToast("Executing Draw...");
-            const tx = await gameContract.executeDraw();
+            const tokenContract = new ethers.Contract(tokenAddr, TOKEN_ABI, signer);
+            const tx = await tokenContract.approve(CONTRACT_ADDRESS, amount);
+            showToast("Approving...");
             await tx.wait();
-            
-            showToast("Draw Complete! Spinning...");
-            startSpinAnimation();
-            
-            // Setelah spin visual selesai (3 detik), refresh data
-            setTimeout(() => {
-                refreshGameData(); 
-                showToast("Round Ended! Check Winnings.");
-            }, 3000);
-
-        } catch(err) { showToast("Draw Failed: " + err.reason); }
+            showToast("Approved! Klik Pasang Taruhan lagi.");
+            document.getElementById('approveBtn').classList.add('hidden');
+        } catch (err) {
+            showToast("Approve Gagal");
+        }
     }
 
-    // ============================================================
-    // 4. UI HELPER FUNCTIONS
-    // ============================================================
-    function selectAnimal(name, index) {
-        currentSelectedAnimal = { name, index };
-        for (let i = 0; i < 6; i++) document.getElementById(`card-${i}`).classList.remove('selected');
-        document.getElementById(`card-${index}`).classList.add('selected');
+    async function executeDraw() {
+        try {
+            const tx = await contract.executeDraw();
+            showToast("Memutar Roda... 🎰");
+            
+            // Listen event
+            contract.once("BattleResult", (reels, outcome, rId) => {
+                document.getElementById('reel1').innerText = getEmoji(reels[0]);
+                document.getElementById('reel2').innerText = getEmoji(reels[1]);
+                document.getElementById('reel3').innerText = getEmoji(reels[2]);
+                document.getElementById('roundOutcome').innerText = outcome;
+                showToast(`Hasil: ${outcome}`);
+                loadGameData();
+            });
+
+            await tx.wait();
+        } catch (err) {
+            showToast("Draw Gagal: " + err.reason);
+        }
     }
 
-    function triggerBetModal() {
-        if (!isConnected) { showToast("Connect Wallet First!"); return; }
-        if (currentSelectedAnimal.index === -1) { showToast("Select Animal First!"); return; }
+    async function claimBonus() {
+        try {
+            const tx = await contract.claimReferralBonus();
+            await tx.wait();
+            showToast("Bonus Diklaim!");
+            loadGameData();
+        } catch (e) { showToast("Gagal klaim"); }
+    }
+
+    async function withdraw(ticker) {
+        const amt = prompt(`Masukkan jumlah ${ticker} yg mau di WD:`);
+        if(!amt) return;
         
-        document.getElementById("modalAnimalName").innerText = currentSelectedAnimal.name.toUpperCase();
-        document.getElementById('paymentModal').style.display = 'flex';
+        let currId = 0, parsedAmt;
+        if(ticker === 'ETH') { currId = 0; parsedAmt = ethers.parseEther(amt); }
+        if(ticker === 'USDT') { currId = 1; parsedAmt = ethers.parseUnits(amt, 6); }
+        if(ticker === 'SHIB') { currId = 2; parsedAmt = ethers.parseUnits(amt, 18); }
+
+        try {
+            const tx = await contract.withdrawCredit(currId, parsedAmt);
+            await tx.wait();
+            showToast("Withdraw Berhasil!");
+            loadGameData();
+        } catch(e) { showToast("WD Gagal: " + e.reason); }
     }
 
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    // --- 4. SOCIAL FEATURES ---
+    async function loadComments(rId) {
+        if (rId < 1) return;
+        const count = await contract.commentCounts(rId);
+        const list = document.getElementById('commentsList');
+        list.innerHTML = "";
 
-    function startSpinAnimation() {
-        const reels = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
-        const imageUrls = Object.values(ITEM_IMAGES);
-        reels.forEach((reelImg, i) => {
-            let counter = 0;
-            const interval = setInterval(() => {
-                reelImg.src = imageUrls[Math.floor(Math.random() * imageUrls.length)];
-                counter++; if (counter > 10 + (i * 5)) clearInterval(interval);
-            }, 100);
-        });
+        // Load 10 komentar terakhir saja agar ringan
+        let start = count > 10n ? count - 10n : 0n;
+        for (let i = start; i < count; i++) {
+            const c = await contract.roundComments(rId, i);
+            const div = document.createElement('div');
+            div.style.borderBottom = "1px solid #444";
+            div.style.padding = "5px";
+            div.innerHTML = `<small style='color:#aaa'>${c[1].substring(0,6)}...</small><br>${c[2]}`;
+            list.appendChild(div);
+        }
+    }
+
+    async function submitComment() {
+        const txt = document.getElementById('commentText').value;
+        const roundId = currentRound > 1 ? currentRound - 1n : 1n; // Komentar untuk ronde yg baru selesai atau aktif
+        try {
+            const tx = await contract.addComment(roundId, txt);
+            await tx.wait();
+            document.getElementById('commentText').value = "";
+            loadComments(roundId);
+        } catch(e) { showToast("Gagal komen"); }
+    }
+
+    async function sendReaction(type) {
+        const roundId = currentRound > 1 ? currentRound - 1n : 1n;
+        try {
+            const tx = await contract.setReaction(roundId, type);
+            await tx.wait();
+            showToast("Reaksi terkirim");
+        } catch(e) { showToast("Gagal reaksi"); }
+    }
+
+    async function submitRating() {
+        const stars = document.getElementById('starRating').value;
+        const roundId = currentRound > 1 ? currentRound - 1n : 1n;
+        try {
+            const tx = await contract.submitRating(roundId, stars);
+            await tx.wait();
+            showToast("Rating terkirim");
+        } catch(e) { showToast("Gagal rating"); }
+    }
+
+    // --- UTILS ---
+    function getEmoji(num) {
+        const emojis = ['🐵','🦁','🐼','🐮','🐯','🐔'];
+        return emojis[num] || '❓';
+    }
+
+    function showTab(tabName) {
+        document.getElementById('tab-comments').classList.add('hidden');
+        document.getElementById('tab-rating').classList.add('hidden');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+        event.target.classList.add('active');
     }
 
     function showToast(msg) {
         const x = document.getElementById("toast");
-        x.innerText = msg; x.className = "show";
-        setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
+        x.innerText = msg;
+        x.className = "show";
+        setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
     }
-    
-    function checkLocalStorageAuth() { /* Helper if needed */ }
 </script>
+
 </body>
-</html>
+                        </html>
