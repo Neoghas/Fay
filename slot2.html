@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+a<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -429,69 +429,87 @@
         } catch(e) { console.error("Login Check Error:", e); }
     }
 
-    // --- UPDATE LOGIC REFRESH DATA ---
+    // --- UPDATE SCRIPT FRONTEND (AGAR STATUS JELAS) ---
     async function refreshGameData() {
         if(!gameContract) return;
         try {
-            // ... (Load User Data & Bonus Balance tetap sama seperti sebelumnya) ...
+            // 1. User Data & Bonus (Tetap)
+            const userData = await gameContract.users(userAddress);
+            if(userData[1]) {
+                document.getElementById('referralPanel').style.display = 'block';
+                document.getElementById('displayNick').innerText = userData[0];
+                document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
+            }
 
-            // === LOGIKA BARU UNTUK BORDER ===
+            const bonus = await gameContract.freeShibCredits(userAddress);
+            document.getElementById('userBonusBalance').innerText = ethers.formatEther(bonus);
+            const btnFree = document.getElementById('btnFreeBet');
+            if(bonus >= ethers.parseEther("10000")) { 
+                btnFree.disabled = false; btnFree.style.background = "var(--success)"; 
+            } else { 
+                btnFree.disabled = true; btnFree.style.background = "#333"; 
+            }
+
+            // 2. LOGIKA TIM & DRAW (SESUAI KONTRAK ASLI)
+            const MIN_TEAMS_REQUIRED = 5; // Sesuai kontrak Anda: MIN_TEAMS_ACTIVE = 5
+            
+            let activeCount = 0;
             const currentRound = await gameContract.currentRoundId();
-            
-            // 1. Cek Hewan Apa Saja yang SUDAH Saya Bet di Ronde Ini
-            let myBetAnimals = [false, false, false, false, false, false]; // Index 0-5
-            
-            // Kita loop manual array roundBets (Max asumsi 12 slot karena 6 hewan x 2 player)
-            // Ini cara manual karena Solidity public array getter butuh index
+
+            // Cek Bet Saya
+            let myBetAnimals = [false, false, false, false, false, false];
             for(let i=0; i<12; i++) {
                 try {
                     const betInfo = await gameContract.roundBets(currentRound, i);
-                    if(betInfo[0].toLowerCase() === userAddress.toLowerCase()) { // betInfo[0] is player address
-                        const animalIdx = Number(betInfo[4]); // animalChoice
-                        myBetAnimals[animalIdx] = true;
+                    if(betInfo[0].toLowerCase() === userAddress.toLowerCase()) {
+                        myBetAnimals[Number(betInfo[4])] = true;
                     }
-                } catch(e) {
-                    break; // Stop loop jika index out of bounds (array habis)
-                }
+                } catch(e) { break; }
             }
 
-            // 2. Loop Setiap Hewan untuk Tentukan Class CSS
-            let activeCount = 0;
+            // Loop Status Hewan
             for(let i=0; i<6; i++) {
                 const count = Number(await gameContract.activeTeamCounts(i));
                 const card = document.getElementById(`card-${i}`);
                 const badge = document.getElementById(`count-${i}`);
                 
-                // Update Text Count
                 badge.innerText = `${count}/2`;
                 if(count >= 2) badge.classList.add("filled"); else badge.classList.remove("filled");
                 
-                // --- LOGIKA CLASS CSS ---
-                // Reset Class dulu
+                // Reset Class
                 card.classList.remove('my-bet', 'open', 'full', 'selected');
+                card.onclick = function() { selectAnimal(getImageName(i), i); };
 
                 if (count >= 2) {
-                    // KONDISI 3: FULL (UNGU)
                     card.classList.add('full');
-                    // Matikan klik jika full
                     card.onclick = null; 
+                } else if (myBetAnimals[i]) {
+                    card.classList.add('my-bet');
                 } else {
-                    // Kembalikan fungsi klik jika tidak full
-                    card.onclick = function() { selectAnimal(getImageName(i), i); };
-
-                    if (myBetAnimals[i]) {
-                        // KONDISI 1: SUDAH SAYA BET (BIRU)
-                        card.classList.add('my-bet');
-                    } else {
-                        // KONDISI 2: MASIH TERSEDIA (HIJAU)
-                        card.classList.add('open');
-                    }
+                    card.classList.add('open');
                 }
 
+                // Hitung Tim Aktif
                 if(count > 0) activeCount++;
             }
 
-            // ... (Draw Button Logic tetap sama) ...
+            // 3. UPDATE TOMBOL DENGAN INFO JELAS
+            const btnDraw = document.getElementById('drawBtn');
+            const status = document.getElementById('drawStatus');
+            
+            if(activeCount >= MIN_TEAMS_REQUIRED) { 
+                btnDraw.disabled = false; btnDraw.classList.add('ready');
+                status.innerText = "READY TO DRAW!"; 
+                status.classList.add('ready');
+                status.style.color = "var(--success)";
+            } else {
+                btnDraw.disabled = true; btnDraw.classList.remove('ready');
+                // Tampilkan pesan kurang berapa tim lagi
+                const need = MIN_TEAMS_REQUIRED - activeCount;
+                status.innerText = `Need ${need} more teams active to Draw`; 
+                status.classList.remove('ready');
+                status.style.color = "var(--danger)";
+            }
             updatePoolDisplay();
 
         } catch(e) { console.error("Refresh Error:", e); }
