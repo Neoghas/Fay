@@ -305,355 +305,675 @@
 <div id="toast">Notification</div>
 
 <script>
-    // --- CONFIG --- 
+    // --- KONFIGURASI PENTING --- 
     const CONTRACT_ADDRESS = "0x72a20552267B4313f74003E25593592B15b76ad6";
     const USDT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2";
     const SHIB_ADDRESS = "0xba63AFBf0060a9123aAAc1213b587d0462bD4d45";
     const BASE_SEPOLIA_ID = 84532;
     const BASE_SEPOLIA_HEX = "0x14a34";
 
-    const GAME_ABI = [{"inputs":[{"internalType":"address","name":"_usdtToken","type":"address"},{"internalType":"address","name":"_shibToken","type":"address"},{"internalType":"address","name":"_priceFeedETH","type":"address"},{"internalType":"address","name":"_priceFeedUSDT","type":"address"},{"internalType":"address","name":"_priceFeedSHIB","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"indexed":false,"internalType":"string","name":"outcome","type":"string"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"}],"name":"BattleResult","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"enum FaylottoUltimate.Currency","name":"curr","type":"uint8"},{"indexed":false,"internalType":"bool","name":"isRealTransfer","type":"bool"}],"name":"WinDistributed","type":"event"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"}],"name":"getRoundResult","outputs":[{"components":[{"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"internalType":"string","name":"outcome","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"address","name":"winner","type":"address"}],"internalType":"struct FaylottoUltimate.RoundResultData","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundBets","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"enum FaylottoUltimate.BetType","name":"bType","type":"uint8"},{"internalType":"uint8","name":"animalChoice","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"userWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"globalWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"","type":"uint8"}],"name":"activeTeamCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"}],"name":"betETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"},{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"bool","name":"_isFreeBet","type":"bool"}],"name":"betToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"executeDraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"string","name":"nickname","type":"string"},{"internalType":"bool","name":"isRegistered","type":"bool"},{"internalType":"address","name":"referrer","type":"address"},{"internalType":"bool","name":"hasBet","type":"bool"},{"internalType":"uint256","name":"pendingRefBonusCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeShibCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"enum FaylottoUltimate.Currency","name":"","type":"uint8"}],"name":"userCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdrawCredit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_nickname","type":"string"},{"internalType":"string","name":"_referrerNick","type":"string"}],"name":"register","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralBonus","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"commentCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"string","name":"_text","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundComments","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"author","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isEdited","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint8","name":"_stars","type":"uint8"}],"name":"submitRating","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint8","name":"_reaction","type":"uint8"}],"name":"setReaction","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"totalRatingScore","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"totalRatingCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"dislikeCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"}],"name":"getLatestPrice","outputs":[{"internalType":"int256","name":"","type":"int256"}],"stateMutability":"view","type":"function"}];
+    // --- ABI LENGKAP --- 
+    const GAME_ABI = [{"inputs":[{"internalType":"address","name":"_usdtToken","type":"address"},{"internalType":"address","name":"_shibToken","type":"address"},{"internalType":"address","name":"_priceFeedETH","type":"address"},{"internalType":"address","name":"_priceFeedUSDT","type":"address"},{"internalType":"address","name":"_priceFeedSHIB","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"indexed":false,"internalType":"string","name":"outcome","type":"string"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"}],"name":"BattleResult","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"enum FaylottoUltimate.Currency","name":"curr","type":"uint8"},{"indexed":false,"internalType":"bool","name":"isRealTransfer","type":"bool"}],"name":"WinDistributed","type":"event"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"}],"name":"getRoundResult","outputs":[{"components":[{"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"internalType":"string","name":"outcome","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"address","name":"winner","type":"address"}],"internalType":"struct FaylottoUltimate.RoundResultData","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundBets","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"enum FaylottoUltimate.BetType","name":"bType","type":"uint8"},{"internalType":"uint8","name":"animalChoice","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"userWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"globalWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"","type":"uint8"}],"name":"activeTeamCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"}],"name":"betETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"},{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"bool","name":"_isFreeBet","type":"bool"}],"name":"betToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"executeDraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"string","name":"nickname","type":"string"},{"internalType":"bool","name":"isRegistered","type":"bool"},{"internalType":"address","name":"referrer","type":"address"},{"internalType":"bool","name":"hasBet","type":"bool"},{"internalType":"uint256","name":"pendingRefBonusCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeShibCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"enum FaylottoUltimate.Currency","name":"","type":"uint8"}],"name":"userCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdrawCredit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_nickname","type":"string"},{"internalType":"string","name":"_referrerNick","type":"string"}],"name":"register","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralBonus","outputs":[],"stateMutability":"nonpayable","type":"function"}];
     const ERC20_ABI = [{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
 
+    // --- VARIABLES & STATE ---
     const IMAGE_NAMES = ['tuna', 'crab', 'shark', 'octopus', 'shrimp', 'orcha'];
     const IMAGE_LIST = ["tuna.svg", "crab.svg", "shark.svg", "octo.svg", "shrimp.svg", "orcha.svg", "zonk.svg"]; 
+    
     const MIN_SPIN_TIME = 35000; 
-    let spinStartTime = 0; let spinIntervals = [];
+    let spinStartTime = 0;
+    let spinIntervals = [];
+
     let provider, signer, userAddress, gameContract;
     let isConnected = false;
     let currentSelectedAnimal = { name: '', index: -1 };
     let detectedReferrer = "";
     let roundPools = { eth: 0, usdt: 0, shib: 0 };
-    let historyCursor = 0; let isInitialLoad = true; let currentMaxRound = 0;
-    let globalWinnersCache = {}; let globalHistoryLength = -1;
     
-    // Social State
-    let currentSocialRound = 0;
+    // History State
+    let historyCursor = 0;
+    let isInitialLoad = true;
+    let currentMaxRound = 0;
+    
+    // Cache Global
+    let globalWinnersCache = {}; 
+    let globalHistoryLength = -1;
 
+    // --- MAIN LOGIC ---
     window.onload = async () => {
         document.querySelectorAll('.reel-img').forEach(img => img.src = "what.svg");
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('ref')) detectedReferrer = urlParams.get('ref');
+        
         provider = new ethers.JsonRpcProvider("https://sepolia.base.org");
         gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, provider);
-        setupEventListeners(); refreshGameData(); 
-        fetchOraclePrices(); setInterval(fetchOraclePrices, 60000); // Price feed
+        
+        setupEventListeners();
+        refreshGameData(); 
     };
 
+    function handleWalletClick() { isConnected ? openWalletDashboard() : connectWallet(); }
+
     async function connectWallet() {
-        if (!window.ethereum) { showToast("MetaMask missing"); return; }
+        if (!window.ethereum) { showToast("MetaMask not installed!"); return; }
         try {
             provider = new ethers.BrowserProvider(window.ethereum);
             const accounts = await provider.send("eth_requestAccounts", []);
-            userAddress = accounts[0]; await switchNetwork();
+            userAddress = accounts[0];
+            await switchNetwork();
             signer = await provider.getSigner();
             gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, signer);
+
             const storedAuth = localStorage.getItem(`auth_${userAddress}`);
-            if (storedAuth && JSON.parse(storedAuth).expiry > Date.now()) finalizeLogin();
-            else await requestSignature();
-        } catch (error) { console.error(error); }
+            if (storedAuth && JSON.parse(storedAuth).expiry > Date.now()) {
+                finalizeLogin();
+            } else {
+                await requestSignature();
+            }
+        } catch (error) { console.error(error); showToast("Connection failed"); }
     }
-    
-    function handleWalletClick() { isConnected ? openWalletDashboard() : connectWallet(); }
-    async function switchNetwork() { try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_SEPOLIA_HEX }] }); } catch {} }
+
+    async function switchNetwork() {
+        try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_SEPOLIA_HEX }] }); }
+        catch (err) { console.log("Network switch ignored or failed"); }
+    }
+
     async function requestSignature() {
         try {
             const msg = `Login Faylotto\nUser: ${userAddress}\nTs: ${Date.now()}`;
             const sig = await signer.signMessage(msg);
             localStorage.setItem(`auth_${userAddress}`, JSON.stringify({ sig, expiry: Date.now() + 86400000 * 30 }));
             finalizeLogin();
-        } catch { showToast("Login Cancelled"); }
+        } catch { showToast("Sign rejected"); }
     }
+
     async function finalizeLogin() {
         isConnected = true;
-        document.getElementById("connectBtn").innerText = userAddress.substring(0,6)+"...";
+        document.getElementById("connectBtn").innerText = userAddress.substring(0,6)+"..."+userAddress.slice(-4);
         document.getElementById("connectBtn").classList.add("connected");
-        showToast("Connected"); refreshGameData();
+        showToast("Wallet Connected");
+        refreshGameData();
     }
 
-    // --- NEW: ORACLE PRICE FEED ---
-    async function fetchOraclePrices() {
-        try {
-            const ethPrice = await gameContract.getLatestPrice(0);
-            const usdtPrice = await gameContract.getLatestPrice(1);
-            const shibPrice = await gameContract.getLatestPrice(2);
-            document.getElementById('priceETH').innerText = `$${(Number(ethPrice)/1e8).toFixed(2)}`;
-            document.getElementById('priceUSDT').innerText = `$${(Number(usdtPrice)/1e8).toFixed(4)}`;
-            document.getElementById('priceSHIB').innerText = `$${(Number(shibPrice)/1e8).toFixed(8)}`;
-        } catch(e) { console.log("Oracle fetch error"); }
-    }
-
-    // --- NEW: SOCIAL MODAL LOGIC ---
-    async function openSocialModal(roundId) {
-        if(!isConnected) { showToast("Connect Wallet first"); return; }
-        currentSocialRound = roundId;
-        document.getElementById('socialModal').style.display = 'flex';
-        document.getElementById('socialRoundId').innerText = roundId;
-        loadSocialData(roundId);
-    }
-
-    async function loadSocialData(roundId) {
-        document.getElementById('commentList').innerHTML = 'Loading...';
-        try {
-            // 1. Ratings
-            const totalScore = await gameContract.totalRatingScore(roundId);
-            const totalCount = await gameContract.totalRatingCount(roundId);
-            const avg = totalCount > 0n ? (Number(totalScore) / Number(totalCount)).toFixed(1) : "0.0";
-            document.getElementById('avgRating').innerText = avg;
-            document.getElementById('countRating').innerText = totalCount;
-            
-            // 2. Reactions
-            const likes = await gameContract.likeCounts(roundId);
-            const dislikes = await gameContract.dislikeCounts(roundId);
-            document.getElementById('cntLike').innerText = likes;
-            document.getElementById('cntDislike').innerText = dislikes;
-
-            // 3. Comments
-            const cCount = await gameContract.commentCounts(roundId);
-            document.getElementById('cntComments').innerText = cCount;
-            const list = document.getElementById('commentList');
-            list.innerHTML = '';
-            
-            for(let i=0; i< Number(cCount); i++) {
-                const c = await gameContract.roundComments(roundId, i);
-                const userNick = (await gameContract.users(c[1]))[0] || c[1].substring(0,6);
-                const div = document.createElement('div');
-                div.className = 'comment-item';
-                div.innerHTML = `<div class="comment-user">${userNick}</div><div class="comment-text">${c[2]}</div>`;
-                list.appendChild(div);
-            }
-            if(Number(cCount) === 0) list.innerHTML = '<div style="color:#666; font-size:0.8em;">No comments yet. Be the first!</div>';
-
-        } catch(e) { console.error(e); document.getElementById('commentList').innerHTML = 'Error loading data'; }
-    }
-
-    async function rateRound(stars) {
-        if(!currentSocialRound) return;
-        try {
-            const tx = await gameContract.submitRating(currentSocialRound, stars);
-            showToast("Submitting Rating..."); await tx.wait();
-            showToast("Rated!"); loadSocialData(currentSocialRound);
-        } catch(e) { showToast("Error: " + e.reason); }
-    }
-
-    async function reactRound(type) {
-        if(!currentSocialRound) return;
-        try {
-            const tx = await gameContract.setReaction(currentSocialRound, type);
-            showToast("Sending Reaction..."); await tx.wait();
-            showToast("Reacted!"); loadSocialData(currentSocialRound);
-        } catch(e) { showToast("Error: " + e.reason); }
-    }
-
-    async function postComment() {
-        const txt = document.getElementById('commentInput').value;
-        if(!txt) return;
-        try {
-            const tx = await gameContract.addComment(currentSocialRound, txt);
-            document.getElementById('commentInput').value = "";
-            showToast("Posting Comment..."); await tx.wait();
-            showToast("Posted!"); loadSocialData(currentSocialRound);
-        } catch(e) { showToast("Error: " + e.reason); }
-    }
-
-    // --- CORE GAME & HISTORY LOGIC ---
+    // --- HISTORY TAB LOGIC ---
     function switchTab(tab) {
         if (tab === 'global') {
-            document.getElementById('tabGlobal').classList.remove('hidden'); document.getElementById('tabPersonal').classList.add('hidden');
-            document.querySelectorAll('.tab-btn')[0].classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.remove('active');
+            document.getElementById('tabGlobal').classList.remove('hidden');
+            document.getElementById('tabPersonal').classList.add('hidden');
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.querySelectorAll('.tab-btn')[1].classList.remove('active');
         } else {
-            document.getElementById('tabGlobal').classList.add('hidden'); document.getElementById('tabPersonal').classList.remove('hidden');
-            document.querySelectorAll('.tab-btn')[0].classList.remove('active'); document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('tabGlobal').classList.add('hidden');
+            document.getElementById('tabPersonal').classList.remove('hidden');
+            document.querySelectorAll('.tab-btn')[0].classList.remove('active');
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
             updatePersonalHistory();
         }
     }
 
-    function formatOutcomeText(raw, reels) {
-        const r0=Number(reels[0]), r1=Number(reels[1]), r2=Number(reels[2]);
-        const gN = (i) => i===6 ? "Zonk" : (IMAGE_NAMES[i] ? IMAGE_NAMES[i].charAt(0).toUpperCase()+IMAGE_NAMES[i].slice(1) : "?");
-        if(raw==="TRIPLE") return `<span style="color:var(--gold);">${gN(r0)} (TRIPLE)</span>`;
-        if(raw==="DOUBLE") {
-            let d = r0===r1?gN(r0): (r1===r2?gN(r1):gN(r0)); let s = r0===r1?gN(r2): (r1===r2?gN(r0):gN(r1));
-            return `<span style="color:var(--accent);">${d} (Double)</span> - ${s}`;
+    // --- HELPER: FORMAT TEKS OUTCOME (Cantik) ---
+    function formatOutcomeText(rawOutcome, reels) {
+        const r0 = Number(reels[0]);
+        const r1 = Number(reels[1]);
+        const r2 = Number(reels[2]);
+        
+        const getN = (idx) => {
+            if (idx === 6) return "Zonk"; 
+            if (!IMAGE_NAMES[idx]) return "Unknown";
+            return IMAGE_NAMES[idx].charAt(0).toUpperCase() + IMAGE_NAMES[idx].slice(1);
+        };
+
+        const n0 = getN(r0);
+        const n1 = getN(r1);
+        const n2 = getN(r2);
+
+        if (rawOutcome === "TRIPLE") {
+            return `<span style="color:var(--gold); font-weight:bold;">${n0} (TRIPLE)</span>`;
+        } else if (rawOutcome === "DOUBLE") {
+            let doubleName = "";
+            let singleName = "";
+            if (r0 === r1) { doubleName = n0; singleName = n2; }
+            else if (r1 === r2) { doubleName = n1; singleName = n0; }
+            else { doubleName = n0; singleName = n1; }
+            return `<span style="color:var(--accent);">${doubleName} (Double)</span> - ${singleName}`;
+        } else if (rawOutcome === "ONE_ZONK") {
+            return `${n0} - <span style="color:var(--danger)">Zonk</span> - ${n2}`;
+        } else {
+            return `${n0} - ${n1} - ${n2}`;
         }
-        if(raw==="ONE_ZONK") return `${gN(r0)} - <span style="color:var(--danger)">Zonk</span> - ${gN(r2)}`;
-        return `${gN(r0)} - ${gN(r1)} - ${gN(r2)}`;
     }
 
+    // --- GLOBAL HISTORY (Pake Array Contract - Super Cepat) ---
     async function fetchBatchHistory(count) {
         const historyList = document.getElementById('historyList');
-        if (historyCursor < 1) { document.getElementById('btnLoadMore').style.display = 'none'; return; }
-        const start = historyCursor, end = Math.max(1, historyCursor - count + 1);
+        if (historyCursor < 1) {
+            document.getElementById('btnLoadMore').style.display = 'none';
+            return;
+        }
+
+        const start = historyCursor;
+        const end = Math.max(1, historyCursor - count + 1);
+        
+        // Fase 1: Render Kartu Dasar
         const roundPromises = [];
         for (let r = start; r >= end; r--) {
             if (document.getElementById(`history-card-${r}`)) continue;
             roundPromises.push(gameContract.getRoundResult(r).then(res => ({ r, res })));
         }
-        if (roundPromises.length === 0) { historyCursor = end - 1; return; }
+
+        if (roundPromises.length === 0) {
+            historyCursor = end - 1;
+            return;
+        }
+
         try {
             const results = await Promise.all(roundPromises);
+
             for (let item of results) {
                 const { r, res } = item;
-                const card = document.createElement('div'); card.className = 'history-card'; card.id = `history-card-${r}`;
+                const formattedText = formatOutcomeText(res.outcome, res.reels);
+
+                const card = document.createElement('div');
+                card.className = 'history-card';
+                card.id = `history-card-${r}`;
+                
                 card.innerHTML = `
-                    <button class="btn-social-open" onclick="openSocialModal(${r})">💬</button>
-                    <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">Round #${r} • ${new Date(Number(res.timestamp) * 1000).toLocaleTimeString()}</div>
-                    <div class="history-reels"><img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[0])]}"><img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[1])]}"><img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[2])]}"></div>
-                    <div class="history-outcome" style="margin-top:5px;">${formatOutcomeText(res.outcome, res.reels)}</div>
-                    <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;"><span style="font-size:0.7em; color:#555;">Loading...</span></div>
+                    <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">
+                        Round #${r} • ${new Date(Number(res.timestamp) * 1000).toLocaleTimeString()}
+                    </div>
+                    <div class="history-reels">
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[0])]}">
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[1])]}">
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[2])]}">
+                    </div>
+                    <div class="history-outcome" style="margin-top:5px;">${formattedText}</div>
+                    
+                    <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;">
+                        <span style="font-size:0.7em; color:#555;">Loading...</span>
+                    </div>
                 `;
                 historyList.appendChild(card);
             }
+
+            // Fase 2: Ambil Pemenang dari ARRAY KONTRAK (BUKAN LOGS)
             await fetchWinnersFromContract(start, end);
+
         } catch (err) { console.error("History Error:", err); }
-        historyCursor = end - 1; if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
+
+        historyCursor = end - 1;
+        if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
     }
 
-    async function fetchWinnersFromContract(max, min) {
+    async function fetchWinnersFromContract(maxRound, minRound) {
         try {
+            // 1. Cari Panjang Array globalWinHistory (Sekali saja)
             if (globalHistoryLength === -1) {
-                let idx = Number(await gameContract.currentRoundId()); let found = false;
-                while(!found) { try { await gameContract.globalWinHistory(idx); idx++; } catch { globalHistoryLength = idx; found = true; } }
-            }
-            let idx = globalHistoryLength - 1, check = 0;
-            while (idx >= 0 && check < 200) {
-                try {
-                    const d = await gameContract.globalWinHistory(idx);
-                    const rId = Number(d[3]);
-                    if (rId <= max && rId >= min) {
-                        if (!globalWinnersCache[rId]) globalWinnersCache[rId] = { eth:0n, usdt:0n, shib:0n, topAddr:d[0], topAmt:d[1] };
-                        if(Number(d[2])===0) globalWinnersCache[rId].eth+=d[1]; else if(Number(d[2])===1) globalWinnersCache[rId].usdt+=d[1]; else globalWinnersCache[rId].shib+=d[1];
-                        if(d[1] > globalWinnersCache[rId].topAmt) { globalWinnersCache[rId].topAmt=d[1]; globalWinnersCache[rId].topAddr=d[0]; }
+                let idx = Number(await gameContract.currentRoundId()); 
+                let foundEnd = false;
+                // Cek forward/backward untuk mencari ujung array
+                // Kita coba brute force santai karena ini view call gratis
+                while(!foundEnd) {
+                    try {
+                        await gameContract.globalWinHistory(idx);
+                        idx++;
+                    } catch (e) {
+                        globalHistoryLength = idx;
+                        foundEnd = true;
                     }
-                    if(rId < min) break;
-                } catch(e){ break; } idx--; check++;
+                }
             }
-            for (let r = max; r >= min; r--) {
-                const div = document.getElementById(`winner-info-${r}`); if (!div) continue;
-                const d = globalWinnersCache[r];
-                if (!d) { div.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>'; continue; }
-                let pay = ""; if(d.eth>0n) pay+=`<div style="color:#627EEA">+${parseFloat(ethers.formatEther(d.eth)).toFixed(4)} ETH</div>`;
-                if(d.usdt>0n) pay+=`<div style="color:#26A17B">+${parseFloat(ethers.formatUnits(d.usdt,6)).toFixed(2)} USDT</div>`;
-                if(d.shib>0n) pay+=`<div style="color:#FFA409">+${parseFloat(ethers.formatUnits(d.shib,18)).toLocaleString()} SHIB</div>`;
-                div.innerHTML = `<div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;"><div style="display:flex; justify-content:space-between;"><div style="text-align:left;"><div style="font-size:0.65em; color:#888;">WINNER</div><div style="color:var(--gold); font-weight:bold; font-size:0.85em;" id="nick-${r}">🏆 ${d.topAddr.substring(0,4)}...</div></div><div style="text-align:right; font-size:0.75em; font-weight:bold;">${pay}</div></div></div>`;
-                gameContract.users(d.topAddr).then(u=>{ if(u[0]) document.getElementById(`nick-${r}`).innerText=`🏆 ${u[0]}`; }).catch(()=>{});
+
+            // 2. Scan Mundur Array
+            let idx = globalHistoryLength - 1;
+            let checkCount = 0;
+            const SAFETY_LIMIT = 200; // Limit scan agar browser tidak hang
+
+            while (idx >= 0 && checkCount < SAFETY_LIMIT) {
+                try {
+                    const data = await gameContract.globalWinHistory(idx);
+                    const rId = Number(data[3]);
+                    const amt = data[1];
+                    const curr = Number(data[2]);
+                    const player = data[0];
+
+                    // Jika roundId ini ada di range yang sedang kita render
+                    if (rId <= maxRound && rId >= minRound) {
+                        if (!globalWinnersCache[rId]) {
+                            globalWinnersCache[rId] = { eth: 0n, usdt: 0n, shib: 0n, topAddr: player, topAmt: amt };
+                        }
+                        // Agregasi
+                        if (curr === 0) globalWinnersCache[rId].eth += amt;
+                        else if (curr === 1) globalWinnersCache[rId].usdt += amt;
+                        else globalWinnersCache[rId].shib += amt;
+
+                        // Update MVP
+                        if (amt > globalWinnersCache[rId].topAmt) {
+                            globalWinnersCache[rId].topAmt = amt;
+                            globalWinnersCache[rId].topAddr = player;
+                        }
+                    }
+                    if (rId < minRound) break; // Sudah lewat jauh ke masa lalu
+                } catch (e) { break; }
+                idx--;
+                checkCount++;
             }
-        } catch (e) { console.log(e); }
+
+            // 3. Update UI
+            for (let r = maxRound; r >= minRound; r--) {
+                const container = document.getElementById(`winner-info-${r}`);
+                if (!container) continue;
+
+                const data = globalWinnersCache[r];
+                if (!data) {
+                    container.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>';
+                    continue;
+                }
+
+                let displayName = `${data.topAddr.substring(0,4)}...${data.topAddr.slice(-4)}`;
+                let payoutHtml = "";
+                if (data.eth > 0n) payoutHtml += `<div style="color:#627EEA;">+ ${parseFloat(ethers.formatEther(data.eth)).toFixed(4)} ETH</div>`;
+                if (data.usdt > 0n) payoutHtml += `<div style="color:#26A17B;">+ ${parseFloat(ethers.formatUnits(data.usdt, 6)).toFixed(2)} USDT</div>`;
+                if (data.shib > 0n) payoutHtml += `<div style="color:#FFA409;">+ ${parseFloat(ethers.formatUnits(data.shib, 18)).toLocaleString()} SHIB</div>`;
+
+                container.innerHTML = `
+                    <div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div style="text-align:left;">
+                                <div style="font-size:0.65em; color:#888;">WINNER</div>
+                                <div style="color:var(--gold); font-weight:bold; font-size:0.85em;" id="nick-${r}">🏆 ${displayName}</div>
+                            </div>
+                            <div style="text-align:right; font-size:0.75em; font-weight:bold;">${payoutHtml}</div>
+                        </div>
+                    </div>
+                `;
+
+                gameContract.users(data.topAddr).then(uData => {
+                    if (uData && uData[0]) document.getElementById(`nick-${r}`).innerHTML = `🏆 ${uData[0]}`;
+                }).catch(()=>{});
+            }
+
+        } catch (e) { console.error("Fetch Contract Error:", e); }
     }
 
-    async function loadMoreHistory() { const btn=document.getElementById('btnLoadMore'); btn.innerText="Loading..."; btn.disabled=true; await fetchBatchHistory(15); btn.innerText="Load More"; btn.disabled=false; }
+    async function loadMoreHistory() {
+        const btn = document.getElementById('btnLoadMore');
+        btn.innerText = "Loading...";
+        btn.disabled = true;
+        await fetchBatchHistory(15);
+        btn.innerText = "Load Previous Rounds (15)";
+        btn.disabled = false;
+    }
 
+    // --- PERSONAL HISTORY (Contract View - ANTI LAG) ---
     async function updatePersonalHistory() {
         const list = document.getElementById('personalHistoryList');
-        if (!isConnected) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Connect Wallet</div>'; return; }
-        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Loading...</div>';
+        if (!isConnected || !userAddress) {
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Connect Wallet to view history</div>';
+            return;
+        }
+
+        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Loading from contract...</div>';
         try {
-            let myWins = [], idx = 0, fetching = true;
-            while(fetching) { try { const log = await gameContract.userWinHistory(userAddress, idx); myWins.push(log); idx++; if(idx>50) fetching=false; } catch { fetching=false; } }
-            if(myWins.length===0) { list.innerHTML='<div style="text-align:center; padding:20px; color:#666;">No winnings yet.</div>'; return; }
-            list.innerHTML='';
-            for(let win of myWins.reverse()) {
-                let sym = Number(win[2])===0?"ETH":(Number(win[2])===1?"USDT":"SHIB");
-                let val = parseFloat(ethers.formatUnits(win[1], Number(win[2])===1?6:18));
-                let el = document.createElement('div'); el.className = 'personal-bet-card'; el.style.borderLeftColor = 'var(--gold)';
-                el.innerHTML = `<div class="pb-info"><div class="pb-time">Round #${win[3]}</div><div style="font-weight:bold; color:var(--text);">Result: <span style="color:var(--accent);">${win[5]}</span></div></div><div style="text-align:right;"><span class="badge badge-win" style="color:var(--gold);">🏆 VICTORY</span><div style="margin-top:5px; font-weight:bold; color:#fff;">+ ${val.toLocaleString()} ${sym}</div></div>`;
+            const myWins = [];
+            let index = 0;
+            let keepFetching = true;
+            while (keepFetching) {
+                try {
+                    const log = await gameContract.userWinHistory(userAddress, index);
+                    myWins.push({
+                        player: log[0], amount: log[1], curr: Number(log[2]),
+                        roundId: Number(log[3]), timestamp: Number(log[4]), outcome: log[5]
+                    });
+                    index++;
+                    if (index > 50) keepFetching = false; 
+                } catch (e) { keepFetching = false; }
+            }
+
+            if (myWins.length === 0) {
+                list.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">No winning history recorded yet.</div>`;
+                return;
+            }
+
+            const reversedWins = myWins.reverse();
+            list.innerHTML = ''; 
+
+            for (let win of reversedWins) {
+                let symbol = win.curr === 0 ? "ETH" : (win.curr === 1 ? "USDT" : "SHIB");
+                let decimal = win.curr === 1 ? 6 : 18;
+                let val = parseFloat(ethers.formatUnits(win.amount, decimal));
+                let valStr = win.curr === 2 ? val.toLocaleString() : (val < 0.001 ? val.toFixed(6) : val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4}));
+                let colorHex = win.curr === 0 ? "#627EEA" : (win.curr === 1 ? "#26A17B" : "#FFA409");
+
+                const el = document.createElement('div');
+                el.className = 'personal-bet-card';
+                el.style.borderLeftColor = 'var(--gold)';
+                el.style.background = 'rgba(255, 215, 0, 0.05)';
+                el.innerHTML = `
+                    <div class="pb-info">
+                        <div class="pb-time">Round #${win.roundId} • ${new Date(win.timestamp * 1000).toLocaleString()}</div>
+                        <div style="font-weight:bold; color:var(--text);">Result: <span style="color:var(--accent);">${win.outcome}</span></div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="badge badge-win" style="border-color:var(--gold); color:var(--gold);">🏆 VICTORY</span>
+                        <div style="margin-top:5px; font-weight:bold; color:${colorHex}; font-size:1.1em;">+ ${valStr} <span style="font-size:0.7em;">${symbol}</span></div>
+                    </div>
+                `;
                 list.appendChild(el);
             }
-        } catch(e) { list.innerHTML='Error'; }
+        } catch (e) {
+            console.error("Contract History Error:", e);
+            list.innerHTML = `<div style="text-align:center; color:var(--danger); padding:10px;">Connection Error</div>`;
+        }
     }
 
+    // --- CORE GAME FUNCTIONS ---
     async function refreshGameData() {
-        if(isConnected) {
-            const u = await gameContract.users(userAddress);
-            if(u[1]) {
-                document.getElementById('referralPanel').style.display='block';
-                document.getElementById('displayNick').innerText=u[0];
-                document.getElementById('displayRefLink').innerText=location.origin+location.pathname+"?ref="+u[0];
-                if(Number(u[4])>0) { document.getElementById('claimBonusBtnContainer').innerHTML=`<button class='wallet-btn' onclick='claimReferralBonus()'>Claim ${Number(u[4])*10000} SHIB</button>`; }
+        try {
+            if (isConnected) {
+                const userData = await gameContract.users(userAddress);
+                if (userData[1]) {
+                    document.getElementById('referralPanel').style.display = 'block';
+                    document.getElementById('displayNick').innerText = userData[0];
+                    document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
+                    const pending = Number(userData[4]);
+                    const claimContainer = document.getElementById('claimBonusBtnContainer');
+                    claimContainer.innerHTML = '';
+                    if (pending > 0) {
+                        const btn = document.createElement('button');
+                        btn.className = 'wallet-btn';
+                        btn.style.marginBottom = '10px';
+                        btn.innerText = `Claim ${pending * 10000} SHIB Bonus`;
+                        btn.onclick = claimReferralBonus;
+                        claimContainer.appendChild(btn);
+                    }
+                }
+                const bonus = await gameContract.freeShibCredits(userAddress);
+                document.getElementById('userBonusBalance').innerText = Number(ethers.formatEther(bonus)).toLocaleString();
+                const btnFree = document.getElementById('btnFreeBet');
+                if (bonus >= ethers.parseEther("10000")) {
+                    btnFree.disabled = false; btnFree.style.background = "var(--success)";
+                } else {
+                    btnFree.disabled = true; btnFree.style.background = "#333";
+                }
             }
-            const b = await gameContract.freeShibCredits(userAddress);
-            document.getElementById('userBonusBalance').innerText=Number(ethers.formatEther(b)).toLocaleString();
-            document.getElementById('btnFreeBet').disabled = b < ethers.parseEther("10000");
-            if(b >= ethers.parseEther("10000")) document.getElementById('btnFreeBet').style.background = "var(--success)";
-        }
-        const currR = Number(await gameContract.currentRoundId());
-        
-        // Pools & Bets
-        let bets=[], idx=0; while(true){ try{ bets.push(await gameContract.roundBets(currR, idx)); idx++; }catch{break;}}
-        let counts=[0,0,0,0,0,0], pools={e:0,u:0,s:0}, myBets=[0,0,0,0,0,0];
-        bets.forEach(b => {
-            let amt = parseFloat(ethers.formatUnits(b[1], Number(b[2])===1?6:18));
-            if(Number(b[2])===0) pools.e+=amt; else if(Number(b[2])===1) pools.u+=amt; else pools.s+=amt;
-            counts[Number(b[4])]++; if(b[0].toLowerCase()===userAddress?.toLowerCase()) myBets[Number(b[4])]=1;
-        });
-        document.getElementById('poolTotalETH').innerText=pools.e.toFixed(4);
-        document.getElementById('poolTotalUSDT').innerText=pools.u.toFixed(2);
-        document.getElementById('poolTotalSHIB').innerText=pools.s.toLocaleString();
-        
-        for(let i=0; i<6; i++) {
-            document.getElementById(`count-${i}`).innerText = counts[i];
-            let c = document.getElementById(`card-${i}`);
-            c.classList.remove('my-bet','open');
-            if(myBets[i]) c.classList.add('my-bet'); else c.classList.add('open');
-        }
-        let active = counts.filter(c=>c>0).length;
-        if(active>=5) { document.getElementById('drawBtn').disabled=false; document.getElementById('drawBtn').classList.add('ready'); document.getElementById('drawStatus').innerText="READY!"; }
-        else { document.getElementById('drawBtn').disabled=true; document.getElementById('drawBtn').classList.remove('ready'); document.getElementById('drawStatus').innerText=`Need ${5-active} teams`; }
 
-        // History
-        if(isInitialLoad) { document.getElementById('historyList').innerHTML=''; fetchBatchHistory(10); isInitialLoad=false; }
-        else if(document.getElementById('historyList').firstChild) { document.getElementById('historyList').innerHTML=''; fetchBatchHistory(10); }
-        if(!document.getElementById('tabPersonal').classList.contains('hidden')) updatePersonalHistory();
+            const currentRound = Number(await gameContract.currentRoundId());
+            let bets = [];
+            let index = 0;
+            while (true) {
+                try {
+                    const bet = await gameContract.roundBets(currentRound, index);
+                    bets.push(bet);
+                    index++;
+                } catch { break; }
+            }
+
+            let myBetAnimals = Array(6).fill(false);
+            let animalCurrCounts = Array(6).fill().map(() => ({eth: 0, usdt: 0, shib: 0}));
+            let pools = {eth: 0, usdt: 0, shib: 0};
+            let activeCount = 0;
+
+            bets.forEach(bet => {
+                const animal = Number(bet[4]);
+                const curr = Number(bet[2]);
+                const bType = Number(bet[3]); 
+                let dec = curr === 1 ? 6 : 18;
+                const amt = parseFloat(ethers.formatUnits(bet[1], dec));
+                if (bet[0].toLowerCase() === userAddress?.toLowerCase()) myBetAnimals[animal] = true;
+                if (curr === 0) { animalCurrCounts[animal].eth++; if(bType===0) pools.eth+=amt; }
+                else if (curr === 1) { animalCurrCounts[animal].usdt++; if(bType===0) pools.usdt+=amt; }
+                else { animalCurrCounts[animal].shib++; if(bType===0) pools.shib+=amt; }
+            });
+
+            roundPools = pools;
+            updatePoolDisplay();
+
+            for (let i = 0; i < 6; i++) {
+                const count = Number(await gameContract.activeTeamCounts(i)); 
+                const card = document.getElementById(`card-${i}`);
+                const badge = document.getElementById(`count-${i}`);
+                badge.innerText = `${count}`;
+                if (count > 0) badge.classList.add("filled"); else badge.classList.remove("filled");
+                card.classList.remove('my-bet', 'open', 'selected');
+                card.onclick = () => selectAnimal(IMAGE_NAMES[i], i);
+                if (myBetAnimals[i]) card.classList.add('my-bet'); else card.classList.add('open');
+                document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
+                document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
+                document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
+                if (count > 0) activeCount++;
+            }
+
+            const MIN_TEAMS = 5;
+            const btnDraw = document.getElementById('drawBtn');
+            const status = document.getElementById('drawStatus');
+            if (activeCount >= MIN_TEAMS) {
+                btnDraw.disabled = false; btnDraw.classList.add('ready');
+                status.innerText = "READY TO DRAW!"; status.style.color = "var(--success)";
+            } else {
+                btnDraw.disabled = true; btnDraw.classList.remove('ready');
+                status.innerText = `Need ${MIN_TEAMS - activeCount} more teams active to Draw`; status.style.color = "var(--danger)";
+            }
+
+            // Update Global History (Global Tab)
+            updateHistorySection(currentRound); 
+            // Update My Winnings (jika tab aktif)
+            if (!document.getElementById('tabPersonal').classList.contains('hidden')) updatePersonalHistory();
+
+        } catch (e) { console.error("Refresh Error:", e); }
     }
 
-    function selectAnimal(n,i) { currentSelectedAnimal={name:n,index:i}; for(let k=0;k<6;k++) document.getElementById(`card-${k}`).classList.remove('selected'); document.getElementById(`card-${i}`).classList.add('selected'); }
-    function triggerBetModal() { if(!isConnected || currentSelectedAnimal.index===-1) return showToast("Connect & Select!"); document.getElementById("modalAnimalName").innerText=currentSelectedAnimal.name.toUpperCase(); document.getElementById('paymentModal').style.display='flex'; }
-    function closeModal(id) { document.getElementById(id).style.display='none'; }
-    function showToast(m) { let x=document.getElementById("toast"); x.innerText=m; x.className="show"; setTimeout(()=>{x.className=x.className.replace("show","")},3000); }
-    
-    async function processPayment(type) {
-        closeModal('paymentModal'); showToast("Processing...");
-        try {
-            let tx, i=currentSelectedAnimal.index;
-            if(type==='ETH') tx = await gameContract.betETH(i, {value:ethers.parseEther("0.0005")});
-            else if(type==='FREE') tx = await gameContract.betToken(i,2,true);
-            else {
-                let t = type==='USDT'? new ethers.Contract(USDT_ADDRESS,ERC20_ABI,signer) : new ethers.Contract(SHIB_ADDRESS,ERC20_ABI,signer);
-                let a = type==='USDT'? ethers.parseUnits("10",6) : ethers.parseUnits("110000",18);
-                if((await t.allowance(userAddress,CONTRACT_ADDRESS)) < a) { showToast("Approving..."); await (await t.approve(CONTRACT_ADDRESS,ethers.MaxUint256)).wait(); }
-                tx = await gameContract.betToken(i, type==='USDT'?1:2, false);
+    // Helper Wrapper untuk Global History
+    function updateHistorySection(roundId) {
+        historyCursor = roundId - 1; 
+        if (isInitialLoad) {
+            document.getElementById('historyList').innerHTML = '';
+            fetchBatchHistory(10);
+            isInitialLoad = false;
+        } else {
+            // Realtime update logic (simplified: fetch recent 10 to sync)
+            const first = document.getElementById('historyList').firstElementChild;
+            if(first) {
+                 document.getElementById('historyList').innerHTML = '';
+                 fetchBatchHistory(10);
             }
-            showToast("Sending..."); await tx.wait(); showToast("Bet Placed!"); refreshGameData();
-        } catch(e) { showToast("Error"); console.log(e); }
+        }
+    }
+
+    function updatePoolDisplay() {
+        document.getElementById('poolTotalETH').innerText = roundPools.eth.toFixed(4);
+        document.getElementById('poolTotalUSDT').innerText = roundPools.usdt.toFixed(2);
+        document.getElementById('poolTotalSHIB').innerText = roundPools.shib.toLocaleString();
+    }
+
+    function selectAnimal(name, index) {
+        currentSelectedAnimal = { name, index };
+        for (let i = 0; i < 6; i++) document.getElementById(`card-${i}`).classList.remove('selected');
+        document.getElementById(`card-${index}`).classList.add('selected');
+    }
+
+    async function processPayment(currencyType) {
+        if (currentSelectedAnimal.index === -1) return;
+        const idx = currentSelectedAnimal.index;
+        closeModal('paymentModal');
+        showToast(`Processing ${currencyType}...`);
+        try {
+            let tx;
+            if (currencyType === 'ETH') {
+                const val = ethers.parseEther("0.0005");
+                tx = await gameContract.betETH(idx, { value: val });
+            } else if (currencyType === 'USDT') {
+                const usdt = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, signer);
+                const amount = ethers.parseUnits("10", 6);
+                await checkApprove(usdt, amount);
+                tx = await gameContract.betToken(idx, 1, false);
+            } else if (currencyType === 'SHIB') {
+                const shib = new ethers.Contract(SHIB_ADDRESS, ERC20_ABI, signer);
+                const amount = ethers.parseUnits("110000", 18);
+                await checkApprove(shib, amount);
+                tx = await gameContract.betToken(idx, 2, false);
+            } else if (currencyType === 'FREE') {
+                tx = await gameContract.betToken(idx, 2, true);
+            }
+            showToast("Sending Transaction...");
+            await tx.wait();
+            showToast("Bet Placed Successfully!");
+            refreshGameData();
+        } catch (err) { console.error(err); showToast("Failed: " + (err.reason || err.message.slice(0,20))); }
+    }
+
+    async function checkApprove(tokenContract, amountNeeded) {
+        const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
+        if (allowance < amountNeeded) {
+            showToast("Approving Token...");
+            const tx = await tokenContract.approve(CONTRACT_ADDRESS, ethers.MaxUint256);
+            await tx.wait();
+            showToast("Approved!");
+        }
+    }
+
+    function startSpinAnimation() {
+        spinIntervals.forEach(clearInterval);
+        spinIntervals = [];
+        const reels = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
+        reels.forEach((reel, index) => {
+            let speed = 80 + (index * 10); 
+            const interval = setInterval(() => {
+                const randIdx = Math.floor(Math.random() * IMAGE_LIST.length);
+                reel.src = IMAGE_LIST[randIdx];
+            }, speed);
+            spinIntervals.push(interval);
+        });
+    }
+
+    function stopSpinAnimation(i1, i2, i3) {
+        spinIntervals.forEach(clearInterval);
+        spinIntervals = [];
+        const r1 = document.getElementById('imgReel1'); const r2 = document.getElementById('imgReel2'); const r3 = document.getElementById('imgReel3');
+        
+        r1.style.filter = "blur(2px)"; setTimeout(() => { r1.src = IMAGE_LIST[i1]; r1.style.filter = "none"; }, 100);
+        r2.style.filter = "blur(4px)"; let t2 = setInterval(() => { r2.src = IMAGE_LIST[Math.floor(Math.random()*7)]; }, 80);
+        setTimeout(() => { clearInterval(t2); r2.src = IMAGE_LIST[i2]; r2.style.filter = "none"; }, 600);
+        r3.style.filter = "blur(5px)"; let t3 = setInterval(() => { r3.src = IMAGE_LIST[Math.floor(Math.random()*7)]; }, 80);
+        setTimeout(() => { clearInterval(t3); r3.src = IMAGE_LIST[i3]; r3.style.filter = "none"; r3.style.transform = "scale(1.2)"; setTimeout(() => { r3.style.transform = "scale(1)"; }, 200); }, 1400); 
+    }
+
+    function forceStopAnimation() {
+        spinIntervals.forEach(clearInterval); spinIntervals = [];
+        document.querySelectorAll('.reel-img').forEach(img => { img.style.filter = "none"; img.style.transform = "scale(1)"; img.src = "what.svg"; });
+    }
+
+    async function executeDraw() {
+        try {
+            showToast("Initiating Draw...");
+            const tx = await gameContract.executeDraw();
+            startSpinAnimation();
+            spinStartTime = Date.now(); 
+            showToast("Spinning... (Wait 35s)");
+            const receipt = await tx.wait();
+            
+            // Manual Check Safety
+            const currRound = await gameContract.currentRoundId();
+            const lastRoundId = Number(currRound) - 1;
+            checkRoundResult(lastRoundId);
+        } catch (err) { 
+            console.error(err); forceStopAnimation(); 
+            showToast("Draw Error: " + (err.reason || err.message)); 
+        }
+    }
+
+    let isProcessingResult = false;
+    async function checkRoundResult(roundId) {
+        if (isProcessingResult) return; 
+        isProcessingResult = true;
+        setTimeout(() => { isProcessingResult = false; }, 40000);
+
+        const elapsed = Date.now() - spinStartTime;
+        const remainingTime = MIN_SPIN_TIME - elapsed;
+        const delay = remainingTime > 0 ? remainingTime : 0;
+
+        setTimeout(async () => {
+            try {
+                const result = await gameContract.getRoundResult(roundId);
+                const r1 = Number(result[0][0]); const r2 = Number(result[0][1]); const r3 = Number(result[0][2]);
+                stopSpinAnimation(r1, r2, r3);
+
+                const winnersIndices = new Set([r1, r2, r3]);
+                for (let i = 0; i < 6; i++) {
+                    const card = document.getElementById(`card-${i}`);
+                    if (winnersIndices.has(i) && i < 6) card.classList.add('winner-glamour');
+                    else card.classList.remove('winner-glamour');
+                }
+                setTimeout(() => { for (let i = 0; i < 6; i++) document.getElementById(`card-${i}`).classList.remove('winner-glamour'); }, 8000);
+                
+                showToast("Round Finished! Updating...");
+                refreshGameData();
+            } catch (e) { console.error("Result Error:", e); forceStopAnimation(); }
+        }, delay);
+    }
+
+    async function withdraw(curr) {
+        try {
+            showToast(`Withdrawing ${curr}...`);
+            let cIdx = curr === 'ETH' ? 0 : (curr === 'USDT' ? 1 : 2);
+            const bal = await gameContract.userCredits(userAddress, cIdx);
+            if (bal == 0n) { showToast("No balance to withdraw"); return; }
+            const tx = await gameContract.withdrawCredit(cIdx, bal);
+            await tx.wait();
+            showToast("Withdraw Success!");
+            openWalletDashboard();
+        } catch (err) { showToast("Withdraw Failed: " + (err.reason || err.message)); }
+    }
+
+    function triggerBetModal() {
+        if (!isConnected) { showToast("Connect Wallet First"); return; }
+        if (currentSelectedAnimal.index === -1) { showToast("Select Animal First"); return; }
+        document.getElementById("modalAnimalName").innerText = currentSelectedAnimal.name.toUpperCase();
+        document.getElementById('paymentModal').style.display = 'flex';
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function showToast(msg) {
+        const x = document.getElementById("toast"); x.innerText = msg; x.className = "show";
+        setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
     }
 
     async function openWalletDashboard() {
-        document.getElementById('walletInfoModal').style.display='flex'; document.getElementById('dashAddress').innerText=userAddress;
+        document.getElementById('walletInfoModal').style.display = 'flex';
+        document.getElementById('dashAddress').innerText = userAddress;
         try {
-            document.getElementById('balETH').innerText=parseFloat(ethers.formatEther(await provider.getBalance(userAddress))).toFixed(4);
-            let cr = await gameContract.userCredits(userAddress,0); document.getElementById('credETH').innerText=parseFloat(ethers.formatEther(cr)).toFixed(4);
-        } catch(e){}
+            const balEth = await provider.getBalance(userAddress);
+            document.getElementById('balETH').innerText = parseFloat(ethers.formatEther(balEth)).toFixed(4);
+            const usdt = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, provider);
+            const balUsdt = await usdt.balanceOf(userAddress);
+            document.getElementById('balUSDT').innerText = parseFloat(ethers.formatUnits(balUsdt, 6)).toFixed(2);
+            const shib = new ethers.Contract(SHIB_ADDRESS, ERC20_ABI, provider);
+            const balShib = await shib.balanceOf(userAddress);
+            document.getElementById('balSHIB').innerText = parseFloat(ethers.formatUnits(balShib, 18)).toFixed(2);
+            const credEth = await gameContract.userCredits(userAddress, 0);
+            document.getElementById('credETH').innerText = parseFloat(ethers.formatEther(credEth)).toFixed(4);
+            const credUsdt = await gameContract.userCredits(userAddress, 1);
+            document.getElementById('credUSDT').innerText = parseFloat(ethers.formatUnits(credUsdt, 6)).toFixed(2);
+            const credShib = await gameContract.userCredits(userAddress, 2);
+            document.getElementById('credSHIB').innerText = parseFloat(ethers.formatEther(credShib)).toFixed(2);
+        } catch (e) { console.error("Dashboard Error", e); }
     }
-    async function withdraw(curr) {
-        try { showToast("Withdrawing..."); let c=curr==='ETH'?0:(curr==='USDT'?1:2); await (await gameContract.withdrawCredit(c, await gameContract.userCredits(userAddress,c))).wait(); showToast("Success"); } catch(e){ showToast("Fail");}
-    }
-    function disconnectWallet() { localStorage.removeItem(`auth_${userAddress}`); location.reload(); }
-    function copyRefLink() { navigator.clipboard.writeText(document.getElementById('displayRefLink').innerText); showToast("Copied"); }
-    async function registerUser() { try { await (await gameContract.register(document.getElementById('regNickname').value, detectedReferrer||"")).wait(); closeModal('registerModal'); finalizeLogin(); } catch(e){ showToast("Reg Fail"); } }
-    async function claimReferralBonus() { try { await (await gameContract.claimReferralBonus()).wait(); showToast("Claimed"); refreshGameData(); } catch(e){} }
 
-    // ANIMATION
-    function startSpinAnimation() { spinIntervals.forEach(clearInterval); spinIntervals=[]; [1,2,3].forEach((x,i)=> spinIntervals.push(setInterval(()=>document.getElementById(`imgReel${x}`).src=IMAGE_LIST[Math.floor(Math.random()*7)], 80+i*10))); }
-    function stopSpinAnimation(r1,r2,r3) { spinIntervals.forEach(clearInterval); document.getElementById('imgReel1').src=IMAGE_LIST[r1]; setTimeout(()=>document.getElementById('imgReel2').src=IMAGE_LIST[r2],500); setTimeout(()=>document.getElementById('imgReel3').src=IMAGE_LIST[r3],1000); }
-    async function executeDraw() { try { await gameContract.executeDraw(); startSpinAnimation(); spinStartTime=Date.now(); showToast("Spinning..."); checkRoundResult((await gameContract.currentRoundId())-1n); } catch(e){ showToast("Error"); } }
-    let processing=false;
-    async function checkRoundResult(rid) {
-        if(processing) return; processing=true; setTimeout(()=>processing=false,40000);
-        setTimeout(async()=>{
-            try { const r = await gameContract.getRoundResult(rid); stopSpinAnimation(r[0][0],r[0][1],r[0][2]); refreshGameData(); } catch(e){}
-        }, Math.max(0, MIN_SPIN_TIME - (Date.now()-spinStartTime)));
+    function disconnectWallet() { localStorage.removeItem(`auth_${userAddress}`); location.reload(); }
+    function copyRefLink() { navigator.clipboard.writeText(document.getElementById('displayRefLink').innerText); showToast("Link Copied"); }
+    async function registerUser() {
+        const nick = document.getElementById('regNickname').value;
+        try {
+            const tx = await gameContract.register(nick, detectedReferrer || ""); await tx.wait();
+            closeModal('registerModal'); finalizeLogin();
+        } catch (e) { showToast("Reg Failed: " + (e.reason || e.message)); }
     }
-    function setupEventListeners() { gameContract.on("NewBet", refreshGameData); gameContract.on("BattleResult", (a,b,id)=>checkRoundResult(id)); }
+    async function claimReferralBonus() {
+        try { const tx = await gameContract.claimReferralBonus(); await tx.wait(); showToast("Bonus Claimed!"); refreshGameData(); } catch (e) { showToast("Claim Failed"); }
+    }
+    function setupEventListeners() {
+        gameContract.on("NewBet", () => { refreshGameData(); });
+        gameContract.on("BattleResult", (reels, outcome, roundId) => { checkRoundResult(Number(roundId)); });
+    }
 </script>
 </body>
-    </html>
+</html>
