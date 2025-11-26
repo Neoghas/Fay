@@ -1019,112 +1019,107 @@
         if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
    }
     
-   async function findAndDisplayWinner(roundId) {
-        const container = document.getElementById(`winner-info-${roundId}`);
-        if (!container) return;
+   async function updatePersonalHistory() {
+        const list = document.getElementById('personalHistoryList');
+        
+        if (!isConnected || !userAddress) {
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Connect Wallet to view history</div>';
+            return;
+        }
 
+        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Loading from contract...</div>';
+        
         try {
-            // 1. Cari Block Number dari BattleResult
-            // Kita scan 50.000 block ke belakang agar history lama tetap ke-load
-            const battleFilter = gameContract.filters.BattleResult(null, null, roundId);
-            const battleEvents = await gameContract.queryFilter(battleFilter, -50000); 
+            // Kita ambil data langsung dari Mapping 'userWinHistory' di kontrak
+            // Karena solidity tidak punya fungsi 'length' untuk mapping array di public interface standar,
+            // Kita lakukan iterasi dari index 0 sampai error (habis).
+            
+            const myWins = [];
+            let index = 0;
+            let keepFetching = true;
 
-            if (battleEvents.length === 0) {
-                container.innerHTML = '<span style="font-size:0.7em; color:#555;">(Data archived/too old)</span>';
-                return;
+            // Loop fetch data (Sequential) - Ini sangat cepat karena view function
+            while (keepFetching) {
+                try {
+                    // Panggil fungsi kontrak: userWinHistory(address, index)
+                    const log = await gameContract.userWinHistory(userAddress, index);
+                    
+                    // Struct: [player, winAmount, currency, roundId, timestamp, outcomeType]
+                    myWins.push({
+                        player: log[0],
+                        amount: log[1],
+                        curr: Number(log[2]),
+                        roundId: Number(log[3]),
+                        timestamp: Number(log[4]),
+                        outcome: log[5]
+                    });
+                    
+                    index++;
+                    
+                    // Safety break jika user punya ribuan kemenangan (ambil 50 terakhir saja)
+                    if (index > 50) keepFetching = false; 
+
+                } catch (e) {
+                    // Jika error, berarti index sudah habis (End of Array)
+                    keepFetching = false;
+                }
             }
 
-            const exactBlock = battleEvents[0].blockNumber;
-
-            // 2. Cari Event 'WinDistributed' di Block yang SAMA
-            const winFilter = gameContract.filters.WinDistributed();
-            const winEvents = await gameContract.queryFilter(winFilter, exactBlock, exactBlock);
-
-            // JIKA TIDAK ADA PEMENANG
-            if (winEvents.length === 0) {
-                container.innerHTML = `
-                    <div style="margin-top:5px; border-top:1px dashed #333; padding-top:4px;">
-                        <span style="font-size:0.75em; color:#666; font-style:italic;">No Winners this round</span>
+            if (myWins.length === 0) {
+                list.innerHTML = `
+                    <div style="text-align:center; padding:20px; color:#666;">
+                        No winning history recorded in contract yet.<br>
+                        <small>(Good luck on your next spin!)</small>
                     </div>`;
                 return;
             }
 
-            // 3. Hitung Total Kemenangan (Agregasi)
-            let totalETH = 0n;
-            let totalUSDT = 0n;
-            let totalSHIB = 0n;
+            // Balik urutan agar yang terbaru (Index terbesar) ada di atas
+            const reversedWins = myWins.reverse();
             
-            // Variabel untuk mencari pemenang terbesar (MVP Round ini)
-            let topWinnerAddr = "";
-            let topWinAmount = -1n;
+            list.innerHTML = ''; 
 
-            for (let evt of winEvents) {
-                const args = evt.args; // [winnerAddress, amount, currency, isRealTransfer]
-                const wAddr = args[0];
-                const amt = args[1]; // Ini BigInt
-                const curr = Number(args[2]); // 0=ETH, 1=USDT, 2=SHIB
+            for (let win of reversedWins) {
+                // Format Currency
+                let symbol = win.curr === 0 ? "ETH" : (win.curr === 1 ? "USDT" : "SHIB");
+                let decimal = win.curr === 1 ? 6 : 18;
+                let val = parseFloat(ethers.formatUnits(win.amount, decimal));
+                
+                // Format Angka Cantik
+                let valStr = "";
+                if (win.curr === 2) valStr = val.toLocaleString(); // SHIB tanpa desimal
+                else if (val < 0.001) valStr = val.toFixed(6);
+                else valStr = val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4});
 
-                // Jumlahkan Total
-                if (curr === 0) totalETH += amt;
-                else if (curr === 1) totalUSDT += amt;
-                else if (curr === 2) totalSHIB += amt;
+                // Warna Currency
+                let colorClass = win.curr === 0 ? "text-eth" : (win.curr === 1 ? "text-usdt" : "text-shib");
+                let colorHex = win.curr === 0 ? "#627EEA" : (win.curr === 1 ? "#26A17B" : "#FFA409");
 
-                // Cek apakah ini pemenang terbesar? (Simplifikasi: kita bandingkan raw amount saja)
-                if (amt > topWinAmount) {
-                    topWinAmount = amt;
-                    topWinnerAddr = wAddr;
-                }
-            }
+                const el = document.createElement('div');
+                el.className = 'personal-bet-card';
+                el.style.borderLeftColor = 'var(--gold)'; // Gold karena ini pasti WIN
+                el.style.background = 'rgba(255, 215, 0, 0.05)'; // Sedikit tint emas
 
-            // 4. Ambil Nickname Pemenang Terbesar
-            let displayName = `${topWinnerAddr.substring(0,4)}...${topWinnerAddr.slice(-4)}`;
-            try {
-                // Panggil kontrak untuk cek nickname
-                const uData = await gameContract.users(topWinnerAddr);
-                if (uData && uData[0]) {
-                    displayName = uData[0]; // Pakai nickname jika ada
-                }
-            } catch (err) {
-                console.log("Nick fetch fail, using address");
-            }
-
-            // 5. Format Text Total Payout
-            let payoutHtml = "";
-            
-            if (totalETH > 0n) {
-                const val = parseFloat(ethers.formatEther(totalETH));
-                payoutHtml += `<div style="color:#627EEA;">+ ${val.toFixed(5)} ETH</div>`;
-            }
-            if (totalUSDT > 0n) {
-                const val = parseFloat(ethers.formatUnits(totalUSDT, 6));
-                payoutHtml += `<div style="color:#26A17B;">+ ${val.toFixed(2)} USDT</div>`;
-            }
-            if (totalSHIB > 0n) {
-                const val = parseFloat(ethers.formatUnits(totalSHIB, 18));
-                payoutHtml += `<div style="color:#FFA409;">+ ${val.toLocaleString()} SHIB</div>`;
-            }
-
-            // 6. Render Hasil Akhir ke HTML
-            container.innerHTML = `
-                <div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div style="text-align:left;">
-                            <div style="font-size:0.65em; color:#888;">BIG WINNER</div>
-                            <div style="color:var(--gold); font-weight:bold; font-size:0.9em;">🏆 ${displayName}</div>
-                        </div>
-                        <div style="text-align:right; font-size:0.8em; font-weight:bold;">
-                            ${payoutHtml}
+                el.innerHTML = `
+                    <div class="pb-info">
+                        <div class="pb-time">Round #${win.roundId} • ${new Date(win.timestamp * 1000).toLocaleString()}</div>
+                        <div style="font-weight:bold; color:var(--text);">Result: <span style="color:var(--accent);">${win.outcome}</span></div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="badge badge-win" style="border-color:var(--gold); color:var(--gold);">🏆 VICTORY</span>
+                        <div style="margin-top:5px; font-weight:bold; color:${colorHex}; font-size:1.1em;">
+                            + ${valStr} <span style="font-size:0.7em;">${symbol}</span>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+                list.appendChild(el);
+            }
 
         } catch (e) {
-            console.error(`Error winner round ${roundId}:`, e);
-            // Tampilkan error di layar biar tidak bingung
-            container.innerHTML = `<span style="font-size:0.7em; color:var(--danger);">Error loading data</span>`;
+            console.error("Contract History Error:", e);
+            list.innerHTML = `<div style="text-align:center; color:var(--danger); padding:10px;">Connection Error</div>`;
         }
-   }
+                }
     
    async function updatePersonalHistory() {
         const list = document.getElementById('personalHistoryList');
@@ -1151,89 +1146,7 @@
                         No bets found in last 50k blocks.<br>
                         <small>(Try betting on a new round)</small>
                     </div>`;
-                return;
-            }
-
-            // 2. Cache Result Global (Optimasi: Hanya fetch jika belum ada)
-            if (cachedBattleResults.length === 0) {
-                const resFilter = gameContract.filters.BattleResult();
-                cachedBattleResults = await gameContract.queryFilter(resFilter, fromBlock, "latest");
-            }
-
-            const reversedBets = myBets.reverse();
-            list.innerHTML = ''; 
-
-            for (let bet of reversedBets) {
-                const args = bet.args;
-                const animalIdx = Number(args[1]);
-                const betBlock = bet.blockNumber; 
-                const animalName = IMAGE_NAMES[animalIdx] ? IMAGE_NAMES[animalIdx].toUpperCase() : "UNKNOWN";
-
-                // Matching Logic
-                let matchedRound = null;
-                cachedBattleResults.sort((a,b) => a.blockNumber - b.blockNumber);
-
-                for (let res of cachedBattleResults) {
-                    if (res.blockNumber > betBlock) {
-                        matchedRound = res;
-                        break;
-                    }
-                }
-
-                if (!matchedRound) {
-                    // Tampilkan Pending
-                    const el = document.createElement('div');
-                    el.className = 'personal-bet-card';
-                    el.style.borderLeft = '3px solid #666';
-                    el.innerHTML = `
-                        <div class="pb-info">
-                            <div class="pb-time">Block: ${betBlock} (Waiting Draw)</div>
-                            <div>Bet: <span class="pb-animal" style="color:white;">${animalName}</span></div>
-                        </div>
-                        <span class="badge" style="background:#222; border:1px solid #444;">PENDING</span>
-                    `;
-                    list.appendChild(el);
-                    continue;
-                }
-
-                // Kalkulasi Hasil
-                const rArgs = matchedRound.args;
-                const reels = rArgs[0].map(Number);
-                const isWin = reels.includes(animalIdx);
                 
-                // Panggil Helper Format Teks untuk hasil result
-                // Kita panggil fungsi format yang BARU tadi (namun perlu rawOutcome string)
-                // Karena kita tidak punya rawOutcome string di event BattleResult (hanya di struct),
-                // Kita generate manual stringnya untuk display simple:
-                const resDisplay = `${IMAGE_NAMES[reels[0]]}-${IMAGE_NAMES[reels[1]]}-${IMAGE_NAMES[reels[2]]}`.toUpperCase();
-
-                const statusHtml = isWin 
-                    ? `<span class="badge badge-win">VICTORY</span>` 
-                    : `<span class="badge badge-lose">DEFEAT</span>`;
-
-                const el = document.createElement('div');
-                el.className = 'personal-bet-card';
-                el.style.borderLeftColor = isWin ? 'var(--success)' : 'var(--danger)';
-                
-                el.innerHTML = `
-                    <div class="pb-info">
-                        <div class="pb-time">Round Done (Blk ${matchedRound.blockNumber})</div>
-                        <div>Your Bet: <span class="pb-animal">${animalName}</span></div>
-                        <div style="font-size:0.7em; color:#aaa; margin-top:2px;">Result: ${resDisplay}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        ${statusHtml}
-                        <img src="${IMAGE_LIST[animalIdx]}" style="width:25px; height:25px; display:block; margin-top:5px; margin-left:auto;">
-                    </div>
-                `;
-                list.appendChild(el);
-            }
-
-        } catch (e) {
-            console.error("History Error:", e);
-            list.innerHTML = `<div style="text-align:center; padding:10px; color:var(--danger);">Network Limit. Try refreshing.</div>`;
-        }
-   }
     
     // Helper: Format Teks Outcome yang Lebih Cerdas
     function formatOutcomeText(rawOutcome, reels) {
