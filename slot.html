@@ -201,6 +201,18 @@
     .pb-info { font-size: 0.8em; }
     .pb-time { font-size: 0.7em; color: #666; }
     .pb-animal { font-weight: bold; color: var(--accent); }
+
+    /* Status Badge untuk Personal History */
+    .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; text-transform: uppercase; }
+    .badge-win { background: rgba(0, 210, 106, 0.2); color: var(--success); border: 1px solid var(--success); }
+    .badge-lose { background: rgba(255, 75, 75, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+    
+    .winner-info-box {
+        margin-top: 8px; padding-top: 8px; border-top: 1px dashed #444;
+        font-size: 0.75em; display: flex; align-items: center; justify-content: space-between;
+    }
+    .w-user { color: var(--gold); font-weight: bold; display: flex; align-items: center; gap: 4px; }
+    .w-amt { color: white; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -382,6 +394,7 @@
     let historyCursor = 0; // Menandai ronde terakhir yang sudah diload
     let isInitialLoad = true;
     let currentMaxRound = 0;
+    let cachedBattleResults = [];
 
     let provider, signer, userAddress, gameContract;
     let isConnected = false;
@@ -880,7 +893,7 @@
 
             document.querySelectorAll('.tab-btn')[1].classList.add('active');
 
-            updatePersonalHistory(); // Load data hanya saat tab dibuka
+            updatePersonalHistory(); 
 
         }
 
@@ -888,49 +901,31 @@
 
 
 
-    // 2. Fungsi Utama Global History (Infinite Scroll Logic)
-
     async function updateHistorySection(roundIdFromContract) {
 
         currentMaxRound = Number(roundIdFromContract);
 
         const historyList = document.getElementById('historyList');
 
-        const btnLoad = document.getElementById('btnLoadMore');
 
-
-
-        // Jika ini refresh otomatis (bukan klik load more), kita reset list
-
-        // Tapi jika user sedang scroll jauh di bawah, kita biarkan (opsional).
-
-        // Di sini kita buat reset agar data selalu fresh.
 
         if (isInitialLoad) {
 
             historyList.innerHTML = ''; 
 
-            historyCursor = currentMaxRound - 1; // Mulai dari ronde sebelumnya
+            historyCursor = currentMaxRound - 1; 
 
-            await fetchBatchHistory(10); // PERTAMA: LOAD 10
+            await fetchBatchHistory(10); 
 
             isInitialLoad = false;
 
         } else {
 
-            // Jika update realtime (ada pemenang baru), selipkan di atas
-
-            // Tanpa mereset seluruh list scroll ke bawah
+            // Realtime update: Cukup refresh 10 data teratas agar sinkron
 
             const firstCard = historyList.firstElementChild;
 
             if (firstCard) {
-
-                // Cek logic sederhana: render 1 ronde terbaru saja
-
-                // (Implementasi simple: Reset cursor top update)
-
-                // Agar aman dan urutan benar, kita refresh 10 teratas saja saat realtime update
 
                 historyList.innerHTML = '';
 
@@ -954,11 +949,7 @@
 
         btn.disabled = true;
 
-        
-
-        await fetchBatchHistory(15); // SELANJUTNYA: LOAD 15
-
-        
+        await fetchBatchHistory(15);
 
         btn.innerText = "Load Previous Rounds (15)";
 
@@ -968,11 +959,11 @@
 
 
 
+    // --- FUNGSI GLOBAL HISTORY (DENGAN WINNER INFO) ---
+
     async function fetchBatchHistory(count) {
 
         const historyList = document.getElementById('historyList');
-
-        // Stop jika sudah sampai ronde 0
 
         if (historyCursor < 1) {
 
@@ -990,6 +981,24 @@
 
 
 
+        // Optimization: Fetch array length globalWinHistory sekali saja
+
+        let globalWinLength = 0;
+
+        try { 
+
+            // Kita coba tebak panjangnya (atau loop dari index terakhir yang diketahui jika ada)
+
+            // Note: Tidak ada cara cepat check length array publik tanpa getter length khusus di solidity standar
+
+            // Kita pakai trick: loop error handling nanti di getWinnerInfo, atau 
+
+            // Asumsi: Kita cari event WinDistributed saja karena lebih cepat daripada array scanning manual via RPC
+
+        } catch(e) {}
+
+
+
         for (let r = start; r >= end; r--) {
 
             try {
@@ -999,6 +1008,16 @@
                 const outcomeText = result[1]; 
 
                 
+
+                // --- FETCH WINNER INFO KHUSUS RONDE INI ---
+
+                // Kita gunakan Event WinDistributed untuk mencari pemenang di ronde ini
+
+                // Teknik: Mencari event di sekitar waktu timestamp ronde tersebut
+
+                const winnerData = await getWinnerInfoForRound(r, result[2]);
+
+
 
                 const card = document.createElement('div');
 
@@ -1024,21 +1043,21 @@
 
                     <div class="history-outcome">${outcomeText}</div>
 
+                    ${winnerData} 
+
                 `;
 
                 historyList.appendChild(card);
 
             } catch (err) {
 
-                console.log(`Skip history round ${r}`);
+                console.log(`Skip history round ${r}`, err);
 
             }
 
         }
 
-        historyCursor = end - 1; // Update cursor untuk load next batch
-
-        
+        historyCursor = end - 1;
 
         if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
 
@@ -1046,7 +1065,163 @@
 
 
 
-    // 3. Fungsi Personal History (Menggunakan Event Logs)
+    // Helper: Cari data pemenang untuk ronde tertentu
+
+    async function getWinnerInfoForRound(roundId, timestamp) {
+
+        try {
+
+            // Karena globalWinHistory array di contract sulit di-filter by roundId tanpa iterasi berat,
+
+            // Kita gunakan Event Listener 'WinDistributed'
+
+            // Kita cari log event yang terjadi di block yang sama (atau berdekatan) dengan timestamp ronde
+
+            
+
+            // Note: Ini pendekatan "Best Effort" untuk Frontend agar tidak berat.
+
+            // Kita filter 2 block sebelum dan 2 block sesudah timestamp kejadian
+
+            // Tapi karena kita tidak tau block number dari timestamp secara instan di JS standar...
+
+            
+
+            // ALTERNATIF CERDAS: 
+
+            // Loop array globalWinHistory dari index terakhir (karena ronde baru pasti di akhir array)
+
+            // Ini mungkin butuh beberapa call RPC, tapi lebih akurat.
+
+            
+
+            // Mari gunakan cara simple: Tampilkan "Winner info check console" atau query WinDistributed by Log
+
+            // Filter: WinDistributed... Tapi event ini tidak punya Round ID indexed.
+
+            
+
+            // SOLUSI PRO: Kita ambil dari 'globalWinHistory' Contract View, 
+
+            // Kita iterasi mundur misal 20 item terakhir. 
+
+            // Jika ronde lama (load more), mungkin tidak ketemu (untuk hemat RPC).
+
+            
+
+            // (Untuk demo ini saya pakai simulasi iterasi mundur sedikit, 
+
+            // idealnya Anda punya indexer/subgraph. Di sini kita coba ambil max 5 winner terakhir)
+
+            
+
+            // Kita coba akses index array secara manual (brute force sedikit ke belakang)
+
+            // Ini agak berat, jadi saya limit pencarian hanya jika ini adalah 5 ronde teratas.
+
+            // Jika history lama (>5 ronde lalu), kita skip winner info biar tidak lag.
+
+            
+
+            // JIKA RONDE LAMA, SKIP DETIL WINNER (Agar tidak lemot load 1000 data)
+
+            const currentR = Number(await gameContract.currentRoundId());
+
+            if (currentR - roundId > 10) return ""; 
+
+
+
+            // Cari event WinDistributed di logs terbaru
+
+            const filter = gameContract.filters.WinDistributed();
+
+            const events = await gameContract.queryFilter(filter, -200); // Cek 200 blok terakhir
+
+            
+
+            // Kita butuh mencocokkan event WinDistributed dengan Round ID.
+
+            // Tapi Event tidak punya Round ID. 
+
+            // Kita pakai Event BattleResult untuk tau BlockNumber ronde tersebut.
+
+            
+
+            const battleFilter = gameContract.filters.BattleResult(null, null, roundId);
+
+            const battleEvents = await gameContract.queryFilter(battleFilter, -5000); // Cari BattleResult ronde ini
+
+            
+
+            if (battleEvents.length === 0) return "";
+
+            
+
+            const roundBlock = battleEvents[0].blockNumber;
+
+            
+
+            // Cari WinDistributed di block yang sama
+
+            const winnersInBlock = events.filter(e => e.blockNumber === roundBlock);
+
+            
+
+            if (winnersInBlock.length === 0) return `<div class="winner-info-box" style="justify-content:center; color:#555;">No Winners</div>`;
+
+
+
+            // Ambil data winner pertama (atau bisa di-loop semua jika mau)
+
+            const wEvent = winnersInBlock[0];
+
+            const wAddr = wEvent.args[0];
+
+            const wAmnt = wEvent.args[1];
+
+            const wCurr = Number(wEvent.args[2]); // 0 ETH, 1 USDT, 2 SHIB
+
+            
+
+            // Ambil Nickname
+
+            const uData = await gameContract.users(wAddr);
+
+            const nick = uData[0] || "Unknown";
+
+            
+
+            let symbol = wCurr === 0 ? "ETH" : (wCurr === 1 ? "USDT" : "SHIB");
+
+            let decimal = wCurr === 1 ? 6 : 18;
+
+            let val = parseFloat(ethers.formatUnits(wAmnt, decimal));
+
+            if(val < 0.001) val = val.toFixed(6); else val = val.toLocaleString(undefined, {maximumFractionDigits:2});
+
+
+
+            return `
+
+                <div class="winner-info-box">
+
+                    <div class="w-user">🏆 ${nick} (${wAddr.substring(0,4)}..)</div>
+
+                    <div class="w-amt">+${val} ${symbol}</div>
+
+                </div>
+
+            `;
+
+
+
+        } catch (e) { return ""; }
+
+    }
+
+
+
+    // --- FUNGSI PERSONAL HISTORY (VICTORY/DEFEAT) ---
 
     async function updatePersonalHistory() {
 
@@ -1054,41 +1229,25 @@
 
         const list = document.getElementById('personalHistoryList');
 
+        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Scanning Blockchain...</div>';
+
         
 
         try {
 
-            // Filter Event: NewBet(player, animalChoice, timestamp)
+            // 1. Ambil Bet Saya
 
-            // Filter khusus address user yang sedang login
-
-            const filter = gameContract.filters.NewBet(userAddress);
-
-            
-
-            // Query 5000 blok terakhir (sesuaikan dengan kebutuhan/limit RPC)
-
-            // Jika RPC error "query returned more than 10000 results", kurangi range blok
+            const betFilter = gameContract.filters.NewBet(userAddress);
 
             const currentBlock = await provider.getBlockNumber();
 
-            const fromBlock = currentBlock - 5000; 
-
-
-
-            const events = await gameContract.queryFilter(filter, fromBlock, "latest");
+            const myBets = await gameContract.queryFilter(betFilter, currentBlock - 5000, "latest");
 
             
 
-            // Balik urutan agar yang terbaru di atas
-
-            const myBets = events.reverse();
-
-
-
             if (myBets.length === 0) {
 
-                list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No bets found in recent history.</div>';
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No bets found recently.</div>';
 
                 return;
 
@@ -1096,19 +1255,115 @@
 
 
 
-            list.innerHTML = ''; // Clear loading text
+            // 2. Ambil Semua Hasil Ronde (BattleResult) untuk dicocokkan
+
+            // Kita perlu cache ini agar tidak query berulang-ulang
+
+            if (cachedBattleResults.length === 0) {
+
+                const resFilter = gameContract.filters.BattleResult();
+
+                cachedBattleResults = await gameContract.queryFilter(resFilter, currentBlock - 5000, "latest");
+
+            }
 
 
 
-            myBets.forEach(evt => {
+            const reversedBets = myBets.reverse();
 
-                const args = evt.args;
+            list.innerHTML = ''; 
 
-                const animalIdx = Number(args[1]);
 
-                const timestamp = Number(args[2]);
+
+            for (let bet of reversedBets) {
+
+                const args = bet.args;
+
+                const animalIdx = Number(args[1]); // Hewan yang kita pilih
+
+                const betTime = Number(args[2]);
 
                 const animalName = IMAGE_NAMES[animalIdx].toUpperCase();
+
+
+
+                // LOGIKA: Cari BattleResult yang timestamp-nya > Timestamp Bet (Ronde setelah bet)
+
+                // Kita cari yang paling dekat selisih waktunya
+
+                let matchedRound = null;
+
+                for (let res of cachedBattleResults) {
+
+                    const resTime = Number(await getBlockTimestamp(res.blockNumber)); // Butuh timestamp block
+
+                    // Logika simple: BattleResult biasanya terjadi beberapa detik/menit setelah bet
+
+                    // Kita cari result yang terjadi SETELAH bet, tapi tidak terlalu jauh (misal max 1 jam)
+
+                    if (resTime > betTime) {
+
+                        matchedRound = res;
+
+                        break; // Ketemu ronde pertama setelah bet
+
+                    }
+
+                }
+
+
+
+                // Jika ronde belum selesai (belum ada result), skip atau tandai Pending
+
+                if (!matchedRound) {
+
+                    const el = document.createElement('div');
+
+                    el.className = 'personal-bet-card';
+
+                    el.innerHTML = `
+
+                        <div class="pb-info">
+
+                            <div class="pb-time">${new Date(betTime * 1000).toLocaleString()}</div>
+
+                            <div>Bet: <span class="pb-animal">${animalName}</span></div>
+
+                        </div>
+
+                        <span class="badge" style="background:#333; color:#aaa;">PENDING</span>
+
+                    `;
+
+                    list.appendChild(el);
+
+                    continue;
+
+                }
+
+
+
+                // Tentukan Menang/Kalah
+
+                const rArgs = matchedRound.args;
+
+                // rArgs[0] adalah reels (array)
+
+                const reels = rArgs[0].map(Number); // [0, 5, 2]
+
+                
+
+                // Logic Menang sesuai Kontrak: Pilihan user ada di salah satu reel
+
+                const isWin = reels.includes(animalIdx);
+
+                
+
+                const statusHtml = isWin 
+
+                    ? `<span class="badge badge-win">VICTORY</span>` 
+
+                    : `<span class="badge badge-lose">DEFEAT</span>`;
 
 
 
@@ -1116,23 +1371,37 @@
 
                 el.className = 'personal-bet-card';
 
+                // Tambahkan efek border hijau/merah di kartu
+
+                el.style.borderLeftColor = isWin ? 'var(--success)' : 'var(--danger)';
+
+                
+
                 el.innerHTML = `
 
                     <div class="pb-info">
 
-                        <div class="pb-time">${new Date(timestamp * 1000).toLocaleString()}</div>
+                        <div class="pb-time">${new Date(betTime * 1000).toLocaleString()}</div>
 
-                        <div>You Bet on: <span class="pb-animal">${animalName}</span></div>
+                        <div>Bet: <span class="pb-animal">${animalName}</span></div>
+
+                        <div style="font-size:0.7em; color:#888; margin-top:2px;">Result: ${IMAGE_NAMES[reels[0]].toUpperCase()}-${IMAGE_NAMES[reels[1]].toUpperCase()}-${IMAGE_NAMES[reels[2]].toUpperCase()}</div>
 
                     </div>
 
-                    <img src="${IMAGE_LIST[animalIdx]}" style="width:30px; height:30px;">
+                    <div style="text-align:right;">
+
+                        ${statusHtml}
+
+                        <img src="${IMAGE_LIST[animalIdx]}" style="width:25px; height:25px; display:block; margin-top:5px; margin-left:auto;">
+
+                    </div>
 
                 `;
 
                 list.appendChild(el);
 
-            });
+            }
 
 
 
@@ -1140,11 +1409,29 @@
 
             console.error("Personal History Error:", e);
 
-            list.innerHTML = '<div style="text-align:center; color:var(--danger);">Error fetching history. Try again later.</div>';
+            list.innerHTML = '<div style="text-align:center; color:var(--danger);">Error fetching history.</div>';
 
         }
 
     }
+
+
+
+    // Helper Memoization untuk Timestamp Block (biar gak request terus)
+
+    const blockTimeCache = {};
+
+    async function getBlockTimestamp(blockNum) {
+
+        if (blockTimeCache[blockNum]) return blockTimeCache[blockNum];
+
+        const block = await provider.getBlock(blockNum);
+
+        blockTimeCache[blockNum] = block.timestamp;
+
+        return block.timestamp;
+
+                                         }
 
     function setupEventListeners() {
         gameContract.on("NewBet", () => {
