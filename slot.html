@@ -969,16 +969,12 @@
 
         for (let r = start; r >= end; r--) {
             try {
-                // 1. Ambil Data Dasar Ronde
                 const result = await gameContract.getRoundResult(r);
-                
-                // 2. Format Teks Outcome (Panggil Helper Baru)
                 const formattedText = formatOutcomeText(result[1], result[0]);
 
-                // 3. Render Kartu Dasar dulu (Biar cepat muncul)
                 const card = document.createElement('div');
                 card.className = 'history-card';
-                card.id = `history-card-${r}`; // Kasih ID biar bisa di-update nanti
+                card.id = `history-card-${r}`;
                 
                 card.innerHTML = `
                     <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">
@@ -989,16 +985,16 @@
                         <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][1])]}">
                         <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][2])]}">
                     </div>
-                    <div class="history-outcome">${formattedText}</div>
-                    <div id="winner-info-${r}" style="margin-top:5px; min-height:20px;">
-                        <span style="font-size:0.7em; color:#555;">Checking winner...</span>
+                    <div class="history-outcome" style="margin-top:5px;">${formattedText}</div>
+                    
+                    <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px;">
+                        <span style="font-size:0.7em; color:#666;">Loading winner data...</span>
                     </div>
                 `;
                 historyList.appendChild(card);
 
-                // 4. Async Fetch Winner Info (Biar UI gak macet)
-                // Kita panggil fungsi terpisah tanpa 'await' blocking
-                findAndDisplayWinner(r, result[2]);
+                // Fetch winner async
+                findAndDisplayWinner(r);
 
             } catch (err) {
                 console.log(`Skip history round ${r}`, err);
@@ -1008,99 +1004,120 @@
         if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
     }
 
-    // Fungsi Pencari Winner yang Lebih Canggih
-    async function findAndDisplayWinner(roundId, timestamp) {
-        try {
-            const container = document.getElementById(`winner-info-${roundId}`);
-            if (!container) return;
+    async function findAndDisplayWinner(roundId) {
+        const container = document.getElementById(`winner-info-${roundId}`);
+        if (!container) return;
 
-            // Logika: 
-            // Kita cari event 'BattleResult' untuk ronde ini dulu untuk dapat Block Number pastinya.
-            // Kenapa? Karena 'WinDistributed' ada di block yang sama dengan 'BattleResult'.
-            
+        try {
+            // 1. Cari Block Number dari BattleResult
+            // Kita cari range block luas agar pasti ketemu
             const battleFilter = gameContract.filters.BattleResult(null, null, roundId);
-            // Scan 10.000 block ke belakang dari Head (Cukup untuk history baru)
-            // Jika history lama sekali, ini mungkin kosong (limitasi RPC gratis)
-            const battleEvents = await gameContract.queryFilter(battleFilter, -10000); 
+            
+            // NOTE: Base Sepolia menyimpan log cukup lama, kita coba tarik 50.000 block terakhir
+            // Jika ini gagal di console, berarti RPC limit.
+            const battleEvents = await gameContract.queryFilter(battleFilter, -50000); 
 
             if (battleEvents.length === 0) {
-                container.innerHTML = '<span style="font-size:0.7em; color:#555;">- No Data -</span>';
+                container.innerHTML = '<span style="font-size:0.7em; color:#444;">Data too old/archived</span>';
                 return;
             }
 
             const exactBlock = battleEvents[0].blockNumber;
 
-            // Sekarang cari WinDistributed HANYA di block tersebut
+            // 2. Cari WinDistributed di Block yang SAMA
             const winFilter = gameContract.filters.WinDistributed();
             const winEvents = await gameContract.queryFilter(winFilter, exactBlock, exactBlock);
 
             if (winEvents.length === 0) {
-                container.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>';
+                container.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners (Pool Accumulated)</span>';
                 return;
             }
 
-            // Ambil Winner Pertama (Untuk display simple)
-            const wEvent = winEvents[0];
-            const wAddr = wEvent.args[0];
-            const wAmnt = wEvent.args[1];
-            const wCurr = Number(wEvent.args[2]);
+            // 3. Proses Data Winner (Agregat Total)
+            let totalPayoutETH = 0n;
+            let totalPayoutUSDT = 0n;
+            let totalPayoutSHIB = 0n;
+            let biggestWinnerAddr = "";
+            let biggestWinAmount = 0n;
+            let biggestWinCurr = 0; // default eth
 
-            // Ambil Nickname Player
+            for(let evt of winEvents) {
+                const args = evt.args;
+                const amt = args[1]; // BigInt
+                const curr = Number(args[2]);
+
+                if (curr === 0) totalPayoutETH += amt;
+                else if (curr === 1) totalPayoutUSDT += amt;
+                else if (curr === 2) totalPayoutSHIB += amt;
+
+                // Cari winner terbesar untuk ditampilkan namanya
+                // (Logic sederhana: kita anggap ETH base currency comparison atau ambil winner pertama aja)
+                if (amt > biggestWinAmount) {
+                    biggestWinAmount = amt;
+                    biggestWinnerAddr = args[0];
+                    biggestWinCurr = curr;
+                }
+            }
+
+            // Ambil Nickname Pemenang Terbesar
             let nick = "Unknown";
             try {
-                const uData = await gameContract.users(wAddr);
+                const uData = await gameContract.users(biggestWinnerAddr);
                 nick = uData[0];
             } catch {}
 
-            // Format Uang
-            let symbol = wCurr === 0 ? "ETH" : (wCurr === 1 ? "USDT" : "SHIB");
-            let decimal = wCurr === 1 ? 6 : 18;
-            let val = parseFloat(ethers.formatUnits(wAmnt, decimal));
-            
-            if (val < 0.0001) val = val.toFixed(6);
-            else val = val.toLocaleString(undefined, {maximumFractionDigits: 4});
+            // Format Teks Total
+            let payoutText = "";
+            if(totalPayoutETH > 0n) payoutText += `${parseFloat(ethers.formatEther(totalPayoutETH)).toFixed(4)} ETH `;
+            if(totalPayoutUSDT > 0n) payoutText += `${parseFloat(ethers.formatUnits(totalPayoutUSDT, 6)).toFixed(2)} USDT `;
+            if(totalPayoutSHIB > 0n) payoutText += `${parseFloat(ethers.formatUnits(totalPayoutSHIB, 18)).toLocaleString()} SHIB`;
 
             container.innerHTML = `
-                <div class="winner-info-box">
-                    <div class="w-user">🏆 ${nick} <span style="font-weight:normal; opacity:0.7;">(${wAddr.substring(0,4)}..)</span></div>
-                    <div class="w-amt">+${val} <span style="font-size:0.8em;">${symbol}</span></div>
+                <div class="winner-info-box" style="display:block;">
+                    <div style="color:var(--gold); font-weight:bold; font-size:0.8em;">
+                        🏆 ${nick} <span style="font-weight:normal; color:#888;">(${biggestWinnerAddr.substring(0,4)}...)</span>
+                    </div>
+                    <div style="color:white; font-size:0.75em; margin-top:2px;">
+                        Total Win: <span style="color:var(--success);">${payoutText}</span>
+                    </div>
                 </div>
             `;
 
         } catch (e) {
-            console.error("Winner fetch error:", e);
-            const container = document.getElementById(`winner-info-${roundId}`);
-            if(container) container.innerHTML = ''; // Hide error text
+            console.error(`Error finding winner for round ${roundId}:`, e);
+            container.innerHTML = '';
         }
     }
 
-    async function updatePersonalHistory() {
+   async function updatePersonalHistory() {
         const list = document.getElementById('personalHistoryList');
         
-        // 1. Cek Koneksi Wallet Dulu
         if (!isConnected || !userAddress) {
-            list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Please Connect Wallet to view My Bets</div>';
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Connect Wallet first</div>';
             return;
         }
 
-        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Scanning Blockchain...</div>';
+        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Scanning last 24h history...</div>';
         
         try {
-            // 2. Ambil Bet Saya (Batasi range blok agar tidak timeout)
-            const betFilter = gameContract.filters.NewBet(userAddress);
             const currentBlock = await provider.getBlockNumber();
-            // Ambil 5000 blok terakhir saja (sekitar 2-3 jam terakhir di Base Sepolia)
-            // Jika mau lebih lama, harus pakai Indexer (TheGraph) karena RPC gratis terbatas
-            const fromBlock = Math.max(0, currentBlock - 5000); 
-            
+            // PERUBAHAN: Range diperbesar ke 50.000 Blok (~28 Jam di Base)
+            const fromBlock = Math.max(0, currentBlock - 50000); 
+
+            // 1. Ambil Event Bet
+            const betFilter = gameContract.filters.NewBet(userAddress);
             const myBets = await gameContract.queryFilter(betFilter, fromBlock, "latest");
             
             if (myBets.length === 0) {
-                list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No bets found in recent blocks.</div>';
+                list.innerHTML = `
+                    <div style="text-align:center; padding:20px; color:#666;">
+                        No bets found in last 50k blocks.<br>
+                        <small>(Try betting on a new round)</small>
+                    </div>`;
                 return;
             }
 
-            // 3. Cache Result Global (Optimasi)
+            // 2. Cache Result Global (Optimasi: Hanya fetch jika belum ada)
             if (cachedBattleResults.length === 0) {
                 const resFilter = gameContract.filters.BattleResult();
                 cachedBattleResults = await gameContract.queryFilter(resFilter, fromBlock, "latest");
@@ -1112,15 +1129,11 @@
             for (let bet of reversedBets) {
                 const args = bet.args;
                 const animalIdx = Number(args[1]);
-                const betBlock = bet.blockNumber; // Gunakan Block Number, lebih akurat dr Timestamp
+                const betBlock = bet.blockNumber; 
                 const animalName = IMAGE_NAMES[animalIdx] ? IMAGE_NAMES[animalIdx].toUpperCase() : "UNKNOWN";
 
-                // LOGIKA MATCHING:
-                // Cari Result Ronde yang block numbernya > Block Number Bet
-                // Kita cari result terdekat setelah bet dipasang
+                // Matching Logic
                 let matchedRound = null;
-                
-                // Sort cached results by block number ascending
                 cachedBattleResults.sort((a,b) => a.blockNumber - b.blockNumber);
 
                 for (let res of cachedBattleResults) {
@@ -1131,27 +1144,31 @@
                 }
 
                 if (!matchedRound) {
-                    // Masih Pending (Belum di draw)
+                    // Tampilkan Pending
                     const el = document.createElement('div');
                     el.className = 'personal-bet-card';
+                    el.style.borderLeft = '3px solid #666';
                     el.innerHTML = `
                         <div class="pb-info">
-                            <div class="pb-time">Block: ${betBlock} (Pending)</div>
-                            <div>Bet: <span class="pb-animal">${animalName}</span></div>
+                            <div class="pb-time">Block: ${betBlock} (Waiting Draw)</div>
+                            <div>Bet: <span class="pb-animal" style="color:white;">${animalName}</span></div>
                         </div>
-                        <span class="badge" style="background:#333; color:#aaa;">WAITING</span>
+                        <span class="badge" style="background:#222; border:1px solid #444;">PENDING</span>
                     `;
                     list.appendChild(el);
                     continue;
                 }
 
-                // Cek Menang/Kalah
+                // Kalkulasi Hasil
                 const rArgs = matchedRound.args;
                 const reels = rArgs[0].map(Number);
                 const isWin = reels.includes(animalIdx);
                 
-                // Format Hasil Ronde
-                const resText = `${IMAGE_NAMES[reels[0]]} ${IMAGE_NAMES[reels[1]]} ${IMAGE_NAMES[reels[2]]}`.toUpperCase();
+                // Panggil Helper Format Teks untuk hasil result
+                // Kita panggil fungsi format yang BARU tadi (namun perlu rawOutcome string)
+                // Karena kita tidak punya rawOutcome string di event BattleResult (hanya di struct),
+                // Kita generate manual stringnya untuk display simple:
+                const resDisplay = `${IMAGE_NAMES[reels[0]]}-${IMAGE_NAMES[reels[1]]}-${IMAGE_NAMES[reels[2]]}`.toUpperCase();
 
                 const statusHtml = isWin 
                     ? `<span class="badge badge-win">VICTORY</span>` 
@@ -1163,9 +1180,9 @@
                 
                 el.innerHTML = `
                     <div class="pb-info">
-                        <div class="pb-time">Round Result Available</div>
-                        <div>Bet: <span class="pb-animal">${animalName}</span></div>
-                        <div style="font-size:0.7em; color:#888; margin-top:2px;">Vs: ${resText}</div>
+                        <div class="pb-time">Round Done (Blk ${matchedRound.blockNumber})</div>
+                        <div>Your Bet: <span class="pb-animal">${animalName}</span></div>
+                        <div style="font-size:0.7em; color:#aaa; margin-top:2px;">Result: ${resDisplay}</div>
                     </div>
                     <div style="text-align:right;">
                         ${statusHtml}
@@ -1176,49 +1193,47 @@
             }
 
         } catch (e) {
-            console.error("Personal History Error:", e);
-            // Tampilkan error ke user agar tidak dikira loading selamanya
-            list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger);">
-                Failed to load history.<br>
-                <span style="font-size:0.8em; color:#888;">${e.message.slice(0, 30)}...</span>
-                <br><button class="wallet-btn" onclick="updatePersonalHistory()" style="margin-top:10px; font-size:0.8em;">Try Again</button>
-            </div>`;
+            console.error("History Error:", e);
+            list.innerHTML = `<div style="text-align:center; padding:10px; color:var(--danger);">Network Limit. Try refreshing.</div>`;
         }
-    }
-
-    // Helper: Mengubah data mentah menjadi format Teks Cantik
+   }
+    
+    // Helper: Format Teks Outcome yang Lebih Cerdas
     function formatOutcomeText(rawOutcome, reels) {
         const r0 = Number(reels[0]);
         const r1 = Number(reels[1]);
         const r2 = Number(reels[2]);
         
-        // Helper ambil nama (Uppercase awal)
         const getN = (idx) => {
-            if (idx === 6) return "Zonk"; // Index 6 adalah Zonk
+            if (idx === 6) return "Zonk"; 
             if (!IMAGE_NAMES[idx]) return "Unknown";
             return IMAGE_NAMES[idx].charAt(0).toUpperCase() + IMAGE_NAMES[idx].slice(1);
         };
 
-        const n1 = getN(r0);
-        const n2 = getN(r1);
-        const n3 = getN(r2);
+        const n0 = getN(r0);
+        const n1 = getN(r1);
+        const n2 = getN(r2);
 
         if (rawOutcome === "TRIPLE") {
-            return `<span style="color:var(--gold);">${n1} (Triple)</span>`;
+            return `<span style="color:var(--gold); font-weight:bold;">${n0} (TRIPLE)</span>`;
         } 
         else if (rawOutcome === "DOUBLE") {
-            // Cari hewan mana yang double
-            let doubleName = n1;
-            if (r1 === r2) doubleName = n2;
-            else if (r0 === r2) doubleName = n1; // logic sederhana
-            return `<span style="color:var(--accent);">${doubleName} (Double)</span>`;
+            // Logika: Cari mana yang kembar, mana yang beda
+            let doubleName = "";
+            let singleName = "";
+
+            if (r0 === r1) { doubleName = n0; singleName = n2; }
+            else if (r1 === r2) { doubleName = n1; singleName = n0; }
+            else { doubleName = n0; singleName = n1; } // r0 === r2
+
+            return `<span style="color:var(--accent);">${doubleName} (Double)</span> - ${singleName}`;
         } 
         else if (rawOutcome === "ONE_ZONK") {
-            return `${n1} <span style="color:var(--danger)">Zonk</span> ${n3}`;
+            return `${n0} - <span style="color:var(--danger)">Zonk</span> - ${n2}`;
         } 
         else {
             // NO_MATCH
-            return `${n1} ${n2} ${n3}`;
+            return `${n0} - ${n1} - ${n2}`;
         }
     }
 
