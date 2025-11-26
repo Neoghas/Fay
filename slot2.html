@@ -6,65 +6,26 @@
     <title>Faylotto Ultimate - Social Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 <style>
-    /* --- CSS UTAMA & SOCIAL --- */
+    /* --- CSS (SAMA SEPERTI SEBELUMNYA) --- */
     * { box-sizing: border-box; }
-    :root {
-        --primary: #0052ff; --accent: #00d1ff; --bg: #0f111a;
-        --panel: #1e2130; --text: #ffffff; --danger: #ff4b4b; --success: #00d26a;
-        --shib-color: #FFA409; --usdt-color: #26A17B; --eth-color: #627EEA;
-        --gold: #FFD700; --gradient-bg: linear-gradient(135deg, #0f111a, #1e2130);
-    }
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: var(--gradient-bg); color: var(--text); margin: 0;
-        display: flex; flex-direction: column; align-items: center;
-        min-height: 100vh; padding-bottom: 80px; overflow-x: hidden;
-    }
-    header {
-        width: 100%; padding: 15px 20px; display: flex; justify-content: space-between;
-        align-items: center; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--panel);
-        position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    }
-    .wallet-btn {
-        background: var(--primary); color: white; border: none; padding: 8px 16px;
-        border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s;
-        box-shadow: 0 0 10px rgba(0, 82, 255, 0.5);
-    }
+    :root { --primary: #0052ff; --accent: #00d1ff; --bg: #0f111a; --panel: #1e2130; --text: #ffffff; --danger: #ff4b4b; --success: #00d26a; --gold: #FFD700; --gradient-bg: linear-gradient(135deg, #0f111a, #1e2130); }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--gradient-bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-bottom: 80px; overflow-x: hidden; }
+    header { width: 100%; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--panel); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+    .wallet-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 82, 255, 0.5); }
     .wallet-btn.connected { background: var(--success); border: 1px solid #fff; cursor: default; }
     .layout-container { width: 94%; max-width: 480px; display: flex; flex-direction: column; align-items: center; margin: 0 auto; }
-
-    /* SLOT MACHINE */
-    .slot-machine {
-        margin-top: 30px; background: var(--panel); padding: 20px;
-        border-radius: 15px; border: 4px solid #333;
-        box-shadow: 0 0 30px rgba(0, 82, 255, 0.4);
-        width: 100%; display: flex; flex-direction: column; align-items: center;
-    }
+    .slot-machine { margin-top: 30px; background: var(--panel); padding: 20px; border-radius: 15px; border: 4px solid #333; box-shadow: 0 0 30px rgba(0, 82, 255, 0.4); width: 100%; display: flex; flex-direction: column; align-items: center; }
     .reels-container { display: flex; gap: 8px; background: #000; padding: 10px; border-radius: 8px; justify-content: center; margin-bottom: 15px; width: 100%; box-shadow: inset 0 0 10px rgba(255,255,255,0.1); }
     .reel { flex: 1; height: 90px; background: #fff; border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
     .reel-img { width: 80%; height: 80%; object-fit: contain; transition: transform 0.1s; }
-
     .draw-section { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-    .btn-draw {
-        background: linear-gradient(45deg, #333, #555); color: #888; border: 2px solid #444;
-        padding: 12px 0; width: 70%; border-radius: 30px;
-        font-size: 0.9em; font-weight: 800; cursor: not-allowed; transition: 0.3s;
-    }
-    .btn-draw.ready {
-        background: linear-gradient(45deg, #ff0000, #ff8800); color: white; border: 2px solid #ffaa00;
-        cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 0, 0.6); animation: pulse 1.5s infinite;
-    }
+    .btn-draw { background: linear-gradient(45deg, #333, #555); color: #888; border: 2px solid #444; padding: 12px 0; width: 70%; border-radius: 30px; font-size: 0.9em; font-weight: 800; cursor: not-allowed; transition: 0.3s; }
+    .btn-draw.ready { background: linear-gradient(45deg, #ff0000, #ff8800); color: white; border: 2px solid #ffaa00; cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 0, 0.6); animation: pulse 1.5s infinite; }
     @keyframes pulse { 0% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); } 50% { box-shadow: 0 0 25px rgba(255, 100, 0, 0.8); } 100% { box-shadow: 0 0 10px rgba(255, 0, 0, 0.5); } }
     .status-text { font-size: 0.8em; color: var(--accent); font-weight: bold; text-align: center; }
-
-    /* BETTING CARDS */
     .betting-section { margin-top: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; }
     .bet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; margin-top: 15px; }
-    .bet-card {
-        background: var(--panel); border: 3px solid #333; border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.2s;
-        display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1/1.2; position: relative;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
+    .bet-card { background: var(--panel); border: 3px solid #333; border-radius: 12px; padding: 10px; cursor: pointer; transition: 0.2s; display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1/1.2; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     .bet-card:hover { transform: translateY(-5px); box-shadow: 0 0 20px rgba(0, 82, 255, 0.5); }
     .bet-card.my-bet { border-color: var(--primary); background: rgba(0, 82, 255, 0.2); box-shadow: 0 0 20px rgba(0, 82, 255, 0.6); }
     .bet-card.open { border-color: var(--success); animation: pulseGreen 2s infinite; }
@@ -74,8 +35,6 @@
     .name { font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;}
     .team-count { font-size: 9px; color: #aaa; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; margin-top: 2px; }
     .team-count.filled { color: var(--success); border: 1px solid var(--success); }
-
-    /* DASHBOARD & MODALS */
     .pool-dashboard { width: 100%; display: flex; justify-content: space-between; gap: 5px; margin-top: 20px; margin-bottom: 10px; }
     .pool-box { flex: 1; background: #151925; border: 1px solid #333; border-radius: 8px; padding: 8px 5px; text-align: center; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
     .pool-title { font-size: 0.6em; color: #aaa; text-transform: uppercase; margin-bottom: 3px; }
@@ -108,8 +67,6 @@
     #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
     @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
     @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
-
-    /* --- WINNER & HISTORY --- */
     .winner-glamour { border-color: var(--gold) !important; background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.3)) !important; animation: glamourPulse 0.8s infinite alternate !important; z-index: 10; transform-origin: center; }
     @keyframes glamourPulse { 0% { box-shadow: 0 0 15px var(--gold), inset 0 0 5px var(--gold); transform: scale(1); border-color: var(--gold); } 100% { box-shadow: 0 0 30px var(--gold), 0 0 45px #FF4500, inset 0 0 20px var(--gold); transform: scale(1.1); border-color: #FFF; } }
     .winner-glamour::before { content: "🏆 WINNER"; position: absolute; top: -15px; background: linear-gradient(45deg, var(--gold), #FFA500); color: #000; font-weight: bold; font-size: 0.7em; padding: 3px 10px; border-radius: 10px; box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); animation: bounce 0.8s infinite; }
@@ -132,23 +89,17 @@
     .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; text-transform: uppercase; }
     .badge-win { background: rgba(0, 210, 106, 0.2); color: var(--success); border: 1px solid var(--success); }
     .badge-lose { background: rgba(255, 75, 75, 0.2); color: var(--danger); border: 1px solid var(--danger); }
-
-    /* --- SOCIAL & PRICE FEED STYLES (NEW) --- */
     .price-ticker { width: 100%; background: #000; color: #aaa; font-size: 0.7em; padding: 8px; display: flex; justify-content: space-around; border-top: 1px solid #333; position: fixed; bottom: 0; z-index: 200; }
     .price-item span { font-weight: bold; color: white; }
-    
     .btn-social-open { position: absolute; top: 10px; right: 10px; background: transparent; border: 1px solid #444; color: #aaa; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
     .btn-social-open:hover { background: #222; color: white; border-color: white; }
-
     .rating-stars { display: flex; justify-content: center; gap: 5px; margin-bottom: 15px; }
     .star { font-size: 1.5em; color: #444; cursor: pointer; transition: 0.2s; }
     .star.active { color: var(--gold); transform: scale(1.1); }
-    
     .reaction-bar { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
     .btn-react { flex: 1; padding: 8px; background: #111; border: 1px solid #333; border-radius: 6px; color: #888; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
     .btn-react.active-like { border-color: var(--success); color: var(--success); background: rgba(0, 210, 106, 0.1); }
     .btn-react.active-dislike { border-color: var(--danger); color: var(--danger); background: rgba(255, 75, 75, 0.1); }
-
     .comment-section { text-align: left; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px; }
     .comment-list { max-height: 200px; overflow-y: auto; margin-bottom: 10px; }
     .comment-item { background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px; margin-bottom: 8px; font-size: 0.85em; }
@@ -305,7 +256,7 @@
 <div id="toast">Notification</div>
 
 <script>
-    // --- KONFIGURASI PENTING --- 
+    // --- CONFIG --- 
     const CONTRACT_ADDRESS = "0x72a20552267B4313f74003E25593592B15b76ad6";
     const USDT_ADDRESS = "0xa7baE72F341d8E70Fd5Dc2b256ecE7702823bec2";
     const SHIB_ADDRESS = "0xba63AFBf0060a9123aAAc1213b587d0462bD4d45";
@@ -328,7 +279,7 @@
     
     // Cache Optimization
     let globalWinnersCache = {}; 
-    let globalHistoryLength = -1; // -1 artinya belum tau panjang array
+    let globalHistoryLength = -1;
     let currentSocialRound = 0;
 
     window.onload = async () => {
@@ -485,118 +436,57 @@
         historyCursor = end - 1; if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
     }
 
-    // --- OPTIMIZED WINNER FETCHING (FIXED LENGTH DETECTION) ---
+    // --- OPTIMIZED WINNER FETCHING (EXPONENTIAL SEARCH) ---
     async function fetchWinnersOptimized(maxRound, minRound) {
         try {
-            // 1. Cari Panjang Array globalWinHistory dengan Exponential Search
-            // (Karena length array bisa jauh lebih besar dari Round ID)
             if (globalHistoryLength === -1) {
-                // Langkah A: Cari batas atas (Upper Bound)
-                let low = 0;
-                let high = 1;
+                let low = 0, high = 1;
+                try { await gameContract.globalWinHistory(0); } catch { globalHistoryLength=0; return; } 
                 
-                // Cek index 0 dulu (safety check jika array kosong)
-                try { await gameContract.globalWinHistory(0); } 
-                catch { globalHistoryLength = 0; return; } // Array kosong
-
-                // Lipatgandakan 'high' sampai menemukan error (out of bounds)
                 while(true) {
-                    try {
-                        await gameContract.globalWinHistory(high);
-                        low = high;
-                        high *= 2; // 1, 2, 4, 8, 16, 32...
-                    } catch(e) {
-                        break; // Ketemu batas atas
-                    }
+                    try { await gameContract.globalWinHistory(high); low=high; high*=2; } catch(e) { break; }
                 }
-
-                // Langkah B: Binary Search di antara Low dan High untuk cari length pasti
                 let foundLen = low;
                 while (low <= high) {
                     let mid = Math.floor((low + high) / 2);
-                    try {
-                        await gameContract.globalWinHistory(mid);
-                        foundLen = mid + 1; // Valid, coba lebih tinggi
-                        low = mid + 1;
-                    } catch (e) {
-                        high = mid - 1; // Invalid, coba lebih rendah
-                    }
+                    try { await gameContract.globalWinHistory(mid); foundLen = mid + 1; low = mid + 1; } catch (e) { high = mid - 1; }
                 }
                 globalHistoryLength = foundLen;
-                console.log("Global History Length Found:", globalHistoryLength);
             }
 
             if (globalHistoryLength === 0) return;
 
-            // 2. Parallel Fetching (Batching)
-            // Scan mundur dari data terakhir yang ditemukan
             let endScan = globalHistoryLength - 1;
-            // Batasi scan max 100 item terakhir agar RPC tidak timeout
             let startScan = Math.max(0, endScan - 100); 
-            
             const promises = [];
-            for(let i = endScan; i >= startScan; i--) {
-                promises.push(gameContract.globalWinHistory(i));
-            }
+            for(let i = endScan; i >= startScan; i--) promises.push(gameContract.globalWinHistory(i));
             
             const winnersData = await Promise.all(promises);
 
-            // 3. Map Data & Aggregate
             for(let d of winnersData) {
                 const rId = Number(d[3]);
-                // Hanya proses jika ronde ini sedang ditampilkan di layar
                 if (rId <= maxRound && rId >= minRound) {
-                    
-                    if (!globalWinnersCache[rId]) {
-                        globalWinnersCache[rId] = { eth:0n, usdt:0n, shib:0n, topAddr:d[0], topAmt:d[1] };
-                    }
-                    
-                    // Agregasi Total Menang
-                    if(Number(d[2])===0) globalWinnersCache[rId].eth += d[1]; 
-                    else if(Number(d[2])===1) globalWinnersCache[rId].usdt += d[1]; 
-                    else globalWinnersCache[rId].shib += d[1];
-                    
-                    // Cek MVP (Pemenang Terbesar di ronde itu)
-                    if(d[1] > globalWinnersCache[rId].topAmt) { 
-                        globalWinnersCache[rId].topAmt = d[1]; 
-                        globalWinnersCache[rId].topAddr = d[0]; 
-                    }
+                    if (!globalWinnersCache[rId]) globalWinnersCache[rId] = { eth:0n, usdt:0n, shib:0n, topAddr:d[0], topAmt:d[1] };
+                    if(Number(d[2])===0) globalWinnersCache[rId].eth+=d[1]; 
+                    else if(Number(d[2])===1) globalWinnersCache[rId].usdt+=d[1]; 
+                    else globalWinnersCache[rId].shib+=d[1];
+                    if(d[1] > globalWinnersCache[rId].topAmt) { globalWinnersCache[rId].topAmt=d[1]; globalWinnersCache[rId].topAddr=d[0]; }
                 }
             }
 
-            // 4. Update UI
             for (let r = maxRound; r >= minRound; r--) {
-                const div = document.getElementById(`winner-info-${r}`); 
-                if (!div) continue;
-                
+                const div = document.getElementById(`winner-info-${r}`); if (!div) continue;
                 const d = globalWinnersCache[r];
-                if (!d) { 
-                    div.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>'; 
-                    continue; 
-                }
+                if (!d) { div.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>'; continue; }
                 
                 let pay = ""; 
                 if(d.eth>0n) pay+=`<div style="color:#627EEA">+${parseFloat(ethers.formatEther(d.eth)).toFixed(4)} ETH</div>`;
                 if(d.usdt>0n) pay+=`<div style="color:#26A17B">+${parseFloat(ethers.formatUnits(d.usdt,6)).toFixed(2)} USDT</div>`;
                 if(d.shib>0n) pay+=`<div style="color:#FFA409">+${parseFloat(ethers.formatUnits(d.shib,18)).toLocaleString()} SHIB</div>`;
                 
-                div.innerHTML = `
-                    <div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;">
-                        <div style="display:flex; justify-content:space-between;">
-                            <div style="text-align:left;">
-                                <div style="font-size:0.65em; color:#888;">WINNER</div>
-                                <div style="color:var(--gold); font-weight:bold; font-size:0.85em;" id="nick-${r}">🏆 ${d.topAddr.substring(0,4)}...</div>
-                            </div>
-                            <div style="text-align:right; font-size:0.75em; font-weight:bold;">${pay}</div>
-                        </div>
-                    </div>`;
-                
-                // Lazy load nickname
-                gameContract.users(d.topAddr).then(u=>{ 
-                    if(u[0]) document.getElementById(`nick-${r}`).innerText=`🏆 ${u[0]}`; 
-                }).catch(()=>{});
+                div.innerHTML = `<div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;"><div style="display:flex; justify-content:space-between;"><div style="text-align:left;"><div style="font-size:0.65em; color:#888;">WINNER</div><div style="color:var(--gold); font-weight:bold; font-size:0.85em;" id="nick-${r}">🏆 ${d.topAddr.substring(0,4)}...</div></div><div style="text-align:right; font-size:0.75em; font-weight:bold;">${pay}</div></div></div>`;
+                gameContract.users(d.topAddr).then(u=>{ if(u[0]) document.getElementById(`nick-${r}`).innerText=`🏆 ${u[0]}`; }).catch(()=>{});
             }
-
         } catch (e) { console.log("Fetch error", e); }
     }
 
@@ -608,14 +498,11 @@
         list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Loading...</div>';
         try {
             let myWins = [], idx = 0, fetching = true;
-            // Optimization: Parallel fetch initial 20 items
             const p = [];
             for(let i=0; i<20; i++) p.push(gameContract.userWinHistory(userAddress, i).catch(()=>null));
             const res = await Promise.all(p);
-            
             for(let r of res) { if(r) myWins.push(r); else fetching=false; }
             
-            // Fetch rest sequentially if more exist
             if(fetching && myWins.length === 20) {
                  idx = 20;
                  while(fetching && idx < 50) { try { const log = await gameContract.userWinHistory(userAddress, idx); myWins.push(log); idx++; } catch { fetching=false; } }
@@ -722,6 +609,6 @@
         }, Math.max(0, MIN_SPIN_TIME - (Date.now()-spinStartTime)));
     }
     function setupEventListeners() { gameContract.on("NewBet", refreshGameData); gameContract.on("BattleResult", (a,b,id)=>checkRoundResult(id)); }
-        </script>
+</script>
 </body>
-</html>
+    </html>
