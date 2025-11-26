@@ -6,7 +6,7 @@
     <title>Faylotto Ultimate - Base Sepolia</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 <style>
-    /* --- CSS DITINGKATKAN UNTUK LEBIH MEWAH: GRADIENTS, SHADOWS, ANIMATIONS LEBIH HALUS --- */
+    /* --- CSS UTAMA --- */
     * { box-sizing: border-box; }
     :root {
         --primary: #0052ff; --accent: #00d1ff; --bg: #0f111a;
@@ -70,30 +70,11 @@
         justify-content: center; aspect-ratio: 1/1.2; position: relative;
         box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
-
-    /* Hover Effect Default */
     .bet-card:hover { transform: translateY(-5px); box-shadow: 0 0 20px rgba(0, 82, 255, 0.5); }
-
-    /* 1. MY BET (USER SUDAH BET) -> BIRU */
-    .bet-card.my-bet {
-        border-color: var(--primary); /* Biru */
-        background: rgba(0, 82, 255, 0.2);
-        box-shadow: 0 0 20px rgba(0, 82, 255, 0.6);
-    }
-
-    /* 2. OPEN (MASIH BISA DIBET) -> HIJAU */
-    .bet-card.open {
-        border-color: var(--success); /* Hijau */
-        animation: pulseGreen 2s infinite;
-    }
+    .bet-card.my-bet { border-color: var(--primary); background: rgba(0, 82, 255, 0.2); box-shadow: 0 0 20px rgba(0, 82, 255, 0.6); }
+    .bet-card.open { border-color: var(--success); animation: pulseGreen 2s infinite; }
     @keyframes pulseGreen { 0% { border-color: #00d26a; } 50% { border-color: #00ff80; } 100% { border-color: #00d26a; } }
-
-    /* SELECTED STATE (Saat diklik untuk mau bet) */
-    .bet-card.selected {
-        transform: scale(0.95);
-        background: rgba(255, 255, 255, 0.15);
-        box-shadow: 0 0 15px var(--accent);
-    }
+    .bet-card.selected { transform: scale(0.95); background: rgba(255, 255, 255, 0.15); box-shadow: 0 0 15px var(--accent); }
 
     .bet-icon-img { width: 50%; height: 50%; object-fit: contain; margin-bottom: 5px; }
     .name { font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;}
@@ -141,51 +122,34 @@
     @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
     @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
 
-    /* --- EFEK WINNER GLAMOR DITINGKATKAN --- */
-    .winner-glamour {
-        border-color: var(--gold) !important; /* Emas Solid */
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.3)) !important;
-        animation: glamourPulse 0.8s infinite alternate !important;
-        z-index: 10; /* Pastikan di atas layer lain */
-        transform-origin: center;
-    }
-
-    /* Animasi Denyut Emas */
-    @keyframes glamourPulse {
-        0% {
-            box-shadow: 0 0 15px var(--gold), inset 0 0 5px var(--gold);
-            transform: scale(1);
-            border-color: var(--gold);
-        }
-        100% {
-            box-shadow: 0 0 30px var(--gold), 0 0 45px #FF4500, inset 0 0 20px var(--gold); /* Glow Emas & Merah */
-            transform: scale(1.1); /* Sedikit membesar */
-            border-color: #FFF; /* Kilatan Putih */
-        }
-    }
-
-    /* Tambahan: Winner Badge (Opsional, agar lebih jelas) */
-    .winner-glamour::before {
-        content: "🏆 WINNER";
-        position: absolute;
-        top: -15px;
-        background: linear-gradient(45deg, var(--gold), #FFA500);
-        color: #000;
-        font-weight: bold;
-        font-size: 0.7em;
-        padding: 3px 10px;
-        border-radius: 10px;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
-        animation: bounce 0.8s infinite;
-    }
+    /* --- STYLES BARU UNTUK HISTORY & TABS --- */
+    .winner-glamour { border-color: var(--gold) !important; background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.3)) !important; animation: glamourPulse 0.8s infinite alternate !important; z-index: 10; transform-origin: center; }
+    @keyframes glamourPulse { 0% { box-shadow: 0 0 15px var(--gold), inset 0 0 5px var(--gold); transform: scale(1); border-color: var(--gold); } 100% { box-shadow: 0 0 30px var(--gold), 0 0 45px #FF4500, inset 0 0 20px var(--gold); transform: scale(1.1); border-color: #FFF; } }
+    .winner-glamour::before { content: "🏆 WINNER"; position: absolute; top: -15px; background: linear-gradient(45deg, var(--gold), #FFA500); color: #000; font-weight: bold; font-size: 0.7em; padding: 3px 10px; border-radius: 10px; box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); animation: bounce 0.8s infinite; }
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 
-    /* --- TAMBAHAN UNTUK HISTORY SECTION --- */
     .history-section { margin-top: 30px; width: 100%; }
     .history-card { background: var(--panel); padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 0 15px rgba(0,0,0,0.3); }
     .history-reels { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }
     .history-reel-img { width: 40px; height: 40px; object-fit: contain; }
     .history-outcome { font-weight: bold; color: var(--accent); }
+
+    .history-tabs { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }
+    .tab-btn { flex: 1; padding: 10px; background: #151925; border: 1px solid #333; color: #888; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; transition: 0.3s; }
+    .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 82, 255, 0.4); }
+    
+    .btn-load-more { width: 100%; padding: 12px; background: #222; border: 1px dashed #555; color: #aaa; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 0.8em; transition: 0.3s; }
+    .btn-load-more:hover { background: #333; color: white; border-color: white; }
+    .hidden { display: none; }
+
+    .personal-bet-card { background: rgba(255,255,255,0.03); border-left: 3px solid #555; padding: 10px; margin-bottom: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .pb-info { font-size: 0.8em; }
+    .pb-time { font-size: 0.7em; color: #666; }
+    .pb-animal { font-weight: bold; color: var(--accent); }
+    
+    .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; text-transform: uppercase; }
+    .badge-win { background: rgba(0, 210, 106, 0.2); color: var(--success); border: 1px solid var(--success); }
+    .badge-lose { background: rgba(255, 75, 75, 0.2); color: var(--danger); border: 1px solid var(--danger); }
 </style>
 </head>
 <body>
@@ -259,10 +223,22 @@
             </div>
         </div>
 
-        <!-- TAMBAHAN: HISTORY SECTION UNTUK CANGGIH -->
         <div class="history-section">
-            <h3 style="margin-bottom:10px;">Recent Rounds</h3>
-            <div id="historyList"></div>
+            <div class="history-tabs">
+                <button class="tab-btn active" onclick="switchTab('global')">Global Results</button>
+                <button class="tab-btn" onclick="switchTab('personal')">My Winnings</button>
+            </div>
+
+            <div id="tabGlobal">
+                <div id="historyList"></div>
+                <button id="btnLoadMore" class="btn-load-more" onclick="loadMoreHistory()">Load Previous Rounds (15)</button>
+            </div>
+
+            <div id="tabPersonal" class="hidden">
+                <div id="personalHistoryList">
+                    <div style="text-align:center; color:#555; font-size:0.8em; padding:20px;">Fetching blockchain data...</div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -339,9 +315,8 @@
     const BASE_SEPOLIA_ID = 84532;
     const BASE_SEPOLIA_HEX = "0x14a34";
 
-    // --- ABI (Pastikan lengkap) ---
+    // --- ABI LENGKAP --- 
     const GAME_ABI = [{"inputs":[{"internalType":"address","name":"_usdtToken","type":"address"},{"internalType":"address","name":"_shibToken","type":"address"},{"internalType":"address","name":"_priceFeedETH","type":"address"},{"internalType":"address","name":"_priceFeedUSDT","type":"address"},{"internalType":"address","name":"_priceFeedSHIB","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"indexed":false,"internalType":"string","name":"outcome","type":"string"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"}],"name":"BattleResult","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"enum FaylottoUltimate.Currency","name":"curr","type":"uint8"},{"indexed":false,"internalType":"bool","name":"isRealTransfer","type":"bool"}],"name":"WinDistributed","type":"event"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"}],"name":"getRoundResult","outputs":[{"components":[{"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"internalType":"string","name":"outcome","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"address","name":"winner","type":"address"}],"internalType":"struct FaylottoUltimate.RoundResultData","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundBets","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"enum FaylottoUltimate.BetType","name":"bType","type":"uint8"},{"internalType":"uint8","name":"animalChoice","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"userWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"","type":"uint8"}],"name":"activeTeamCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"}],"name":"betETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"},{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"bool","name":"_isFreeBet","type":"bool"}],"name":"betToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"executeDraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"string","name":"nickname","type":"string"},{"internalType":"bool","name":"isRegistered","type":"bool"},{"internalType":"address","name":"referrer","type":"address"},{"internalType":"bool","name":"hasBet","type":"bool"},{"internalType":"uint256","name":"pendingRefBonusCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeShibCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"enum FaylottoUltimate.Currency","name":"","type":"uint8"}],"name":"userCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdrawCredit","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_nickname","type":"string"},{"internalType":"string","name":"_referrerNick","type":"string"}],"name":"register","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralBonus","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-    
     const ERC20_ABI = [{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}];
 
     // --- VARIABLES & STATE ---
@@ -467,7 +442,7 @@
         }
     }
 
-    // --- GLOBAL HISTORY (Dengan Chunking agar tidak Network Limit) ---
+    // --- GLOBAL HISTORY (Dengan Chunking) ---
     async function fetchBatchHistory(count) {
         const historyList = document.getElementById('historyList');
         if (historyCursor < 1) {
@@ -478,7 +453,6 @@
         const start = historyCursor;
         const end = Math.max(1, historyCursor - count + 1);
         
-        // Fase 1: Render Kartu Dasar (Cepat)
         const roundPromises = [];
         for (let r = start; r >= end; r--) {
             if (document.getElementById(`history-card-${r}`)) continue;
@@ -519,7 +493,6 @@
                 historyList.appendChild(card);
             }
 
-            // Fase 2: Cari Pemenang (Scan Logs dengan CHUNKING)
             await bulkFetchWinnersSafe(results);
 
         } catch (err) { console.error("History Error:", err); }
@@ -528,14 +501,9 @@
         if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
     }
 
-    // Fungsi Pencari Winner dengan CHUNKING (Anti Error Merah)
     async function bulkFetchWinnersSafe(roundDataArray) {
         if (roundDataArray.length === 0) return;
-
         try {
-            // Kita scan 50.000 blok ke belakang, tapi DICICIL per 10.000
-            // agar tidak kena "Network Limit" dari RPC Publik Base Sepolia.
-            
             const currentBlock = await provider.getBlockNumber();
             const totalScan = 50000;
             const chunkSize = 10000;
@@ -543,14 +511,13 @@
 
             const battleFilter = gameContract.filters.BattleResult();
             
-            // 1. Scan Event BattleResult (Untuk Mapping RoundID -> Block)
             let battleEvents = [];
             for (let i = startBlock; i < currentBlock; i += chunkSize) {
                 const to = Math.min(i + chunkSize, currentBlock);
                 try {
                     const chunk = await gameContract.queryFilter(battleFilter, i, to);
                     battleEvents.push(...chunk);
-                } catch (e) { /* skip chunk error */ }
+                } catch (e) { }
             }
 
             const roundToBlockMap = {};
@@ -559,7 +526,6 @@
                 roundToBlockMap[rId] = evt.blockNumber;
             });
 
-            // 2. Kumpulkan Block Valid
             const relevantBlocks = [];
             for (let item of roundDataArray) {
                 const blk = roundToBlockMap[item.r];
@@ -571,14 +537,10 @@
             }
             if (relevantBlocks.length === 0) return;
 
-            // 3. Scan WinDistributed (Cicil juga jika range luas)
             const minB = Math.min(...relevantBlocks);
             const maxB = Math.max(...relevantBlocks);
             
             let winEvents = [];
-            // Jika range block terlalu jauh, kita query spesifik atau pecah lagi
-            // Untuk simplifikasi, kita coba query sekali range min-max.
-            // Jika max-min > 10000, kita harus pecah.
             if (maxB - minB > 10000) {
                  for (let i = minB; i <= maxB; i += 10000) {
                      const to = Math.min(i + 10000, maxB);
@@ -591,7 +553,6 @@
                  winEvents = await gameContract.queryFilter(gameContract.filters.WinDistributed(), minB, maxB);
             }
 
-            // 4. Mapping Data
             const blockWinners = {}; 
             for (let evt of winEvents) {
                 const blk = evt.blockNumber;
@@ -600,19 +561,16 @@
                 
                 if (!blockWinners[blk]) blockWinners[blk] = { eth: 0n, usdt: 0n, shib: 0n, topAddr: args[0], topAmt: args[1] };
                 
-                // Sum Total
                 if (Number(args[2]) === 0) blockWinners[blk].eth += args[1];
                 else if (Number(args[2]) === 1) blockWinners[blk].usdt += args[1];
                 else blockWinners[blk].shib += args[1];
 
-                // Check MVP
                 if (args[1] > blockWinners[blk].topAmt) {
                     blockWinners[blk].topAmt = args[1];
                     blockWinners[blk].topAddr = args[0];
                 }
             }
 
-            // 5. Update UI
             for (let item of roundDataArray) {
                 const blkNum = roundToBlockMap[item.r];
                 const container = document.getElementById(`winner-info-${item.r}`);
@@ -643,7 +601,6 @@
                     </div>
                 `;
 
-                // Async Nickname
                 gameContract.users(data.topAddr).then(uData => {
                     if (uData && uData[0]) document.getElementById(`nick-${item.r}`).innerHTML = `🏆 ${uData[0]}`;
                 }).catch(()=>{});
@@ -663,7 +620,7 @@
         btn.disabled = false;
     }
 
-    // --- PERSONAL HISTORY (Menggunakan Contract Storage - ANTI LAG) ---
+    // --- PERSONAL HISTORY (Contract View - ANTI LAG) ---
     async function updatePersonalHistory() {
         const list = document.getElementById('personalHistoryList');
         if (!isConnected || !userAddress) {
@@ -676,7 +633,6 @@
             const myWins = [];
             let index = 0;
             let keepFetching = true;
-            // Loop view function contract (Cepat & Stabil)
             while (keepFetching) {
                 try {
                     const log = await gameContract.userWinHistory(userAddress, index);
@@ -1036,4 +992,4 @@
     }
 </script>
 </body>
-</html>
+    </html>
