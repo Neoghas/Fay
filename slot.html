@@ -1004,91 +1004,113 @@
         if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
     }
 
-    async function findAndDisplayWinner(roundId) {
+   async function findAndDisplayWinner(roundId) {
         const container = document.getElementById(`winner-info-${roundId}`);
         if (!container) return;
 
         try {
             // 1. Cari Block Number dari BattleResult
-            // Kita cari range block luas agar pasti ketemu
+            // Kita scan 50.000 block ke belakang agar history lama tetap ke-load
             const battleFilter = gameContract.filters.BattleResult(null, null, roundId);
-            
-            // NOTE: Base Sepolia menyimpan log cukup lama, kita coba tarik 50.000 block terakhir
-            // Jika ini gagal di console, berarti RPC limit.
             const battleEvents = await gameContract.queryFilter(battleFilter, -50000); 
 
             if (battleEvents.length === 0) {
-                container.innerHTML = '<span style="font-size:0.7em; color:#444;">Data too old/archived</span>';
+                container.innerHTML = '<span style="font-size:0.7em; color:#555;">(Data archived/too old)</span>';
                 return;
             }
 
             const exactBlock = battleEvents[0].blockNumber;
 
-            // 2. Cari WinDistributed di Block yang SAMA
+            // 2. Cari Event 'WinDistributed' di Block yang SAMA
             const winFilter = gameContract.filters.WinDistributed();
             const winEvents = await gameContract.queryFilter(winFilter, exactBlock, exactBlock);
 
+            // JIKA TIDAK ADA PEMENANG
             if (winEvents.length === 0) {
-                container.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners (Pool Accumulated)</span>';
+                container.innerHTML = `
+                    <div style="margin-top:5px; border-top:1px dashed #333; padding-top:4px;">
+                        <span style="font-size:0.75em; color:#666; font-style:italic;">No Winners this round</span>
+                    </div>`;
                 return;
             }
 
-            // 3. Proses Data Winner (Agregat Total)
-            let totalPayoutETH = 0n;
-            let totalPayoutUSDT = 0n;
-            let totalPayoutSHIB = 0n;
-            let biggestWinnerAddr = "";
-            let biggestWinAmount = 0n;
-            let biggestWinCurr = 0; // default eth
+            // 3. Hitung Total Kemenangan (Agregasi)
+            let totalETH = 0n;
+            let totalUSDT = 0n;
+            let totalSHIB = 0n;
+            
+            // Variabel untuk mencari pemenang terbesar (MVP Round ini)
+            let topWinnerAddr = "";
+            let topWinAmount = -1n;
 
-            for(let evt of winEvents) {
-                const args = evt.args;
-                const amt = args[1]; // BigInt
-                const curr = Number(args[2]);
+            for (let evt of winEvents) {
+                const args = evt.args; // [winnerAddress, amount, currency, isRealTransfer]
+                const wAddr = args[0];
+                const amt = args[1]; // Ini BigInt
+                const curr = Number(args[2]); // 0=ETH, 1=USDT, 2=SHIB
 
-                if (curr === 0) totalPayoutETH += amt;
-                else if (curr === 1) totalPayoutUSDT += amt;
-                else if (curr === 2) totalPayoutSHIB += amt;
+                // Jumlahkan Total
+                if (curr === 0) totalETH += amt;
+                else if (curr === 1) totalUSDT += amt;
+                else if (curr === 2) totalSHIB += amt;
 
-                // Cari winner terbesar untuk ditampilkan namanya
-                // (Logic sederhana: kita anggap ETH base currency comparison atau ambil winner pertama aja)
-                if (amt > biggestWinAmount) {
-                    biggestWinAmount = amt;
-                    biggestWinnerAddr = args[0];
-                    biggestWinCurr = curr;
+                // Cek apakah ini pemenang terbesar? (Simplifikasi: kita bandingkan raw amount saja)
+                if (amt > topWinAmount) {
+                    topWinAmount = amt;
+                    topWinnerAddr = wAddr;
                 }
             }
 
-            // Ambil Nickname Pemenang Terbesar
-            let nick = "Unknown";
+            // 4. Ambil Nickname Pemenang Terbesar
+            let displayName = `${topWinnerAddr.substring(0,4)}...${topWinnerAddr.slice(-4)}`;
             try {
-                const uData = await gameContract.users(biggestWinnerAddr);
-                nick = uData[0];
-            } catch {}
+                // Panggil kontrak untuk cek nickname
+                const uData = await gameContract.users(topWinnerAddr);
+                if (uData && uData[0]) {
+                    displayName = uData[0]; // Pakai nickname jika ada
+                }
+            } catch (err) {
+                console.log("Nick fetch fail, using address");
+            }
 
-            // Format Teks Total
-            let payoutText = "";
-            if(totalPayoutETH > 0n) payoutText += `${parseFloat(ethers.formatEther(totalPayoutETH)).toFixed(4)} ETH `;
-            if(totalPayoutUSDT > 0n) payoutText += `${parseFloat(ethers.formatUnits(totalPayoutUSDT, 6)).toFixed(2)} USDT `;
-            if(totalPayoutSHIB > 0n) payoutText += `${parseFloat(ethers.formatUnits(totalPayoutSHIB, 18)).toLocaleString()} SHIB`;
+            // 5. Format Text Total Payout
+            let payoutHtml = "";
+            
+            if (totalETH > 0n) {
+                const val = parseFloat(ethers.formatEther(totalETH));
+                payoutHtml += `<div style="color:#627EEA;">+ ${val.toFixed(5)} ETH</div>`;
+            }
+            if (totalUSDT > 0n) {
+                const val = parseFloat(ethers.formatUnits(totalUSDT, 6));
+                payoutHtml += `<div style="color:#26A17B;">+ ${val.toFixed(2)} USDT</div>`;
+            }
+            if (totalSHIB > 0n) {
+                const val = parseFloat(ethers.formatUnits(totalSHIB, 18));
+                payoutHtml += `<div style="color:#FFA409;">+ ${val.toLocaleString()} SHIB</div>`;
+            }
 
+            // 6. Render Hasil Akhir ke HTML
             container.innerHTML = `
-                <div class="winner-info-box" style="display:block;">
-                    <div style="color:var(--gold); font-weight:bold; font-size:0.8em;">
-                        🏆 ${nick} <span style="font-weight:normal; color:#888;">(${biggestWinnerAddr.substring(0,4)}...)</span>
-                    </div>
-                    <div style="color:white; font-size:0.75em; margin-top:2px;">
-                        Total Win: <span style="color:var(--success);">${payoutText}</span>
+                <div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="text-align:left;">
+                            <div style="font-size:0.65em; color:#888;">BIG WINNER</div>
+                            <div style="color:var(--gold); font-weight:bold; font-size:0.9em;">🏆 ${displayName}</div>
+                        </div>
+                        <div style="text-align:right; font-size:0.8em; font-weight:bold;">
+                            ${payoutHtml}
+                        </div>
                     </div>
                 </div>
             `;
 
         } catch (e) {
-            console.error(`Error finding winner for round ${roundId}:`, e);
-            container.innerHTML = '';
+            console.error(`Error winner round ${roundId}:`, e);
+            // Tampilkan error di layar biar tidak bingung
+            container.innerHTML = `<span style="font-size:0.7em; color:var(--danger);">Error loading data</span>`;
         }
-    }
-
+   }
+    
    async function updatePersonalHistory() {
         const list = document.getElementById('personalHistoryList');
         
