@@ -1074,217 +1074,117 @@
         }
     }
 
-    // --- FUNGSI PERSONAL HISTORY (VICTORY/DEFEAT) ---
-
     async function updatePersonalHistory() {
-
-        if (!userAddress) return;
-
         const list = document.getElementById('personalHistoryList');
-
-        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Scanning Blockchain...</div>';
-
         
-
-        try {
-
-            // 1. Ambil Bet Saya
-
-            const betFilter = gameContract.filters.NewBet(userAddress);
-
-            const currentBlock = await provider.getBlockNumber();
-
-            const myBets = await gameContract.queryFilter(betFilter, currentBlock - 5000, "latest");
-
-            
-
-            if (myBets.length === 0) {
-
-                list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No bets found recently.</div>';
-
-                return;
-
-            }
-
-
-
-            // 2. Ambil Semua Hasil Ronde (BattleResult) untuk dicocokkan
-
-            // Kita perlu cache ini agar tidak query berulang-ulang
-
-            if (cachedBattleResults.length === 0) {
-
-                const resFilter = gameContract.filters.BattleResult();
-
-                cachedBattleResults = await gameContract.queryFilter(resFilter, currentBlock - 5000, "latest");
-
-            }
-
-
-
-            const reversedBets = myBets.reverse();
-
-            list.innerHTML = ''; 
-
-
-
-            for (let bet of reversedBets) {
-
-                const args = bet.args;
-
-                const animalIdx = Number(args[1]); // Hewan yang kita pilih
-
-                const betTime = Number(args[2]);
-
-                const animalName = IMAGE_NAMES[animalIdx].toUpperCase();
-
-
-
-                // LOGIKA: Cari BattleResult yang timestamp-nya > Timestamp Bet (Ronde setelah bet)
-
-                // Kita cari yang paling dekat selisih waktunya
-
-                let matchedRound = null;
-
-                for (let res of cachedBattleResults) {
-
-                    const resTime = Number(await getBlockTimestamp(res.blockNumber)); // Butuh timestamp block
-
-                    // Logika simple: BattleResult biasanya terjadi beberapa detik/menit setelah bet
-
-                    // Kita cari result yang terjadi SETELAH bet, tapi tidak terlalu jauh (misal max 1 jam)
-
-                    if (resTime > betTime) {
-
-                        matchedRound = res;
-
-                        break; // Ketemu ronde pertama setelah bet
-
-                    }
-
-                }
-
-
-
-                // Jika ronde belum selesai (belum ada result), skip atau tandai Pending
-
-                if (!matchedRound) {
-
-                    const el = document.createElement('div');
-
-                    el.className = 'personal-bet-card';
-
-                    el.innerHTML = `
-
-                        <div class="pb-info">
-
-                            <div class="pb-time">${new Date(betTime * 1000).toLocaleString()}</div>
-
-                            <div>Bet: <span class="pb-animal">${animalName}</span></div>
-
-                        </div>
-
-                        <span class="badge" style="background:#333; color:#aaa;">PENDING</span>
-
-                    `;
-
-                    list.appendChild(el);
-
-                    continue;
-
-                }
-
-
-
-                // Tentukan Menang/Kalah
-
-                const rArgs = matchedRound.args;
-
-                // rArgs[0] adalah reels (array)
-
-                const reels = rArgs[0].map(Number); // [0, 5, 2]
-
-                
-
-                // Logic Menang sesuai Kontrak: Pilihan user ada di salah satu reel
-
-                const isWin = reels.includes(animalIdx);
-
-                
-
-                const statusHtml = isWin 
-
-                    ? `<span class="badge badge-win">VICTORY</span>` 
-
-                    : `<span class="badge badge-lose">DEFEAT</span>`;
-
-
-
-                const el = document.createElement('div');
-
-                el.className = 'personal-bet-card';
-
-                // Tambahkan efek border hijau/merah di kartu
-
-                el.style.borderLeftColor = isWin ? 'var(--success)' : 'var(--danger)';
-
-                
-
-                el.innerHTML = `
-
-                    <div class="pb-info">
-
-                        <div class="pb-time">${new Date(betTime * 1000).toLocaleString()}</div>
-
-                        <div>Bet: <span class="pb-animal">${animalName}</span></div>
-
-                        <div style="font-size:0.7em; color:#888; margin-top:2px;">Result: ${IMAGE_NAMES[reels[0]].toUpperCase()}-${IMAGE_NAMES[reels[1]].toUpperCase()}-${IMAGE_NAMES[reels[2]].toUpperCase()}</div>
-
-                    </div>
-
-                    <div style="text-align:right;">
-
-                        ${statusHtml}
-
-                        <img src="${IMAGE_LIST[animalIdx]}" style="width:25px; height:25px; display:block; margin-top:5px; margin-left:auto;">
-
-                    </div>
-
-                `;
-
-                list.appendChild(el);
-
-            }
-
-
-
-        } catch (e) {
-
-            console.error("Personal History Error:", e);
-
-            list.innerHTML = '<div style="text-align:center; color:var(--danger);">Error fetching history.</div>';
-
+        // 1. Cek Koneksi Wallet Dulu
+        if (!isConnected || !userAddress) {
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Please Connect Wallet to view My Bets</div>';
+            return;
         }
 
+        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Scanning Blockchain...</div>';
+        
+        try {
+            // 2. Ambil Bet Saya (Batasi range blok agar tidak timeout)
+            const betFilter = gameContract.filters.NewBet(userAddress);
+            const currentBlock = await provider.getBlockNumber();
+            // Ambil 5000 blok terakhir saja (sekitar 2-3 jam terakhir di Base Sepolia)
+            // Jika mau lebih lama, harus pakai Indexer (TheGraph) karena RPC gratis terbatas
+            const fromBlock = Math.max(0, currentBlock - 5000); 
+            
+            const myBets = await gameContract.queryFilter(betFilter, fromBlock, "latest");
+            
+            if (myBets.length === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No bets found in recent blocks.</div>';
+                return;
+            }
+
+            // 3. Cache Result Global (Optimasi)
+            if (cachedBattleResults.length === 0) {
+                const resFilter = gameContract.filters.BattleResult();
+                cachedBattleResults = await gameContract.queryFilter(resFilter, fromBlock, "latest");
+            }
+
+            const reversedBets = myBets.reverse();
+            list.innerHTML = ''; 
+
+            for (let bet of reversedBets) {
+                const args = bet.args;
+                const animalIdx = Number(args[1]);
+                const betBlock = bet.blockNumber; // Gunakan Block Number, lebih akurat dr Timestamp
+                const animalName = IMAGE_NAMES[animalIdx] ? IMAGE_NAMES[animalIdx].toUpperCase() : "UNKNOWN";
+
+                // LOGIKA MATCHING:
+                // Cari Result Ronde yang block numbernya > Block Number Bet
+                // Kita cari result terdekat setelah bet dipasang
+                let matchedRound = null;
+                
+                // Sort cached results by block number ascending
+                cachedBattleResults.sort((a,b) => a.blockNumber - b.blockNumber);
+
+                for (let res of cachedBattleResults) {
+                    if (res.blockNumber > betBlock) {
+                        matchedRound = res;
+                        break;
+                    }
+                }
+
+                if (!matchedRound) {
+                    // Masih Pending (Belum di draw)
+                    const el = document.createElement('div');
+                    el.className = 'personal-bet-card';
+                    el.innerHTML = `
+                        <div class="pb-info">
+                            <div class="pb-time">Block: ${betBlock} (Pending)</div>
+                            <div>Bet: <span class="pb-animal">${animalName}</span></div>
+                        </div>
+                        <span class="badge" style="background:#333; color:#aaa;">WAITING</span>
+                    `;
+                    list.appendChild(el);
+                    continue;
+                }
+
+                // Cek Menang/Kalah
+                const rArgs = matchedRound.args;
+                const reels = rArgs[0].map(Number);
+                const isWin = reels.includes(animalIdx);
+                
+                // Format Hasil Ronde
+                const resText = `${IMAGE_NAMES[reels[0]]} ${IMAGE_NAMES[reels[1]]} ${IMAGE_NAMES[reels[2]]}`.toUpperCase();
+
+                const statusHtml = isWin 
+                    ? `<span class="badge badge-win">VICTORY</span>` 
+                    : `<span class="badge badge-lose">DEFEAT</span>`;
+
+                const el = document.createElement('div');
+                el.className = 'personal-bet-card';
+                el.style.borderLeftColor = isWin ? 'var(--success)' : 'var(--danger)';
+                
+                el.innerHTML = `
+                    <div class="pb-info">
+                        <div class="pb-time">Round Result Available</div>
+                        <div>Bet: <span class="pb-animal">${animalName}</span></div>
+                        <div style="font-size:0.7em; color:#888; margin-top:2px;">Vs: ${resText}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        ${statusHtml}
+                        <img src="${IMAGE_LIST[animalIdx]}" style="width:25px; height:25px; display:block; margin-top:5px; margin-left:auto;">
+                    </div>
+                `;
+                list.appendChild(el);
+            }
+
+        } catch (e) {
+            console.error("Personal History Error:", e);
+            // Tampilkan error ke user agar tidak dikira loading selamanya
+            list.innerHTML = `<div style="text-align:center; padding:20px; color:var(--danger);">
+                Failed to load history.<br>
+                <span style="font-size:0.8em; color:#888;">${e.message.slice(0, 30)}...</span>
+                <br><button class="wallet-btn" onclick="updatePersonalHistory()" style="margin-top:10px; font-size:0.8em;">Try Again</button>
+            </div>`;
+        }
     }
-
-
-
-    // Helper Memoization untuk Timestamp Block (biar gak request terus)
-
-    const blockTimeCache = {};
-
-    async function getBlockTimestamp(blockNum) {
-
-        if (blockTimeCache[blockNum]) return blockTimeCache[blockNum];
-
-        const block = await provider.getBlock(blockNum);
-
-        blockTimeCache[blockNum] = block.timestamp;
-
-        return block.timestamp;
-
-                                         }
 
     // Helper: Mengubah data mentah menjadi format Teks Cantik
     function formatOutcomeText(rawOutcome, reels) {
