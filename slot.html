@@ -535,25 +535,7 @@
                 status.style.color = "var(--danger)";
             }
 
-            const historyList = document.getElementById('historyList');
-            historyList.innerHTML = '';
-            for (let r = currentRound - 1; r >= Math.max(1, currentRound - 5); r--) {
-                try {
-                    const result = await gameContract.getRoundResult(r);
-                    const card = document.createElement('div');
-                    card.className = 'history-card';
-                    card.innerHTML = `
-                        <div>Round \( {r} - \){result[1]} (${new Date(Number(result[2]) * 1000).toLocaleTimeString()})</div>
-                        <div class="history-reels">
-                            <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][0])]}">
-                            <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][1])]}">
-                            <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][2])]}">
-                        </div>
-                        <div class="history-outcome">${result[1]}</div>
-                    `;
-                    historyList.appendChild(card);
-                } catch {}
-            }
+            updateHistorySection(currentRound);
 
         } catch (e) { console.error("Refresh Error:", e); }
     }
@@ -838,6 +820,43 @@
             showToast("Bonus Claimed!");
             refreshGameData();
         } catch (e) { showToast("Claim Failed"); }
+    }
+
+    // Fungsi terpisah khusus untuk menangani History
+    async function updateHistorySection(currentRoundId) {
+        const historyList = document.getElementById('historyList');
+        if (!historyList) return;
+
+        historyList.innerHTML = ''; // Bersihkan history lama
+
+        // Loop 5 ronde terakhir ke belakang
+        for (let r = currentRoundId - 1; r >= Math.max(1, currentRoundId - 5); r--) {
+            try {
+                const result = await gameContract.getRoundResult(r);
+                
+                // Helper untuk format nama hewan (opsional, biar rapi)
+                const outcomeText = result[1]; 
+                
+                const card = document.createElement('div');
+                card.className = 'history-card';
+                
+                // Perbaikan syntax template literal `${...}` agar berjalan normal
+                card.innerHTML = `
+                    <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">
+                        Round #${r} • ${new Date(Number(result[2]) * 1000).toLocaleTimeString()}
+                    </div>
+                    <div class="history-reels">
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][0])]}">
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][1])]}">
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][2])]}">
+                    </div>
+                    <div class="history-outcome">${outcomeText}</div>
+                `;
+                historyList.appendChild(card);
+            } catch (err) {
+                console.log(`Skip history round ${r}: Data not ready`);
+            }
+        }
     }
 
     function setupEventListeners() {
