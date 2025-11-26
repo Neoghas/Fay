@@ -394,7 +394,7 @@
     let historyCursor = 0; // Menandai ronde terakhir yang sudah diload
     let isInitialLoad = true;
     let currentMaxRound = 0;
-    let cachedBattleResults = [];
+    let blockWinnerCache = {};
 
     let provider, signer, userAddress, gameContract;
     let isConnected = false;
@@ -966,11 +966,28 @@
 
         const start = historyCursor;
         const end = Math.max(1, historyCursor - count + 1);
-
+        
+        // --- FASE 1: FETCH DATA RONDE (REELS) SECARA PARALLEL ---
+        // Kita gunakan Promise.all agar 10 request jalan berbarengan (Super Cepat)
+        const roundPromises = [];
         for (let r = start; r >= end; r--) {
-            try {
-                const result = await gameContract.getRoundResult(r);
-                const formattedText = formatOutcomeText(result[1], result[0]);
+            // Cek duplikat dulu
+            if (document.getElementById(`history-card-${r}`)) continue;
+            roundPromises.push(gameContract.getRoundResult(r).then(res => ({ r, res })));
+        }
+
+        if (roundPromises.length === 0) {
+            historyCursor = end - 1;
+            return;
+        }
+
+        try {
+            const results = await Promise.all(roundPromises);
+
+            // Render Kartu (Tanpa Pemenang dulu)
+            for (let item of results) {
+                const { r, res } = item;
+                const formattedText = formatOutcomeText(res.outcome, res.reels); // Pastikan pakai helper sebelumnya
 
                 const card = document.createElement('div');
                 card.className = 'history-card';
@@ -978,28 +995,30 @@
                 
                 card.innerHTML = `
                     <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">
-                        Round #${r} • ${new Date(Number(result[2]) * 1000).toLocaleTimeString()}
+                        Round #${r} • ${new Date(Number(res.timestamp) * 1000).toLocaleTimeString()}
                     </div>
                     <div class="history-reels">
-                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][0])]}">
-                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][1])]}">
-                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][2])]}">
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[0])]}">
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[1])]}">
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[2])]}">
                     </div>
                     <div class="history-outcome" style="margin-top:5px;">${formattedText}</div>
                     
-                    <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px;">
-                        <span style="font-size:0.7em; color:#666;">Loading winner data...</span>
+                    <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;">
+                        <span style="font-size:0.7em; color:#555;">...</span>
                     </div>
                 `;
                 historyList.appendChild(card);
-
-                // Fetch winner async
-                findAndDisplayWinner(r);
-
-            } catch (err) {
-                console.log(`Skip history round ${r}`, err);
             }
+
+            // --- FASE 2: FETCH PEMENANG (BULK SCAN) ---
+            // Daripada request satu-satu, kita scan logs sakaligus untuk range ronde ini
+            await bulkFetchWinners(results);
+
+        } catch (err) {
+            console.error("Batch Error:", err);
         }
+
         historyCursor = end - 1;
         if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
     }
@@ -1256,6 +1275,128 @@
         else {
             // NO_MATCH
             return `${n0} - ${n1} - ${n2}`;
+        }
+    }
+
+    async function bulkFetchWinners(roundDataArray) {
+        if (roundDataArray.length === 0) return;
+
+        try {
+            // 1. Tentukan Range Block untuk scan event
+            // Kita butuh tau event winner di blok berapa.
+            // Karena kita tidak tau block number dari getRoundResult (hanya timestamp),
+            // Kita scan Event 'BattleResult' untuk ronde-ronde ini.
+            
+            // Ambil ID Ronde terkecil dan terbesar di batch ini
+            const minRound = roundDataArray[roundDataArray.length - 1].r;
+            const maxRound = roundDataArray[0].r;
+
+            // Filter Event: BattleResult(reels, outcome, roundId)
+            // Topik ke-3 adalah roundId (indexed? Cek ABI). 
+            // Di ABI Anda: event BattleResult(uint8[3], string, uint256) -> roundId TIDAK indexed.
+            // Jadi kita tidak bisa filter by topic. Kita harus tarik logs by block range.
+            // Kita scan 10.000 block terakhir (aman untuk history recent).
+            
+            const battleFilter = gameContract.filters.BattleResult();
+            const battleEvents = await gameContract.queryFilter(battleFilter, -10000); 
+
+            // Mapping: RoundID -> BlockNumber
+            const roundToBlockMap = {};
+            
+            battleEvents.forEach(evt => {
+                // args[2] adalah roundId di event BattleResult
+                const rId = Number(evt.args[2]);
+                if (rId >= minRound && rId <= maxRound) {
+                    roundToBlockMap[rId] = evt.blockNumber;
+                }
+            });
+
+            // 2. Scan Event WinDistributed di block-block tersebut
+            // Kita kumpulkan semua block number yang relevan
+            const relevantBlocks = Object.values(roundToBlockMap);
+            if (relevantBlocks.length === 0) return; // Tidak ketemu eventnya (mungkin terlalu lama)
+
+            const minBlock = Math.min(...relevantBlocks);
+            const maxBlock = Math.max(...relevantBlocks);
+
+            // Ambil semua event winner di range block tersebut
+            const winFilter = gameContract.filters.WinDistributed();
+            const winEvents = await gameContract.queryFilter(winFilter, minBlock, maxBlock);
+
+            // 3. Mapping: BlockNumber -> Data Pemenang (Agregat)
+            const blockWinners = {}; // Key: BlockNumber, Value: { name, totalStr }
+
+            // Proses Agregasi Pemenang
+            for (let evt of winEvents) {
+                const blk = evt.blockNumber;
+                const args = evt.args;
+                const wAddr = args[0];
+                const amt = args[1];
+                const curr = Number(args[2]);
+
+                if (!blockWinners[blk]) {
+                    blockWinners[blk] = { eth: 0n, usdt: 0n, shib: 0n, topAddr: wAddr, topAmt: amt };
+                }
+
+                // Sum Total
+                if (curr === 0) blockWinners[blk].eth += amt;
+                else if (curr === 1) blockWinners[blk].usdt += amt;
+                else if (curr === 2) blockWinners[blk].shib += amt;
+
+                // Update MVP (Winner terbesar)
+                if (amt > blockWinners[blk].topAmt) {
+                    blockWinners[blk].topAmt = amt;
+                    blockWinners[blk].topAddr = wAddr;
+                }
+            }
+
+            // 4. Update UI
+            for (let item of roundDataArray) {
+                const rId = item.r;
+                const blkNum = roundToBlockMap[rId];
+                const container = document.getElementById(`winner-info-${rId}`);
+                
+                if (!blkNum || !blockWinners[blkNum]) {
+                    container.innerHTML = '<span style="font-size:0.7em; color:#555;">No Winners</span>';
+                    continue;
+                }
+
+                const data = blockWinners[blkNum];
+                
+                // Ambil Nickname (Optional Async, biar cepat kita pakai address dulu lalu update)
+                let displayName = `${data.topAddr.substring(0,4)}...${data.topAddr.slice(-4)}`;
+                
+                // Format Uang
+                let payoutHtml = "";
+                if (data.eth > 0n) payoutHtml += `<div style="color:#627EEA;">+ ${parseFloat(ethers.formatEther(data.eth)).toFixed(4)} ETH</div>`;
+                if (data.usdt > 0n) payoutHtml += `<div style="color:#26A17B;">+ ${parseFloat(ethers.formatUnits(data.usdt, 6)).toFixed(2)} USDT</div>`;
+                if (data.shib > 0n) payoutHtml += `<div style="color:#FFA409;">+ ${parseFloat(ethers.formatUnits(data.shib, 18)).toLocaleString()} SHIB</div>`;
+
+                container.innerHTML = `
+                    <div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                            <div style="text-align:left;">
+                                <div style="font-size:0.65em; color:#888;">WINNER</div>
+                                <div style="color:var(--gold); font-weight:bold; font-size:0.85em;" id="nick-${rId}">🏆 ${displayName}</div>
+                            </div>
+                            <div style="text-align:right; font-size:0.75em; font-weight:bold;">
+                                ${payoutHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                // Lazy load nickname
+                gameContract.users(data.topAddr).then(uData => {
+                    if (uData && uData[0]) {
+                        const el = document.getElementById(`nick-${rId}`);
+                        if(el) el.innerHTML = `🏆 ${uData[0]}`;
+                    }
+                }).catch(()=>{});
+            }
+
+        } catch (e) {
+            console.error("Bulk Winner Fetch Error:", e);
         }
     }
 
