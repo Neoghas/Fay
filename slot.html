@@ -957,269 +957,122 @@
 
     }
 
-
-
-    // --- FUNGSI GLOBAL HISTORY (DENGAN WINNER INFO) ---
-
     async function fetchBatchHistory(count) {
-
         const historyList = document.getElementById('historyList');
-
         if (historyCursor < 1) {
-
             document.getElementById('btnLoadMore').style.display = 'none';
-
             return;
-
         }
-
-
 
         const start = historyCursor;
-
         const end = Math.max(1, historyCursor - count + 1);
 
-
-
-        // Optimization: Fetch array length globalWinHistory sekali saja
-
-        let globalWinLength = 0;
-
-        try { 
-
-            // Kita coba tebak panjangnya (atau loop dari index terakhir yang diketahui jika ada)
-
-            // Note: Tidak ada cara cepat check length array publik tanpa getter length khusus di solidity standar
-
-            // Kita pakai trick: loop error handling nanti di getWinnerInfo, atau 
-
-            // Asumsi: Kita cari event WinDistributed saja karena lebih cepat daripada array scanning manual via RPC
-
-        } catch(e) {}
-
-
-
         for (let r = start; r >= end; r--) {
-
             try {
-
+                // 1. Ambil Data Dasar Ronde
                 const result = await gameContract.getRoundResult(r);
-
-                const outcomeText = result[1]; 
-
                 
+                // 2. Format Teks Outcome (Panggil Helper Baru)
+                const formattedText = formatOutcomeText(result[1], result[0]);
 
-                // --- FETCH WINNER INFO KHUSUS RONDE INI ---
-
-                // Kita gunakan Event WinDistributed untuk mencari pemenang di ronde ini
-
-                // Teknik: Mencari event di sekitar waktu timestamp ronde tersebut
-
-                const winnerData = await getWinnerInfoForRound(r, result[2]);
-
-
-
+                // 3. Render Kartu Dasar dulu (Biar cepat muncul)
                 const card = document.createElement('div');
-
                 card.className = 'history-card';
-
+                card.id = `history-card-${r}`; // Kasih ID biar bisa di-update nanti
+                
                 card.innerHTML = `
-
                     <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">
-
                         Round #${r} • ${new Date(Number(result[2]) * 1000).toLocaleTimeString()}
-
                     </div>
-
                     <div class="history-reels">
-
                         <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][0])]}">
-
                         <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][1])]}">
-
                         <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][2])]}">
-
                     </div>
-
-                    <div class="history-outcome">${outcomeText}</div>
-
-                    ${winnerData} 
-
+                    <div class="history-outcome">${formattedText}</div>
+                    <div id="winner-info-${r}" style="margin-top:5px; min-height:20px;">
+                        <span style="font-size:0.7em; color:#555;">Checking winner...</span>
+                    </div>
                 `;
-
                 historyList.appendChild(card);
 
+                // 4. Async Fetch Winner Info (Biar UI gak macet)
+                // Kita panggil fungsi terpisah tanpa 'await' blocking
+                findAndDisplayWinner(r, result[2]);
+
             } catch (err) {
-
                 console.log(`Skip history round ${r}`, err);
+            }
+        }
+        historyCursor = end - 1;
+        if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
+    }
 
+    // Fungsi Pencari Winner yang Lebih Canggih
+    async function findAndDisplayWinner(roundId, timestamp) {
+        try {
+            const container = document.getElementById(`winner-info-${roundId}`);
+            if (!container) return;
+
+            // Logika: 
+            // Kita cari event 'BattleResult' untuk ronde ini dulu untuk dapat Block Number pastinya.
+            // Kenapa? Karena 'WinDistributed' ada di block yang sama dengan 'BattleResult'.
+            
+            const battleFilter = gameContract.filters.BattleResult(null, null, roundId);
+            // Scan 10.000 block ke belakang dari Head (Cukup untuk history baru)
+            // Jika history lama sekali, ini mungkin kosong (limitasi RPC gratis)
+            const battleEvents = await gameContract.queryFilter(battleFilter, -10000); 
+
+            if (battleEvents.length === 0) {
+                container.innerHTML = '<span style="font-size:0.7em; color:#555;">- No Data -</span>';
+                return;
             }
 
-        }
+            const exactBlock = battleEvents[0].blockNumber;
 
-        historyCursor = end - 1;
+            // Sekarang cari WinDistributed HANYA di block tersebut
+            const winFilter = gameContract.filters.WinDistributed();
+            const winEvents = await gameContract.queryFilter(winFilter, exactBlock, exactBlock);
 
-        if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
+            if (winEvents.length === 0) {
+                container.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>';
+                return;
+            }
 
-    }
-
-
-
-    // Helper: Cari data pemenang untuk ronde tertentu
-
-    async function getWinnerInfoForRound(roundId, timestamp) {
-
-        try {
-
-            // Karena globalWinHistory array di contract sulit di-filter by roundId tanpa iterasi berat,
-
-            // Kita gunakan Event Listener 'WinDistributed'
-
-            // Kita cari log event yang terjadi di block yang sama (atau berdekatan) dengan timestamp ronde
-
-            
-
-            // Note: Ini pendekatan "Best Effort" untuk Frontend agar tidak berat.
-
-            // Kita filter 2 block sebelum dan 2 block sesudah timestamp kejadian
-
-            // Tapi karena kita tidak tau block number dari timestamp secara instan di JS standar...
-
-            
-
-            // ALTERNATIF CERDAS: 
-
-            // Loop array globalWinHistory dari index terakhir (karena ronde baru pasti di akhir array)
-
-            // Ini mungkin butuh beberapa call RPC, tapi lebih akurat.
-
-            
-
-            // Mari gunakan cara simple: Tampilkan "Winner info check console" atau query WinDistributed by Log
-
-            // Filter: WinDistributed... Tapi event ini tidak punya Round ID indexed.
-
-            
-
-            // SOLUSI PRO: Kita ambil dari 'globalWinHistory' Contract View, 
-
-            // Kita iterasi mundur misal 20 item terakhir. 
-
-            // Jika ronde lama (load more), mungkin tidak ketemu (untuk hemat RPC).
-
-            
-
-            // (Untuk demo ini saya pakai simulasi iterasi mundur sedikit, 
-
-            // idealnya Anda punya indexer/subgraph. Di sini kita coba ambil max 5 winner terakhir)
-
-            
-
-            // Kita coba akses index array secara manual (brute force sedikit ke belakang)
-
-            // Ini agak berat, jadi saya limit pencarian hanya jika ini adalah 5 ronde teratas.
-
-            // Jika history lama (>5 ronde lalu), kita skip winner info biar tidak lag.
-
-            
-
-            // JIKA RONDE LAMA, SKIP DETIL WINNER (Agar tidak lemot load 1000 data)
-
-            const currentR = Number(await gameContract.currentRoundId());
-
-            if (currentR - roundId > 10) return ""; 
-
-
-
-            // Cari event WinDistributed di logs terbaru
-
-            const filter = gameContract.filters.WinDistributed();
-
-            const events = await gameContract.queryFilter(filter, -200); // Cek 200 blok terakhir
-
-            
-
-            // Kita butuh mencocokkan event WinDistributed dengan Round ID.
-
-            // Tapi Event tidak punya Round ID. 
-
-            // Kita pakai Event BattleResult untuk tau BlockNumber ronde tersebut.
-
-            
-
-            const battleFilter = gameContract.filters.BattleResult(null, null, roundId);
-
-            const battleEvents = await gameContract.queryFilter(battleFilter, -5000); // Cari BattleResult ronde ini
-
-            
-
-            if (battleEvents.length === 0) return "";
-
-            
-
-            const roundBlock = battleEvents[0].blockNumber;
-
-            
-
-            // Cari WinDistributed di block yang sama
-
-            const winnersInBlock = events.filter(e => e.blockNumber === roundBlock);
-
-            
-
-            if (winnersInBlock.length === 0) return `<div class="winner-info-box" style="justify-content:center; color:#555;">No Winners</div>`;
-
-
-
-            // Ambil data winner pertama (atau bisa di-loop semua jika mau)
-
-            const wEvent = winnersInBlock[0];
-
+            // Ambil Winner Pertama (Untuk display simple)
+            const wEvent = winEvents[0];
             const wAddr = wEvent.args[0];
-
             const wAmnt = wEvent.args[1];
+            const wCurr = Number(wEvent.args[2]);
 
-            const wCurr = Number(wEvent.args[2]); // 0 ETH, 1 USDT, 2 SHIB
+            // Ambil Nickname Player
+            let nick = "Unknown";
+            try {
+                const uData = await gameContract.users(wAddr);
+                nick = uData[0];
+            } catch {}
 
-            
-
-            // Ambil Nickname
-
-            const uData = await gameContract.users(wAddr);
-
-            const nick = uData[0] || "Unknown";
-
-            
-
+            // Format Uang
             let symbol = wCurr === 0 ? "ETH" : (wCurr === 1 ? "USDT" : "SHIB");
-
             let decimal = wCurr === 1 ? 6 : 18;
-
             let val = parseFloat(ethers.formatUnits(wAmnt, decimal));
+            
+            if (val < 0.0001) val = val.toFixed(6);
+            else val = val.toLocaleString(undefined, {maximumFractionDigits: 4});
 
-            if(val < 0.001) val = val.toFixed(6); else val = val.toLocaleString(undefined, {maximumFractionDigits:2});
-
-
-
-            return `
-
+            container.innerHTML = `
                 <div class="winner-info-box">
-
-                    <div class="w-user">🏆 ${nick} (${wAddr.substring(0,4)}..)</div>
-
-                    <div class="w-amt">+${val} ${symbol}</div>
-
+                    <div class="w-user">🏆 ${nick} <span style="font-weight:normal; opacity:0.7;">(${wAddr.substring(0,4)}..)</span></div>
+                    <div class="w-amt">+${val} <span style="font-size:0.8em;">${symbol}</span></div>
                 </div>
-
             `;
 
-
-
-        } catch (e) { return ""; }
-
+        } catch (e) {
+            console.error("Winner fetch error:", e);
+            const container = document.getElementById(`winner-info-${roundId}`);
+            if(container) container.innerHTML = ''; // Hide error text
+        }
     }
-
-
 
     // --- FUNGSI PERSONAL HISTORY (VICTORY/DEFEAT) ---
 
@@ -1432,6 +1285,42 @@
         return block.timestamp;
 
                                          }
+
+    // Helper: Mengubah data mentah menjadi format Teks Cantik
+    function formatOutcomeText(rawOutcome, reels) {
+        const r0 = Number(reels[0]);
+        const r1 = Number(reels[1]);
+        const r2 = Number(reels[2]);
+        
+        // Helper ambil nama (Uppercase awal)
+        const getN = (idx) => {
+            if (idx === 6) return "Zonk"; // Index 6 adalah Zonk
+            if (!IMAGE_NAMES[idx]) return "Unknown";
+            return IMAGE_NAMES[idx].charAt(0).toUpperCase() + IMAGE_NAMES[idx].slice(1);
+        };
+
+        const n1 = getN(r0);
+        const n2 = getN(r1);
+        const n3 = getN(r2);
+
+        if (rawOutcome === "TRIPLE") {
+            return `<span style="color:var(--gold);">${n1} (Triple)</span>`;
+        } 
+        else if (rawOutcome === "DOUBLE") {
+            // Cari hewan mana yang double
+            let doubleName = n1;
+            if (r1 === r2) doubleName = n2;
+            else if (r0 === r2) doubleName = n1; // logic sederhana
+            return `<span style="color:var(--accent);">${doubleName} (Double)</span>`;
+        } 
+        else if (rawOutcome === "ONE_ZONK") {
+            return `${n1} <span style="color:var(--danger)">Zonk</span> ${n3}`;
+        } 
+        else {
+            // NO_MATCH
+            return `${n1} ${n2} ${n3}`;
+        }
+    }
 
     function setupEventListeners() {
         gameContract.on("NewBet", () => {
