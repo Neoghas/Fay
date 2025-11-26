@@ -186,6 +186,21 @@
     .history-reels { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }
     .history-reel-img { width: 40px; height: 40px; object-fit: contain; }
     .history-outcome { font-weight: bold; color: var(--accent); }
+
+    /* --- STYLE BARU UNTUK TAB & HISTORY --- */
+    .history-tabs { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }
+    .tab-btn { flex: 1; padding: 10px; background: #151925; border: 1px solid #333; color: #888; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; transition: 0.3s; }
+    .tab-btn.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 82, 255, 0.4); }
+    
+    .btn-load-more { width: 100%; padding: 12px; background: #222; border: 1px dashed #555; color: #aaa; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 0.8em; transition: 0.3s; }
+    .btn-load-more:hover { background: #333; color: white; border-color: white; }
+    .hidden { display: none; }
+
+    /* Style untuk Personal Bet Card */
+    .personal-bet-card { background: rgba(255,255,255,0.03); border-left: 3px solid #555; padding: 10px; margin-bottom: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    .pb-info { font-size: 0.8em; }
+    .pb-time { font-size: 0.7em; color: #666; }
+    .pb-animal { font-weight: bold; color: var(--accent); }
 </style>
 </head>
 <body>
@@ -258,13 +273,26 @@
                 <button class="btn-copy" onclick="copyRefLink()">Copy</button>
             </div>
         </div>
-
-        <div class="history-section">
-            <h3 style="margin-bottom:10px;">Recent Rounds</h3>
-            <div id="historyList"></div>
-        </div>
     </div>
 </div>
+
+    <div class="history-section">
+            <div class="history-tabs">
+                <button class="tab-btn active" onclick="switchTab('global')">Global Results</button>
+                <button class="tab-btn" onclick="switchTab('personal')">My Bets</button>
+            </div>
+
+            <div id="tabGlobal">
+                <div id="historyList"></div>
+                <button id="btnLoadMore" class="btn-load-more" onclick="loadMoreHistory()">Load Previous Rounds (15)</button>
+            </div>
+
+            <div id="tabPersonal" class="hidden">
+                <div id="personalHistoryList">
+                    <div style="text-align:center; color:#555; font-size:0.8em; padding:20px;">Fetching blockchain data...</div>
+                </div>
+            </div>
+    </div>
 
 <div id="paymentModal" class="modal-overlay">
     <div class="modal-content">
@@ -351,6 +379,9 @@
     const MIN_SPIN_TIME = 35000; 
     let spinStartTime = 0;
     let spinIntervals = [];
+    let historyCursor = 0; // Menandai ronde terakhir yang sudah diload
+    let isInitialLoad = true;
+    let currentMaxRound = 0;
 
     let provider, signer, userAddress, gameContract;
     let isConnected = false;
@@ -535,7 +566,12 @@
                 status.style.color = "var(--danger)";
             }
 
-            updateHistorySection(currentRound);
+            updateHistorySection(currentRound); 
+            
+            // Jika tab personal sedang aktif, refresh juga personal history
+            if (!document.getElementById('tabPersonal').classList.contains('hidden')) {
+                updatePersonalHistory();
+            }
 
         } catch (e) { console.error("Refresh Error:", e); }
     }
@@ -822,41 +858,292 @@
         } catch (e) { showToast("Claim Failed"); }
     }
 
-    // Fungsi terpisah khusus untuk menangani History
-    async function updateHistorySection(currentRoundId) {
-        const historyList = document.getElementById('historyList');
-        if (!historyList) return;
+    function switchTab(tab) {
 
-        historyList.innerHTML = ''; // Bersihkan history lama
+        if (tab === 'global') {
 
-        // Loop 5 ronde terakhir ke belakang
-        for (let r = currentRoundId - 1; r >= Math.max(1, currentRoundId - 5); r--) {
-            try {
-                const result = await gameContract.getRoundResult(r);
-                
-                // Helper untuk format nama hewan (opsional, biar rapi)
-                const outcomeText = result[1]; 
-                
-                const card = document.createElement('div');
-                card.className = 'history-card';
-                
-                // Perbaikan syntax template literal `${...}` agar berjalan normal
-                card.innerHTML = `
-                    <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">
-                        Round #${r} • ${new Date(Number(result[2]) * 1000).toLocaleTimeString()}
-                    </div>
-                    <div class="history-reels">
-                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][0])]}">
-                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][1])]}">
-                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][2])]}">
-                    </div>
-                    <div class="history-outcome">${outcomeText}</div>
-                `;
-                historyList.appendChild(card);
-            } catch (err) {
-                console.log(`Skip history round ${r}: Data not ready`);
-            }
+            document.getElementById('tabGlobal').classList.remove('hidden');
+
+            document.getElementById('tabPersonal').classList.add('hidden');
+
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+
+            document.querySelectorAll('.tab-btn')[1].classList.remove('active');
+
+        } else {
+
+            document.getElementById('tabGlobal').classList.add('hidden');
+
+            document.getElementById('tabPersonal').classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn')[0].classList.remove('active');
+
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+
+            updatePersonalHistory(); // Load data hanya saat tab dibuka
+
         }
+
+    }
+
+
+
+    // 2. Fungsi Utama Global History (Infinite Scroll Logic)
+
+    async function updateHistorySection(roundIdFromContract) {
+
+        currentMaxRound = Number(roundIdFromContract);
+
+        const historyList = document.getElementById('historyList');
+
+        const btnLoad = document.getElementById('btnLoadMore');
+
+
+
+        // Jika ini refresh otomatis (bukan klik load more), kita reset list
+
+        // Tapi jika user sedang scroll jauh di bawah, kita biarkan (opsional).
+
+        // Di sini kita buat reset agar data selalu fresh.
+
+        if (isInitialLoad) {
+
+            historyList.innerHTML = ''; 
+
+            historyCursor = currentMaxRound - 1; // Mulai dari ronde sebelumnya
+
+            await fetchBatchHistory(10); // PERTAMA: LOAD 10
+
+            isInitialLoad = false;
+
+        } else {
+
+            // Jika update realtime (ada pemenang baru), selipkan di atas
+
+            // Tanpa mereset seluruh list scroll ke bawah
+
+            const firstCard = historyList.firstElementChild;
+
+            if (firstCard) {
+
+                // Cek logic sederhana: render 1 ronde terbaru saja
+
+                // (Implementasi simple: Reset cursor top update)
+
+                // Agar aman dan urutan benar, kita refresh 10 teratas saja saat realtime update
+
+                historyList.innerHTML = '';
+
+                historyCursor = currentMaxRound - 1;
+
+                await fetchBatchHistory(10);
+
+            }
+
+        }
+
+    }
+
+
+
+    async function loadMoreHistory() {
+
+        const btn = document.getElementById('btnLoadMore');
+
+        btn.innerText = "Loading...";
+
+        btn.disabled = true;
+
+        
+
+        await fetchBatchHistory(15); // SELANJUTNYA: LOAD 15
+
+        
+
+        btn.innerText = "Load Previous Rounds (15)";
+
+        btn.disabled = false;
+
+    }
+
+
+
+    async function fetchBatchHistory(count) {
+
+        const historyList = document.getElementById('historyList');
+
+        // Stop jika sudah sampai ronde 0
+
+        if (historyCursor < 1) {
+
+            document.getElementById('btnLoadMore').style.display = 'none';
+
+            return;
+
+        }
+
+
+
+        const start = historyCursor;
+
+        const end = Math.max(1, historyCursor - count + 1);
+
+
+
+        for (let r = start; r >= end; r--) {
+
+            try {
+
+                const result = await gameContract.getRoundResult(r);
+
+                const outcomeText = result[1]; 
+
+                
+
+                const card = document.createElement('div');
+
+                card.className = 'history-card';
+
+                card.innerHTML = `
+
+                    <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">
+
+                        Round #${r} • ${new Date(Number(result[2]) * 1000).toLocaleTimeString()}
+
+                    </div>
+
+                    <div class="history-reels">
+
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][0])]}">
+
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][1])]}">
+
+                        <img class="history-reel-img" src="${IMAGE_LIST[Number(result[0][2])]}">
+
+                    </div>
+
+                    <div class="history-outcome">${outcomeText}</div>
+
+                `;
+
+                historyList.appendChild(card);
+
+            } catch (err) {
+
+                console.log(`Skip history round ${r}`);
+
+            }
+
+        }
+
+        historyCursor = end - 1; // Update cursor untuk load next batch
+
+        
+
+        if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
+
+    }
+
+
+
+    // 3. Fungsi Personal History (Menggunakan Event Logs)
+
+    async function updatePersonalHistory() {
+
+        if (!userAddress) return;
+
+        const list = document.getElementById('personalHistoryList');
+
+        
+
+        try {
+
+            // Filter Event: NewBet(player, animalChoice, timestamp)
+
+            // Filter khusus address user yang sedang login
+
+            const filter = gameContract.filters.NewBet(userAddress);
+
+            
+
+            // Query 5000 blok terakhir (sesuaikan dengan kebutuhan/limit RPC)
+
+            // Jika RPC error "query returned more than 10000 results", kurangi range blok
+
+            const currentBlock = await provider.getBlockNumber();
+
+            const fromBlock = currentBlock - 5000; 
+
+
+
+            const events = await gameContract.queryFilter(filter, fromBlock, "latest");
+
+            
+
+            // Balik urutan agar yang terbaru di atas
+
+            const myBets = events.reverse();
+
+
+
+            if (myBets.length === 0) {
+
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">No bets found in recent history.</div>';
+
+                return;
+
+            }
+
+
+
+            list.innerHTML = ''; // Clear loading text
+
+
+
+            myBets.forEach(evt => {
+
+                const args = evt.args;
+
+                const animalIdx = Number(args[1]);
+
+                const timestamp = Number(args[2]);
+
+                const animalName = IMAGE_NAMES[animalIdx].toUpperCase();
+
+
+
+                const el = document.createElement('div');
+
+                el.className = 'personal-bet-card';
+
+                el.innerHTML = `
+
+                    <div class="pb-info">
+
+                        <div class="pb-time">${new Date(timestamp * 1000).toLocaleString()}</div>
+
+                        <div>You Bet on: <span class="pb-animal">${animalName}</span></div>
+
+                    </div>
+
+                    <img src="${IMAGE_LIST[animalIdx]}" style="width:30px; height:30px;">
+
+                `;
+
+                list.appendChild(el);
+
+            });
+
+
+
+        } catch (e) {
+
+            console.error("Personal History Error:", e);
+
+            list.innerHTML = '<div style="text-align:center; color:var(--danger);">Error fetching history. Try again later.</div>';
+
+        }
+
     }
 
     function setupEventListeners() {
