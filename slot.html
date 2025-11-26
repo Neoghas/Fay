@@ -1119,73 +1119,7 @@
             console.error("Contract History Error:", e);
             list.innerHTML = `<div style="text-align:center; color:var(--danger); padding:10px;">Connection Error</div>`;
         }
-                }
-    
-   async function updatePersonalHistory() {
-        const list = document.getElementById('personalHistoryList');
-        
-        if (!isConnected || !userAddress) {
-            list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Connect Wallet first</div>';
-            return;
-        }
-
-        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Scanning last 24h history...</div>';
-        
-        try {
-            const currentBlock = await provider.getBlockNumber();
-            // PERUBAHAN: Range diperbesar ke 50.000 Blok (~28 Jam di Base)
-            const fromBlock = Math.max(0, currentBlock - 50000); 
-
-            // 1. Ambil Event Bet
-            const betFilter = gameContract.filters.NewBet(userAddress);
-            const myBets = await gameContract.queryFilter(betFilter, fromBlock, "latest");
-            
-            if (myBets.length === 0) {
-                list.innerHTML = `
-                    <div style="text-align:center; padding:20px; color:#666;">
-                        No bets found in last 50k blocks.<br>
-                        <small>(Try betting on a new round)</small>
-                    </div>`;
-                
-    
-    // Helper: Format Teks Outcome yang Lebih Cerdas
-    function formatOutcomeText(rawOutcome, reels) {
-        const r0 = Number(reels[0]);
-        const r1 = Number(reels[1]);
-        const r2 = Number(reels[2]);
-        
-        const getN = (idx) => {
-            if (idx === 6) return "Zonk"; 
-            if (!IMAGE_NAMES[idx]) return "Unknown";
-            return IMAGE_NAMES[idx].charAt(0).toUpperCase() + IMAGE_NAMES[idx].slice(1);
-        };
-
-        const n0 = getN(r0);
-        const n1 = getN(r1);
-        const n2 = getN(r2);
-
-        if (rawOutcome === "TRIPLE") {
-            return `<span style="color:var(--gold); font-weight:bold;">${n0} (TRIPLE)</span>`;
-        } 
-        else if (rawOutcome === "DOUBLE") {
-            // Logika: Cari mana yang kembar, mana yang beda
-            let doubleName = "";
-            let singleName = "";
-
-            if (r0 === r1) { doubleName = n0; singleName = n2; }
-            else if (r1 === r2) { doubleName = n1; singleName = n0; }
-            else { doubleName = n0; singleName = n1; } // r0 === r2
-
-            return `<span style="color:var(--accent);">${doubleName} (Double)</span> - ${singleName}`;
-        } 
-        else if (rawOutcome === "ONE_ZONK") {
-            return `${n0} - <span style="color:var(--danger)">Zonk</span> - ${n2}`;
-        } 
-        else {
-            // NO_MATCH
-            return `${n0} - ${n1} - ${n2}`;
-        }
-    }
+                    }
 
     async function bulkFetchWinners(roundDataArray) {
         if (roundDataArray.length === 0) return;
