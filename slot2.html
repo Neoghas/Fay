@@ -485,38 +485,55 @@
         historyCursor = end - 1; if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
     }
 
-    // --- OPTIMIZED WINNER FETCHING (BINARY SEARCH LENGTH + PARALLEL FETCH) ---
+    // --- OPTIMIZED WINNER FETCHING (FIXED LENGTH DETECTION) ---
     async function fetchWinnersOptimized(maxRound, minRound) {
         try {
-            // 1. Find Array Length using Binary Search (Fast!)
+            // 1. Cari Panjang Array globalWinHistory dengan Exponential Search
+            // (Karena length array bisa jauh lebih besar dari Round ID)
             if (globalHistoryLength === -1) {
+                // Langkah A: Cari batas atas (Upper Bound)
                 let low = 0;
-                let high = Number(await gameContract.currentRoundId()) + 5; // Estimates max length
-                let foundLen = 0;
+                let high = 1;
                 
+                // Cek index 0 dulu (safety check jika array kosong)
+                try { await gameContract.globalWinHistory(0); } 
+                catch { globalHistoryLength = 0; return; } // Array kosong
+
+                // Lipatgandakan 'high' sampai menemukan error (out of bounds)
+                while(true) {
+                    try {
+                        await gameContract.globalWinHistory(high);
+                        low = high;
+                        high *= 2; // 1, 2, 4, 8, 16, 32...
+                    } catch(e) {
+                        break; // Ketemu batas atas
+                    }
+                }
+
+                // Langkah B: Binary Search di antara Low dan High untuk cari length pasti
+                let foundLen = low;
                 while (low <= high) {
                     let mid = Math.floor((low + high) / 2);
                     try {
-                        // Check if index exists
                         await gameContract.globalWinHistory(mid);
-                        foundLen = mid + 1;
+                        foundLen = mid + 1; // Valid, coba lebih tinggi
                         low = mid + 1;
                     } catch (e) {
-                        high = mid - 1;
+                        high = mid - 1; // Invalid, coba lebih rendah
                     }
                 }
                 globalHistoryLength = foundLen;
+                console.log("Global History Length Found:", globalHistoryLength);
             }
 
-            // 2. Parallel Fetching of Data (Batching)
-            // We only need to scan data relevant to our rounds
-            // Scan backwards from end of array
-            
-            let endScan = globalHistoryLength - 1;
-            let startScan = Math.max(0, endScan - 50); // Scan last 50 winners max
-            
-            if (endScan < 0) return; // Empty history
+            if (globalHistoryLength === 0) return;
 
+            // 2. Parallel Fetching (Batching)
+            // Scan mundur dari data terakhir yang ditemukan
+            let endScan = globalHistoryLength - 1;
+            // Batasi scan max 100 item terakhir agar RPC tidak timeout
+            let startScan = Math.max(0, endScan - 100); 
+            
             const promises = [];
             for(let i = endScan; i >= startScan; i--) {
                 promises.push(gameContract.globalWinHistory(i));
@@ -527,32 +544,57 @@
             // 3. Map Data & Aggregate
             for(let d of winnersData) {
                 const rId = Number(d[3]);
+                // Hanya proses jika ronde ini sedang ditampilkan di layar
                 if (rId <= maxRound && rId >= minRound) {
-                    if (!globalWinnersCache[rId]) globalWinnersCache[rId] = { eth:0n, usdt:0n, shib:0n, topAddr:d[0], topAmt:d[1] };
-                    if(Number(d[2])===0) globalWinnersCache[rId].eth+=d[1]; 
-                    else if(Number(d[2])===1) globalWinnersCache[rId].usdt+=d[1]; 
-                    else globalWinnersCache[rId].shib+=d[1];
                     
+                    if (!globalWinnersCache[rId]) {
+                        globalWinnersCache[rId] = { eth:0n, usdt:0n, shib:0n, topAddr:d[0], topAmt:d[1] };
+                    }
+                    
+                    // Agregasi Total Menang
+                    if(Number(d[2])===0) globalWinnersCache[rId].eth += d[1]; 
+                    else if(Number(d[2])===1) globalWinnersCache[rId].usdt += d[1]; 
+                    else globalWinnersCache[rId].shib += d[1];
+                    
+                    // Cek MVP (Pemenang Terbesar di ronde itu)
                     if(d[1] > globalWinnersCache[rId].topAmt) { 
-                        globalWinnersCache[rId].topAmt=d[1]; globalWinnersCache[rId].topAddr=d[0]; 
+                        globalWinnersCache[rId].topAmt = d[1]; 
+                        globalWinnersCache[rId].topAddr = d[0]; 
                     }
                 }
             }
 
             // 4. Update UI
             for (let r = maxRound; r >= minRound; r--) {
-                const div = document.getElementById(`winner-info-${r}`); if (!div) continue;
+                const div = document.getElementById(`winner-info-${r}`); 
+                if (!div) continue;
+                
                 const d = globalWinnersCache[r];
-                if (!d) { div.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>'; continue; }
+                if (!d) { 
+                    div.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>'; 
+                    continue; 
+                }
                 
                 let pay = ""; 
                 if(d.eth>0n) pay+=`<div style="color:#627EEA">+${parseFloat(ethers.formatEther(d.eth)).toFixed(4)} ETH</div>`;
                 if(d.usdt>0n) pay+=`<div style="color:#26A17B">+${parseFloat(ethers.formatUnits(d.usdt,6)).toFixed(2)} USDT</div>`;
                 if(d.shib>0n) pay+=`<div style="color:#FFA409">+${parseFloat(ethers.formatUnits(d.shib,18)).toLocaleString()} SHIB</div>`;
                 
-                div.innerHTML = `<div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;"><div style="display:flex; justify-content:space-between;"><div style="text-align:left;"><div style="font-size:0.65em; color:#888;">WINNER</div><div style="color:var(--gold); font-weight:bold; font-size:0.85em;" id="nick-${r}">🏆 ${d.topAddr.substring(0,4)}...</div></div><div style="text-align:right; font-size:0.75em; font-weight:bold;">${pay}</div></div></div>`;
+                div.innerHTML = `
+                    <div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <div style="text-align:left;">
+                                <div style="font-size:0.65em; color:#888;">WINNER</div>
+                                <div style="color:var(--gold); font-weight:bold; font-size:0.85em;" id="nick-${r}">🏆 ${d.topAddr.substring(0,4)}...</div>
+                            </div>
+                            <div style="text-align:right; font-size:0.75em; font-weight:bold;">${pay}</div>
+                        </div>
+                    </div>`;
                 
-                gameContract.users(d.topAddr).then(u=>{ if(u[0]) document.getElementById(`nick-${r}`).innerText=`🏆 ${u[0]}`; }).catch(()=>{});
+                // Lazy load nickname
+                gameContract.users(d.topAddr).then(u=>{ 
+                    if(u[0]) document.getElementById(`nick-${r}`).innerText=`🏆 ${u[0]}`; 
+                }).catch(()=>{});
             }
 
         } catch (e) { console.log("Fetch error", e); }
