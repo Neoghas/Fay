@@ -526,10 +526,13 @@
 
                             </button>
 
-                            <div class="mini-stars" id="stars-box-${r}">
-
-                                <span class="mini-star" onclick="submitRating(${r},1)">★</span><span class="mini-star" onclick="submitRating(${r},2)">★</span><span class="mini-star" onclick="submitRating(${r},3)">★</span><span class="mini-star" onclick="submitRating(${r},4)">★</span><span class="mini-star" onclick="submitRating(${r},5)">★</span>
-
+                            <div class="mini-stars" id="stars-box-${r}" style="display:flex; align-items:center;">
+                                <span class="mini-star" onclick="submitRating(${r},1)">★</span>
+                                <span class="mini-star" onclick="submitRating(${r},2)">★</span>
+                                <span class="mini-star" onclick="submitRating(${r},3)">★</span>
+                                <span class="mini-star" onclick="submitRating(${r},4)">★</span>
+                                <span class="mini-star" onclick="submitRating(${r},5)">★</span>
+                                <span id="stars-count-${r}" style="font-size:0.75em; color:#888; margin-left:4px; font-weight:normal;">(0)</span>
                             </div>
 
                         </div>
@@ -1304,7 +1307,7 @@
         } catch(e) { showToast("Edit Failed"); }
     }
 
-    // 6. Helper Social Lite (Untuk Update Angka di Depan)
+    // 6. Helper Social Lite (Update Angka & Bintang di Depan)
     async function updateSocialStatsLite(rId) {
         try {
             const [score, count, likes, cCount] = await Promise.all([
@@ -1314,13 +1317,13 @@
                 gameContract.commentCounts(rId)
             ]);
 
-            // Update Counter
+            // Update Counter Likes & Comments
             const elLikes = document.getElementById(`stats-likes-${rId}`);
             const elComms = document.getElementById(`stats-comments-${rId}`);
             if(elLikes) elLikes.innerText = `${likes} Likes`;
             if(elComms) elComms.innerText = `${cCount} Comments`;
 
-            // Update Bintang
+            // Update Warna Bintang (Rata-rata)
             const avg = count > 0n ? Math.round(Number(score)/Number(count)) : 0;
             const box = document.getElementById(`stars-box-${rId}`);
             if(box) {
@@ -1330,6 +1333,14 @@
                     else stars[i].classList.remove('active');
                 }
             }
+
+            // --- BARU: UPDATE TOTAL SCORE (COUNT) ---
+            const elStarCount = document.getElementById(`stars-count-${rId}`);
+            if(elStarCount) {
+                // Menampilkan Total Score (Bintang Akumulasi), bukan jumlah orang
+                elStarCount.innerText = `(${score})`; 
+            }
+
         } catch(e){}
     }
 
