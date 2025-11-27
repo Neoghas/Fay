@@ -287,6 +287,30 @@
     .edit-mode-container { display: flex; gap: 5px; margin-top: 5px; }
     .btn-save-edit { background: var(--success); color: #000; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-weight: bold; font-size: 0.8em; }
     .btn-cancel-edit { background: #333; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8em; }
+
+    /* Tombol Buka Chat di Pojok Kanan Atas Kartu */
+    .btn-social-open {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: transparent;
+        border: 1px solid #444;
+        color: #aaa;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.3s;
+        z-index: 5; /* Agar bisa diklik */
+    }
+    .btn-social-open:hover {
+        background: #222;
+        color: white;
+        border-color: white;
+    }
 </style>
 </head>
 <body>
@@ -401,18 +425,13 @@
 <div id="socialModal" class="modal-overlay">
     <div class="modal-content">
         <button class="close-modal" onclick="closeModal('socialModal')">&times;</button>
+        <div class="modal-title" style="font-size:1em; border-bottom:1px solid #333; padding-bottom:10px;">Round #<span id="socialRoundId"></span> Hub</div>
         
-        <div class="modal-title" style="border-bottom:1px solid #333; padding-bottom:10px;">
-            Round #<span id="socialRoundId">...</span> Hub
-        </div>
-
-        <div style="margin-top:10px; font-size:0.7em; color:#aaa;">RATING & REACTION</div>
-        <div class="rating-stars" id="ratingStars">
-            </div>
-        <div class="reaction-bar" style="margin-bottom:15px;">
-             <button class="btn-like-single" id="modalLikeBtn" style="width:100%; justify-content:center;">
-                👍 Like <span id="modalLikeCount">0</span>
-             </button>
+        <div style="font-size:0.7em; color:#aaa; margin-bottom:5px;">DETAILED STATS</div>
+        <div style="display:flex; justify-content:space-around; margin-bottom:15px; font-size:0.8em;">
+            <div>⭐ Avg: <span id="avgRating">0.0</span></div>
+            <div>👍 Likes: <span id="cntLike">0</span></div>
+            <div>👎 Dislikes: <span id="cntDislike">0</span></div>
         </div>
 
         <div class="comment-section">
@@ -422,11 +441,11 @@
             </div>
 
             <div class="comment-list" id="commentList">
-                <div style="text-align:center; color:#444; padding:20px;">Loading chat stream...</div>
+                <div style="text-align:center; color:#444; padding:20px;">Loading chat...</div>
             </div>
 
             <div class="input-group">
-                <textarea id="commentInput" class="input-comment" rows="1" placeholder="Type a message..."></textarea>
+                <textarea id="commentInput" class="input-comment" rows="1" placeholder="Type message..."></textarea>
                 <button class="wallet-btn" style="padding:0 15px; height:auto;" onclick="postComment()">SEND</button>
             </div>
         </div>
@@ -575,6 +594,8 @@
                 const { r, res } = item;
                 const card = document.createElement('div'); card.className = 'history-card'; card.id = `history-card-${r}`;
                 card.innerHTML = `
+                    <button class="btn-social-open" onclick="openSocialModal(${r})">💬</button>
+                    
                     <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">Round #${r} • ${new Date(Number(res.timestamp) * 1000).toLocaleTimeString()}</div>
                     <div class="history-reels"><img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[0])]}"><img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[1])]}"><img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[2])]}"></div>
                     <div class="history-outcome" style="margin-top:5px;">${formatOutcomeText(res.outcome, res.reels)}</div>
