@@ -192,6 +192,101 @@
     }
     .btn-like-single:hover { border-color: var(--success); color: white; }
     .btn-like-single:active { transform: scale(0.95); }
+
+    /* --- CSS KOMENTAR CANGGIH (FINAL MERGED) --- */
+    
+    /* Container Utama Komentar */
+    .comment-section {
+        margin-top: 15px;
+        border-top: 1px solid #333;
+        padding-top: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* List Scrollable */
+    .comment-list {
+        max-height: 250px;
+        overflow-y: auto;
+        padding-right: 5px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    /* Scrollbar Keren */
+    .comment-list::-webkit-scrollbar { width: 4px; }
+    .comment-list::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+    /* Item Komentar Individual */
+    .comment-item {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 8px;
+        padding: 10px;
+        position: relative;
+        transition: 0.2s;
+    }
+    .comment-item:hover { background: rgba(255,255,255,0.06); border-color: var(--primary); }
+    
+    /* Header: Nama & Waktu */
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+    }
+    .comment-user {
+        font-size: 0.8em;
+        font-weight: bold;
+        color: var(--accent);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .comment-time { font-size: 0.65em; color: #666; }
+    
+    /* Isi Teks Komentar (Support Spasi Bawah) */
+    .comment-body {
+        font-size: 0.9em;
+        color: #eee;
+        line-height: 1.4;
+        word-wrap: break-word;
+        white-space: pre-wrap; /* Penting agar ENTER terbaca */
+    }
+    
+    .edited-tag { font-size: 0.6em; color: #888; font-style: italic; margin-left: 5px; }
+
+    /* Tombol Edit Icon (Pensil) */
+    .btn-edit-icon {
+        background: none; border: none; color: #555; cursor: pointer; font-size: 0.8em; transition: 0.2s;
+    }
+    .btn-edit-icon:hover { color: var(--gold); }
+
+    /* Area Input & Tombol Send */
+    .input-group { display: flex; gap: 5px; margin-top: 5px; align-items: flex-start; }
+    
+    /* Input Textarea (Support Resize) */
+    .input-comment {
+        flex: 1;
+        background: #0f111a;
+        border: 1px solid #333;
+        color: white;
+        padding: 10px;
+        border-radius: 6px;
+        outline: none;
+        transition: 0.3s;
+        font-family: inherit; /* Agar font sama dengan body */
+        resize: vertical;     /* Bisa ditarik ke bawah */
+        min-height: 40px;
+    }
+    .input-comment:focus { border-color: var(--accent); box-shadow: 0 0 10px rgba(0, 209, 255, 0.2); }
+    
+    /* Tombol Save/Cancel saat Edit */
+    .edit-mode-container { display: flex; gap: 5px; margin-top: 5px; }
+    .btn-save-edit { background: var(--success); color: #000; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-weight: bold; font-size: 0.8em; }
+    .btn-cancel-edit { background: #333; color: #fff; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8em; }
 </style>
 </head>
 <body>
@@ -300,6 +395,41 @@
             </div>
         </div>
         <button class="btn-disconnect" onclick="disconnectWallet()">DISCONNECT</button>
+    </div>
+</div>
+
+<div id="socialModal" class="modal-overlay">
+    <div class="modal-content">
+        <button class="close-modal" onclick="closeModal('socialModal')">&times;</button>
+        
+        <div class="modal-title" style="border-bottom:1px solid #333; padding-bottom:10px;">
+            Round #<span id="socialRoundId">...</span> Hub
+        </div>
+
+        <div style="margin-top:10px; font-size:0.7em; color:#aaa;">RATING & REACTION</div>
+        <div class="rating-stars" id="ratingStars">
+            </div>
+        <div class="reaction-bar" style="margin-bottom:15px;">
+             <button class="btn-like-single" id="modalLikeBtn" style="width:100%; justify-content:center;">
+                👍 Like <span id="modalLikeCount">0</span>
+             </button>
+        </div>
+
+        <div class="comment-section">
+            <div style="display:flex; justify-content:space-between; font-size:0.8em; color:#aaa; margin-bottom:5px;">
+                <span>LIVE CHAT</span>
+                <span id="cntComments">0 Comments</span>
+            </div>
+
+            <div class="comment-list" id="commentList">
+                <div style="text-align:center; color:#444; padding:20px;">Loading chat stream...</div>
+            </div>
+
+            <div class="input-group">
+                <textarea id="commentInput" class="input-comment" rows="1" placeholder="Type a message..."></textarea>
+                <button class="wallet-btn" style="padding:0 15px; height:auto;" onclick="postComment()">SEND</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1025,6 +1155,158 @@
 
         }, delay);
 
+    }
+
+    // --- FUNGSI KOMENTAR (LOAD, ADD, EDIT) ---
+
+    // 1. Load Social Data (Termasuk Komentar)
+    async function loadSocialData(roundId) {
+        document.getElementById('commentList').innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Decryption data...</div>';
+        
+        try {
+            // Load Stats Dasar
+            const [score, count, likes, cCount] = await Promise.all([
+                gameContract.totalRatingScore(roundId),
+                gameContract.totalRatingCount(roundId),
+                gameContract.likeCounts(roundId),
+                gameContract.commentCounts(roundId)
+            ]);
+
+            // Update UI Header Modal
+            const avg = count > 0n ? Math.round(Number(score)/Number(count)) : 0;
+            const starsContainer = document.getElementById('ratingStars');
+            starsContainer.innerHTML = '';
+            for(let i=1; i<=5; i++) {
+                let cls = i <= avg ? "star-btn active" : "star-btn";
+                starsContainer.innerHTML += `<span class="${cls}" onclick="submitRating(${roundId}, ${i})">★</span>`;
+            }
+            document.getElementById('modalLikeCount').innerText = likes;
+            document.getElementById('modalLikeBtn').onclick = () => submitLike(roundId);
+            document.getElementById('cntComments').innerText = `${cCount} Comments`;
+
+            // --- LOAD COMMENTS ---
+            const list = document.getElementById('commentList');
+            list.innerHTML = '';
+
+            const commentTotal = Number(cCount);
+            if (commentTotal === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:#444; font-style:italic;">No chatter yet. Start the conversation!</div>';
+                return;
+            }
+
+            // Loop Fetch Comment (Sequential agar urut)
+            for(let i = 0; i < commentTotal; i++) {
+                const c = await gameContract.roundComments(roundId, i);
+                // Struct: [id, author, text, timestamp, isEdited]
+                
+                const author = c[1];
+                const text = c[2];
+                const time = Number(c[3]);
+                const isEdited = c[4];
+                
+                // Cek apakah ini komentar saya (untuk tombol edit)
+                const isMine = isConnected && (author.toLowerCase() === userAddress.toLowerCase());
+                
+                // Get Nickname (Lazy)
+                let nick = author.substring(0, 6) + '...';
+                try { const u = await gameContract.users(author); if(u[0]) nick = u[0]; } catch {}
+
+                const div = document.createElement('div');
+                div.className = 'comment-item';
+                div.id = `comment-box-${i}`;
+                
+                // Tombol Edit hanya muncul jika isMine = true
+                const editBtnHtml = isMine ? `<button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${i}, '${text.replace(/'/g, "\\'")}')">✎</button>` : '';
+                const editedHtml = isEdited ? `<span class="edited-tag">(edited)</span>` : '';
+
+                div.innerHTML = `
+                    <div class="comment-header">
+                        <span class="comment-user">● ${nick}</span>
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <span class="comment-time">${timeAgo(time)}</span>
+                            ${editBtnHtml}
+                        </div>
+                    </div>
+                    <div class="comment-body" id="comment-text-${i}">
+                        ${text} ${editedHtml}
+                    </div>
+                `;
+                list.appendChild(div);
+            }
+            
+            // Scroll ke bawah otomatis
+            list.scrollTop = list.scrollHeight;
+
+        } catch(e) { 
+            console.error(e);
+            document.getElementById('commentList').innerHTML = 'Connection error.'; 
+        }
+    }
+
+    // 2. Post Komentar Baru
+    async function postComment() {
+        const txt = document.getElementById('commentInput').value;
+        if(!txt) return;
+        
+        try {
+             // Cek Register
+            const u = await gameContract.users(userAddress);
+            if(!u[1]) { showToast("Register Profile First"); return; }
+
+            const tx = await gameContract.addComment(currentSocialRound, txt, {gasLimit: 500000});
+            document.getElementById('commentInput').value = ""; // Clear input
+            showToast("Broadcasting...");
+            await tx.wait();
+            showToast("Sent!");
+            loadSocialData(currentSocialRound); // Refresh
+        } catch(e) { showToast("Failed: " + (e.reason||"Error")); }
+    }
+
+    // 3. Aktifkan Mode Edit (Inline - Support Spasi Bawah)
+    function enableEditMode(roundId, commentId, oldText) {
+        const container = document.getElementById(`comment-text-${commentId}`);
+        if(!container) return;
+
+        // Kita decode dulu kalau ada karakter aneh, lalu masukkan ke textarea
+        container.innerHTML = `
+            <div class="edit-mode-container" style="flex-direction:column;">
+                <textarea id="edit-input-${commentId}" class="input-comment" rows="3" style="width:100%;">${oldText}</textarea>
+                <div style="display:flex; gap:5px; justify-content:flex-end; margin-top:5px;">
+                    <button class="btn-cancel-edit" onclick="loadSocialData(${roundId})">Cancel</button>
+                    <button class="btn-save-edit" onclick="saveEditComment(${roundId}, ${commentId})">Save</button>
+                </div>
+            </div>
+        `;
+    }
+
+    // 4. Simpan Edit ke Blockchain
+    async function saveEditComment(roundId, commentId) {
+        const newTxt = document.getElementById(`edit-input-${commentId}`).value;
+        if(!newTxt) return;
+
+        try {
+            const tx = await gameContract.editComment(roundId, commentId, newTxt, {gasLimit: 500000});
+            showToast("Updating blockchain...");
+            await tx.wait();
+            showToast("Edit Updated!");
+            loadSocialData(roundId);
+        } catch(e) { showToast("Edit Failed"); }
+    }
+
+    // Helper: Time Ago
+    function timeAgo(ts) {
+        const seconds = Math.floor((new Date() - ts * 1000) / 1000);
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + "y";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + "mo";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + "d";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + "h";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + "m";
+        return Math.floor(seconds) + "s";
     }
 
     async function withdraw(curr) {
