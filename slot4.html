@@ -425,13 +425,14 @@
 <div id="socialModal" class="modal-overlay">
     <div class="modal-content">
         <button class="close-modal" onclick="closeModal('socialModal')">&times;</button>
-        <div class="modal-title" style="font-size:1em; border-bottom:1px solid #333; padding-bottom:10px;">Round #<span id="socialRoundId"></span> Hub</div>
+        <div class="modal-title" style="font-size:1em; border-bottom:1px solid #333; padding-bottom:10px;">
+            Round #<span id="socialRoundId">...</span> Hub
+        </div>
         
-        <div style="font-size:0.7em; color:#aaa; margin-bottom:5px;">DETAILED STATS</div>
-        <div style="display:flex; justify-content:space-around; margin-bottom:15px; font-size:0.8em;">
-            <div>⭐ Avg: <span id="avgRating">0.0</span></div>
-            <div>👍 Likes: <span id="cntLike">0</span></div>
-            <div>👎 Dislikes: <span id="cntDislike">0</span></div>
+        <div style="display:flex; justify-content:space-around; margin-bottom:15px; font-size:0.8em; color:#aaa;">
+            <div>⭐ <span id="avgRating">0.0</span></div>
+            <div>👍 <span id="cntLike">0</span></div>
+            <div>👎 <span id="cntDislike">0</span></div>
         </div>
 
         <div class="comment-section">
@@ -475,6 +476,7 @@
     let historyCursor = 0; let isInitialLoad = true; let currentMaxRound = 0;
     let globalWinnersCache = {}; let globalHistoryLength = -1;
     let isProcessingResult = false;
+    let currentSocialRound = 0;
 
     window.onload = async () => {
         document.querySelectorAll('.reel-img').forEach(img => img.src = "what.svg");
@@ -1397,6 +1399,145 @@
     async function claimReferralBonus() {
         try { const tx = await gameContract.claimReferralBonus(); await tx.wait(); showToast("Bonus Claimed!"); refreshGameData(); } catch (e) { showToast("Claim Failed"); }
     }
+
+    // --- FUNGSI SOCIAL LENGKAP (CHAT, RATE, LIKE, EDIT) ---
+    
+    // 1. Buka Modal & Set Ronde Aktif
+    async function openSocialModal(roundId) {
+        if(!isConnected) { showToast("Connect Wallet first"); return; }
+        currentSocialRound = roundId; 
+        document.getElementById('socialModal').style.display = 'flex';
+        document.getElementById('socialRoundId').innerText = roundId;
+        loadSocialData(roundId);
+    }
+
+    // 2. Load Data (Rating, Like, & Komentar Canggih)
+    async function loadSocialData(roundId) {
+        const list = document.getElementById('commentList');
+        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Loading discussion...</div>';
+        
+        try {
+            // Ambil Statistik
+            const [score, count, likes, dislikes, cCount] = await Promise.all([
+                gameContract.totalRatingScore(roundId),
+                gameContract.totalRatingCount(roundId),
+                gameContract.likeCounts(roundId),
+                gameContract.dislikeCounts(roundId),
+                gameContract.commentCounts(roundId)
+            ]);
+            
+            // Update Header Modal
+            const avg = count > 0n ? (Number(score) / Number(count)).toFixed(1) : "0.0";
+            document.getElementById('avgRating').innerText = avg;
+            document.getElementById('cntLike').innerText = likes;
+            document.getElementById('cntDislike').innerText = dislikes;
+            document.getElementById('cntComments').innerText = `${cCount} Comments`;
+
+            // Update Bintang di Modal
+            const starsContainer = document.getElementById('ratingStars');
+            starsContainer.innerHTML = '';
+            for(let i=1; i<=5; i++) {
+                let cls = i <= Math.round(Number(avg)) ? "star-btn active" : "star-btn";
+                starsContainer.innerHTML += `<span class="${cls}" onclick="submitRating(${roundId}, ${i})">★</span>`;
+            }
+
+            // Load Komentar
+            list.innerHTML = '';
+            const totalComments = Number(cCount);
+            
+            if(totalComments === 0) {
+                list.innerHTML = '<div style="text-align:center; padding:20px; color:#444; font-style:italic;">No comments yet. Be the first!</div>';
+            } else {
+                for(let i=0; i< totalComments; i++) {
+                    const c = await gameContract.roundComments(roundId, i);
+                    // c = [id, author, text, timestamp, isEdited]
+                    const author = c[1];
+                    const text = c[2];
+                    const time = Number(c[3]);
+                    const isEdited = c[4];
+
+                    let nick = author.substring(0,6) + '...';
+                    try { const u = await gameContract.users(author); if(u[0]) nick=u[0]; } catch{}
+
+                    // Cek Pemilik Komentar (Untuk Tombol Edit)
+                    const isMine = isConnected && (author.toLowerCase() === userAddress.toLowerCase());
+                    const editBtnHtml = isMine ? `<button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${i}, '${text.replace(/'/g, "\\'")}')">✎</button>` : '';
+                    const editedTag = isEdited ? `<span class="edited-tag">(edited)</span>` : '';
+
+                    const div = document.createElement('div');
+                    div.className = 'comment-item';
+                    div.innerHTML = `
+                        <div class="comment-header">
+                            <span class="comment-user">● ${nick}</span>
+                            <div style="display:flex; align-items:center; gap:5px;">
+                                <span class="comment-time">${timeAgo(time)}</span>
+                                ${editBtnHtml}
+                            </div>
+                        </div>
+                        <div class="comment-body" id="comment-text-${i}">${text} ${editedTag}</div>
+                    `;
+                    list.appendChild(div);
+                }
+                list.scrollTop = list.scrollHeight; // Auto scroll ke bawah
+            }
+
+        } catch(e) { 
+            console.error(e); 
+            list.innerHTML = '<div style="text-align:center; color:red;">Error loading data</div>'; 
+        }
+    }
+
+    // 3. Kirim Komentar Baru
+    async function postComment() {
+        const txt = document.getElementById('commentInput').value;
+        if(!txt) return;
+        try {
+            const u = await gameContract.users(userAddress);
+            if(!u[1]) { showToast("Register Profile First!"); return; }
+
+            const tx = await gameContract.addComment(currentSocialRound, txt, {gasLimit: 500000});
+            document.getElementById('commentInput').value = "";
+            showToast("Posting..."); await tx.wait(); showToast("Posted!");
+            loadSocialData(currentSocialRound);
+        } catch(e) { showToast("Failed: " + (e.reason || "Error")); }
+    }
+
+    // 4. Aktifkan Mode Edit (Inline Textarea)
+    function enableEditMode(roundId, commentId, oldText) {
+        const container = document.getElementById(`comment-text-${commentId}`);
+        if(!container) return;
+        container.innerHTML = `
+            <div class="edit-mode-container" style="flex-direction:column;">
+                <textarea id="edit-input-${commentId}" class="input-comment" rows="2" style="width:100%;">${oldText}</textarea>
+                <div style="display:flex; gap:5px; justify-content:flex-end; margin-top:5px;">
+                    <button class="btn-cancel-edit" onclick="loadSocialData(${roundId})">Cancel</button>
+                    <button class="btn-save-edit" onclick="saveEditComment(${roundId}, ${commentId})">Save</button>
+                </div>
+            </div>
+        `;
+    }
+
+    // 5. Simpan Edit ke Blockchain
+    async function saveEditComment(roundId, commentId) {
+        const newTxt = document.getElementById(`edit-input-${commentId}`).value;
+        if(!newTxt) return;
+        try {
+            const tx = await gameContract.editComment(roundId, commentId, newTxt, {gasLimit: 500000});
+            showToast("Updating..."); await tx.wait(); showToast("Updated!");
+            loadSocialData(roundId);
+        } catch(e) { showToast("Edit Failed"); }
+    }
+
+    // Helper Waktu (e.g. "5m ago")
+    function timeAgo(ts) {
+        const s = Math.floor((new Date() - ts * 1000) / 1000);
+        if(s>31536000) return Math.floor(s/31536000)+"y";
+        if(s>86400) return Math.floor(s/86400)+"d";
+        if(s>3600) return Math.floor(s/3600)+"h";
+        if(s>60) return Math.floor(s/60)+"m";
+        return s+"s";
+                                    }
+    
     function setupEventListeners() {
         gameContract.on("NewBet", () => { refreshGameData(); });
         gameContract.on("BattleResult", (reels, outcome, roundId) => { checkRoundResult(Number(roundId)); });
