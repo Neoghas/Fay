@@ -552,46 +552,118 @@
 
     async function refreshGameData() {
         try {
+            // 1. Update Data User (Referral & Bonus) jika terkoneksi
             if (isConnected) {
                 const userData = await gameContract.users(userAddress);
-                if (userData[1]) {
-                    document.getElementById('referralPanel').style.display='block';
-                    document.getElementById('displayNick').innerText=userData[0];
-                    document.getElementById('displayRefLink').innerText=location.origin+location.pathname+"?ref="+userData[0];
-                    document.getElementById('pendingBonus').innerText = Number(userData[4]) * 10000; 
-                    if(Number(userData[4])>0) { document.getElementById('claimBonusBtnContainer').innerHTML=`<button class='wallet-btn' onclick='claimReferralBonus()'>Claim ${Number(userData[4])*10000} SHIB Bonus</button>`; }
+                if (userData[1]) { // Jika sudah register
+                    document.getElementById('referralPanel').style.display = 'block';
+                    document.getElementById('displayNick').innerText = userData[0];
+                    document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
+                    
+                    const pending = Number(userData[4]);
+                    document.getElementById('pendingBonus').innerText = pending * 10000;
+                    
+                    const claimContainer = document.getElementById('claimBonusBtnContainer');
+                    if (pending > 0) {
+                        claimContainer.innerHTML = `<button class="wallet-btn" style="width:100%; margin-bottom:10px; background:var(--gold); color:black;" onclick="claimReferralBonus()">Claim ${pending * 10000} SHIB Bonus</button>`;
+                    } else {
+                        claimContainer.innerHTML = '';
+                    }
                     updateReferralCount();
                 }
+                
                 const bonus = await gameContract.freeShibCredits(userAddress);
-                document.getElementById('userBonusBalance').innerText=Number(ethers.formatEther(bonus)).toLocaleString();
-                document.getElementById('btnFreeBet').disabled = bonus < ethers.parseEther("10000");
-                if(bonus >= ethers.parseEther("10000")) document.getElementById('btnFreeBet').style.background = "var(--success)";
+                document.getElementById('userBonusBalance').innerText = Number(ethers.formatEther(bonus)).toLocaleString();
+                
+                const btnFree = document.getElementById('btnFreeBet');
+                if (btnFree) {
+                    btnFree.disabled = bonus < ethers.parseEther("10000");
+                    if (bonus >= ethers.parseEther("10000")) btnFree.style.background = "var(--success)";
+                    else btnFree.style.background = "#333";
+                }
             }
+
+            // 2. Fetch Data Ronde Saat Ini
             const currR = Number(await gameContract.currentRoundId());
-            let bets=[], idx=0; while(true){ try{ bets.push(await gameContract.roundBets(currR, idx)); idx++; }catch{break;}}
-            let counts=[0,0,0,0,0,0], pools={e:0,u:0,s:0}, myBets=[0,0,0,0,0,0];
+            let bets = [];
+            let idx = 0;
+            // Loop untuk mengambil semua bet di ronde ini
+            while (true) {
+                try {
+                    const bet = await gameContract.roundBets(currR, idx);
+                    bets.push(bet);
+                    idx++;
+                } catch { break; }
+            }
+
+            // 3. Inisialisasi Variabel Hitungan
+            let counts = [0, 0, 0, 0, 0, 0]; // Global count per hewan
+            let pools = { eth: 0, usdt: 0, shib: 0 }; // Global pool
+            
+            // --- PENTING: Reset Counter Bet Saya ---
+            myBetCounts = [0, 0, 0, 0, 0, 0]; 
+
+            // 4. Loop Analisa Bet
             bets.forEach(b => {
-                let amt = parseFloat(ethers.formatUnits(b[1], Number(b[2])===1?6:18));
-                if(Number(b[2])===0) pools.e+=amt; else if(Number(b[2])===1) pools.u+=amt; else pools.s+=amt;
-                counts[Number(b[4])]++; if(b[0].toLowerCase()===userAddress?.toLowerCase()) myBets[Number(b[4])]=1;
+                let decimal = Number(b[2]) === 1 ? 6 : 18;
+                let amt = parseFloat(ethers.formatUnits(b[1], decimal));
+
+                // Tambah ke Pool Global
+                if (Number(b[2]) === 0) pools.eth += amt;
+                else if (Number(b[2]) === 1) pools.usdt += amt;
+                else pools.shib += amt;
+
+                // Tambah ke Global Count Hewan
+                counts[Number(b[4])]++;
+
+                // --- LOGIKA MAX 2 BET ---
+                // Jika bet ini milik user yang sedang login, catat!
+                if (isConnected && b[0].toLowerCase() === userAddress.toLowerCase()) {
+                    myBetCounts[Number(b[4])]++;
+                }
             });
-            document.getElementById('poolTotalETH').innerText=pools.e.toFixed(4);
-            document.getElementById('poolTotalUSDT').innerText=pools.u.toFixed(2);
-            document.getElementById('poolTotalSHIB').innerText=pools.s.toLocaleString();
-            for(let i=0; i<6; i++) {
+
+            // 5. Update Tampilan Pool & Kartu
+            roundPools = pools;
+            updatePoolDisplay();
+
+            for (let i = 0; i < 6; i++) {
                 document.getElementById(`count-${i}`).innerText = counts[i];
                 let c = document.getElementById(`card-${i}`);
-                c.classList.remove('my-bet','open');
-                if(myBets[i]) c.classList.add('my-bet'); else c.classList.add('open');
+                c.classList.remove('my-bet', 'open');
+
+                // Styling: Jika user punya bet di sini, beri warna biru
+                if (myBetCounts[i] > 0) c.classList.add('my-bet'); 
+                else c.classList.add('open');
             }
-            let active = counts.filter(c=>c>0).length;
-            if(active>=5) { document.getElementById('drawBtn').disabled=false; document.getElementById('drawBtn').classList.add('ready'); document.getElementById('drawStatus').innerText="READY!"; }
-            else { document.getElementById('drawBtn').disabled=true; document.getElementById('drawBtn').classList.remove('ready'); document.getElementById('drawStatus').innerText=`Need ${5-active} teams`; }
 
-            updateHistorySection(currR); 
-            if (!document.getElementById('tabPersonal').classList.contains('hidden')) updatePersonalHistory();
+            // 6. Update Status Tombol Draw
+            let active = counts.filter(c => c > 0).length;
+            const btnDraw = document.getElementById('drawBtn');
+            const drawStatus = document.getElementById('drawStatus');
 
-        } catch (e) { console.error("Refresh Error:", e); }
+            if (active >= 5) {
+                btnDraw.disabled = false;
+                btnDraw.classList.add('ready');
+                drawStatus.innerText = "READY TO DRAW!";
+                drawStatus.style.color = "var(--success)";
+            } else {
+                btnDraw.disabled = true;
+                btnDraw.classList.remove('ready');
+                drawStatus.innerText = `Need ${5 - active} more teams active`;
+                drawStatus.style.color = "var(--danger)";
+            }
+
+            // 7. Update History (Tanpa mengganggu UI utama)
+            updateHistorySection(currR);
+            
+            if (!document.getElementById('tabPersonal').classList.contains('hidden')) {
+                updatePersonalHistory();
+            }
+
+        } catch (e) {
+            console.error("Refresh Error:", e);
+        }
     }
 
     function updateHistorySection(roundId) {
@@ -757,6 +829,14 @@
     function triggerBetModal() {
         if (!isConnected) { showToast("Connect Wallet First"); return; }
         if (currentSelectedAnimal.index === -1) { showToast("Select Animal First"); return; }
+        
+        // --- LOGIC BARU: MAX 2 BETS PER HEWAN ---
+        if (myBetCounts[currentSelectedAnimal.index] >= 2) {
+            showToast("Max 2 Bets Limit Reached!");
+            return;
+        }
+        // ----------------------------------------
+
         document.getElementById("modalAnimalName").innerText = currentSelectedAnimal.name.toUpperCase();
         document.getElementById('paymentModal').style.display = 'flex';
     }
