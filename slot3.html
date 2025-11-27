@@ -149,39 +149,49 @@
     .badge-win { background: rgba(0, 210, 106, 0.2); color: var(--success); border: 1px solid var(--success); }
     .badge-lose { background: rgba(255, 75, 75, 0.2); color: var(--danger); border: 1px solid var(--danger); }
 
-    /* --- CSS TAMBAHAN UNTUK SOCIAL DI CARD --- */
+    /* --- CSS BARU: SOCIAL FIX --- */
     .social-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 8px;
-        padding-top: 5px;
+        margin-top: 10px;
+        padding-top: 8px;
         border-top: 1px solid #333;
     }
-    .star-group { display: flex; gap: 2px; }
+    .star-group { display: flex; align-items: center; gap: 2px; }
     .star-btn {
         cursor: pointer;
-        color: #444;
-        font-size: 1.1em;
+        font-size: 1.3em;
+        color: #444; /* Warna mati */
         transition: 0.2s;
+        line-height: 1;
     }
-    .star-btn:hover, .star-btn.active { color: var(--gold); }
+    .star-btn:hover { transform: scale(1.2); }
+    /* Class untuk bintang menyala */
+    .star-btn.active { color: var(--gold); text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
     
-    .reaction-group { display: flex; gap: 10px; }
-    .react-btn {
-        background: none;
+    .star-count { 
+        font-size: 0.7em; 
+        color: #888; 
+        margin-left: 6px; 
+    }
+    
+    .like-wrapper { display: flex; align-items: center; }
+    .btn-like-single {
+        background: #151925;
         border: 1px solid #333;
-        border-radius: 4px;
-        color: #888;
+        color: #aaa;
+        border-radius: 6px;
+        padding: 5px 12px;
         cursor: pointer;
-        font-size: 0.8em;
-        padding: 2px 6px;
+        font-size: 0.85em;
         display: flex;
         align-items: center;
-        gap: 3px;
+        gap: 6px;
+        transition: 0.3s;
     }
-    .react-btn:hover { border-color: #666; color: white; }
-    .react-val { font-size: 0.9em; font-weight: bold; }
+    .btn-like-single:hover { border-color: var(--success); color: white; }
+    .btn-like-single:active { transform: scale(0.95); }
 </style>
 </head>
 <body>
@@ -539,18 +549,16 @@
                     
                 <div class="social-bar">
                         <div class="star-group">
-                            <span id="star-${r}-1" class="star-btn" onclick="sendRating(${r}, 1)">★</span>
-                            <span id="star-${r}-2" class="star-btn" onclick="sendRating(${r}, 2)">★</span>
-                            <span id="star-${r}-3" class="star-btn" onclick="sendRating(${r}, 3)">★</span>
-                            <span id="star-${r}-4" class="star-btn" onclick="sendRating(${r}, 4)">★</span>
-                            <span id="star-${r}-5" class="star-btn" onclick="sendRating(${r}, 5)">★</span>
+                            <span id="star-${r}-1" class="star-btn" onclick="submitRating(${r}, 1)">★</span>
+                            <span id="star-${r}-2" class="star-btn" onclick="submitRating(${r}, 2)">★</span>
+                            <span id="star-${r}-3" class="star-btn" onclick="submitRating(${r}, 3)">★</span>
+                            <span id="star-${r}-4" class="star-btn" onclick="submitRating(${r}, 4)">★</span>
+                            <span id="star-${r}-5" class="star-btn" onclick="submitRating(${r}, 5)">★</span>
+                            <span id="vote-count-${r}" class="star-count">(0)</span>
                         </div>
-                        <div class="reaction-group">
-                            <button class="react-btn" onclick="sendReaction(${r}, 1)">
-                                👍 <span id="like-val-${r}" class="react-val">0</span>
-                            </button>
-                            <button class="react-btn" onclick="sendReaction(${r}, 2)">
-                                👎 <span id="dislike-val-${r}" class="react-val">0</span>
+                        <div class="like-wrapper">
+                            <button class="btn-like-single" onclick="submitLike(${r})">
+                                👍 <span id="likes-count-${r}">0</span>
                             </button>
                         </div>
                     </div>
@@ -559,6 +567,7 @@
                 historyList.appendChild(card);
 
                 updateRoundSocials(r);
+                updateSocialStats(r);
             }
 
             await fetchWinnersFromContract(start, end);
@@ -569,60 +578,98 @@
         if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
     }
 
-    // --- FUNGSI BARU: SOCIAL INTERACTIONS ---
+    // --- FUNGSI SOCIAL LOGIC (PERBAIKAN) ---
 
-    // 1. Kirim Rating Bintang
-    async function sendRating(roundId, stars) {
-        if(!isConnected) { showToast("Connect Wallet first"); return; }
+    // 1. Fungsi Kirim Rating Bintang (1-5)
+    async function submitRating(roundId, stars) {
+        if(!isConnected) { showToast("Connect Wallet First"); return; }
+        
+        // Cek Register Dulu
         try {
-            const tx = await gameContract.submitRating(roundId, stars);
-            showToast("Submitting Rating...");
+            const u = await gameContract.users(userAddress);
+            if(!u[1]) { // u[1] isRegistered bool
+                showToast("Please Register Profile First"); 
+                document.getElementById('registerModal').style.display='flex'; 
+                return; 
+            }
+
+            // Kirim Transaksi dengan Gas Limit Manual
+            const tx = await gameContract.submitRating(roundId, stars, { gasLimit: 500000 });
+            showToast(`Rating ${stars} Stars...`);
             await tx.wait();
             showToast("Rated Successfully!");
-            updateRoundSocials(roundId); // Refresh tampilan
-        } catch(e) { showToast("Error: " + (e.reason || "Failed")); }
+            
+            // Refresh Data Social
+            updateSocialStats(roundId);
+
+        } catch(e) { 
+            console.error(e);
+            showToast("Failed: " + (e.reason || "Unknown Error")); 
+        }
     }
 
-    // 2. Kirim Reaksi (1=Like, 2=Dislike)
-    async function sendReaction(roundId, type) {
-        if(!isConnected) { showToast("Connect Wallet first"); return; }
+    // 2. Fungsi Kirim Like (Cukup 1 Tombol)
+    async function submitLike(roundId) {
+        if(!isConnected) { showToast("Connect Wallet First"); return; }
+
         try {
-            const tx = await gameContract.setReaction(roundId, type);
-            showToast("Sending Reaction...");
+            const u = await gameContract.users(userAddress);
+            if(!u[1]) { 
+                showToast("Please Register Profile First"); 
+                document.getElementById('registerModal').style.display='flex'; 
+                return; 
+            }
+
+            // Kirim Reaction (1 = Like)
+            const tx = await gameContract.setReaction(roundId, 1, { gasLimit: 500000 });
+            showToast("Sending Like...");
             await tx.wait();
-            showToast("Reacted Successfully!");
-            updateRoundSocials(roundId); // Refresh tampilan
-        } catch(e) { showToast("Error: " + (e.reason || "Failed")); }
+            showToast("Liked!");
+            
+            updateSocialStats(roundId);
+
+        } catch(e) { 
+            console.error(e);
+            showToast("Failed: " + (e.reason || "Already Reacted?")); 
+        }
     }
 
-    // 3. Update Tampilan Social per Ronde (Fetch Data)
-    async function updateRoundSocials(rId) {
+    // 3. Fungsi Update Tampilan (Stars & Like Count)
+    async function updateSocialStats(rid) {
         try {
-            // Ambil data paralel agar cepat
-            const [likes, dislikes, score, count] = await Promise.all([
-                gameContract.likeCounts(rId),
-                gameContract.dislikeCounts(rId),
-                gameContract.totalRatingScore(rId),
-                gameContract.totalRatingCount(rId)
+            // Ambil data terbaru dari kontrak
+            const [score, count, likes] = await Promise.all([
+                gameContract.totalRatingScore(rid),
+                gameContract.totalRatingCount(rid),
+                gameContract.likeCounts(rid)
             ]);
 
-            // Update Text Like/Dislike
-            const elLike = document.getElementById(`like-val-${rId}`);
-            const elDislike = document.getElementById(`dislike-val-${rId}`);
+            // Update Jumlah Like
+            const elLike = document.getElementById(`likes-count-${rid}`);
             if(elLike) elLike.innerText = likes;
-            if(elDislike) elDislike.innerText = dislikes;
 
-            // Update Warna Bintang (Rata-rata)
-            const avg = count > 0n ? Number(score) / Number(count) : 0;
+            // Update Tampilan Bintang (Rata-rata)
+            // Jika belum ada vote, anggap 0
+            let avg = 0;
+            if (count > 0n) {
+                avg = Math.round(Number(score) / Number(count));
+            }
+
+            // Loop update warna bintang 1-5
             for(let i=1; i<=5; i++) {
-                const s = document.getElementById(`star-${rId}-${i}`);
-                if(s) {
-                    // Jika rata-rata >= i, warnai emas
-                    if(i <= Math.round(avg)) s.classList.add('active');
-                    else s.classList.remove('active');
+                const starEl = document.getElementById(`star-${rid}-${i}`);
+                if(starEl) {
+                    // Jika i <= rata-rata, nyalakan class active
+                    if(i <= avg) starEl.classList.add('active');
+                    else starEl.classList.remove('active');
                 }
             }
-        } catch(e) { console.log("Social fetch err", rId); }
+
+            // Update Text Count (Jumlah Voter)
+            const elCount = document.getElementById(`vote-count-${rid}`);
+            if(elCount) elCount.innerText = `(${count})`;
+
+        } catch(e) { console.log("Social update err", rid); }
     }
 
     // --- FUNGSI FINAL: FETCH WINNERS (SOLUSI LOCAL SCOPE) ---
