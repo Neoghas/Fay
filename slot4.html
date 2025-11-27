@@ -325,6 +325,7 @@
     let roundPools = { eth: 0, usdt: 0, shib: 0 };
     let historyCursor = 0; let isInitialLoad = true; let currentMaxRound = 0;
     let globalWinnersCache = {}; let globalHistoryLength = -1;
+    let isProcessingResult = false;
 
     window.onload = async () => {
         document.querySelectorAll('.reel-img').forEach(img => img.src = "what.svg");
@@ -748,15 +749,52 @@
     }
 
     function stopSpinAnimation(i1, i2, i3) {
+        // 1. MATIKAN SEMUA ANIMASI YANG SEDANG BERJALAN (PENTING!)
+        // Ini mencegah animasi sebelumnya menimpa hasil baru
         spinIntervals.forEach(clearInterval);
         spinIntervals = [];
-        const r1 = document.getElementById('imgReel1'); const r2 = document.getElementById('imgReel2'); const r3 = document.getElementById('imgReel3');
-        
-        r1.style.filter = "blur(2px)"; setTimeout(() => { r1.src = IMAGE_LIST[i1]; r1.style.filter = "none"; }, 100);
-        r2.style.filter = "blur(4px)"; let t2 = setInterval(() => { r2.src = IMAGE_LIST[Math.floor(Math.random()*7)]; }, 80);
-        setTimeout(() => { clearInterval(t2); r2.src = IMAGE_LIST[i2]; r2.style.filter = "none"; }, 600);
-        r3.style.filter = "blur(5px)"; let t3 = setInterval(() => { r3.src = IMAGE_LIST[Math.floor(Math.random()*7)]; }, 80);
-        setTimeout(() => { clearInterval(t3); r3.src = IMAGE_LIST[i3]; r3.style.filter = "none"; r3.style.transform = "scale(1.2)"; setTimeout(() => { r3.style.transform = "scale(1)"; }, 200); }, 1400); 
+
+        const r1 = document.getElementById('imgReel1');
+        const r2 = document.getElementById('imgReel2');
+        const r3 = document.getElementById('imgReel3');
+
+        // --- REEL 1 (Langsung Set Gambar Asli) ---
+        r1.style.filter = "blur(2px)";
+        setTimeout(() => {
+            r1.src = IMAGE_LIST[i1]; // Gambar dari KONTRAK
+            r1.style.filter = "none";
+        }, 100);
+
+        // --- REEL 2 (Delay dikit, tapi Interval Disimpan Global) ---
+        r2.style.filter = "blur(4px)";
+        // Putar acak sebentar...
+        let t2 = setInterval(() => { 
+            r2.src = IMAGE_LIST[Math.floor(Math.random() * IMAGE_LIST.length)]; 
+        }, 80);
+        spinIntervals.push(t2); // SIMPAN ID INTERVAL AGAR BISA DIMATIKAN
+
+        setTimeout(() => {
+            clearInterval(t2); // Matikan paksa putaran acak
+            r2.src = IMAGE_LIST[i2]; // Tempel Gambar Asli dari KONTRAK
+            r2.style.filter = "none";
+        }, 600);
+
+        // --- REEL 3 (Delay lama, Interval Disimpan Global) ---
+        r3.style.filter = "blur(5px)";
+        let t3 = setInterval(() => { 
+            r3.src = IMAGE_LIST[Math.floor(Math.random() * IMAGE_LIST.length)]; 
+        }, 80);
+        spinIntervals.push(t3); // SIMPAN ID INTERVAL
+
+        setTimeout(() => {
+            clearInterval(t3); // Matikan paksa putaran acak
+            r3.src = IMAGE_LIST[i3]; // Tempel Gambar Asli dari KONTRAK
+            r3.style.filter = "none";
+            
+            // Efek Pop
+            r3.style.transform = "scale(1.2)";
+            setTimeout(() => { r3.style.transform = "scale(1)"; }, 200);
+        }, 1400);
     }
 
     function forceStopAnimation() {
@@ -783,34 +821,126 @@
         }
     }
 
-    let isProcessingResult = false;
     async function checkRoundResult(roundId) {
+
         if (isProcessingResult) return; 
+
         isProcessingResult = true;
-        setTimeout(() => { isProcessingResult = false; }, 40000);
+
+        
+
+        // Reset flag setelah 10 detik (safety)
+
+        setTimeout(() => { isProcessingResult = false; }, 10000);
+
+
+
+        // Hitung sisa waktu spin
 
         const elapsed = Date.now() - spinStartTime;
+
         const remainingTime = MIN_SPIN_TIME - elapsed;
+
         const delay = remainingTime > 0 ? remainingTime : 0;
 
+
+
+        console.log(`Waiting ${delay}ms to show result for Round ${roundId}...`);
+
+
+
         setTimeout(async () => {
+
             try {
+
+                // 1. AMBIL DATA KONTRAK (Truth Source)
+
                 const result = await gameContract.getRoundResult(roundId);
-                const r1 = Number(result[0][0]); const r2 = Number(result[0][1]); const r3 = Number(result[0][2]);
+
+                
+
+                // Konversi BigInt/Struct ke Angka Biasa
+
+                const r1 = Number(result[0][0]);
+
+                const r2 = Number(result[0][1]);
+
+                const r3 = Number(result[0][2]);
+
+                const outcomeStr = result[1];
+
+
+
+                // 2. LOG UNTUK BUKTI (Cek Console F12)
+
+                console.log("🔥 CONTRACT RESULT:", { 
+
+                    Reels: [r1, r2, r3], 
+
+                    Names: [IMAGE_NAMES[r1], IMAGE_NAMES[r2], IMAGE_NAMES[r3]], 
+
+                    Outcome: outcomeStr 
+
+                });
+
+
+
+                // 3. EKSEKUSI ANIMASI STOP (Kirim Index Pasti)
+
                 stopSpinAnimation(r1, r2, r3);
 
-                const winnersIndices = new Set([r1, r2, r3]);
-                for (let i = 0; i < 6; i++) {
-                    const card = document.getElementById(`card-${i}`);
-                    if (winnersIndices.has(i) && i < 6) card.classList.add('winner-glamour');
-                    else card.classList.remove('winner-glamour');
-                }
-                setTimeout(() => { for (let i = 0; i < 6; i++) document.getElementById(`card-${i}`).classList.remove('winner-glamour'); }, 8000);
                 
-                showToast("Round Finished! Updating...");
+
+                // 4. UPDATE TEXT & GLAMOUR
+
+                showToast(`Result: ${outcomeStr}`);
+
+
+
+                const winnersIndices = new Set([r1, r2, r3]);
+
+                for (let i = 0; i < 6; i++) {
+
+                    const card = document.getElementById(`card-${i}`);
+
+                    if (winnersIndices.has(i) && i < 6) card.classList.add('winner-glamour');
+
+                    else card.classList.remove('winner-glamour');
+
+                }
+
+                
+
+                setTimeout(() => { 
+
+                    for (let i = 0; i < 6; i++) 
+
+                        document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
+
+                }, 8000);
+
+
+
+                // 5. REFRESH DATA (Saldo, History, dll)
+
                 refreshGameData();
-            } catch (e) { console.error("Result Error:", e); forceStopAnimation(); }
+
+
+
+            } catch (e) { 
+
+                console.error("Result Error:", e); 
+
+                forceStopAnimation(); 
+
+            } finally {
+
+                isProcessingResult = false;
+
+            }
+
         }, delay);
+
     }
 
     async function withdraw(curr) {
