@@ -627,7 +627,7 @@
             // 1. Update Data User (Referral & Bonus) jika terkoneksi
             if (isConnected) {
                 const userData = await gameContract.users(userAddress);
-                if (userData[1]) { // Jika sudah register
+                if (userData[1]) { 
                     document.getElementById('referralPanel').style.display = 'block';
                     document.getElementById('displayNick').innerText = userData[0];
                     document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
@@ -659,7 +659,6 @@
             const currR = Number(await gameContract.currentRoundId());
             let bets = [];
             let idx = 0;
-            // Loop untuk mengambil semua bet di ronde ini
             while (true) {
                 try {
                     const bet = await gameContract.roundBets(currR, idx);
@@ -669,30 +668,37 @@
             }
 
             // 3. Inisialisasi Variabel Hitungan
-            let counts = [0, 0, 0, 0, 0, 0]; // Global count per hewan
-            let pools = { eth: 0, usdt: 0, shib: 0 }; // Global pool
-            
-            // --- PENTING: Reset Counter Bet Saya ---
+            let counts = [0, 0, 0, 0, 0, 0]; 
+            let pools = { eth: 0, usdt: 0, shib: 0 }; 
             myBetCounts = [0, 0, 0, 0, 0, 0]; 
+            
+            // --- PERBAIKAN: Array Penampung Statistik E/U/S per Hewan ---
+            let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
 
             // 4. Loop Analisa Bet
             bets.forEach(b => {
-                let decimal = Number(b[2]) === 1 ? 6 : 18;
+                let curr = Number(b[2]); // 0=ETH, 1=USDT, 2=SHIB
+                let animalIdx = Number(b[4]);
+                let decimal = curr === 1 ? 6 : 18;
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
-                // Tambah ke Pool Global
-                if (Number(b[2]) === 0) pools.eth += amt;
-                else if (Number(b[2]) === 1) pools.usdt += amt;
+                // Update Global Pool
+                if (curr === 0) pools.eth += amt;
+                else if (curr === 1) pools.usdt += amt;
                 else pools.shib += amt;
 
-                // Tambah ke Global Count Hewan
-                counts[Number(b[4])]++;
+                // Update Total Count Hewan
+                counts[animalIdx]++;
 
-                // --- LOGIKA MAX 2 BET ---
-                // Jika bet ini milik user yang sedang login, catat!
+                // Update Bet Saya (Untuk Limit Max 2)
                 if (isConnected && b[0].toLowerCase() === userAddress.toLowerCase()) {
-                    myBetCounts[Number(b[4])]++;
+                    myBetCounts[animalIdx]++;
                 }
+
+                // --- PERBAIKAN: Update Counter E/U/S per Kartu ---
+                if (curr === 0) animalCurrCounts[animalIdx].eth++;
+                else if (curr === 1) animalCurrCounts[animalIdx].usdt++;
+                else animalCurrCounts[animalIdx].shib++;
             });
 
             // 5. Update Tampilan Pool & Kartu
@@ -700,13 +706,19 @@
             updatePoolDisplay();
 
             for (let i = 0; i < 6; i++) {
+                // Update Angka Besar (Total Populasi)
                 document.getElementById(`count-${i}`).innerText = counts[i];
+                
+                // Update Styling (Biru jika user bet)
                 let c = document.getElementById(`card-${i}`);
                 c.classList.remove('my-bet', 'open');
-
-                // Styling: Jika user punya bet di sini, beri warna biru
                 if (myBetCounts[i] > 0) c.classList.add('my-bet'); 
                 else c.classList.add('open');
+
+                // --- PERBAIKAN: Update Angka Kecil (E:.. U:.. S:..) ---
+                document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
+                document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
+                document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
             }
 
             // 6. Update Status Tombol Draw
@@ -726,7 +738,7 @@
                 drawStatus.style.color = "var(--danger)";
             }
 
-            // 7. Update History (Tanpa mengganggu UI utama)
+            // 7. Update History
             updateHistorySection(currR);
             
             if (!document.getElementById('tabPersonal').classList.contains('hidden')) {
@@ -737,6 +749,7 @@
             console.error("Refresh Error:", e);
         }
     }
+
 
     function updateHistorySection(roundId) {
         historyCursor = roundId - 1; 
