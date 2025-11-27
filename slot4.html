@@ -516,30 +516,101 @@
 
     async function loadMoreHistory() { const btn=document.getElementById('btnLoadMore'); btn.innerText="Loading..."; btn.disabled=true; await fetchBatchHistory(15); btn.innerText="Load More"; btn.disabled=false; }
 
+    // --- FUNGSI PERSONAL HISTORY (PERBAIKAN: SEQUENTIAL FETCH) ---
     async function updatePersonalHistory() {
         const list = document.getElementById('personalHistoryList');
-        if (!isConnected) { list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Connect Wallet</div>'; return; }
-        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Loading...</div>';
+        
+        if (!isConnected || !userAddress) {
+            list.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">Connect Wallet to view history</div>';
+            return;
+        }
+
+        list.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">Loading data...</div>';
+        
         try {
-            let myWins = [], idx = 0, fetching = true;
-            const p = [];
-            for(let i=0; i<20; i++) p.push(gameContract.userWinHistory(userAddress, i).catch(()=>null));
-            const res = await Promise.all(p);
-            for(let r of res) { if(r) myWins.push(r); else fetching=false; }
-            if(fetching && myWins.length === 20) {
-                 idx = 20;
-                 while(fetching && idx < 50) { try { const log = await gameContract.userWinHistory(userAddress, idx); myWins.push(log); idx++; } catch { fetching=false; } }
+            const myWins = [];
+            let index = 0;
+            let keepFetching = true;
+
+            // Loop satu per satu (Lebih lambat sedikit tapi 100% Aman dari Error RPC)
+            while (keepFetching) {
+                try {
+                    // Panggil data per index
+                    const log = await gameContract.userWinHistory(userAddress, index);
+                    
+                    // Jika berhasil (data ada), simpan
+                    // Konversi data struct ke object biasa agar mudah dibaca
+                    myWins.push({
+                        amount: log[1],
+                        curr: Number(log[2]),
+                        roundId: Number(log[3]),
+                        timestamp: Number(log[4]),
+                        outcome: log[5]
+                    });
+                    
+                    index++;
+                    
+                    // Batas safety agar browser tidak hang jika data terlalu banyak
+                    if (index > 50) keepFetching = false; 
+
+                } catch (e) {
+                    // Jika error di sini, artinya data sudah habis (End of Array)
+                    // Stop loop dengan aman
+                    keepFetching = false;
+                }
             }
-            if(myWins.length===0) { list.innerHTML='<div style="text-align:center; padding:20px; color:#666;">No winnings yet.</div>'; return; }
-            list.innerHTML='';
-            for(let win of myWins.reverse()) {
-                let sym = Number(win[2])===0?"ETH":(Number(win[2])===1?"USDT":"SHIB");
-                let val = parseFloat(ethers.formatUnits(win[1], Number(win[2])===1?6:18));
-                let el = document.createElement('div'); el.className = 'personal-bet-card'; el.style.borderLeftColor = 'var(--gold)';
-                el.innerHTML = `<div class="pb-info"><div class="pb-time">Round #${win[3]}</div><div style="font-weight:bold; color:var(--text);">Result: <span style="color:var(--accent);">${win[5]}</span></div></div><div style="text-align:right;"><span class="badge badge-win" style="color:var(--gold);">🏆 VICTORY</span><div style="margin-top:5px; font-weight:bold; color:${colorHex}; font-size:1.1em;">+ ${val.toLocaleString()} ${sym}</div></div>`;
+
+            // Cek hasil
+            if (myWins.length === 0) {
+                list.innerHTML = `
+                    <div style="text-align:center; padding:20px; color:#666;">
+                        No winning history yet.<br>
+                        <small>(Good luck!)</small>
+                    </div>`;
+                return;
+            }
+
+            // Render Data (Balik urutan agar terbaru di atas)
+            const reversedWins = myWins.reverse();
+            list.innerHTML = ''; 
+
+            for (let win of reversedWins) {
+                let symbol = win.curr === 0 ? "ETH" : (win.curr === 1 ? "USDT" : "SHIB");
+                let decimal = win.curr === 1 ? 6 : 18;
+                let val = parseFloat(ethers.formatUnits(win.amount, decimal));
+                
+                // Format angka
+                let valStr = win.curr === 2 
+                    ? val.toLocaleString() 
+                    : (val < 0.001 ? val.toFixed(6) : val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4}));
+                
+                let colorHex = win.curr === 0 ? "#627EEA" : (win.curr === 1 ? "#26A17B" : "#FFA409");
+
+                const el = document.createElement('div');
+                el.className = 'personal-bet-card';
+                el.style.borderLeftColor = 'var(--gold)'; // Gold strip
+                el.style.background = 'rgba(255, 215, 0, 0.05)'; // Gold tint
+
+                el.innerHTML = `
+                    <div class="pb-info">
+                        <div class="pb-time">Round #${win.roundId} • ${new Date(win.timestamp * 1000).toLocaleString()}</div>
+                        <div style="font-weight:bold; color:var(--text);">Result: <span style="color:var(--accent);">${win.outcome}</span></div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span class="badge badge-win" style="border-color:var(--gold); color:var(--gold);">🏆 VICTORY</span>
+                        <div style="margin-top:5px; font-weight:bold; color:${colorHex}; font-size:1.1em;">
+                            + ${valStr} <span style="font-size:0.7em;">${symbol}</span>
+                        </div>
+                    </div>
+                `;
                 list.appendChild(el);
             }
-        } catch(e) { list.innerHTML='Error'; }
+
+        } catch (e) {
+            console.error("History Logic Error:", e);
+            // Error ini hanya muncul jika koneksi internet putus total
+            list.innerHTML = `<div style="text-align:center; color:var(--danger); padding:10px;">Network Error. Try refreshing.</div>`;
+        }
     }
 
     async function updateReferralCount() {
