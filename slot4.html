@@ -3,18 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faylotto Ultimate - Social Fixed</title>
+    <title>Faylotto Ultimate - Final Fixed</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 <style>
     /* --- CSS UTAMA --- */
     * { box-sizing: border-box; }
-    :root {
-        --primary: #0052ff; --accent: #00d1ff; --bg: #0f111a;
-        --panel: #1e2130; --text: #ffffff; --danger: #ff4b4b; --success: #00d26a;
-        --shib-color: #FFA409; --usdt-color: #26A17B; --eth-color: #627EEA;
-        --gold: #FFD700; --gradient-bg: linear-gradient(135deg, #0f111a, #1e2130);
-    }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--gradient-bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-bottom: 50px; overflow-x: hidden; }
+    :root { --primary: #0052ff; --accent: #00d1ff; --bg: #0f111a; --panel: #1e2130; --text: #ffffff; --danger: #ff4b4b; --success: #00d26a; --gold: #FFD700; --gradient-bg: linear-gradient(135deg, #0f111a, #1e2130); }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--gradient-bg); color: var(--text); margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding-bottom: 80px; overflow-x: hidden; }
     header { width: 100%; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--panel); position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
     .wallet-btn { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9rem; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 82, 255, 0.5); }
     .wallet-btn.connected { background: var(--success); border: 1px solid #fff; cursor: default; }
@@ -101,8 +96,6 @@
     .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; text-transform: uppercase; }
     .badge-win { background: rgba(0, 210, 106, 0.2); color: var(--success); border: 1px solid var(--success); }
     .badge-lose { background: rgba(255, 75, 75, 0.2); color: var(--danger); border: 1px solid var(--danger); }
-
-    /* --- CSS SOCIAL FIX --- */
     .social-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 8px; border-top: 1px solid #333; }
     .star-group { display: flex; align-items: center; gap: 2px; }
     .star-btn { cursor: pointer; font-size: 1.3em; color: #444; transition: 0.2s; line-height: 1; }
@@ -221,6 +214,7 @@
         <button class="btn-disconnect" onclick="disconnectWallet()">DISCONNECT</button>
     </div>
 </div>
+
 <div id="toast">Notification</div>
 
 <script>
@@ -283,14 +277,14 @@
         showToast("Connected"); refreshGameData();
     }
 
-    // --- SOCIAL LOGIC FIX ---
+    // --- SOCIAL LOGIC ---
     async function submitRating(rid, stars) {
         if(!isConnected) { showToast("Connect First"); return; }
         try {
             const u = await gameContract.users(userAddress);
             if(!u[1]) { showToast("Register Profile First"); document.getElementById('registerModal').style.display='flex'; return; }
             
-            const tx = await gameContract.submitRating(rid, stars, {gasLimit: 500000}); // Fix Gas
+            const tx = await gameContract.submitRating(rid, stars, {gasLimit: 500000});
             showToast("Rating..."); await tx.wait(); showToast("Rated!"); updateSocialStats(rid);
         } catch(e){ showToast("Failed: " + (e.reason||"Error")); }
     }
@@ -300,7 +294,7 @@
             const u = await gameContract.users(userAddress);
             if(!u[1]) { showToast("Register Profile First"); document.getElementById('registerModal').style.display='flex'; return; }
 
-            const tx = await gameContract.setReaction(rid, 1, {gasLimit: 500000}); // Fix Gas
+            const tx = await gameContract.setReaction(rid, 1, {gasLimit: 500000});
             showToast("Liking..."); await tx.wait(); showToast("Liked!"); updateSocialStats(rid);
         } catch(e){ showToast("Failed: " + (e.reason||"Error")); }
     }
@@ -312,14 +306,10 @@
                 gameContract.likeCounts(rid)
             ]);
             const avg = count > 0n ? Math.round(Number(score)/Number(count)) : 0;
-            
-            // Update Stars Color
             for(let i=1; i<=5; i++) {
                 const s = document.getElementById(`star-${rid}-${i}`);
                 if(s) { if(i <= avg) s.classList.add('active'); else s.classList.remove('active'); }
             }
-            
-            // Update Counts
             const elCount = document.getElementById(`vote-count-${rid}`);
             if(elCount) elCount.innerText = `(${count})`;
             const elLike = document.getElementById(`likes-count-${rid}`);
@@ -357,11 +347,11 @@
         const roundPromises = [];
         for (let r = start; r >= end; r--) {
             if (document.getElementById(`history-card-${r}`)) continue;
-            roundPromises.push(gameContract.getRoundResult(r).then(res => ({ r, res })));
+            roundPromises.push(gameContract.getRoundResult(r).then(res => ({ r, res })).catch(e => null));
         }
         if (roundPromises.length === 0) { historyCursor = end - 1; return; }
         try {
-            const results = await Promise.all(roundPromises);
+            const results = (await Promise.all(roundPromises)).filter(x => x !== null);
             for (let item of results) {
                 const { r, res } = item;
                 const card = document.createElement('div'); card.className = 'history-card'; card.id = `history-card-${r}`;
@@ -370,7 +360,6 @@
                     <div class="history-reels"><img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[0])]}"><img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[1])]}"><img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[2])]}"></div>
                     <div class="history-outcome" style="margin-top:5px;">${formatOutcomeText(res.outcome, res.reels)}</div>
                     <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;"><span style="font-size:0.7em; color:#555;">Loading...</span></div>
-                    
                     <div class="social-bar">
                         <div class="star-group">
                             <span id="star-${r}-1" class="star-btn" onclick="submitRating(${r},1)">★</span><span id="star-${r}-2" class="star-btn" onclick="submitRating(${r},2)">★</span><span id="star-${r}-3" class="star-btn" onclick="submitRating(${r},3)">★</span><span id="star-${r}-4" class="star-btn" onclick="submitRating(${r},4)">★</span><span id="star-${r}-5" class="star-btn" onclick="submitRating(${r},5)">★</span>
@@ -380,7 +369,7 @@
                     </div>
                 `;
                 historyList.appendChild(card);
-                updateSocialStats(r); // Init Social data
+                updateSocialStats(r);
             }
             await fetchWinnersFromContract(start, end);
         } catch (err) { console.error("History Error:", err); }
@@ -389,7 +378,7 @@
 
     async function fetchWinnersFromContract(maxRound, minRound) {
         try {
-            let currentBatchData = {}; // LOCAL SCOPE (ANTI-DOUBLE)
+            let currentBatchData = {};
             
             if (globalHistoryLength === -1) {
                 let low = 0, high = 1;
@@ -420,7 +409,7 @@
 
             for (let r = maxRound; r >= minRound; r--) {
                 const div = document.getElementById(`winner-info-${r}`); if (!div) continue;
-                div.innerHTML = ''; // CLEAR (ANTI DOUBLE)
+                div.innerHTML = '';
                 
                 const d = currentBatchData[r];
                 if (!d) { div.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>'; continue; }
@@ -458,7 +447,7 @@
                 let sym = Number(win[2])===0?"ETH":(Number(win[2])===1?"USDT":"SHIB");
                 let val = parseFloat(ethers.formatUnits(win[1], Number(win[2])===1?6:18));
                 let el = document.createElement('div'); el.className = 'personal-bet-card'; el.style.borderLeftColor = 'var(--gold)';
-                el.innerHTML = `<div class="pb-info"><div class="pb-time">Round #${win[3]}</div><div style="font-weight:bold; color:var(--text);">Result: <span style="color:var(--accent);">${win[5]}</span></div></div><div style="text-align:right;"><span class="badge badge-win" style="color:var(--gold);">🏆 VICTORY</span><div style="margin-top:5px; font-weight:bold; color:#fff;">+ ${val.toLocaleString()} ${sym}</div></div>`;
+                el.innerHTML = `<div class="pb-info"><div class="pb-time">Round #${win[3]}</div><div style="font-weight:bold; color:var(--text);">Result: <span style="color:var(--accent);">${win[5]}</span></div></div><div style="text-align:right;"><span class="badge badge-win" style="color:var(--gold);">🏆 VICTORY</span><div style="margin-top:5px; font-weight:bold; color:${colorHex}; font-size:1.1em;">+ ${val.toLocaleString()} ${sym}</div></div>`;
                 list.appendChild(el);
             }
         } catch(e) { list.innerHTML='Error'; }
@@ -474,94 +463,259 @@
     }
 
     async function refreshGameData() {
-        if(isConnected) {
-            const u = await gameContract.users(userAddress);
-            if(u[1]) {
-                document.getElementById('referralPanel').style.display='block';
-                document.getElementById('displayNick').innerText=u[0];
-                document.getElementById('displayRefLink').innerText=location.origin+location.pathname+"?ref="+u[0];
-                document.getElementById('pendingBonus').innerText = Number(u[4]) * 10000; 
-                if(Number(u[4])>0) { document.getElementById('claimBonusBtnContainer').innerHTML=`<button class='wallet-btn' onclick='claimReferralBonus()'>Claim ${Number(u[4])*10000} SHIB Bonus</button>`; }
-                updateReferralCount();
+        try {
+            if (isConnected) {
+                const userData = await gameContract.users(userAddress);
+                if (userData[1]) {
+                    document.getElementById('referralPanel').style.display='block';
+                    document.getElementById('displayNick').innerText=userData[0];
+                    document.getElementById('displayRefLink').innerText=location.origin+location.pathname+"?ref="+userData[0];
+                    document.getElementById('pendingBonus').innerText = Number(userData[4]) * 10000; 
+                    if(Number(userData[4])>0) { document.getElementById('claimBonusBtnContainer').innerHTML=`<button class='wallet-btn' onclick='claimReferralBonus()'>Claim ${Number(userData[4])*10000} SHIB Bonus</button>`; }
+                    updateReferralCount();
+                }
+                const bonus = await gameContract.freeShibCredits(userAddress);
+                document.getElementById('userBonusBalance').innerText=Number(ethers.formatEther(bonus)).toLocaleString();
+                document.getElementById('btnFreeBet').disabled = bonus < ethers.parseEther("10000");
+                if(bonus >= ethers.parseEther("10000")) document.getElementById('btnFreeBet').style.background = "var(--success)";
             }
-            const b = await gameContract.freeShibCredits(userAddress);
-            document.getElementById('userBonusBalance').innerText=Number(ethers.formatEther(b)).toLocaleString();
-            document.getElementById('btnFreeBet').disabled = b < ethers.parseEther("10000");
-            if(b >= ethers.parseEther("10000")) document.getElementById('btnFreeBet').style.background = "var(--success)";
-        }
-        const currR = Number(await gameContract.currentRoundId());
-        let bets=[], idx=0; while(true){ try{ bets.push(await gameContract.roundBets(currR, idx)); idx++; }catch{break;}}
-        let counts=[0,0,0,0,0,0], pools={e:0,u:0,s:0}, myBets=[0,0,0,0,0,0];
-        bets.forEach(b => {
-            let amt = parseFloat(ethers.formatUnits(b[1], Number(b[2])===1?6:18));
-            if(Number(b[2])===0) pools.e+=amt; else if(Number(b[2])===1) pools.u+=amt; else pools.s+=amt;
-            counts[Number(b[4])]++; if(b[0].toLowerCase()===userAddress?.toLowerCase()) myBets[Number(b[4])]=1;
-        });
-        document.getElementById('poolTotalETH').innerText=pools.e.toFixed(4);
-        document.getElementById('poolTotalUSDT').innerText=pools.u.toFixed(2);
-        document.getElementById('poolTotalSHIB').innerText=pools.s.toLocaleString();
-        for(let i=0; i<6; i++) {
-            document.getElementById(`count-${i}`).innerText = counts[i];
-            let c = document.getElementById(`card-${i}`);
-            c.classList.remove('my-bet','open');
-            if(myBets[i]) c.classList.add('my-bet'); else c.classList.add('open');
-        }
-        let active = counts.filter(c=>c>0).length;
-        if(active>=5) { document.getElementById('drawBtn').disabled=false; document.getElementById('drawBtn').classList.add('ready'); document.getElementById('drawStatus').innerText="READY!"; }
-        else { document.getElementById('drawBtn').disabled=true; document.getElementById('drawBtn').classList.remove('ready'); document.getElementById('drawStatus').innerText=`Need ${5-active} teams`; }
+            const currR = Number(await gameContract.currentRoundId());
+            let bets=[], idx=0; while(true){ try{ bets.push(await gameContract.roundBets(currR, idx)); idx++; }catch{break;}}
+            let counts=[0,0,0,0,0,0], pools={e:0,u:0,s:0}, myBets=[0,0,0,0,0,0];
+            bets.forEach(b => {
+                let amt = parseFloat(ethers.formatUnits(b[1], Number(b[2])===1?6:18));
+                if(Number(b[2])===0) pools.e+=amt; else if(Number(b[2])===1) pools.u+=amt; else pools.s+=amt;
+                counts[Number(b[4])]++; if(b[0].toLowerCase()===userAddress?.toLowerCase()) myBets[Number(b[4])]=1;
+            });
+            document.getElementById('poolTotalETH').innerText=pools.e.toFixed(4);
+            document.getElementById('poolTotalUSDT').innerText=pools.u.toFixed(2);
+            document.getElementById('poolTotalSHIB').innerText=pools.s.toLocaleString();
+            for(let i=0; i<6; i++) {
+                document.getElementById(`count-${i}`).innerText = counts[i];
+                let c = document.getElementById(`card-${i}`);
+                c.classList.remove('my-bet','open');
+                if(myBets[i]) c.classList.add('my-bet'); else c.classList.add('open');
+            }
+            let active = counts.filter(c=>c>0).length;
+            if(active>=5) { document.getElementById('drawBtn').disabled=false; document.getElementById('drawBtn').classList.add('ready'); document.getElementById('drawStatus').innerText="READY!"; }
+            else { document.getElementById('drawBtn').disabled=true; document.getElementById('drawBtn').classList.remove('ready'); document.getElementById('drawStatus').innerText=`Need ${5-active} teams`; }
 
-        if(isInitialLoad) { document.getElementById('historyList').innerHTML=''; fetchBatchHistory(10); isInitialLoad=false; }
-        else if(document.getElementById('historyList').firstChild) { document.getElementById('historyList').innerHTML=''; fetchBatchHistory(10); }
-        if(!document.getElementById('tabPersonal').classList.contains('hidden')) updatePersonalHistory();
+            updateHistorySection(currR); 
+            if (!document.getElementById('tabPersonal').classList.contains('hidden')) updatePersonalHistory();
+
+        } catch (e) { console.error("Refresh Error:", e); }
     }
 
-    function selectAnimal(n,i) { currentSelectedAnimal={name:n,index:i}; for(let k=0;k<6;k++) document.getElementById(`card-${k}`).classList.remove('selected'); document.getElementById(`card-${i}`).classList.add('selected'); }
-    function triggerBetModal() { if(!isConnected || currentSelectedAnimal.index===-1) return showToast("Connect & Select!"); document.getElementById("modalAnimalName").innerText=currentSelectedAnimal.name.toUpperCase(); document.getElementById('paymentModal').style.display='flex'; }
-    function closeModal(id) { document.getElementById(id).style.display='none'; }
-    function showToast(m) { let x=document.getElementById("toast"); x.innerText=m; x.className="show"; setTimeout(()=>{x.className=x.className.replace("show","")},3000); }
-    
-    async function processPayment(type) {
-        closeModal('paymentModal'); showToast("Processing...");
-        try {
-            let tx, i=currentSelectedAnimal.index;
-            if(type==='ETH') tx = await gameContract.betETH(i, {value:ethers.parseEther("0.0005")});
-            else if(type==='FREE') tx = await gameContract.betToken(i,2,true);
-            else {
-                let t = type==='USDT'? new ethers.Contract(USDT_ADDRESS,ERC20_ABI,signer) : new ethers.Contract(SHIB_ADDRESS,ERC20_ABI,signer);
-                let a = type==='USDT'? ethers.parseUnits("10",6) : ethers.parseUnits("110000",18);
-                if((await t.allowance(userAddress,CONTRACT_ADDRESS)) < a) { showToast("Approving..."); await (await t.approve(CONTRACT_ADDRESS,ethers.MaxUint256)).wait(); }
-                tx = await gameContract.betToken(i, type==='USDT'?1:2, false);
+    function updateHistorySection(roundId) {
+        historyCursor = roundId - 1; 
+        if (isInitialLoad) {
+            document.getElementById('historyList').innerHTML = '';
+            fetchBatchHistory(10);
+            isInitialLoad = false;
+        } else {
+            const first = document.getElementById('historyList').firstElementChild;
+            if(first) {
+                 document.getElementById('historyList').innerHTML = '';
+                 fetchBatchHistory(10);
             }
-            showToast("Sending..."); await tx.wait(); showToast("Bet Placed!"); refreshGameData();
-        } catch(e) { showToast("Error"); console.log(e); }
+        }
+    }
+
+    function updatePoolDisplay() {
+        document.getElementById('poolTotalETH').innerText = roundPools.eth.toFixed(4);
+        document.getElementById('poolTotalUSDT').innerText = roundPools.usdt.toFixed(2);
+        document.getElementById('poolTotalSHIB').innerText = roundPools.shib.toLocaleString();
+    }
+
+    function selectAnimal(name, index) {
+        currentSelectedAnimal = { name, index };
+        for (let i = 0; i < 6; i++) document.getElementById(`card-${i}`).classList.remove('selected');
+        document.getElementById(`card-${index}`).classList.add('selected');
+    }
+
+    async function processPayment(currencyType) {
+        if (currentSelectedAnimal.index === -1) return;
+        const idx = currentSelectedAnimal.index;
+        closeModal('paymentModal');
+        showToast(`Processing ${currencyType}...`);
+        try {
+            let tx;
+            if (currencyType === 'ETH') {
+                const val = ethers.parseEther("0.0005");
+                tx = await gameContract.betETH(idx, { value: val });
+            } else if (currencyType === 'USDT') {
+                const usdt = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, signer);
+                const amount = ethers.parseUnits("10", 6);
+                await checkApprove(usdt, amount);
+                tx = await gameContract.betToken(idx, 1, false);
+            } else if (currencyType === 'SHIB') {
+                const shib = new ethers.Contract(SHIB_ADDRESS, ERC20_ABI, signer);
+                const amount = ethers.parseUnits("110000", 18);
+                await checkApprove(shib, amount);
+                tx = await gameContract.betToken(idx, 2, false);
+            } else if (currencyType === 'FREE') {
+                tx = await gameContract.betToken(idx, 2, true);
+            }
+            showToast("Sending Transaction...");
+            await tx.wait();
+            showToast("Bet Placed Successfully!");
+            refreshGameData();
+        } catch (err) { console.error(err); showToast("Failed: " + (err.reason || err.message.slice(0,20))); }
+    }
+
+    async function checkApprove(tokenContract, amountNeeded) {
+        const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
+        if (allowance < amountNeeded) {
+            showToast("Approving Token...");
+            const tx = await tokenContract.approve(CONTRACT_ADDRESS, ethers.MaxUint256);
+            await tx.wait();
+            showToast("Approved!");
+        }
+    }
+
+    function startSpinAnimation() {
+        spinIntervals.forEach(clearInterval);
+        spinIntervals = [];
+        const reels = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
+        reels.forEach((reel, index) => {
+            let speed = 80 + (index * 10); 
+            const interval = setInterval(() => {
+                const randIdx = Math.floor(Math.random() * IMAGE_LIST.length);
+                reel.src = IMAGE_LIST[randIdx];
+            }, speed);
+            spinIntervals.push(interval);
+        });
+    }
+
+    function stopSpinAnimation(i1, i2, i3) {
+        spinIntervals.forEach(clearInterval);
+        spinIntervals = [];
+        const r1 = document.getElementById('imgReel1'); const r2 = document.getElementById('imgReel2'); const r3 = document.getElementById('imgReel3');
+        
+        r1.style.filter = "blur(2px)"; setTimeout(() => { r1.src = IMAGE_LIST[i1]; r1.style.filter = "none"; }, 100);
+        r2.style.filter = "blur(4px)"; let t2 = setInterval(() => { r2.src = IMAGE_LIST[Math.floor(Math.random()*7)]; }, 80);
+        setTimeout(() => { clearInterval(t2); r2.src = IMAGE_LIST[i2]; r2.style.filter = "none"; }, 600);
+        r3.style.filter = "blur(5px)"; let t3 = setInterval(() => { r3.src = IMAGE_LIST[Math.floor(Math.random()*7)]; }, 80);
+        setTimeout(() => { clearInterval(t3); r3.src = IMAGE_LIST[i3]; r3.style.filter = "none"; r3.style.transform = "scale(1.2)"; setTimeout(() => { r3.style.transform = "scale(1)"; }, 200); }, 1400); 
+    }
+
+    function forceStopAnimation() {
+        spinIntervals.forEach(clearInterval); spinIntervals = [];
+        document.querySelectorAll('.reel-img').forEach(img => { img.style.filter = "none"; img.style.transform = "scale(1)"; img.src = "what.svg"; });
+    }
+
+    async function executeDraw() {
+        try {
+            showToast("Initiating Draw...");
+            const tx = await gameContract.executeDraw();
+            startSpinAnimation();
+            spinStartTime = Date.now(); 
+            showToast("Spinning... (Wait 35s)");
+            const receipt = await tx.wait();
+            
+            // Manual Check Safety
+            const currRound = await gameContract.currentRoundId();
+            const lastRoundId = Number(currRound) - 1;
+            checkRoundResult(lastRoundId);
+        } catch (err) { 
+            console.error(err); forceStopAnimation(); 
+            showToast("Draw Error: " + (err.reason || err.message)); 
+        }
+    }
+
+    let isProcessingResult = false;
+    async function checkRoundResult(roundId) {
+        if (isProcessingResult) return; 
+        isProcessingResult = true;
+        setTimeout(() => { isProcessingResult = false; }, 40000);
+
+        const elapsed = Date.now() - spinStartTime;
+        const remainingTime = MIN_SPIN_TIME - elapsed;
+        const delay = remainingTime > 0 ? remainingTime : 0;
+
+        setTimeout(async () => {
+            try {
+                const result = await gameContract.getRoundResult(roundId);
+                const r1 = Number(result[0][0]); const r2 = Number(result[0][1]); const r3 = Number(result[0][2]);
+                stopSpinAnimation(r1, r2, r3);
+
+                const winnersIndices = new Set([r1, r2, r3]);
+                for (let i = 0; i < 6; i++) {
+                    const card = document.getElementById(`card-${i}`);
+                    if (winnersIndices.has(i) && i < 6) card.classList.add('winner-glamour');
+                    else card.classList.remove('winner-glamour');
+                }
+                setTimeout(() => { for (let i = 0; i < 6; i++) document.getElementById(`card-${i}`).classList.remove('winner-glamour'); }, 8000);
+                
+                showToast("Round Finished! Updating...");
+                refreshGameData();
+            } catch (e) { console.error("Result Error:", e); forceStopAnimation(); }
+        }, delay);
+    }
+
+    async function withdraw(curr) {
+        try {
+            showToast(`Withdrawing ${curr}...`);
+            let cIdx = curr === 'ETH' ? 0 : (curr === 'USDT' ? 1 : 2);
+            const bal = await gameContract.userCredits(userAddress, cIdx);
+            if (bal == 0n) { showToast("No balance to withdraw"); return; }
+            const tx = await gameContract.withdrawCredit(cIdx, bal);
+            await tx.wait();
+            showToast("Withdraw Success!");
+            openWalletDashboard();
+        } catch (err) { showToast("Withdraw Failed: " + (err.reason || err.message)); }
+    }
+
+    function triggerBetModal() {
+        if (!isConnected) { showToast("Connect Wallet First"); return; }
+        if (currentSelectedAnimal.index === -1) { showToast("Select Animal First"); return; }
+        document.getElementById("modalAnimalName").innerText = currentSelectedAnimal.name.toUpperCase();
+        document.getElementById('paymentModal').style.display = 'flex';
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function showToast(msg) {
+        const x = document.getElementById("toast"); x.innerText = msg; x.className = "show";
+        setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
     }
 
     async function openWalletDashboard() {
-        document.getElementById('walletInfoModal').style.display='flex'; document.getElementById('dashAddress').innerText=userAddress;
+        document.getElementById('walletInfoModal').style.display = 'flex';
+        document.getElementById('dashAddress').innerText = userAddress;
         try {
-            document.getElementById('balETH').innerText=parseFloat(ethers.formatEther(await provider.getBalance(userAddress))).toFixed(4);
-            let cr = await gameContract.userCredits(userAddress,0); document.getElementById('credETH').innerText=parseFloat(ethers.formatEther(cr)).toFixed(4);
-        } catch(e){}
+            const balEth = await provider.getBalance(userAddress);
+            document.getElementById('balETH').innerText = parseFloat(ethers.formatEther(balEth)).toFixed(4);
+            const usdt = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, provider);
+            const balUsdt = await usdt.balanceOf(userAddress);
+            document.getElementById('balUSDT').innerText = parseFloat(ethers.formatUnits(balUsdt, 6)).toFixed(2);
+            const shib = new ethers.Contract(SHIB_ADDRESS, ERC20_ABI, provider);
+            const balShib = await shib.balanceOf(userAddress);
+            document.getElementById('balSHIB').innerText = parseFloat(ethers.formatUnits(balShib, 18)).toFixed(2);
+            const credEth = await gameContract.userCredits(userAddress, 0);
+            document.getElementById('credETH').innerText = parseFloat(ethers.formatEther(credEth)).toFixed(4);
+            const credUsdt = await gameContract.userCredits(userAddress, 1);
+            document.getElementById('credUSDT').innerText = parseFloat(ethers.formatUnits(credUsdt, 6)).toFixed(2);
+            const credShib = await gameContract.userCredits(userAddress, 2);
+            document.getElementById('credSHIB').innerText = parseFloat(ethers.formatEther(credShib)).toFixed(2);
+        } catch (e) { console.error("Dashboard Error", e); }
     }
-    async function withdraw(curr) {
-        try { showToast("Withdrawing..."); let c=curr==='ETH'?0:(curr==='USDT'?1:2); await (await gameContract.withdrawCredit(c, await gameContract.userCredits(userAddress,c))).wait(); showToast("Success"); } catch(e){ showToast("Fail");}
-    }
-    function disconnectWallet() { localStorage.removeItem(`auth_${userAddress}`); location.reload(); }
-    function copyRefLink() { navigator.clipboard.writeText(document.getElementById('displayRefLink').innerText); showToast("Copied"); }
-    async function registerUser() { try { await (await gameContract.register(document.getElementById('regNickname').value, detectedReferrer||"")).wait(); closeModal('registerModal'); finalizeLogin(); } catch(e){ showToast("Reg Fail"); } }
-    async function claimReferralBonus() { try { await (await gameContract.claimReferralBonus()).wait(); showToast("Claimed"); refreshGameData(); } catch(e){} }
 
-    function startSpinAnimation() { spinIntervals.forEach(clearInterval); spinIntervals=[]; [1,2,3].forEach((x,i)=> spinIntervals.push(setInterval(()=>document.getElementById(`imgReel${x}`).src=IMAGE_LIST[Math.floor(Math.random()*7)], 80+i*10))); }
-    function stopSpinAnimation(r1,r2,r3) { spinIntervals.forEach(clearInterval); document.getElementById('imgReel1').src=IMAGE_LIST[r1]; setTimeout(()=>document.getElementById('imgReel2').src=IMAGE_LIST[r2],500); setTimeout(()=>document.getElementById('imgReel3').src=IMAGE_LIST[r3],1000); }
-    async function executeDraw() { try { await gameContract.executeDraw(); startSpinAnimation(); spinStartTime=Date.now(); showToast("Spinning..."); checkRoundResult((await gameContract.currentRoundId())-1n); } catch(e){ showToast("Error"); } }
-    let processing=false;
-    async function checkRoundResult(rid) {
-        if(processing) return; processing=true; setTimeout(()=>processing=false,40000);
-        setTimeout(async()=>{
-            try { const r = await gameContract.getRoundResult(rid); stopSpinAnimation(r[0][0],r[0][1],r[0][2]); refreshGameData(); } catch(e){}
-        }, Math.max(0, MIN_SPIN_TIME - (Date.now()-spinStartTime)));
+    function disconnectWallet() { localStorage.removeItem(`auth_${userAddress}`); location.reload(); }
+    function copyRefLink() { navigator.clipboard.writeText(document.getElementById('displayRefLink').innerText); showToast("Link Copied"); }
+    async function registerUser() {
+        const nick = document.getElementById('regNickname').value;
+        try {
+            const tx = await gameContract.register(nick, detectedReferrer || ""); await tx.wait();
+            closeModal('registerModal'); finalizeLogin();
+        } catch (e) { showToast("Reg Failed: " + (e.reason || e.message)); }
     }
-    function setupEventListeners() { gameContract.on("NewBet", refreshGameData); gameContract.on("BattleResult", (a,b,id)=>checkRoundResult(id)); }
+    async function claimReferralBonus() {
+        try { const tx = await gameContract.claimReferralBonus(); await tx.wait(); showToast("Bonus Claimed!"); refreshGameData(); } catch (e) { showToast("Claim Failed"); }
+    }
+    function setupEventListeners() {
+        gameContract.on("NewBet", () => { refreshGameData(); });
+        gameContract.on("BattleResult", (reels, outcome, roundId) => { checkRoundResult(Number(roundId)); });
+    }
 </script>
 </body>
-                                                                                                                                                                                                                                                                                                                                                  </html>
+</html>
