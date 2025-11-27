@@ -514,15 +514,15 @@
         if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
     }
 
-    // --- FUNGSI FINAL: FETCH WINNERS DARI KONTRAK ---
+    // --- FUNGSI FINAL: FETCH WINNERS (SOLUSI LOCAL SCOPE) ---
     async function fetchWinnersFromContract(maxRound, minRound) {
         try {
-            // 1. RESET CACHE (PENTING: Agar tidak terjadi penjumlahan ganda)
-            for (let r = maxRound; r >= minRound; r--) {
-                delete globalWinnersCache[r];
-            }
+            // PENTING: Gunakan Variabel LOKAL untuk perhitungan batch ini.
+            // Jangan gunakan variabel global untuk menampung hitungan sementara.
+            // Ini mengisolasi proses agar tidak bentrok dengan refresh lain.
+            let currentBatchData = {}; 
 
-            // 2. Cari Panjang Array (Binary Search)
+            // 1. Cari Panjang Array (Binary Search - Tetap Sama)
             if (globalHistoryLength === -1) {
                 let low = 0;
                 let high = 1;
@@ -544,7 +544,7 @@
 
             if (globalHistoryLength === 0) return;
 
-            // 3. Fetch Data Paralel
+            // 2. Fetch Data Paralel
             let endScan = globalHistoryLength - 1;
             let startScan = Math.max(0, endScan - 100); 
             
@@ -553,35 +553,37 @@
             
             const winnersData = await Promise.all(promises);
 
-            // 4. Proses Data (Agregasi)
+            // 3. Proses Data ke Variabel LOKAL (currentBatchData)
             for(let d of winnersData) {
                 const rId = Number(d[3]);
                 if (rId <= maxRound && rId >= minRound) {
                     
-                    if (!globalWinnersCache[rId]) {
-                        globalWinnersCache[rId] = { eth: 0n, usdt: 0n, shib: 0n, topAddr: d[0], topAmt: d[1] };
+                    // Inisialisasi di object LOKAL (Selalu mulai dari 0 di setiap run)
+                    if (!currentBatchData[rId]) {
+                        currentBatchData[rId] = { eth: 0n, usdt: 0n, shib: 0n, topAddr: d[0], topAmt: d[1] };
                     }
                     
-                    if(Number(d[2])===0) globalWinnersCache[rId].eth += d[1]; 
-                    else if(Number(d[2])===1) globalWinnersCache[rId].usdt += d[1]; 
-                    else globalWinnersCache[rId].shib += d[1];
+                    // Agregasi
+                    if(Number(d[2])===0) currentBatchData[rId].eth += d[1]; 
+                    else if(Number(d[2])===1) currentBatchData[rId].usdt += d[1]; 
+                    else currentBatchData[rId].shib += d[1];
 
-                    if(d[1] > globalWinnersCache[rId].topAmt) { 
-                        globalWinnersCache[rId].topAmt = d[1]; 
-                        globalWinnersCache[rId].topAddr = d[0]; 
+                    if(d[1] > currentBatchData[rId].topAmt) { 
+                        currentBatchData[rId].topAmt = d[1]; 
+                        currentBatchData[rId].topAddr = d[0]; 
                     }
                 }
             }
 
-            // 5. Render UI
+            // 4. Render UI dari Variabel LOKAL
             for (let r = maxRound; r >= minRound; r--) {
                 const container = document.getElementById(`winner-info-${r}`);
                 if (!container) continue;
 
-                // BERSIHKAN DULU AGAR TIDAK DOUBLE
+                // Bersihkan Container (Wajib)
                 container.innerHTML = ''; 
 
-                const data = globalWinnersCache[r];
+                const data = currentBatchData[r]; // Ambil dari lokal
                 if (!data) {
                     container.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>';
                     continue;
@@ -616,7 +618,7 @@
 
         } catch (e) { console.error("Fetch Contract Error:", e); }
     }
-
+    
     async function loadMoreHistory() {
         const btn = document.getElementById('btnLoadMore');
         btn.innerText = "Loading...";
