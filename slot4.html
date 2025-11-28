@@ -736,39 +736,64 @@ function setupEventListeners(){
 /* fetchBatchHistory / fetchWinnersFromContract kept similar to yours but with safe guards */
 async function fetchBatchHistory(count){
   const historyList = document.getElementById('historyList');
-  // get current round id
+
   try {
     const curr = Number(await gameContract.currentRoundId());
     if (historyCursor === 0) historyCursor = curr - 1;
-    if (historyCursor < 1) { document.getElementById('btnLoadMore').style.display = 'none'; return; }
+    if (historyCursor < 1) { 
+      document.getElementById('btnLoadMore').style.display = 'none'; 
+      return; 
+    }
+
     const start = historyCursor;
     const end = Math.max(1, historyCursor - count + 1);
     const promises = [];
+
     for (let r = start; r >= end; r--) {
       if (document.getElementById(`history-card-${r}`)) continue;
-      promises.push(gameContract.getRoundResult(r).then(res => ({r,res})).catch(()=>null));
+      promises.push(
+        gameContract.getRoundResult(r)
+          .then(res => ({ r, res }))
+          .catch(()=>null)
+      );
     }
-    const results = (await Promise.all(promises)).filter(x=>x!==null);
-    for (const item of results) {
+
+    // FIXED: renamed results → roundResults
+    const roundResults = (await Promise.all(promises)).filter(x=>x!==null);
+
+    for (const item of roundResults) {
       const { r, res } = item;
-      const card = document.createElement('div'); card.className='history-card'; card.id = `history-card-${r}`;
+      const card = document.createElement('div'); 
+      card.className='history-card'; 
+      card.id = `history-card-${r}`;
+
       card.innerHTML = `
-        <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">Round #${r} • ${new Date(Number(res.timestamp)*1000).toLocaleTimeString()}</div>
+        <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">
+          Round #${r} • ${new Date(Number(res.timestamp)*1000).toLocaleTimeString()}
+        </div>
         <div class="history-reels">
           <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[0])]}">
           <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[1])]}">
           <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[2])]}">
         </div>
-        <div class="history-outcome" style="margin-top:5px;">${formatOutcomeText(res.outcome, res.reels)}</div>
-        <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;"><span style="font-size:0.7em; color:#555;">Loading...</span></div>
+        <div class="history-outcome" style="margin-top:5px;">
+          ${formatOutcomeText(res.outcome, res.reels)}
+        </div>
+        <div id="winner-info-${r}" 
+             style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;">
+          <span style="font-size:0.7em; color:#555;">Loading...</span>
+        </div>
         <div class="social-bar"> ... </div>
       `;
+
       historyList.appendChild(card);
     }
-    // fetch winners details for those rounds (last 100 global wins scan) — heavy, consider contract helper
+
     await fetchWinnersFromContract(start, end);
+
     historyCursor = end - 1;
     if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
+
   } catch (e) {
     console.error("fetchBatchHistory", e);
   }
