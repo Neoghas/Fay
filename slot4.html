@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -236,15 +236,46 @@
         <p style="margin-top:15px; color:#aaa; font-size:0.7em;">*Min 5 teams required to Draw</p>
 
         <div id="referralPanel" class="referral-panel">
-            <div class="ref-label">Player Profile</div>
-            <div style="font-size:1.2em; font-weight:bold; color:white; margin-bottom:10px;" id="displayNick">...</div>
-            <div class="ref-stats-grid"><div class="ref-stat-item"><span class="rs-val" id="totalInvited">0</span><span class="rs-lbl">Total Invited</span></div><div class="ref-stat-item"><span class="rs-val" style="color:var(--gold);" id="pendingBonus">0</span><span class="rs-lbl">Pending Bonus</span></div></div>
-            <div id="claimBonusBtnContainer"></div>
-            <div class="ref-label">Referral Link</div>
-            <div class="ref-box"><span id="displayRefLink" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">...</span><button class="btn-copy" onclick="copyRefLink()">Copy</button></div>
-            <div class="comm-info">*0.25% Commission from winnings is automatically added to your Game Credit.</div>
-        </div>
+    
+    <div id="view-register" style="display:none;">
+        <div class="ref-label" style="color:var(--gold);">NEW PLAYER REGISTRATION</div>
+        <p style="font-size:0.8em; color:#aaa; margin:5px 0 15px 0;">Create a nickname to start betting & earning.</p>
+        
+        <input type="text" id="panelRegNick" placeholder="Enter Nickname (Min 3 Chars)" 
+               style="width:100%; padding:12px; margin-bottom:10px; background:#111; border:1px solid #444; color:white; border-radius:8px; text-align:center;">
+        
+        <div id="panelRefInfo" style="font-size:0.75em; color:var(--success); margin-bottom:10px; font-style:italic;"></div>
+        
+        <button class="wallet-btn" style="width:100%; background:var(--primary);" onclick="registerUser()">CREATE ACCOUNT</button>
+    </div>
 
+    <div id="view-profile" style="display:none;">
+        <div class="ref-label">Player Profile</div>
+        <div style="font-size:1.2em; font-weight:bold; color:white; margin-bottom:10px;" id="displayNick">...</div>
+        
+        <div class="ref-stats-grid">
+            <div class="ref-stat-item">
+                <span class="rs-val" id="totalInvited">0</span>
+                <span class="rs-lbl">Total Invited</span>
+            </div>
+            <div class="ref-stat-item">
+                <span class="rs-val" style="color:var(--gold);" id="pendingBonus">0</span>
+                <span class="rs-lbl">Pending Bonus</span>
+            </div>
+        </div>
+        
+        <div id="claimBonusBtnContainer"></div>
+        
+        <div class="ref-label">Referral Link</div>
+        <div class="ref-box">
+            <span id="displayRefLink" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">...</span>
+            <button class="btn-copy" onclick="copyRefLink()">Copy</button>
+        </div>
+        <div class="comm-info">*0.25% Commission from winnings is automatically added to your Game Credit.</div>
+    </div>
+
+        </div>
+        
         <div class="history-section">
             <div class="history-tabs">
                 <button class="tab-btn active" onclick="switchTab('global')">Global Results</button>
@@ -274,15 +305,6 @@
             <div style="font-size:0.8em; color:#aaa;">Free Credit Balance: <span id="userBonusBalance" style="color:white;">0</span> SHIB</div>
             <button id="btnFreeBet" class="wallet-btn" style="width:100%; margin-top:5px; background:#333;" disabled onclick="processPayment('FREE')">Use Free Credit (10k)</button>
         </div>
-    </div>
-</div>
-
-<div id="registerModal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-title">REGISTER PROFILE</div>
-        <input type="text" id="regNickname" class="input-field" placeholder="Enter Nickname (Min 3 Chars)" style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:none;">
-        <div id="refInfoDisplay" style="font-size:0.8em; color:var(--success); margin-bottom:10px;"></div>
-        <button class="wallet-btn" style="width:100%;" onclick="registerUser()">REGISTER NOW</button>
     </div>
 </div>
 
@@ -373,8 +395,13 @@
         if(!isConnected) { showToast("Connect First"); return; }
         try {
             const u = await gameContract.users(userAddress);
-            if(!u[1]) { showToast("Register Profile First"); document.getElementById('registerModal').style.display='flex'; return; }
-            
+            // Contoh untuk submitRating (terapkan logika sama ke submitLike & triggerBetModal)
+if(!u[1]) { 
+    showToast("Please Register in Referral Panel below!"); 
+    // Scroll otomatis ke panel referral
+    document.getElementById('referralPanel').scrollIntoView({behavior: "smooth"});
+    return; 
+}
             const tx = await gameContract.submitRating(rid, stars, {gasLimit: 500000});
             showToast("Rating..."); await tx.wait(); showToast("Rated!"); updateSocialStats(rid);
         } catch(e){ showToast("Failed: " + (e.reason||"Error")); }
@@ -383,8 +410,13 @@
         if(!isConnected) { showToast("Connect First"); return; }
         try {
             const u = await gameContract.users(userAddress);
-            if(!u[1]) { showToast("Register Profile First"); document.getElementById('registerModal').style.display='flex'; return; }
-
+            // Contoh untuk submitRating (terapkan logika sama ke submitLike & triggerBetModal)
+if(!u[1]) { 
+    showToast("Please Register in Referral Panel below!"); 
+    // Scroll otomatis ke panel referral
+    document.getElementById('referralPanel').scrollIntoView({behavior: "smooth"});
+    return; 
+}
             const tx = await gameContract.setReaction(rid, 1, {gasLimit: 500000});
             showToast("Liking..."); await tx.wait(); showToast("Liked!"); updateSocialStats(rid);
         } catch(e){ showToast("Failed: " + (e.reason||"Error")); }
@@ -627,35 +659,55 @@
     async function refreshGameData() {
         try {
             // 1. Update Data User (Referral & Bonus) jika terkoneksi
-            if (isConnected) {
-                const userData = await gameContract.users(userAddress);
-                if (userData[1]) { 
-                    document.getElementById('referralPanel').style.display = 'block';
-                    document.getElementById('displayNick').innerText = userData[0];
-                    document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
-                    
-                    const pending = Number(userData[4]);
-                    document.getElementById('pendingBonus').innerText = pending * 10000;
-                    
-                    const claimContainer = document.getElementById('claimBonusBtnContainer');
-                    if (pending > 0) {
-                        claimContainer.innerHTML = `<button class="wallet-btn" style="width:100%; margin-bottom:10px; background:var(--gold); color:black;" onclick="claimReferralBonus()">Claim ${pending * 10000} SHIB Bonus</button>`;
-                    } else {
-                        claimContainer.innerHTML = '';
-                    }
-                    updateReferralCount();
-                }
-                
-                const bonus = await gameContract.freeShibCredits(userAddress);
-                document.getElementById('userBonusBalance').innerText = Number(ethers.formatEther(bonus)).toLocaleString();
-                
-                const btnFree = document.getElementById('btnFreeBet');
-                if (btnFree) {
-                    btnFree.disabled = bonus < ethers.parseEther("10000");
-                    if (bonus >= ethers.parseEther("10000")) btnFree.style.background = "var(--success)";
-                    else btnFree.style.background = "#333";
-                }
-            }
+            // GANTI BAGIAN LOGIC USER DATA DI DALAM refreshGameData()
+if (isConnected) {
+    // Selalu tampilkan panel jika wallet connect
+    document.getElementById('referralPanel').style.display = 'block'; 
+
+    const userData = await gameContract.users(userAddress);
+    const isReg = userData[1]; // boolean isRegistered
+
+    if (isReg) {
+        // JIKA SUDAH DAFTAR: Tampilkan View Profile, Sembunyikan View Register
+        document.getElementById('view-profile').style.display = 'block';
+        document.getElementById('view-register').style.display = 'none';
+
+        // Update UI Profil (Logika Lama)
+        document.getElementById('displayNick').innerText = userData[0];
+        document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
+        
+        const pending = Number(userData[4]);
+        document.getElementById('pendingBonus').innerText = pending * 10000;
+        
+        const claimContainer = document.getElementById('claimBonusBtnContainer');
+        if (pending > 0) {
+            claimContainer.innerHTML = `<button class="wallet-btn" style="width:100%; margin-bottom:10px; background:var(--gold); color:black;" onclick="claimReferralBonus()">Claim ${pending * 10000} SHIB Bonus</button>`;
+        } else {
+            claimContainer.innerHTML = '';
+        }
+        updateReferralCount();
+    } else {
+        // JIKA BELUM DAFTAR: Tampilkan View Register, Sembunyikan View Profile
+        document.getElementById('view-profile').style.display = 'none';
+        document.getElementById('view-register').style.display = 'block';
+        
+        // Tampilkan info referrer jika ada link
+        if(detectedReferrer) {
+            document.getElementById('panelRefInfo').innerText = "Invited by: " + detectedReferrer;
+        }
+    }
+    
+    // Update Bonus Balance (Sama seperti sebelumnya)
+    const bonus = await gameContract.freeShibCredits(userAddress);
+    document.getElementById('userBonusBalance').innerText = Number(ethers.formatEther(bonus)).toLocaleString();
+    
+    const btnFree = document.getElementById('btnFreeBet');
+    if (btnFree) {
+        btnFree.disabled = bonus < ethers.parseEther("10000");
+        if (bonus >= ethers.parseEther("10000")) btnFree.style.background = "var(--success)";
+        else btnFree.style.background = "#333";
+    }
+}
 
             // 2. Fetch Data Ronde Saat Ini
             const currR = Number(await gameContract.currentRoundId());
@@ -1042,17 +1094,24 @@
         } catch (err) { showToast("Withdraw Failed: " + (err.reason || err.message)); }
     }
 
-    function triggerBetModal() {
+    async function triggerBetModal() {
         if (!isConnected) { showToast("Connect Wallet First"); return; }
+        
+        // Cek Registrasi Dulu
+        try {
+            const u = await gameContract.users(userAddress);
+            if(!u[1]) { 
+                showToast("Please Register in Referral Panel below!"); 
+                document.getElementById('referralPanel').scrollIntoView({behavior: "smooth"});
+                return; 
+            }
+        } catch(e) { console.log(e); }
+
         if (currentSelectedAnimal.index === -1) { showToast("Select Animal First"); return; }
         
-        // --- LOGIC BARU: MAX 2 BETS PER HEWAN ---
-        if (myBetCounts[currentSelectedAnimal.index] >= 2) {
-            showToast("Max 2 Bets Limit Reached!");
-            return;
-        }
-        // ----------------------------------------
-
+        // --- BAGIAN LIMIT MAX 2 SUDAH DIHAPUS ---
+        // Sekarang user bisa bet sebanyak apapun
+        
         document.getElementById("modalAnimalName").innerText = currentSelectedAnimal.name.toUpperCase();
         document.getElementById('paymentModal').style.display = 'flex';
     }
@@ -1095,6 +1154,29 @@
     }
     async function claimReferralBonus() {
         try { const tx = await gameContract.claimReferralBonus(); await tx.wait(); showToast("Bonus Claimed!"); refreshGameData(); } catch (e) { showToast("Claim Failed"); }
+    }
+
+    async function registerUser() {
+    // Ambil value dari input baru di panel
+    const nick = document.getElementById('panelRegNick').value;
+    
+    if (!nick || nick.length < 3) {
+        showToast("Nickname min 3 chars!");
+        return;
+    }
+
+    try {
+        showToast("Registering...");
+        // Panggil kontrak
+        const tx = await gameContract.register(nick, detectedReferrer || ""); 
+        await tx.wait();
+        
+        showToast("Registration Success!");
+        finalizeLogin(); // Refresh data halaman
+    } catch (e) { 
+        console.error(e);
+        showToast("Reg Failed: " + (e.reason || e.message.slice(0,20))); 
+    }
     }
     
     function setupEventListeners() {
