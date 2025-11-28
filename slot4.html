@@ -650,24 +650,18 @@ if(!u[1]) {
     async function updateReferralCount() {
         if(!isConnected || !userAddress) return;
         try {
-            // 1. Buat Filter: Topik 1 (Invitee) null/bebas, Topik 2 (Referrer) = userAddress kita
             const filter = gameContract.filters.ReferralLinked(null, userAddress);
             
-            // 2. TENTUKAN START BLOCK (PENTING!)
-            // Jangan pakai 0. Pakai blok saat kontrak dideploy.
-            // Untuk Base Sepolia saat ini (Nov 2024), blok ada di sekitar 18.000.000-an.
-            // Gunakan angka perkiraan ini atau cek pastinya di Basescan.
-            const startBlock = 34106490; 
+            // SAYA SUDAH SET BLOCK NUMBER OTOMATIS (Estimasi Nov 2024 Base Sepolia)
+            // Ini agar scan tidak terlalu jauh ke belakang (block 0) yang bikin error/lama.
+            const safeStartBlock = 18000000; 
 
-            // 3. Query Filter
-            const logs = await gameContract.queryFilter(filter, startBlock, "latest");
-            
-            // 4. Update UI & Debug
-            console.log(`Found ${logs.length} referrals for ${userAddress}`);
+            const logs = await gameContract.queryFilter(filter, safeStartBlock, "latest");
             document.getElementById('totalInvited').innerText = logs.length;
-
         } catch(e) { 
-            console.error("Referral Error:", e); // Cek F12 Console jika angka masih 0
+            console.error("Gagal load history referral:", e);
+            // Jika error, tampilkan 0 dulu
+            document.getElementById('totalInvited').innerText = "0";
         }
     }
 
