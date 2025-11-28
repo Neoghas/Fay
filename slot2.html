@@ -488,18 +488,21 @@
     }
 
     function formatOutcomeText(raw, reels) {
-        const r0=Number(reels[0]), r1=Number(reels[1]), r2=Number(reels[2]);
+        const r0 = Number(reels[0]);
+        const r1 = Number(reels[1]);
+        const r2 = Number(reels[2]);
         const gN = (i) => i===6 ? "Zonk" : (IMAGE_NAMES[i] ? IMAGE_NAMES[i].charAt(0).toUpperCase()+IMAGE_NAMES[i].slice(1) : "?");
+
         if(raw==="TRIPLE") return `<span style="color:var(--gold); font-weight:bold;">${gN(r0)} (TRIPLE)</span>`;
         if(raw==="DOUBLE") {
-            let d = r0===r1?gN(r0): (r1===r2?gN(r1):gN(r0)); let s = r0===r1?gN(r2): (r1===r2?gN(r0):gN(r1));
+            let d = r0===r1?gN(r0): (r1===r2?gN(r1):gN(r0)); 
+            let s = r0===r1?gN(r2): (r1===r2?gN(r0):gN(r1));
             return `<span style="color:var(--accent);">${d} (Double)</span> - ${s}`;
         }
         if(raw==="ONE_ZONK") return `${gN(r0)} - <span style="color:var(--danger)">Zonk</span> - ${gN(r2)}`;
         return `${gN(r0)} - ${gN(r1)} - ${gN(r2)}`;
     }
 
-    // --- FIX: FETCH BATCH HISTORY (ANTI BLANK) ---
     async function fetchBatchHistory(count) {
         const historyList = document.getElementById('historyList');
         
@@ -513,75 +516,71 @@
         const start = historyCursor;
         const end = Math.max(1, historyCursor - count + 1);
         
-        // 1. Buat Array Promise (Parallel Fetch)
-        // PENTING: Tambahkan .catch(() => null) agar jika satu gagal, yg lain tetap jalan
+        // 1. Fetch Data Reel (Parallel & Aman)
         const roundPromises = [];
         for (let r = start; r >= end; r--) {
-            // Skip jika kartu sudah ada (cegah duplikat)
             if (document.getElementById(`history-card-${r}`)) continue;
-            
+            // Gunakan .catch agar satu error tidak mematikan semua
             roundPromises.push(
                 gameContract.getRoundResult(r)
                     .then(res => ({ r, res }))
-                    .catch(err => null) // Silent fail per item
+                    .catch(e => null) 
             );
         }
 
-        // Jika tidak ada ronde baru untuk dimuat
         if (roundPromises.length === 0) {
             historyCursor = end - 1;
             return;
         }
 
         try {
-            // 2. Tunggu Semua Data
-            const rawResults = await Promise.all(roundPromises);
-            
-            // Filter data yang null (error)
-            const results = rawResults.filter(item => item !== null);
+            // 2. Tunggu data
+            const results = (await Promise.all(roundPromises)).filter(x => x !== null);
 
             // 3. Render Kartu
             for (let item of results) {
                 const { r, res } = item;
-                
                 const card = document.createElement('div'); 
                 card.className = 'history-card'; 
                 card.id = `history-card-${r}`;
                 
-                card.innerHTML = `                    
+                card.innerHTML = `
                     <div style="font-size:0.8em; color:#aaa; margin-bottom:5px;">
                         Round #${r} • ${new Date(Number(res.timestamp) * 1000).toLocaleTimeString()}
                     </div>
+                    
                     <div class="history-reels">
                         <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[0])]}">
                         <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[1])]}">
                         <img class="history-reel-img" src="${IMAGE_LIST[Number(res.reels[2])]}">
                     </div>
-                    <div class="history-outcome" style="margin-top:5px;">
-                        ${formatOutcomeText(res.outcome, res.reels)}
-                    </div>
+                    <div class="history-outcome" style="margin-top:5px;">${formatOutcomeText(res.outcome, res.reels)}</div>
                     
                     <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;">
-                        <span style="font-size:0.7em; color:#555;">Loading data...</span>
+                        <span style="font-size:0.7em; color:#555;">Loading winner...</span>
                     </div>
 
                     <div class="card-footer">
+                        <div style="display:flex; justify-content:space-between; font-size:0.7em; color:#666; margin-bottom:5px; padding:0 2px;">
+                            <span id="stats-likes-${r}">0 Likes</span>
+                            <span id="stats-comments-${r}">0 Comments</span>
+                        </div>
+
                         <div class="action-bar">
                             <button class="action-btn" onclick="toggleLike(${r})">
-                                👍 <span id="stats-likes-${r}">0 Like</span>
+                                👍 Like
                             </button>
-
                             <button class="action-btn" onclick="toggleCommentSection(${r})">
-                                💬 <span id="stats-comments-${r}">0 Comments</span>
+                                💬 Comment
                             </button>
-
+                            
                             <div class="mini-stars" id="stars-box-${r}" style="display:flex; align-items:center;" onmouseout="resetStar(${r})">
                                 <span id="mini-star-${r}-1" class="mini-star" onclick="submitRating(${r},1)" onmouseover="hoverStar(${r},1)">★</span>
                                 <span id="mini-star-${r}-2" class="mini-star" onclick="submitRating(${r},2)" onmouseover="hoverStar(${r},2)">★</span>
                                 <span id="mini-star-${r}-3" class="mini-star" onclick="submitRating(${r},3)" onmouseover="hoverStar(${r},3)">★</span>
                                 <span id="mini-star-${r}-4" class="mini-star" onclick="submitRating(${r},4)" onmouseover="hoverStar(${r},4)">★</span>
                                 <span id="mini-star-${r}-5" class="mini-star" onclick="submitRating(${r},5)" onmouseover="hoverStar(${r},5)">★</span>
-                                <span id="stars-count-${r}" style="font-size:0.75em; color:#888; margin-left:4px; font-weight:normal;">(0)</span>
+                                <span id="stars-count-${r}" style="font-size:0.75em; color:#888; margin-left:4px;">(0)</span>
                             </div>
                         </div>
 
@@ -599,25 +598,22 @@
 
                 historyList.appendChild(card);
                 
-                // Update Statistik Kecil (Like/Rate) secara Async
-                updateSocialStatsLite(r); 
+                // Load Stats Like/Comment
+                updateSocialStatsLite(r);
             }
 
-            // 4. Panggil Data Pemenang (Setelah Kartu Muncul)
+            // 4. Panggil Data Pemenang (Sequential Anti-Stuck)
             await fetchWinnersFromContract(start, end);
 
-        } catch (err) { 
-            console.error("History Error:", err); 
-        }
-
-        // Update Cursor untuk load more selanjutnya
+        } catch (err) { console.error("History Error:", err); }
+        
         historyCursor = end - 1; 
         if (historyCursor < 1) {
             const btnLoad = document.getElementById('btnLoadMore');
             if(btnLoad) btnLoad.style.display = 'none';
         }
     }
-
+    
     // --- LOGIKA HOVER BINTANG (MINI STAR) ---
     function hoverStar(roundId, starIdx) {
         for(let i=1; i<=5; i++) {
@@ -748,8 +744,21 @@
         }
     }
 
-    async function loadMoreHistory() { const btn=document.getElementById('btnLoadMore'); btn.innerText="Loading..."; btn.disabled=true; await fetchBatchHistory(15); btn.innerText="Load More"; btn.disabled=false; }
-
+    async function loadMoreHistory() { 
+        const btn = document.getElementById('btnLoadMore'); 
+        if(btn) {
+            btn.innerText = "Loading..."; 
+            btn.disabled = true; 
+        }
+        
+        await fetchBatchHistory(15); 
+        
+        if(btn) {
+            btn.innerText = "Load Previous Rounds (15)"; 
+            btn.disabled = false; 
+        }
+    }
+    
     // --- FUNGSI MY WINNINGS (FIX: GROUPING DATA AGAR TIDAK DOUBLE) ---
     async function updatePersonalHistory() {
         const list = document.getElementById('personalHistoryList');
@@ -1049,20 +1058,25 @@
     }
 
     function updateHistorySection(roundId) {
+        // Set cursor ke ronde terakhir yang selesai (roundId - 1)
         historyCursor = roundId - 1; 
-        if (isInitialLoad) {
-            document.getElementById('historyList').innerHTML = '';
+        
+        // Jika baru pertama load atau list kosong, paksa render
+        const list = document.getElementById('historyList');
+        if (isInitialLoad || list.innerHTML.trim() === "") {
+            list.innerHTML = '';
             fetchBatchHistory(10);
             isInitialLoad = false;
         } else {
-            const first = document.getElementById('historyList').firstElementChild;
-            if(first) {
-                 document.getElementById('historyList').innerHTML = '';
+            // Cek apakah ada ronde baru (top card beda dengan cursor)
+            const first = list.firstElementChild;
+            if (first && first.id !== `history-card-${historyCursor}`) {
+                 list.innerHTML = ''; // Bersihkan dan muat ulang yang baru
                  fetchBatchHistory(10);
             }
         }
     }
-
+    
     function updatePoolDisplay() {
         document.getElementById('poolTotalETH').innerText = roundPools.eth.toFixed(4);
         document.getElementById('poolTotalUSDT').innerText = roundPools.usdt.toFixed(2);
