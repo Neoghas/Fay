@@ -254,10 +254,13 @@
         padding: 10px; 
         border-radius: 15px; 
         font-size: 0.9em;
-        font-family: inherit; /* Supaya font sama dengan body */
-        resize: none; 
-        height: 50px; 
-        overflow: hidden;
+        font-family: inherit;
+        
+        /* PERUBAHAN DI SINI: */
+        resize: vertical; /* Izinkan user menarik ke bawah */
+        min-height: 50px; /* Tinggi minimal */
+        max-height: 200px; /* Tinggi maksimal agar tidak merusak layout */
+        overflow: auto;
     }
     .input-comment:focus { border-color: var(--primary); outline: none; }
     
@@ -1350,19 +1353,25 @@ if (isConnected) {
             for (let i = 0; i < count; i++) {
                 const c = await gameContract.roundComments(roundId, i);
                 const cId = c[0];
-                const author = c[1];
-                const text = c[2]; // Ini string dari kontrak (bisa mengandung \n)
+                const author = c[1]; // Ini masih Alamat Wallet (0x...)
+                const text = c[2];
                 const time = Number(c[3]);
                 const isEdited = c[4];
 
                 const isMyComment = (userAddress && author.toLowerCase() === userAddress.toLowerCase());
                 const dateStr = new Date(time * 1000).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'});
                 
+                // ID Unik untuk elemen nama (agar bisa di-update nanti)
+                const nameElementId = `author-name-${roundId}-${cId}`;
+
                 const item = document.createElement('div');
                 item.className = 'comment-item';
                 item.innerHTML = `
                     <div class="comment-bubble" id="bubble-${roundId}-${cId}">
-                        <div class="comment-author">${author.substring(0,6)}...</div>
+                        <div class="comment-author" id="${nameElementId}" style="color:var(--accent);">
+                            ${author.substring(0,6)}...
+                        </div>
+                        
                         <div class="comment-text" id="text-${roundId}-${cId}"></div> 
                         <div class="comment-meta">
                             <span>${dateStr}</span>
@@ -1372,10 +1381,21 @@ if (isConnected) {
                     </div>
                 `;
                 
-                // PENTING: Set text pakai innerText agar aman dari XSS dan karakter aneh
+                // Set text aman
                 item.querySelector(`#text-${roundId}-${cId}`).innerText = text;
-                
                 listDiv.appendChild(item);
+
+                // --- LOGIC FETCH NICKNAME (BACKGROUND) ---
+                // Kita panggil ini tanpa 'await' agar loading komentar tidak macet
+                gameContract.users(author).then(u => {
+                    const nick = u[0]; // Index 0 adalah nickname string
+                    const el = document.getElementById(nameElementId);
+                    if (el && nick) {
+                        el.innerText = nick; // Update Wallet jadi Nickname
+                    }
+                }).catch(() => {
+                    // Jika error/gagal load nick, biarkan tetap wallet address
+                });
             }
         } catch (e) {
             console.error(e);
