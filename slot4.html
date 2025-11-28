@@ -259,10 +259,33 @@
     .comment-bubble {
         background: #2a2e3d;
         padding: 10px 12px;
+        /* Tambahkan padding kanan agar teks tidak menabrak icon pensil */
+        padding-right: 30px; 
         border-radius: 12px;
         flex: 1;
-        position: relative;
-        min-width: 0; /* Mencegah overflow */
+        position: relative; /* Wajib relative agar icon bisa dipojokkan */
+        min-width: 0;
+    }
+
+    /* --- GAYA ICON PENSIL --- */
+    .btn-edit-icon {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        padding: 2px;
+        transition: 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .btn-edit-icon:hover {
+        color: var(--accent);
+        transform: scale(1.1);
     }
     
     .comment-author { font-weight: bold; color: var(--accent); font-size: 0.9em; cursor: pointer; }
@@ -1458,21 +1481,58 @@ if (isConnected) {
                 // ID Unik untuk elemen nama (agar bisa di-update nanti)
                 const nameElementId = `author-name-${roundId}-${cId}`;
 
-                const item = document.createElement('div');
-                item.className = 'comment-item';
+                const editIconHtml = `
+
+                    <button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${cId})" title="Edit Comment">
+
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+
+                        </svg>
+
+                    </button>
+
+                `;
+
+
+
+                // Update HTML Bubble
+
                 item.innerHTML = `
+
                     <div class="comment-bubble" id="bubble-${roundId}-${cId}">
+
+                        
+
+                        ${isMyComment ? editIconHtml : ''}
+
+
+
                         <div class="comment-author" id="${nameElementId}" style="color:var(--accent);">
+
                             Loading...
+
                         </div>
+
                         <br>
-                        <div class="comment-text" id="text-${roundId}-${cId}"></div>
+
+                        <div class="comment-text" id="text-${roundId}-${cId}"></div> 
+
+                        
+
                         <div class="comment-meta">
+
                             <span>${dateStr}</span>
+
                             ${isEdited ? '<span>(Edited)</span>' : ''}
-                            ${isMyComment ? `<span class="comment-actions" onclick="enableEditMode(${roundId}, ${cId})">Edit</span>` : ''}
-                        </div>
+
+                            </div>
+
                     </div>
+
                 `;
                 
                 // Set text aman
