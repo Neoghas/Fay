@@ -423,7 +423,6 @@
     let roundPools = { eth: 0, usdt: 0, shib: 0 };
     let historyCursor = 0; let isInitialLoad = true; let currentMaxRound = 0;
     let globalWinnersCache = {}; let globalHistoryLength = -1;
-    let isProcessingResult = false;
 
     window.onload = async () => {
         document.querySelectorAll('.reel-img').forEach(img => img.src = "what.svg");
@@ -1052,126 +1051,97 @@
         }
     }
 
+    let isProcessingResult = false;
+
     async function checkRoundResult(roundId) {
-
         if (isProcessingResult) return; 
-
         isProcessingResult = true;
 
-        
+        // Reset safety flag
+        setTimeout(() => { isProcessingResult = false; }, 40000);
 
-        // Reset flag setelah 10 detik (safety)
+        try {
+            // 1. AMBIL DATA KONTRAK
+            const result = await gameContract.getRoundResult(roundId);
+            const r1 = Number(result[0][0]);
+            const r2 = Number(result[0][1]);
+            const r3 = Number(result[0][2]);
+            const outcomeStr = result[1];
 
-        setTimeout(() => { isProcessingResult = false; }, 10000);
+            console.log("🔥 RESULT:", outcomeStr);
 
-
-
-        // Hitung sisa waktu spin
-
-        const elapsed = Date.now() - spinStartTime;
-
-        const remainingTime = MIN_SPIN_TIME - elapsed;
-
-        const delay = remainingTime > 0 ? remainingTime : 0;
-
-
-
-        console.log(`Waiting ${delay}ms to show result for Round ${roundId}...`);
-
-
-
-        setTimeout(async () => {
-
-            try {
-
-                // 1. AMBIL DATA KONTRAK (Truth Source)
-
-                const result = await gameContract.getRoundResult(roundId);
-
+            // 2. CEK STATUS: APAKAH SAYA PEMAIN ATAU PENONTON?
+            
+            if (spinStartTime !== 0) {
+                // --- KASUS A: SAYA PEMAIN (Yang Klik Tombol) ---
+                // Saya sudah muter duluan, tinggal tunggu sisa waktu.
                 
+                const elapsed = Date.now() - spinStartTime;
+                const remainingTime = MIN_SPIN_TIME - elapsed;
+                const delay = remainingTime > 0 ? remainingTime : 0;
 
-                // Konversi BigInt/Struct ke Angka Biasa
+                console.log(`Player Mode: Finishing in ${delay}ms`);
 
-                const r1 = Number(result[0][0]);
+                setTimeout(() => {
+                    finalizeRound(r1, r2, r3, outcomeStr);
+                }, delay);
 
-                const r2 = Number(result[0][1]);
+            } else {
+                // --- KASUS B: SAYA PENONTON (Global User) ---
+                // Saya diam saja, tapi tiba-tiba ada Event masuk.
+                // Artinya ada Live Draw! Saya harus ikut muter 35 detik.
 
-                const r3 = Number(result[0][2]);
-
-                const outcomeStr = result[1];
-
-
-
-                // 2. LOG UNTUK BUKTI (Cek Console F12)
-
-                console.log("🔥 CONTRACT RESULT:", { 
-
-                    Reels: [r1, r2, r3], 
-
-                    Names: [IMAGE_NAMES[r1], IMAGE_NAMES[r2], IMAGE_NAMES[r3]], 
-
-                    Outcome: outcomeStr 
-
-                });
-
-
-
-                // 3. EKSEKUSI ANIMASI STOP (Kirim Index Pasti)
-
-                stopSpinAnimation(r1, r2, r3);
-
+                console.log("Spectator Mode: Starting Live Animation...");
                 
-
-                // 4. UPDATE TEXT & GLAMOUR
-
-                showToast(`Result: ${outcomeStr}`);
-
-
-
-                const winnersIndices = new Set([r1, r2, r3]);
-
-                for (let i = 0; i < 6; i++) {
-
-                    const card = document.getElementById(`card-${i}`);
-
-                    if (winnersIndices.has(i) && i < 6) card.classList.add('winner-glamour');
-
-                    else card.classList.remove('winner-glamour');
-
-                }
-
+                // Paksa Mulai Animasi
+                startSpinAnimation();
                 
+                // Beri Notifikasi Keren
+                const t = document.getElementById("toast");
+                showToast("🔴 LIVE DRAW STARTED!");
+                t.style.background = "var(--primary)"; // Biru (Info)
 
-                setTimeout(() => { 
-
-                    for (let i = 0; i < 6; i++) 
-
-                        document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
-
-                }, 8000);
-
-
-
-                // 5. REFRESH DATA (Saldo, History, dll)
-
-                refreshGameData();
-
-
-
-            } catch (e) { 
-
-                console.error("Result Error:", e); 
-
-                forceStopAnimation(); 
-
-            } finally {
-
-                isProcessingResult = false;
-
+                // Tunggu 35 Detik Penuh (Sama seperti pemain)
+                setTimeout(() => {
+                    t.style.background = "#333"; // Reset warna toast
+                    finalizeRound(r1, r2, r3, outcomeStr);
+                }, MIN_SPIN_TIME);
             }
 
-        }, delay);
+        } catch (e) { 
+            console.error("Result Error:", e); 
+            forceStopAnimation(); 
+            isProcessingResult = false;
+        }
+    }
 
+    // --- FUNGSI BARU: UNTUK MENYELESAIKAN RONDE ---
+    // (Ini berisi logika stop animasi, highlight winner, dan refresh)
+    function finalizeRound(r1, r2, r3, outcomeStr) {
+        // 1. Stop Animasi
+        stopSpinAnimation(r1, r2, r3);
+
+        // 2. Tampilkan Hasil
+        showToast(`Result: ${outcomeStr}`);
+
+        // 3. Animasi Winner Glamour
+        const winnersIndices = new Set([r1, r2, r3]);
+        for (let i = 0; i < 6; i++) {
+            const card = document.getElementById(`card-${i}`);
+            if (winnersIndices.has(i) && i < 6) card.classList.add('winner-glamour');
+            else card.classList.remove('winner-glamour');
+        }
+
+        // 4. Hapus Glamour setelah 8 detik
+        setTimeout(() => { 
+            for (let i = 0; i < 6; i++) 
+                document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
+        }, 8000);
+
+        // 5. Refresh Data & Reset State
+        refreshGameData();
+        isProcessingResult = false; 
+        spinStartTime = 0;
     }
 
     async function withdraw(curr) {
