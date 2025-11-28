@@ -202,6 +202,16 @@
     .mini-star { font-size: 1.2em; color: #444; cursor: pointer; }
     .mini-star.active { color: var(--gold); }
     .mini-star.hover-active { color: #FFD700 !important; text-shadow: 0 0 5px rgba(255, 215, 0, 0.8); transform: scale(1.3); transition: transform 0.1s; }
+
+    /* Stats E U S Kecil di dalam Card */
+    .card-stats { 
+        display: flex; justify-content: space-between; width: 100%; 
+        font-size: 0.55em; margin-top: 5px; border-top: 1px solid #333; padding-top: 3px; 
+    }
+    .txt-eth { color: var(--eth-color); }
+    .txt-usdt { color: var(--usdt-color); }
+    .txt-shib { color: var(--shib-color); }
+    .name { font-size: 0.7em; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -457,67 +467,98 @@
 
     async function refreshGameData() {
         try {
-            // Update Counts & Bonus
-            const promises = [
-                gameContract.activeTeamCounts(0), gameContract.activeTeamCounts(1), gameContract.activeTeamCounts(2),
-                gameContract.activeTeamCounts(3), gameContract.activeTeamCounts(4), gameContract.activeTeamCounts(5)
-            ];
-            if(isConnected) promises.push(gameContract.freeShibCredits(userAddress));
+            const currR = await gameContract.currentRoundId();
             
-            const results = await Promise.all(promises);
-            let active = 0;
-            
-            for(let i=0; i<6; i++) {
-                const c = Number(results[i]);
-                document.getElementById(`count-${i}`).innerText = c;
-                if(c>0) active++;
-            }
+            // 1. UPDATE HISTORI (Sama seperti sebelumnya)
+            updateHistorySection(Number(currR));
 
-            if(isConnected) {
-                const bonus = results[6];
-                document.getElementById('userBonusBalance').innerText = parseFloat(ethers.formatEther(bonus)).toLocaleString();
-                const btnFree = document.getElementById('btnFreeBet');
-                if(btnFree) {
-                    if(bonus >= ethers.parseEther("10000")) { btnFree.disabled=false; btnFree.style.background="var(--success)"; }
-                    else { btnFree.disabled=true; btnFree.style.background="#333"; }
+            // 2. SIAPKAN ARRAY PENGHITUNG (6 Hewan x 3 Mata Uang)
+            // Struktur: [ {eth:0, usdt:0, shib:0}, ... ]
+            let detailedStats = Array(6).fill().map(() => ({ eth: 0, usdt: 0, shib: 0 }));
+            let active = 0;
+            let pools = { eth: 0, usdt: 0, shib: 0 };
+
+            // 3. LOOPING BETS (Mengambil data satu per satu dari Blockchain)
+            // Kita batasi max 100 bet terakhir agar browser tidak berat
+            let idx = 0;
+            let keepFetching = true;
+
+            while (keepFetching && idx < 100) {
+                try {
+                    // Ambil data bet dari mapping public array: roundBets(roundId, index)
+                    const b = await gameContract.roundBets(currR, idx);
+                    
+                    const animal = Number(b.animalChoice); // 0-5
+                    const curr = Number(b.currency);       // 0=ETH, 1=USDT, 2=SHIB
+                    const amount = b.amount;
+
+                    // Hitung Count E/U/S per Hewan
+                    if (curr === 0) detailedStats[animal].eth++;
+                    else if (curr === 1) detailedStats[animal].usdt++;
+                    else if (curr === 2) detailedStats[animal].shib++;
+
+                    // Hitung Total Pool (Estimasi)
+                    if (b.bType == 0) { // Hanya Main Bet yang dihitung ke pool
+                        let val = 0;
+                        if (curr === 0) { val = parseFloat(ethers.formatEther(amount)); pools.eth += val; }
+                        else if (curr === 1) { val = parseFloat(ethers.formatUnits(amount, 6)); pools.usdt += val; }
+                        else { val = parseFloat(ethers.formatEther(amount)); pools.shib += val; }
+                    }
+
+                    idx++;
+                } catch (e) {
+                    // Jika error, berarti array habis (tidak ada bet lagi)
+                    keepFetching = false;
                 }
             }
 
-            // Draw Button Logic
-            const btnDraw = document.getElementById('drawBtn');
-            const status = document.getElementById('drawStatus');
-            if(active >= 5) {
-                btnDraw.disabled = false; btnDraw.classList.add('ready'); btnDraw.innerText = "DRAW NOW!";
-                status.innerText = "Ready!"; status.style.color = "var(--success)";
-            } else {
-                btnDraw.disabled = true; btnDraw.classList.remove('ready');
-                status.innerText = `Need ${5-active} teams`; status.style.color = "var(--danger)";
+            // 4. UPDATE TAMPILAN KARTU (DOM)
+            for (let i = 0; i < 6; i++) {
+                // Hitung Total dari hasil loop tadi
+                const totalAnimal = detailedStats[i].eth + detailedStats[i].usdt + detailedStats[i].shib;
+                
+                // Update Angka Besar (Total)
+                document.getElementById(`cnt-${i}`).innerText = totalAnimal;
+                
+                // Update Angka Kecil (E U S) - INI YANG ANDA MINTA
+                document.getElementById(`c-eth-${i}`).innerText = detailedStats[i].eth;
+                document.getElementById(`c-usdt-${i}`).innerText = detailedStats[i].usdt;
+                document.getElementById(`c-shib-${i}`).innerText = detailedStats[i].shib;
+
+                // Update status aktif untuk tombol Draw
+                if (totalAnimal > 0) active++;
             }
 
-            const currR = await gameContract.currentRoundId();
-            updateHistorySection(Number(currR));
-            
-            // Calc Pools (Simple)
-            let pools = { eth:0, usdt:0, shib:0 };
-            let idx = 0;
-            // Limit 50 bets to avoid lag
-            while(idx < 50) {
-                try {
-                    const b = await gameContract.roundBets(currR, idx);
-                    if(b.bType == 0) { // Main bet only
-                        const amt = parseFloat(ethers.formatUnits(b.amount, b.currency==1?6:18));
-                        if(b.currency==0) pools.eth+=amt; else if(b.currency==1) pools.usdt+=amt; else pools.shib+=amt;
-                    }
-                    idx++;
-                } catch { break; }
-            }
+            // 5. UPDATE TAMPILAN POOL GLOBAL
             document.getElementById('poolTotalETH').innerText = pools.eth.toFixed(4);
             document.getElementById('poolTotalUSDT').innerText = pools.usdt.toFixed(2);
             document.getElementById('poolTotalSHIB').innerText = pools.shib.toLocaleString();
 
-        } catch(e){}
-    }
+            // 6. UPDATE LOGIKA TOMBOL DRAW
+            const btnDraw = document.getElementById('drawBtn');
+            const status = document.getElementById('drawStatus');
+            if (active >= 5) {
+                btnDraw.disabled = false; btnDraw.classList.add('ready'); btnDraw.innerText = "DRAW NOW!";
+                status.innerText = "Ready to Spin!"; status.style.color = "var(--success)";
+            } else {
+                btnDraw.disabled = true; btnDraw.classList.remove('ready'); btnDraw.innerText = "WAITING...";
+                status.innerText = `Need ${5 - active} more teams`; status.style.color = "var(--danger)";
+            }
 
+            // Update Bonus User (Jika Konek)
+            if (isConnected) {
+                const bonus = await gameContract.freeShibCredits(userAddress);
+                document.getElementById('userBonusBalance').innerText = parseFloat(ethers.formatEther(bonus)).toLocaleString();
+                const btnFree = document.getElementById('btnFreeBet');
+                if (btnFree) {
+                    if (bonus >= ethers.parseEther("10000")) { btnFree.disabled = false; btnFree.style.background = "var(--success)"; }
+                    else { btnFree.disabled = true; btnFree.style.background = "#333"; }
+                }
+            }
+
+        } catch (e) { console.log("Refresh Loop Error", e); }
+    }
+    
     // --- BETTING & DRAW ---
     function selectAnimal(n, i) { currentSelectedAnimal = {name:n, index:i}; document.querySelectorAll('.bet-card').forEach(c=>c.classList.remove('selected')); document.getElementById(`card-${i}`).classList.add('selected'); }
     function triggerBetModal() { 
