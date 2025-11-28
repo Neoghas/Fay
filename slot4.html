@@ -569,21 +569,40 @@ if(!u[1]) {
     }
     async function updateSocialStats(rid) {
         try {
+            // Ambil data dari kontrak
             const [score, count, likes] = await Promise.all([
-                gameContract.totalRatingScore(rid),
-                gameContract.totalRatingCount(rid),
+                gameContract.totalRatingScore(rid), // Ini TOTAL BINTANG (Contoh: 8)
+                gameContract.totalRatingCount(rid), // Ini TOTAL ORANG (Contoh: 2)
                 gameContract.likeCounts(rid)
             ]);
+
+            // 1. Logika Bintang Visual (Tetap Pakai Rata-rata)
+            // Supaya tampilan bintangnya akurat (8 / 2 orang = 4 Bintang menyala)
             const avg = count > 0n ? Math.round(Number(score)/Number(count)) : 0;
+            
             for(let i=1; i<=5; i++) {
                 const s = document.getElementById(`star-${rid}-${i}`);
-                if(s) { if(i <= avg) s.classList.add('active'); else s.classList.remove('active'); }
+                if(s) { 
+                    // Pastikan tidak menimpa efek hover user saat ini
+                    if (!s.classList.contains('hover-gold') && !s.classList.contains('dimmed')) {
+                        if(i <= avg) s.classList.add('active'); 
+                        else s.classList.remove('active'); 
+                    }
+                }
             }
+
+            // 2. Logika Text Count (YANG ANDA MINTA)
+            // Ganti variable 'count' menjadi 'score'
             const elCount = document.getElementById(`vote-count-${rid}`);
-            if(elCount) elCount.innerText = `(${count})`;
+            
+            // Tampilkan total skor bintang (score), bukan jumlah orang (count)
+            if(elCount) elCount.innerText = `(${score})`; 
+
+            // 3. Update Like
             const elLike = document.getElementById(`likes-count-${rid}`);
             if(elLike) elLike.innerText = likes;
-        } catch(e){}
+
+        } catch(e) { console.log(e); }
     }
 
     function switchTab(tab) {
