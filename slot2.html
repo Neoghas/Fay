@@ -875,24 +875,21 @@
 
     async function refreshGameData() {
         try {
-            // -------------------------------------------------
-            // 1. CEK STATUS USER (REGISTER / BELUM)
-            // -------------------------------------------------
+            // --- 1. UPDATE USER DATA (JIKA CONNECT) ---
             if (isConnected) {
                 const userData = await gameContract.users(userAddress);
                 const isRegistered = userData[1]; // Bool
 
                 if (isRegistered) {
-                    // --- SKENARIO A: SUDAH REGISTER ---
+                    // Tampilkan Panel Referral
                     document.getElementById('registerModal').style.display = 'none';
                     document.getElementById('referralPanel').style.display = 'block';
-                    
                     document.getElementById('displayNick').innerText = userData[0];
                     document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
-                    
+
                     const pending = Number(userData[4]);
                     document.getElementById('pendingBonus').innerText = pending * 10000;
-                    
+
                     if (pending > 0) {
                         document.getElementById('claimBonusBtnContainer').innerHTML = `<button class="wallet-btn" style="width:100%; margin-bottom:10px; background:var(--gold); color:black;" onclick="claimReferralBonus()">Claim ${pending * 10000} SHIB Bonus</button>`;
                     } else {
@@ -900,23 +897,22 @@
                     }
                     updateReferralCount();
                 } else {
-                    // --- SKENARIO B: BELUM REGISTER (USER BARU) ---
+                    // User Baru -> Buka Modal
                     console.log("User New: Opening Register Modal");
                     document.getElementById('registerModal').style.display = 'flex';
                     document.getElementById('referralPanel').style.display = 'none';
-                    
-                    // FIX: TAMPILKAN INFO REFERRAL DI MODAL (JIKA ADA)
+
                     if (typeof detectedReferrer !== 'undefined' && detectedReferrer) {
                         const refDisplay = document.getElementById('refInfoDisplay');
                         if(refDisplay) {
                             refDisplay.innerText = "✅ Invited by: " + detectedReferrer;
-                            refDisplay.style.color = "#00d26a"; // Hijau
+                            refDisplay.style.color = "#00d26a"; 
                             refDisplay.style.fontWeight = "bold";
                         }
                     }
                 }
 
-                // Update Saldo Bonus (Credit)
+                // Update Saldo Bonus
                 const bonus = await gameContract.freeShibCredits(userAddress);
                 document.getElementById('userBonusBalance').innerText = Number(ethers.formatEther(bonus)).toLocaleString();
                 
@@ -928,9 +924,7 @@
                 }
             }
 
-            // -------------------------------------------------
-            // 2. FETCH DATA GLOBAL (RONDE, BETS, POOLS)
-            // -------------------------------------------------
+            // --- 2. FETCH DATA GLOBAL (JALAN TERUS WALAU BELUM REGISTER) ---
             const currR = Number(await gameContract.currentRoundId());
             let bets = [];
             let idx = 0;
@@ -942,15 +936,16 @@
                 } catch { break; }
             }
 
-            // Inisialisasi Variabel
+            // Inisialisasi
             let counts = [0, 0, 0, 0, 0, 0]; 
             let pools = { eth: 0, usdt: 0, shib: 0 }; 
             myBetCounts = [0, 0, 0, 0, 0, 0]; 
+            // FIX: Inisialisasi ulang array count E/U/S
             let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
 
             // Loop Analisa
             bets.forEach(b => {
-                let curr = Number(b[2]); // 0=ETH, 1=USDT, 2=SHIB
+                let curr = Number(b[2]); 
                 let animalIdx = Number(b[4]);
                 let decimal = curr === 1 ? 6 : 18;
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
@@ -960,10 +955,10 @@
                 else if (curr === 1) pools.usdt += amt;
                 else pools.shib += amt;
 
-                // Count
+                // Count Total
                 counts[animalIdx]++;
 
-                // My Bet Count
+                // My Bet
                 if (isConnected && b[0].toLowerCase() === userAddress.toLowerCase()) {
                     myBetCounts[animalIdx]++;
                 }
@@ -979,16 +974,18 @@
             document.getElementById('poolTotalUSDT').innerText = pools.u.toFixed(2);
             document.getElementById('poolTotalSHIB').innerText = pools.s.toLocaleString();
 
-            // Update Kartu Hewan
+            // Update Kartu Hewan (Loop 0-5)
             for (let i = 0; i < 6; i++) {
+                // Update Angka Besar
                 document.getElementById(`count-${i}`).innerText = counts[i];
-                let c = document.getElementById(`card-${i}`);
                 
+                // Update Warna Kartu
+                let c = document.getElementById(`card-${i}`);
                 c.classList.remove('my-bet', 'open');
                 if (myBetCounts[i] > 0) c.classList.add('my-bet'); 
                 else c.classList.add('open');
 
-                // Update Angka Kecil E/U/S
+                // FIX: Update Angka Kecil (E/U/S)
                 document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
                 document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
                 document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
@@ -1011,17 +1008,16 @@
                 drawStatus.style.color = "var(--danger)";
             }
 
-            // Update History
+            // Update History (Global Results)
             updateHistorySection(currR);
             
+            // Update My Winnings (Hanya jika tab aktif)
             if (!document.getElementById('tabPersonal').classList.contains('hidden')) {
                 updatePersonalHistory();
             }
 
-        } catch (e) {
-            console.error("Refresh Error:", e);
+        } catch (e) { console.error("Refresh Error:", e); }
         }
-       }
 
     async function registerUser() {
         const nick = document.getElementById('regNickname').value;
