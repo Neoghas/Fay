@@ -650,10 +650,25 @@ if(!u[1]) {
     async function updateReferralCount() {
         if(!isConnected || !userAddress) return;
         try {
+            // 1. Buat Filter: Topik 1 (Invitee) null/bebas, Topik 2 (Referrer) = userAddress kita
             const filter = gameContract.filters.ReferralLinked(null, userAddress);
-            const logs = await gameContract.queryFilter(filter, 0, "latest");
+            
+            // 2. TENTUKAN START BLOCK (PENTING!)
+            // Jangan pakai 0. Pakai blok saat kontrak dideploy.
+            // Untuk Base Sepolia saat ini (Nov 2024), blok ada di sekitar 18.000.000-an.
+            // Gunakan angka perkiraan ini atau cek pastinya di Basescan.
+            const startBlock = 34106490; 
+
+            // 3. Query Filter
+            const logs = await gameContract.queryFilter(filter, startBlock, "latest");
+            
+            // 4. Update UI & Debug
+            console.log(`Found ${logs.length} referrals for ${userAddress}`);
             document.getElementById('totalInvited').innerText = logs.length;
-        } catch(e) { }
+
+        } catch(e) { 
+            console.error("Referral Error:", e); // Cek F12 Console jika angka masih 0
+        }
     }
 
     async function refreshGameData() {
