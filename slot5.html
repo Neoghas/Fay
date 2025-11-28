@@ -986,6 +986,7 @@
     const IMAGE_LIST = ["tuna.svg", "crab.svg", "shark.svg", "octo.svg", "shrimp.svg", "orcha.svg", "zonk.svg"]; 
     const MIN_SPIN_TIME = 35000; 
     let spinStartTime = 0; let spinIntervals = [];
+    let isSpinning = false;
     let provider, signer, userAddress;
     let isConnected = false;
     let currentSelectedAnimal = { name: '', index: -1 };
@@ -1634,6 +1635,9 @@ if (isConnected) {
     }
 
     function startSpinAnimation() {
+        if(isSpinning) return; // Cegah double start
+        isSpinning = true;
+        
         spinIntervals.forEach(clearInterval);
         spinIntervals = [];
         const reels = [document.getElementById('imgReel1'), document.getElementById('imgReel2'), document.getElementById('imgReel3')];
@@ -1648,49 +1652,32 @@ if (isConnected) {
     }
 
     function stopSpinAnimation(i1, i2, i3) {
-        // 1. MATIKAN SEMUA ANIMASI YANG SEDANG BERJALAN (PENTING!)
-        // Ini mencegah animasi sebelumnya menimpa hasil baru
+        // Matikan interval putaran acak
         spinIntervals.forEach(clearInterval);
         spinIntervals = [];
+        isSpinning = false; // <--- RESET FLAG DI SINI
 
+        // ... (sisanya sama: set gambar final, efek blur, dll) ...
         const r1 = document.getElementById('imgReel1');
         const r2 = document.getElementById('imgReel2');
         const r3 = document.getElementById('imgReel3');
 
-        // --- REEL 1 (Langsung Set Gambar Asli) ---
+        // REEL 1
         r1.style.filter = "blur(2px)";
-        setTimeout(() => {
-            r1.src = IMAGE_LIST[i1]; // Gambar dari KONTRAK
-            r1.style.filter = "none";
-        }, 100);
+        setTimeout(() => { r1.src = IMAGE_LIST[i1]; r1.style.filter = "none"; }, 100);
 
-        // --- REEL 2 (Delay dikit, tapi Interval Disimpan Global) ---
+        // REEL 2
         r2.style.filter = "blur(4px)";
-        // Putar acak sebentar...
-        let t2 = setInterval(() => { 
-            r2.src = IMAGE_LIST[Math.floor(Math.random() * IMAGE_LIST.length)]; 
-        }, 80);
-        spinIntervals.push(t2); // SIMPAN ID INTERVAL AGAR BISA DIMATIKAN
+        let t2 = setInterval(() => { r2.src = IMAGE_LIST[Math.floor(Math.random() * IMAGE_LIST.length)]; }, 80);
+        setTimeout(() => { clearInterval(t2); r2.src = IMAGE_LIST[i2]; r2.style.filter = "none"; }, 600);
 
-        setTimeout(() => {
-            clearInterval(t2); // Matikan paksa putaran acak
-            r2.src = IMAGE_LIST[i2]; // Tempel Gambar Asli dari KONTRAK
-            r2.style.filter = "none";
-        }, 600);
-
-        // --- REEL 3 (Delay lama, Interval Disimpan Global) ---
+        // REEL 3
         r3.style.filter = "blur(5px)";
-        let t3 = setInterval(() => { 
-            r3.src = IMAGE_LIST[Math.floor(Math.random() * IMAGE_LIST.length)]; 
-        }, 80);
-        spinIntervals.push(t3); // SIMPAN ID INTERVAL
-
-        setTimeout(() => {
-            clearInterval(t3); // Matikan paksa putaran acak
-            r3.src = IMAGE_LIST[i3]; // Tempel Gambar Asli dari KONTRAK
-            r3.style.filter = "none";
-            
-            // Efek Pop
+        let t3 = setInterval(() => { r3.src = IMAGE_LIST[Math.floor(Math.random() * IMAGE_LIST.length)]; }, 80);
+        setTimeout(() => { 
+            clearInterval(t3); 
+            r3.src = IMAGE_LIST[i3]; 
+            r3.style.filter = "none"; 
             r3.style.transform = "scale(1.2)";
             setTimeout(() => { r3.style.transform = "scale(1)"; }, 200);
         }, 1400);
@@ -1706,20 +1693,18 @@ if (isConnected) {
             showToast("Initiating Draw...");
             const tx = await gameContract.executeDraw();
             
-            // --- MULAI WAKTU DARI SINI (Hanya untuk Admin) ---
+            // --- MULAI DARI 0 ---
+            spinStartTime = Date.now(); // Set waktu mulai SEKARANG
             startSpinAnimation();
-            spinStartTime = Date.now(); // Catat waktu mulai
-            // ------------------------------------------------
             
             showToast("Broadcasting to Blockchain... (Wait 35s)");
-            await tx.wait(); // Tunggu konfirmasi blok
-            
-            // Kita tidak perlu panggil checkRoundResult manual lagi
-            // Karena Event Listener di atas akan menangkap hasilnya otomatis
+            await tx.wait(); 
             
         } catch (err) { 
             console.error(err); 
-            forceStopAnimation(); 
+            // Matikan animasi manual jika error
+            spinIntervals.forEach(clearInterval);
+            isSpinning = false;
             showToast("Draw Error: " + (err.reason || err.message)); 
         }
     }
@@ -2107,58 +2092,58 @@ if (isConnected) {
             refreshGameData(); // Refresh data tetap pakai RPC biasa
         });
 
-        // 2. Listener LIVE DRAW (Lewat WSS - Cepat & Sync 35 Detik)
+        // 2. Listener LIVE DRAW (Fixed 35s Logic)
         listenerContract.on("BattleResult", async (reels, outcome, roundId) => {
-            // --- HAPUS baris gameContract.on, langsung masuk logika ---
-            
-            console.log("⚡ WSS SIGNAL RECEIVED! Round:", Number(roundId));
             const rId = Number(roundId);
-            
-            // Cek apakah animasi di device ini sedang jalan?
-            // Jika belum jalan (misal user baru buka tab), kita jalankan sekarang.
-            if (!spinIntervals.length) {
+            console.log(`⚡ RESULT RECEIVED! Round #${rId}`);
+
+            // Jika animasi belum jalan (user baru masuk), jalankan sekarang
+            if (!isSpinning) {
                 startSpinAnimation();
-                showToast(`LIVE DRAW DETECTED! Round #${rId}`);
+                // Kalau user baru masuk pas result keluar, 
+                // anggap dia telat, jadi set start time agak mundur biar gak nunggu 35s penuh (opsional)
+                // Tapi untuk sinkronisasi ketat, kita set Date.now()
+                if (spinStartTime === 0) spinStartTime = Date.now(); 
             }
 
-            console.log(`🎰 Result received for Round ${rId}. Starting 35s Countdown...`);
+            // Jika user adalah admin yg tekan tombol, spinStartTime sudah ada isinya.
+            // Jika user biasa, kita isi sekarang jika masih 0
+            if (spinStartTime === 0) spinStartTime = Date.now();
 
-            // --- LOGIKA SINKRONISASI WAKTU ---
-            // Jika admin yang menekan tombol, spinStartTime sudah diset.
-            // Jika user cuma penonton, kita set spinStartTime sekarang.
-            if (spinStartTime === 0) {
-                spinStartTime = Date.now();
-            }
-
-            const DURATION = 35000; // 35 Detik
+            const DURATION = 35000; // 35 Detik Wajib
             
-            // Hitung sisa waktu
-            const elapsed = Date.now() - spinStartTime;
-            const remaining = DURATION - elapsed;
+            // Hitung sudah berapa lama berputar sejak startSpinAnimation dipanggil?
+            const now = Date.now();
+            const elapsed = now - spinStartTime;
             
-            // Jika sisa waktu masih ada, TUNGGU.
-            // Jika waktu sudah lewat, langsung buka (delay 0).
-            const delay = remaining > 0 ? remaining : 0;
+            // Hitung sisa waktu yang HARUS ditunggu
+            let remaining = DURATION - elapsed;
 
-            if(delay > 0) {
-                showToast(`Revealing winner in ${Math.ceil(delay/1000)}s...`);
+            // Safety: Jangan sampai minus
+            if (remaining < 0) remaining = 0;
+
+            console.log(`⏳ Elapsed: ${elapsed}ms | Waiting: ${remaining}ms`);
+
+            if (remaining > 0) {
+                showToast(`Revealing winner in ${Math.ceil(remaining/1000)}s...`);
             }
 
-            // Tahan eksekusi sampai waktu habis
-            await new Promise(r => setTimeout(r, delay));
+            // Tunggu sisa waktu
+            await new Promise(r => setTimeout(r, remaining));
 
-            // --- WAKTU HABIS: BUKA HASIL ---
+            // --- EKSEKUSI FINAL ---
             const r1 = Number(reels[0]);
             const r2 = Number(reels[1]);
             const r3 = Number(reels[2]);
 
-            // Hentikan animasi di gambar yang benar
             stopSpinAnimation(r1, r2, r3); 
 
-            // Tampilkan efek visual
             showToast(`Result: ${outcome}`);
             
-            // Efek Glamour Winner
+            // Reset Variable Global
+            spinStartTime = 0; 
+            
+            // Efek Glamour
             const winnersIndices = new Set([r1, r2, r3]);
             for (let i = 0; i < 6; i++) {
                 const card = document.getElementById(`card-${i}`);
@@ -2170,10 +2155,8 @@ if (isConnected) {
                     document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
             }, 8000);
 
-            // Reset Waktu & Refresh Data
-            spinStartTime = 0;
             refreshGameData();
-        });
+        });      
     }
 </script>
 </body>
