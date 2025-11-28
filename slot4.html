@@ -175,6 +175,24 @@
         color: #888; 
         margin-left: 6px; 
     }
+
+    /* --- CSS TAMBAHAN UNTUK HOVER BINTANG --- */
+    
+    /* Warna Emas saat di-hover (Preview) */
+    .star-btn.hover-gold { 
+        color: var(--gold) !important; 
+        text-shadow: 0 0 10px rgba(255, 215, 0, 0.6); 
+        transform: scale(1.1);
+    }
+    
+    /* Warna Abu-abu saat di-hover tapi tidak dipilih (Dimmed) */
+    /* Ini penting: Jika rating asli 5, tapi kita hover di bintang 1, 
+       bintang 2-5 harus mati (jadi abu-abu) sementara */
+    .star-btn.dimmed {
+        color: #444 !important;
+        text-shadow: none !important;
+        transform: scale(1);
+    }
     
     .like-wrapper { display: flex; align-items: center; }
     .btn-like-single {
@@ -588,7 +606,6 @@ if(!u[1]) {
                 const { r, res } = item;
                 const card = document.createElement('div'); card.className = 'history-card'; card.id = `history-card-${r}`;
                 
-                // Ambil count komentar (untuk badge)
                 let commentCount = 0;
                 try { commentCount = await gameContract.commentCounts(r); } catch(e){}
 
@@ -599,8 +616,12 @@ if(!u[1]) {
                     <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;"><span style="font-size:0.7em; color:#555;">Loading...</span></div>
                     
                     <div class="social-bar">
-                        <div class="star-group">
-                            <span id="star-${r}-1" class="star-btn" onclick="submitRating(${r},1)">★</span><span id="star-${r}-2" class="star-btn" onclick="submitRating(${r},2)">★</span><span id="star-${r}-3" class="star-btn" onclick="submitRating(${r},3)">★</span><span id="star-${r}-4" class="star-btn" onclick="submitRating(${r},4)">★</span><span id="star-${r}-5" class="star-btn" onclick="submitRating(${r},5)">★</span>
+                        <div class="star-group" onmouseleave="resetStarHover(${r})">
+                            <span id="star-${r}-1" class="star-btn" onmouseenter="previewStarRating(${r}, 1)" onclick="submitRating(${r},1)">★</span>
+                            <span id="star-${r}-2" class="star-btn" onmouseenter="previewStarRating(${r}, 2)" onclick="submitRating(${r},2)">★</span>
+                            <span id="star-${r}-3" class="star-btn" onmouseenter="previewStarRating(${r}, 3)" onclick="submitRating(${r},3)">★</span>
+                            <span id="star-${r}-4" class="star-btn" onmouseenter="previewStarRating(${r}, 4)" onclick="submitRating(${r},4)">★</span>
+                            <span id="star-${r}-5" class="star-btn" onmouseenter="previewStarRating(${r}, 5)" onclick="submitRating(${r},5)">★</span>
                             <span id="vote-count-${r}" class="star-count">(0)</span>
                         </div>
                         <div class="like-wrapper" style="gap:10px;">
@@ -627,7 +648,41 @@ if(!u[1]) {
             await fetchWinnersFromContract(start, end);
         } catch (err) { console.error("History Error:", err); }
         historyCursor = end - 1; if (historyCursor < 1) document.getElementById('btnLoadMore').style.display = 'none';
+    }
+
+    // --- LOGIC HOVER BINTANG ---
+
+    // 1. Saat mouse masuk ke salah satu bintang (Preview Mode)
+    function previewStarRating(rid, val) {
+        for(let i=1; i<=5; i++) {
+            const s = document.getElementById(`star-${rid}-${i}`);
+            if(!s) continue;
+            
+            // Hapus class lama dulu biar bersih
+            s.classList.remove('hover-gold', 'dimmed');
+            
+            if (i <= val) {
+                // Bintang 1 sampai yang ditunjuk -> Nyala Emas
+                s.classList.add('hover-gold');
+            } else {
+                // Bintang sisanya -> Mati (Dimmed)
+                // Ini penting agar rating asli tertutup sementara
+                s.classList.add('dimmed');
             }
+        }
+    }
+
+    // 2. Saat mouse keluar dari area bintang (Reset ke status asli)
+    function resetStarHover(rid) {
+        for(let i=1; i<=5; i++) {
+            const s = document.getElementById(`star-${rid}-${i}`);
+            if(s) {
+                // Hapus efek hover
+                s.classList.remove('hover-gold', 'dimmed');
+                // Otomatis class 'active' yang asli (dari updateSocialStats) akan terlihat kembali
+            }
+        }
+    }
 
     async function fetchWinnersFromContract(maxRound, minRound) {
         try {
