@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+l<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2090,35 +2090,33 @@ if (isConnected) {
             for (let i = 0; i < count; i++) {
                 const c = await gameContract.roundComments(roundId, i);
                 
-                // 1. AMBIL DATA MENTAH
+                // 1. DATA MENTAH
                 const cId = c[0];
                 const author = c[1]; 
-                const rawData = c[2]; // <--- Ini string gabungan (Teks + Kode Gambar)
+                const rawData = c[2]; // String gabungan
                 const time = Number(c[3]);
                 const isEdited = c[4];
 
-                // 2. LOGIKA HIBRID (PEMECAHAN GAMBAR & TEKS)
-                // Pastikan variabel IMG_SEPARATOR sudah didefinisikan di atas script (const IMG_SEPARATOR = " ||IMG|| ";)
+                // 2. LOGIKA HIBRID (Pecah Teks & Gambar)
                 let displayMessage = "";
                 let displayImage = "";
 
                 if (rawData.includes(IMG_SEPARATOR)) {
                     const parts = rawData.split(IMG_SEPARATOR);
-                    displayMessage = parts[0]; // Bagian Teks
-                    const imgUrl = parts[1];   // Bagian URL Gambar
-                    
-                    // Buat HTML Gambar
+                    displayMessage = parts[0]; 
+                    const imgUrl = parts[1];   
                     displayImage = `<img src="${imgUrl}" class="comment-image-result" onclick="window.open('${imgUrl}','_blank')">`;
                 } else {
-                    displayMessage = rawData; // Jika tidak ada gambar, semua adalah teks
+                    displayMessage = rawData; 
                 }
 
-                // 3. LOGIKA LAINNYA (User, Date, Buttons)
+                // 3. LOGIKA LAINNYA
                 const isMyComment = (userAddress && author.toLowerCase() === userAddress.toLowerCase());
                 const dateStr = new Date(time * 1000).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'});
                 const nameElementId = `author-name-${roundId}-${cId}`;
 
-                // Tombol Edit (Kanan Atas)
+                // --- TOMBOL EDIT (Kanan Atas) ---
+                // Perhatikan penggunaan .replace(/'/g, "\\'") untuk mencegah error tanda kutip
                 const editIconHtml = `
                     <button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${cId}, '${displayMessage.replace(/'/g, "\\'")}')" title="Edit">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2128,7 +2126,7 @@ if (isConnected) {
                     </button>
                 `;
 
-                // Tombol Profil (Kanan Bawah - Agar tidak kosong)
+                // --- TOMBOL PROFIL (Kanan Bawah) ---
                 const viewProfileHtml = `
                     <button class="btn-view-profile" onclick="openPlayerProfile('${author}')" title="View Profile">
                         <img src="user.png" style="width:14px; height:14px; opacity:0.8;">
@@ -2161,12 +2159,12 @@ if (isConnected) {
                     </div>
                 `;
                 
-                // Masukkan Teks Bersih (Tanpa URL gambar) ke div text
+                // Masukkan Teks Bersih
                 item.querySelector(`#text-${roundId}-${cId}`).innerText = displayMessage;
                 
                 listDiv.appendChild(item);
 
-                // 5. FETCH NICKNAME (Background)
+                // 5. FETCH NICKNAME
                 gameContract.users(author).then(u => {
                     const nick = u[0]; 
                     const el = document.getElementById(nameElementId);
@@ -2177,7 +2175,7 @@ if (isConnected) {
             console.error(e);
             listDiv.innerHTML = '<div style="color:red; font-size:0.8em;">Failed to load.</div>';
         }
-        }
+    }
 
     async function postComment(roundId) {
         const input = document.getElementById(`input-comment-${roundId}`);
