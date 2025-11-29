@@ -1,9 +1,14 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faylotto Ultimate</title>
+    <title>Faylotto Slot Ultimate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@700&display=swap" rel="stylesheet">
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 <style>
     /* --- CSS UTAMA (THEME: CYBERPUNK NEON) --- */
@@ -33,7 +38,7 @@
     }
 
     body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Ubuntu', sans-serif;
         background: var(--gradient-bg); 
         color: var(--text); 
         margin: 0;
@@ -52,12 +57,11 @@
     }
 
     .wallet-btn {
-        background: linear-gradient(90deg, var(--primary), #0077ff); 
-        color: #000; border: none; padding: 8px 16px;
-        border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 0.9rem; 
+        background: linear-gradient(90deg, #03a9f4, #f441a5);
+        color: #fff; border: none; padding: 8px 16px;
+        border-radius: 20px; cursor: pointer; font-weight: 800; font-size: 0.9rem; 
         transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         box-shadow: var(--glow-primary);
-        text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     .wallet-btn:hover {
@@ -118,8 +122,8 @@
         text-transform: uppercase; letter-spacing: 1px;
     }
     .btn-draw.ready {
-        background: linear-gradient(45deg, #ff0055, #ff00cc); 
-        color: white; 
+        background: linear-gradient(90deg, #03a9f4, #f441a5);
+        color: #fff; 
         border: none;
         cursor: pointer; 
         box-shadow: 0 0 20px rgba(255, 0, 85, 0.5); 
@@ -183,13 +187,13 @@
     .text-eth { color: var(--eth-color); } .text-usdt { color: var(--usdt-color); } .text-shib { color: var(--shib-color); }
 
     .card-stats-container { width: 100%; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-size: 0.6em; font-weight: bold; }  
-    .c-stat { display: flex; align-items: center; gap: 2px; }  
+    .c-stat { display: flex; align-items: center; gap: 2px; }
 
     .main-bet-btn { 
         margin-top: 15px; 
         background: linear-gradient(90deg, var(--primary), var(--accent)); 
         color: white; border: none; 
-        padding: 13px 0; width: 70%; border-radius: 50px; 
+        padding: 13px 0; width: 50%; border-radius: 50px; 
         font-size: 0.9em; font-weight: bold; cursor: pointer; transition: 0.3s; 
         box-shadow: 0 0 15px rgba(0, 210, 255, 0.4); 
         text-transform: uppercase; letter-spacing: 1px;
@@ -227,7 +231,25 @@
     .dash-balance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; text-align: left; }  
     .dash-item { background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }  
     .dash-label { font-size: 0.65em; color: #888; display: block; text-transform: uppercase; }  
-    .dash-val { font-size: 0.85em; font-weight: bold; color: #eee; }  
+    /* --- WARNA SALDO DI MODAL WALLET --- */
+
+/* Saldo ETH (Mengambil warna dari --eth-color) */
+.dash-val.text-eth { 
+    color: var(--eth-color) !important; 
+    text-shadow: 0 0 5px rgba(98, 126, 234, 0.3); /* Tambah sedikit glow biar keren */
+}   
+
+/* Saldo USDT (Mengambil warna dari --usdt-color) */
+.dash-val.text-usdt { 
+    color: var(--usdt-color) !important; 
+    text-shadow: 0 0 5px rgba(38, 161, 123, 0.3);
+}  
+
+/* Saldo SHIB (Mengambil warna dari --shib-color) */
+.dash-val.text-shib { 
+    color: var(--shib-color) !important; 
+    text-shadow: 0 0 5px rgba(255, 164, 9, 0.3);
+}  
     .btn-disconnect { background: rgba(255, 42, 109, 0.2); border: 1px solid var(--danger); width: 100%; padding: 10px; border-radius: 8px; color: var(--danger); font-weight: bold; cursor: pointer; transition: 0.2s; }
     .btn-disconnect:hover { background: var(--danger); color: white; }
 
@@ -239,13 +261,18 @@
         text-align: center; display: none; 
         box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
     }  
-    .ref-label { font-size: 0.7em; color: var(--primary); text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px; font-weight: bold; }  
+    .ref-label { font-size: 0.7em; color: var(--primary); margin-bottom: 5px; letter-spacing: 1px; font-weight: bold; }  
     .ref-box { background: #080808; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; margin-top: 5px; font-size: 0.8em; color: #888; }  
     .btn-copy { 
-        background: var(--primary); color: #000; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold; transition: 0.2s; 
+        background: var(--success) !important; color: #000; border: 2px solid #04b371; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: bold; transition: 0.2s; 
     }  
-    .btn-copy:hover { background: #fff; }  
-  
+    
+    .btn-copy:hover { 
+    background: #00d2ff;
+    color: #000;
+    box-shadow: inset 0 0 0 2px #00a8cc, 0 0 15px #69ffc7; 
+    }
+    
     .ref-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; margin-bottom: 10px; }  
     .ref-stat-item { background: rgba(0,0,0,0.3); border: 1px solid #333; padding: 10px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; }  
     .rs-val { font-size: 1.2em; font-weight: bold; color: white; text-shadow: 0 0 5px rgba(255,255,255,0.2); }  
@@ -254,339 +281,589 @@
     .comm-info { font-size: 0.65em; color: #666; margin-top: 15px; font-style: italic; border-top: 1px dashed #333; padding-top: 8px;}  
 
     .withdraw-section { margin-top:15px; padding-top:10px; border-top:1px dashed #444; text-align:left; }  
-    .withdraw-title { font-size:0.8em; color:#aaa; margin-bottom:5px; }  
+    .withdraw-title { font-size:0.7em; color:#aaa; margin-bottom:5px; }  
     .btn-withdraw-small { background: rgba(5, 255, 161, 0.2); color: var(--success); border: 1px solid var(--success); padding: 4px 8px; border-radius: 4px; font-weight:bold; cursor:pointer; font-size:0.8em; float:right; transition: 0.2s; }  
     .btn-withdraw-small:hover { background: var(--success); color: #000; }
 
-    #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 16px; position: fixed; z-index: 999; bottom: 30px; left: 50%; transform: translateX(-50%); border: 1px solid var(--primary); box-shadow: 0 0 20px rgba(0,0,0,0.5); }  
-    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }  
+    #toast { visibility: hidden; min-width: 250px; background: linear-gradient(90deg, #03a9f4, #f441a5);
+    color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 999; bottom: 30px; left: 50%; transform: translateX(-50%); border: 1px solid var(--primary); box-shadow: 0 0 20px rgba(0,0,0,0.5); }  
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 7.5s; }  
     @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }  
     @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
 
-    .winner-glamour { border-color: var(--gold) !important; background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 165, 0, 0.3)) !important; animation: glamourPulse 0.8s infinite alternate !important; z-index: 10; transform-origin: center; }
-    @keyframes glamourPulse { 0% { box-shadow: 0 0 15px var(--gold), inset 0 0 5px var(--gold); transform: scale(1); border-color: var(--gold); } 100% { box-shadow: 0 0 30px var(--gold), 0 0 45px #FF4500, inset 0 0 20px var(--gold); transform: scale(1.1); border-color: #FFF; } }
-    .winner-glamour::before { content: "🏆 WINNER"; position: absolute; top: -15px; background: linear-gradient(45deg, var(--gold), #FFA500); color: #000; font-weight: bold; font-size: 0.7em; padding: 3px 10px; border-radius: 10px; box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); animation: bounce 0.8s infinite; }
-    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-    
-    /* ============================================================
-   CSS LANJUTAN — VERSI POLOS, CLEAN, MODERN, RAPI
-   Melanjutkan style yang sudah ada tanpa efek berlebihan
-   ============================================================ */
-
-/* --- HISTORY SECTION WRAPPER --- */
-.history-section {
-    width: 100%;
-    margin-top: 25px;
-}
-
-/* --- HISTORY CARD SIMPLE --- */
-.history-card {
-    background: #1b1f2c;
-    border: 1px solid #2a2e3a;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 15px;
-}
-
-/* Reels dalam card */
-.history-reels {
-    display: flex;
-    justify-content: center;
-    gap: 5px;
-    margin-bottom: 10px;
-}
-
-.history-reel-img {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-}
-
-/* Outcome text */
-.history-outcome {
-    font-weight: bold;
-    color: var(--accent);
-}
-
-/* --- TAB HISTORY (ALL / MINE / WINS) --- */
-.history-tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 10px;
-    font-size: 0.9em;
-    font-weight: bold;
-    background: #151925;
-    border: 1px solid #333;
-    color: #aaa;
-    cursor: pointer;
-    border-radius: 8px;
-    transition: 0.2s;
-}
-
-.tab-btn.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
-}
-
-/* --- LOAD MORE BUTTON --- */
-.btn-load-more {
-    width: 100%;
-    padding: 12px;
-    font-size: 0.85em;
-    color: #aaa;
-    background: #222;
-    border: 1px dashed #555;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.btn-load-more:hover {
-    background: #2b2b2b;
-}
-
-/* --- PERSONAL BET ITEM --- */
-.personal-bet-card {
-    background: rgba(255,255,255,0.04);
-    border-left: 3px solid #555;
-    padding: 10px;
-    border-radius: 6px;
-    margin-bottom: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.pb-info {
-    font-size: 0.85em;
-}
-
-.pb-time {
-    font-size: 0.75em;
-    color: #777;
-}
-
-.pb-animal {
-    font-weight: bold;
-    color: var(--accent);
-}
-
-/* WIN / LOSE BADGE */
-.badge {
-    padding: 3px 8px;
-    font-size: 0.75em;
-    font-weight: bold;
-    border-radius: 4px;
-    text-transform: uppercase;
-}
-
-.badge-win {
-    background: rgba(0, 210, 106, 0.15);
-    color: var(--success);
-    border: 1px solid var(--success);
-}
-
-.badge-lose {
-    background: rgba(255, 75, 75, 0.15);
-    color: var(--danger);
-    border: 1px solid var(--danger);
-}
-
-/* --- SOCIAL BAR (STARS + LIKE) --- */
-.social-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #333;
-}
-
-.star-group {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
-
-.star-btn {
-    cursor: pointer;
-    font-size: 1.3em;
-    color: #444;
-    transition: 0.15s;
-}
-
-.star-btn:hover {
-    color: #666;
-}
-
-.star-btn.active {
-    color: var(--gold);
-}
-
-.star-count {
-    font-size: 0.75em;
-    margin-left: 6px;
-    color: #888;
-}
-
-/* LIKE BUTTON */
-.btn-like-single {
-    background: #151925;
-    border: 1px solid #333;
-    color: #aaa;
-    padding: 5px 12px;
-    border-radius: 6px;
-    font-size: 0.85em;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.btn-like-single:hover {
-    background: #1e2230;
-}
-
-/* --- KOMENTAR SECTION --- */
-.comments-container {
-    display: none;
-    background: rgba(0,0,0,0.15);
-    padding: 12px;
-    margin-top: 12px;
-    border-radius: 8px;
-    border-top: 1px solid #333;
-}
-
-.comment-list {
-    max-height: 260px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-/* Item komentar */
-.comment-item {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-}
-
-/* Bubble komentar */
-.comment-bubble {
-    background: #2a2e3d;
-    padding: 10px 12px;
-    padding-right: 32px; /* ruang untuk icon edit */
-    border-radius: 12px;
-    flex: 1;
-    position: relative;
-}
-
-/* Icon Edit */
-.btn-edit-icon {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: none;
-    border: none;
-    color: #777;
-    cursor: pointer;
-    font-size: 0.9em;
-    padding: 2px;
-}
-
-.btn-edit-icon:hover {
-    color: var(--accent);
-}
-
-/* Nama */
-.comment-author {
-    font-weight: bold;
-    color: var(--accent);
-    font-size: 0.9em;
-}
-
-/* Teks */
-.comment-text {
-    margin-top: 4px;
-    color: #eee;
-    white-space: pre-wrap;
-    font-size: 0.9em;
-    line-height: 1.4;
-}
-
-/* Meta */
-.comment-meta {
-    margin-top: 6px;
-    font-size: 0.7em;
-    color: #777;
-    display: flex;
-    gap: 10px;
-}
-
-/* Aksi */
-.comment-actions {
-    color: #888;
-    cursor: pointer;
-    text-decoration: underline;
-}
-
-.comment-actions:hover {
-    color: white;
-}
-
-/* Input komentar */
-.comment-input-area {
-    display: flex;
-    gap: 5px;
-    margin-top: 10px;
-    align-items: flex-end;
-}
-
-.input-comment {
-    flex: 1;
-    background: #111;
-    border: 1px solid #444;
-    border-radius: 10px;
-    color: white;
-    padding: 10px;
-    font-size: 0.9em;
-    resize: vertical;
-    min-height: 45px;
-    max-height: 150px;
-}
-
-.input-comment:focus {
-    border-color: var(--primary);
-    outline: none;
-}
-
-/* Tombol kirim */
-.btn-post-comment {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--primary);
-    border: none;
-    color: white;
-    cursor: pointer;
+    /* --- WINNER GLAMOUR --- */
+    .winner-glamour { 
+        border-color: var(--gold) !important; 
+        background: radial-gradient(circle, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.05) 100%) !important; 
+        animation: glamourPulse 0.8s infinite alternate !important; 
+        z-index: 10; transform-origin: center; 
+        box-shadow: 0 0 30px rgba(255, 215, 0, 0.3) !important;
+    }  
+    .winner-glamour::before { 
+        /* 1. Hapus emoji piala, sisakan teksnya saja */
+        content: "WINNER"; 
+        
+        position: absolute; 
+        top: -15px; 
+        
+        /* 2. GABUNGKAN GAMBAR PNG + GRADIENT WARNA */
+        /* Format: url('gambar') posisi / ukuran, gradient-warna */
+        background: url('cup.png') no-repeat 8px center / 14px auto, 
+                    linear-gradient(45deg, #ffd700, #ffaa00);
+        
+        /* 3. Atur Padding Kiri lebih besar (untuk tempat gambar) */
+        padding: 4px 12px 4px 28px; 
+        
+        color: #000; 
+        font-weight: 800; 
+        font-size: 0.7em; 
+        border-radius: 20px; 
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); 
+        animation: bounce 0.8s infinite; 
+        border: 1px solid #fff;
     }
+    
+    /* --- HISTORY CARDS --- */
+    .history-section { margin-top: 30px; width: 100%; }  
+    .history-card { 
+        background: #1a1b26; 
+        padding: 15px; border-radius: 12px; margin-bottom: 15px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; 
+        border: 1px solid var(--primary);
+    }  
+    .history-reels { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }  
+    .history-reel-img { width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }  
+    .history-outcome { font-weight: bold; color: var(--text); font-size: 0.9em; text-shadow: 0 0 5px rgba(255,255,255,0.1); }  
+    
+    .history-tabs { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }  
+    .tab-btn { 
+        flex: 1; padding: 10px; background: rgba(255,255,255,0.05); 
+        border: 1px solid transparent; color: #888; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; transition: 0.3s; 
+    }  
+    .tab-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+    .tab-btn.active { 
+        background: rgba(0, 210, 255, 0.1); 
+        color: var(--primary); 
+        border-color: var(--primary); 
+        box-shadow: 0 0 10px rgba(0, 210, 255, 0.1); 
+    }  
+    .btn-load-more { width: 100%; padding: 12px; background: transparent; border: 1px dashed #555; color: #888; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 0.8em; transition: 0.3s; }  
+    .btn-load-more:hover { border-color: var(--primary); color: var(--primary); }  
+    .hidden { display: none; }  
+    
+    .personal-bet-card { 
+        background: rgba(255,255,255,0.02); 
+        border-left: 3px solid #555; padding: 10px; margin-bottom: 10px; border-radius: 6px; 
+        display: flex; justify-content: space-between; align-items: center; 
+        transition: 0.2s;
+    } 
+    .personal-bet-card:hover { background: rgba(255,255,255,0.05); } 
+    .pb-info { font-size: 0.8em; }  
+    .pb-time { font-size: 0.7em; color: #666; }  
+    .pb-animal { font-weight: bold; color: var(--primary); }  
+    .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; text-transform: uppercase; }  
+    .badge-win { background: rgba(5, 255, 161, 0.1); color: var(--success); border: 1px solid var(--success); }  
+    .badge-lose { background: rgba(255, 42, 109, 0.1); color: var(--danger); border: 1px solid var(--danger); }  
+
+    /* --- SOCIAL BAR --- */  
+    .social-bar {  
+        display: flex; justify-content: space-between; align-items: center;  
+        margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);  
+    }  
+    .star-group { display: flex; align-items: center; gap: 2px; }  
+    .star-btn { cursor: pointer; font-size: 1.3em; color: #444; transition: 0.2s; line-height: 1; }  
+    .star-btn:hover { transform: scale(1.2); }  
+    .star-btn.active { color: var(--gold); text-shadow: 0 0 10px rgba(255, 221, 89, 0.6); }  
+    .star-count { font-size: 0.7em; color: #888; margin-left: 6px; }  
+    .star-btn.hover-gold { color: var(--gold) !important; text-shadow: 0 0 10px rgba(255, 215, 0, 0.6); transform: scale(1.1); }  
+    .star-btn.dimmed { color: #333 !important; text-shadow: none !important; transform: scale(1); }  
+    
+    .like-wrapper { display: flex; align-items: center; gap: 10px; }  
+    
+    .btn-like-single {  
+        background: #111; border: 1px solid #333; color: #aaa; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 6px; transition: 0.3s;  
+    }  
+    .btn-like-single:hover { border-color: var(--success); color: white; background: rgba(5, 255, 161, 0.1); }  
+    .btn-like-single:active { transform: scale(0.95); }  
+
+    /* --- COMMENTS --- */
+    .btn-comment-toggle {  
+        background: #111; border: 1px solid #333; color: #aaa; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 6px; transition: 0.3s;  
+    }  
+    .btn-comment-toggle:hover { border-color: var(--primary); color: white; background: rgba(0, 210, 255, 0.1); }  
+    .btn-comment-toggle:active { transform: scale(0.95); }  
+    
+    .comments-container { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; }  
+    .comment-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; max-height: 300px; overflow-y: auto; }  
+    .comment-item { display: flex; gap: 8px; align-items: flex-start; }  
+    
+    .comment-bubble {  
+        background: #252836; padding: 10px 12px; padding-right: 30px; border-radius: 12px; flex: 1; position: relative; min-width: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }  
+    .btn-edit-icon { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #666; cursor: pointer; padding: 2px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }  
+    .btn-edit-icon:hover { color: var(--primary); transform: scale(1.1); }  
+    
+    .comment-author { font-weight: bold; color: var(--primary); font-size: 0.85em; cursor: pointer; }  
+    .comment-text { color: #ddd; margin-top: 4px; word-wrap: break-word; white-space: pre-wrap; font-size: 0.9em; line-height: 1.4; }  
+    .comment-meta { font-size: 0.7em; color: #555; margin-top: 6px; display: flex; gap: 10px; }  
+    .comment-actions { color: #777; cursor: pointer; text-decoration: underline; }  
+    .comment-actions:hover { color: white; }  
+
+    .comment-input-area { display: flex; gap: 8px; margin-top: 10px; align-items: flex-end; }  
+    .input-comment {  
+        flex: 1; background: #0f1016; border: 1px solid #333; color: white; padding: 10px; border-radius: 12px; font-size: 0.9em; font-family: inherit; resize: vertical; min-height: 40px; max-height: 200px; overflow: auto; transition: 0.3s;
+    }  
+    .input-comment:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 210, 255, 0.1); outline: none; }  
+    
+    .btn-post-comment {  
+        background: var(--primary); color: #000; border: none; height: 40px; width: 40px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+    }
+    .btn-post-comment:hover { transform: scale(1.1); box-shadow: 0 0 15px var(--primary); color: white;}
+
+    /* --- HISTORY SECTION (CYBERPUNK STYLE) --- */
+    .history-section { margin-top: 30px; width: 100%; }  
+    
+    .history-card { 
+        background: #161822; /* Panel gelap */
+        padding: 15px; 
+        border-radius: 12px; 
+        margin-bottom: 15px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
+        position: relative; 
+        border-left: 3px solid var(--primary); /* Aksen neon kiri */
+        transition: transform 0.2s;
+    }
+    .history-card:hover { transform: translateX(2px); }
+
+    .history-reels { 
+        display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; 
+        background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px;
+    }  
+    .history-reel-img { 
+        width: 40px; height: 40px; object-fit: contain; 
+        filter: drop-shadow(0 0 2px rgba(255,255,255,0.2)); 
+    }  
+    
+    .history-outcome { 
+        font-weight: 800; color: var(--text); 
+        font-size: 0.95em; 
+        text-shadow: 0 0 5px rgba(255,255,255,0.1); 
+        letter-spacing: 0.5px;
+    }  
+    
+    .history-tabs { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }  
+    .tab-btn { 
+        flex: 1; padding: 10px; 
+        background: rgba(255,255,255,0.03); 
+        border: 1px solid rgba(255,255,255,0.05); 
+        color: #888; border-radius: 8px; 
+        cursor: pointer; font-weight: bold; font-size: 0.85em; 
+        transition: all 0.3s; 
+        text-transform: uppercase;
+    }  
+    .tab-btn:hover { 
+        background: rgba(255,255,255,0.08); color: white; 
+    }
+    .tab-btn.active { 
+        background: rgba(0, 210, 255, 0.1); 
+        color: var(--primary); 
+        border-color: var(--primary); 
+        box-shadow: 0 0 10px rgba(0, 210, 255, 0.1); 
+    }  
+    
+    .btn-load-more { 
+        width: 100%; padding: 12px; 
+        background: transparent; 
+        border: 1px dashed #444; 
+        color: #888; border-radius: 8px; 
+        margin-top: 10px; cursor: pointer; 
+        font-size: 0.8em; font-weight: bold; 
+        transition: 0.3s; 
+    }  
+    .btn-load-more:hover { 
+        border-color: var(--primary); 
+        color: var(--primary); 
+        background: rgba(0, 210, 255, 0.05);
+        box-shadow: 0 0 10px rgba(0, 210, 255, 0.1);
+    }  
+    .hidden { display: none; }  
+    
+    .personal-bet-card { 
+        background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+        border-left: 3px solid #555; 
+        padding: 12px; margin-bottom: 10px; border-radius: 6px; 
+        display: flex; justify-content: space-between; align-items: center; 
+        transition: 0.2s;
+    } 
+    .personal-bet-card:hover { background: rgba(255,255,255,0.05); }
+
+    .pb-info { font-size: 0.8em; }  
+    .pb-time { font-size: 0.7em; color: #666; margin-bottom: 2px; }  
+    .pb-animal { font-weight: bold; color: var(--primary); text-shadow: 0 0 5px rgba(0, 210, 255, 0.3); }  
+    
+    .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; text-transform: uppercase; }  
+    .badge-win { 
+        background: rgba(5, 255, 161, 0.1); 
+        color: var(--success); 
+        border: 1px solid var(--success); 
+        box-shadow: 0 0 5px rgba(5, 255, 161, 0.2);
+    }  
+    .badge-lose { 
+        background: rgba(255, 42, 109, 0.1); 
+        color: var(--danger); 
+        border: 1px solid var(--danger); 
+    }  
+
+    /* --- SOCIAL & COMMENTS (GLOWING EFFECTS) --- */
+    .social-bar {  
+        display: flex;  
+        justify-content: space-between;  
+        align-items: center;  
+        margin-top: 15px;  
+        padding-top: 12px;  
+        border-top: 1px solid rgba(255, 255, 255, 0.05);  
+    }  
+    
+    .star-group { display: flex; align-items: center; gap: 4px; }  
+    .star-btn { 
+        cursor: pointer; font-size: 1.4em; color: #444; 
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        line-height: 1; 
+    }  
+    .star-btn:hover { transform: scale(1.3) rotate(10deg); }  
+    .star-btn.active { color: var(--gold); text-shadow: 0 0 10px rgba(255, 221, 89, 0.6); }  
+    
+    .star-btn.hover-gold { color: var(--gold) !important; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8); transform: scale(1.2); }  
+    .star-btn.dimmed { color: #333 !important; text-shadow: none !important; transform: scale(0.9); opacity: 0.5; }  
+    .star-count { font-size: 0.75em; color: #888; margin-left: 8px; font-weight: bold; }  
+
+    .like-wrapper { display: flex; align-items: center; gap: 10px; }  
+    
+    /* Tombol Like & Comment seragam */
+    .btn-like-single, .btn-comment-toggle {  
+        background: #11121a;  
+        border: 1px solid rgba(255,255,255,0.1);  
+        color: #aaa;  
+        border-radius: 8px;  
+        padding: 3px 8px;  
+        cursor: pointer;  
+        font-size: 0.85em;  
+        display: flex; align-items: center; gap: 3px;  
+        transition: all 0.3s ease;  
+    }  
+    .btn-like-single:hover { 
+        border-color: var(--success); color: #fff; 
+        background: rgba(5, 255, 161, 0.1); 
+        box-shadow: 0 0 10px rgba(5, 255, 161, 0.2);
+    }  
+    .btn-comment-toggle:hover { 
+        border-color: var(--primary); color: #fff; 
+        background: rgba(0, 210, 255, 0.1); 
+        box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+    }
+    .btn-like-single:active, .btn-comment-toggle:active { transform: scale(0.95); }  
+
+    /* --- COMMENTS AREA --- */
+    .comments-container {  
+        display: none;   
+        margin-top: 15px;  
+        padding-top: 15px;  
+        border-top: 1px dashed rgba(255,255,255,0.1);  
+        background: rgba(0,0,0,0.25);  
+        padding: 15px;  
+        border-radius: 12px;  
+        animation: slideDown 0.3s ease-out;
+    }  
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .comment-list { 
+        display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; 
+        max-height: 300px; overflow-y: auto; padding-right: 5px;
+    }  
+    
+    .comment-item { display: flex; gap: 10px; align-items: flex-start; }  
+    
+    .comment-bubble {  
+        background: #1f222e;  
+        padding: 10px 14px;  
+        padding-right: 35px;   
+        border-radius: 12px; 
+        border-top-left-radius: 2px;
+        flex: 1; position: relative; min-width: 0; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.05);
+    }  
+
+    .btn-edit-icon { 
+        position: absolute; top: 8px; right: 8px; background: none; border: none; color: #555; 
+        cursor: pointer; padding: 4px; border-radius: 4px; transition: 0.2s; display: flex; 
+    }  
+    .btn-edit-icon:hover { color: var(--primary); background: rgba(0, 210, 255, 0.1); }  
+    
+    .comment-author { font-weight: 700; color: var(--primary); font-size: 0.85em; cursor: pointer; text-shadow: 0 0 5px rgba(0, 210, 255, 0.2); }  
+    .comment-text { color: #e0e6ed; margin-top: 4px; word-wrap: break-word; white-space: pre-wrap; font-size: 0.9em; line-height: 1.5; }  
+    .comment-meta { font-size: 0.7em; color: #666; margin-top: 8px; display: flex; gap: 10px; align-items: center; }  
+    
+    .comment-input-area { display: flex; gap: 10px; margin-top: 10px; align-items: flex-end; background: #111; padding: 5px; border-radius: 15px; border: 1px solid #333; }  
+    
+    .input-comment {  
+        flex: 1; background: transparent; border: none; color: white; padding: 10px; border-radius: 12px; 
+        font-size: 0.9em; font-family: inherit; resize: vertical; min-height: 40px; max-height: 150px; overflow: auto; 
+    }  
+    .input-comment:focus { outline: none; }  
+    
+    .btn-post-comment {  
+        background: linear-gradient(135deg, var(--primary), var(--accent)); 
+        color: white; border: none; 
+        height: 36px; width: 36px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; 
+        transition: 0.3s; box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); margin-bottom: 2px; margin-right: 2px;
+    }
+    .btn-post-comment:hover { transform: scale(1.1) rotate(-10deg); box-shadow: 0 0 20px var(--primary); }
+
+    /* --- SCROLLBAR CUSTOM --- */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0b0c15; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+    
+    /* --- SOCIAL & COMMENTS STYLING (CYBERPUNK THEME) --- */
+
+    /* Container Utama Bar Sosial */
+    .social-bar {  
+        display: flex;  
+        justify-content: space-between; /* Kunci agar elemen menyebar rata */
+        align-items: center;  
+        margin-top: 10px;  
+        padding-top: 8px;  
+        border-top: 1px solid rgba(255,255,255,0.05);  
+        width: 100%;
+    }
+    
+    /* Opsional: Agar Tombol Like dan Komen punya lebar sama 
+       supaya Bintang benar-benar persis di tengah layar */
+    .btn-like-single, .btn-comment-toggle {
+        min-width: 60px; /* Atur lebar minimal */
+    }  
+
+    /* Grup Bintang Rating */
+    .star-group { 
+        display: flex; 
+        align-items: center; 
+        gap: 4px; /* Jarak antar bintang */
+    }  
+    .star-btn {  
+        cursor: pointer;  
+        font-size: 1.4em;  
+        color: #444; /* Warna mati (abu gelap) */  
+        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Efek membal saat hover */
+        line-height: 1;  
+    }  
+    .star-btn:hover { 
+        transform: scale(1.3) rotate(15deg); /* Efek membesar & miring saat hover */
+    }  
+    
+    /* Bintang Menyala (Aktif) */  
+    .star-btn.active { 
+        color: var(--gold); 
+        text-shadow: 0 0 10px rgba(255, 221, 89, 0.8), 0 0 20px rgba(255, 221, 89, 0.4); /* Glow emas */
+    }  
+    
+    /* Hover Effects (Preview & Dimmed) */
+    .star-btn.hover-gold {   
+        color: var(--gold) !important;   
+        text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);   
+        transform: scale(1.2);  
+    }  
+    .star-btn.dimmed {  
+        color: #333 !important;  
+        text-shadow: none !important;  
+        transform: scale(0.9);  
+        opacity: 0.5;
+    }  
+
+    .star-count {   
+        font-size: 0.75em;   
+        color: #aaa;   
+        margin-left: 8px;   
+        font-weight: bold;
+    }  
+
+    /* Wrapper Tombol Like & Comment */
+    .like-wrapper { 
+        display: flex; 
+        align-items: center; 
+        gap: 10px; /* Jarak antara tombol Like dan Komen */
+    }  
+  
+    /* Container Area Komentar */
+    .comments-container {  
+        display: none;   
+        margin-top: 15px;  
+        padding-top: 15px;  
+        border-top: 1px dashed rgba(255,255,255,0.1);  
+        background: rgba(0,0,0,0.25);  
+        padding: 15px;  
+        border-radius: 12px;
+        animation: slideDown 0.3s ease-out; /* Animasi muncul */
+    }  
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* List Komentar */
+    .comment-list {  
+        display: flex; 
+        flex-direction: column; 
+        gap: 12px; 
+        margin-bottom: 15px;  
+        max-height: 300px; 
+        overflow-y: auto;  
+        padding-right: 5px; /* Ruang untuk scrollbar */
+    }  
+    
+    /* Scrollbar Custom untuk List Komentar */
+    .comment-list::-webkit-scrollbar { width: 4px; }
+    .comment-list::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    .comment-list::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+    .comment-item { display: flex; gap: 10px; align-items: flex-start; }  
+  
+    /* Bubble Komentar */
+    .comment-bubble {  
+        background: #1f222e;  
+        padding: 10px 14px;  
+        padding-right: 35px; /* Ruang untuk icon edit */  
+        border-radius: 12px;  
+        border-top-left-radius: 2px; /* Aksen chat bubble */
+        flex: 1;  
+        position: relative;   
+        min-width: 0;  
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.05);
+    }  
+
+    /* Icon Edit (Pensil) */
+    .btn-edit-icon {  
+        position: absolute;  
+        top: 8px;  
+        right: 8px;  
+        background: none;  
+        border: none;  
+        color: #555;  
+        cursor: pointer;  
+        padding: 4px;  
+        border-radius: 4px;
+        transition: 0.2s;  
+        display: flex;  
+        align-items: center;  
+        justify-content: center;  
+    }  
+    .btn-edit-icon:hover {  
+        color: var(--primary);  
+        background: rgba(0, 210, 255, 0.1);
+        transform: scale(1.1);  
+    }  
+  
+    /* Nama User Komentar */
+    .comment-author { 
+        font-weight: 700; 
+        color: var(--primary); 
+        font-size: 0.85em; 
+        cursor: pointer; 
+        margin-bottom: 2px;
+        text-shadow: 0 0 5px rgba(0, 210, 255, 0.3);
+    }  
+  
+    /* Isi Teks Komentar */
+    .comment-text {   
+        color: #e0e0e0;   
+        margin-top: 4px;   
+        word-wrap: break-word;   
+        white-space: pre-wrap;   
+        font-size: 0.9em;  
+        line-height: 1.5;  
+    }  
+  
+    /* Metadata (Waktu & Status Edit) */
+    .comment-meta { 
+        font-size: 0.7em; 
+        color: #666; 
+        margin-top: 8px; 
+        display: flex; 
+        gap: 10px; 
+        align-items: center;
+    }  
+    
+    /* Area Input Komentar */
+    .comment-input-area { 
+        display: flex; 
+        gap: 10px; 
+        margin-top: 10px; 
+        align-items: flex-end; 
+        background: #111; 
+        padding: 5px; 
+        border-radius: 15px; 
+        border: 1px solid #333;
+    }  
+  
+    /* Textarea Input */
+    .input-comment {  
+        flex: 1;   
+        background: transparent;   
+        border: none;   
+        color: white;  
+        padding: 10px;   
+        font-size: 0.9em;  
+        font-family: inherit;  
+        resize: vertical; 
+        min-height: 40px; 
+        max-height: 150px; 
+        overflow: auto;  
+    }  
+    .input-comment:focus { outline: none; } /* Hilangkan outline default */ 
+  
+    /* Tombol Kirim (Pesawat Kertas) */
+    .btn-post-comment {  
+        background: linear-gradient(135deg, var(--primary), var(--accent)); 
+        color: #fff; 
+        border: none;  
+        height: 36px; width: 36px; 
+        border-radius: 50%;   
+        font-weight: bold; cursor: pointer; display: flex;   
+        align-items: center; justify-content: center;  
+        transition: 0.3s;
+        box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+        margin-bottom: 2px;
+        margin-right: 2px;
+    }
+    .btn-post-comment:hover {
+        transform: scale(1.1) rotate(-10deg);
+        box-shadow: 0 0 20px var(--primary);
+        }
+
+    h1, h2, h3 {
+        background: linear-gradient(90deg, #03a9f4, #f441a5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+    }
+
 </style>
 </head>
 <body>
 <header>
     <div style="display:flex; align-items:center; font-weight:bold; font-size:1.2em;">
         <img src="logo.svg" style="height:30px; margin-right:8px;"> 
-        Faylotto
+        <span style="
+            background: linear-gradient(90deg, #03a9f4, #f441a5);
+           -webkit-background-clip: text;
+           -webkit-text-fill-color: transparent;
+            color: transparent;
+            filter: drop-shadow(0 0 5px rgba(0, 210, 255, 0.5));
+            letter-spacing: 1px;">
+            Faylotto
+        </span>
     </div>
-    <button id="connectBtn" class="wallet-btn" onclick="handleWalletClick()">Connect Wallet</button>
+    <button id="connectBtn" class="wallet-btn" onclick="handleWalletClick()" style="display: flex; align-items: center; gap: 8px;">
+    <img src="chain.png" style="width: 22px; height: 22px;">
+    <span>Connect Wallet</span></button>
 </header>
 
 <div class="layout-container">
@@ -613,15 +890,39 @@
             <div class="bet-card" id="card-5" onclick="selectAnimal('orcha', 5)"><img src="orcha.svg" class="bet-icon-img"><span class="name">Orcha</span><span id="count-5" class="team-count">0</span><div class="card-stats-container"><span class="c-stat text-eth">E:<span id="c-eth-5">0</span></span><span class="c-stat text-usdt">U:<span id="c-usdt-5">0</span></span><span class="c-stat text-shib">S:<span id="c-shib-5">0</span></span></div></div>
         </div>
 
-        <div style="width:100%; margin-top:20px; font-size:0.7em; color:#aaa; text-align:left;">ESTIMATED POOLS (ROUND)</div>
+        <center><div style="width:100%; margin-top:20px; font-size:0.7em; color:#00d2ff; text-align:left;">ESTIMATED POOLS (ROUND)</div></center>
         <div class="pool-dashboard">
-            <div class="pool-box"><span class="pool-title">ETH</span><span class="pool-value text-eth" id="poolTotalETH">0.0000</span></div>
-            <div class="pool-box"><span class="pool-title">USDT</span><span class="pool-value text-usdt" id="poolTotalUSDT">0.00</span></div>
-            <div class="pool-box"><span class="pool-title">SHIB</span><span class="pool-value text-shib" id="poolTotalSHIB">0</span></div>
+            
+            <div class="pool-box">
+                <span class="pool-title">ETH</span>
+                <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
+                    <img src="eth.svg" style="width:14px; height:14px;">
+                    <span class="pool-value text-eth" id="poolTotalETH">0.0000</span>
+                </div>
+            </div>
+
+            <div class="pool-box">
+                <span class="pool-title">USDT</span>
+                <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
+                    <img src="usdt.svg" style="width:15px; height:15px;">
+                    <span class="pool-value text-usdt" id="poolTotalUSDT">0.00</span>
+                </div>
+            </div>
+
+            <div class="pool-box">
+                <span class="pool-title">SHIB</span>
+                <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
+                    <img src="shib.png" style="width:14px; height:14px;">
+                    <span class="pool-value text-shib" id="poolTotalSHIB">0</span>
+                </div>
+            </div>
         </div>
 
-        <button id="mainBetBtn" class="main-bet-btn" onclick="triggerBetModal()">PLACE BET</button>
-        <p style="margin-top:15px; color:#aaa; font-size:0.7em;">*Min 5 teams required to Draw</p>
+        <button id="mainBetBtn" class="main-bet-btn" onclick="triggerBetModal()" 
+
+        style="display: flex; align-items: center; justify-content: center; gap: 10px;"><img src="bet.png" style="width: 35px;">PLACE BET</button>
+        
+        <p style="margin-top:15px; color:#ff9f43; font-size:0.7em;">*Min 5 teams required to Draw</p>
 
         <div id="referralPanel" class="referral-panel">
             <div id="view-register" style="display:none;">
@@ -637,8 +938,8 @@
             </div>
         
             <div id="view-profile" style="display:none;">
-                <div class="ref-label">Player Profile</div>
-                <div style="font-size:1.2em; font-weight:bold; color:white; margin-bottom:10px;" id="displayNick">...</div>
+                <div class="ref-label">Player Profile Nickname:</div>
+                <div style="font-size:1.2em; font-weight:bold; color:var(--gold); margin-bottom:10px;" id="displayNick">...</div>
                 
                 <div class="ref-stats-grid">
                     <div class="ref-stat-item">
@@ -683,9 +984,29 @@
         <button class="close-modal" onclick="closeModal('paymentModal')">&times;</button>
         <div class="modal-title">BET ON <span id="modalAnimalName">ANIMAL</span></div>
         <div class="pay-options">
-            <button class="pay-btn btn-eth" onclick="processPayment('ETH')"><span>ETH</span> <span>0.0005 ETH</span></button>
-            <button class="pay-btn btn-usdt" onclick="processPayment('USDT')"><span>USDT</span> <span>10 USDT</span></button>
-            <button class="pay-btn btn-shib" onclick="processPayment('SHIB')"><span>SHIB</span> <span>110,000 SHIB</span></button>
+            <button class="pay-btn btn-eth" onclick="processPayment('ETH')">
+                <span style="display:flex; align-items:center;">
+                    <img src="eth.svg" style="width:30px; height:30px; margin-right:8px;"> 
+                   Betting Cost ETH:
+                </span> 
+                <span>0.0005 ETH</span>
+            </button>
+
+            <button class="pay-btn btn-usdt" onclick="processPayment('USDT')">
+                <span style="display:flex; align-items:center;">
+                    <img src="usdt.svg" style="width:33px; height:33px; margin-right:8px;"> 
+                   Betting Cost USDT:
+                </span> 
+                <span>10 USDT</span>
+            </button>
+
+            <button class="pay-btn btn-shib" onclick="processPayment('SHIB')">
+                <span style="display:flex; align-items:center;">
+                    <img src="shib.png" style="width:30px; height:30px; margin-right:8px;"> 
+                   Betting Cost SHIBA:
+                </span> 
+                <span>110,000 SHIBA</span>
+            </button>
         </div>
         <div style="border-top:1px dashed #444; padding-top:10px;">
             <div style="font-size:0.8em; color:#aaa;">Free Credit Balance: <span id="userBonusBalance" style="color:white;">0</span> SHIB</div>
@@ -697,11 +1018,11 @@
 <div id="walletInfoModal" class="modal-overlay">
     <div class="modal-content">
         <button class="close-modal" onclick="closeModal('walletInfoModal')">&times;</button>
-        <div class="dash-profile"><div style="font-weight:bold; margin-bottom:5px;">WALLET & WINNINGS</div><div style="font-size:0.8em; color:#aaa; background:#111; padding:5px; border-radius:4px;" id="dashAddress">...</div></div>
+        <div class="dash-profile"><div style="font-weight:bold; margin-bottom:5px;">WALLET & WINNINGS</div><div style="font-size:0.7em; color:#aaa; background:#111; padding:5px; border-radius:4px;" id="dashAddress">...</div></div>
         <div style="font-size:0.7em; color:#888; margin-bottom:5px;">WALLET BALANCE</div>
         <div class="dash-balance-grid"><div class="dash-item"><span class="dash-label">ETH</span><span class="dash-val text-eth" id="balETH">0.000</span></div><div class="dash-item"><span class="dash-label">USDT</span><span class="dash-val text-usdt" id="balUSDT">0.00</span></div><div class="dash-item"><span class="dash-label">SHIB</span><span class="dash-val text-shib" id="balSHIB">0.00</span></div></div>
         <div class="withdraw-section">
-            <div class="withdraw-title">GAME CREDIT / WINNINGS / COMMISSIONS</div>
+            <div class="withdraw-title">GAME CREDIT / WINNINGS / REFERRAL COMMISSIONS</div><br>
             <div class="dash-balance-grid">
                 <div class="dash-item"><span class="dash-label">ETH Credit</span><span class="dash-val text-eth" id="credETH">0.000</span><button class="btn-withdraw-small" onclick="withdraw('ETH')">W/D</button></div>
                 <div class="dash-item"><span class="dash-label">USDT Credit</span><span class="dash-val text-usdt" id="credUSDT">0.00</span><button class="btn-withdraw-small" onclick="withdraw('USDT')">W/D</button></div>
@@ -781,7 +1102,7 @@
 
     function handleWalletClick() { isConnected ? openWalletDashboard() : connectWallet(); }
     async function connectWallet() {
-        if (!window.ethereum) { showToast("MetaMask missing"); return; }
+        if (!window.ethereum) { showToast("Please Install MetaMask First"); return; }
         try {
             provider = new ethers.BrowserProvider(window.ethereum);
             const accounts = await provider.send("eth_requestAccounts", []);
@@ -796,22 +1117,27 @@
     async function switchNetwork() { try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_SEPOLIA_HEX }] }); } catch {} }
     async function requestSignature() {
         try {
-            const msg = `Login Faylotto\nUser: ${userAddress}\nTs: ${Date.now()}`;
+            const msg = `Welcome To Faylotto\nUser: ${userAddress}\nTs: ${Date.now()}`;
             const sig = await signer.signMessage(msg);
             localStorage.setItem(`auth_${userAddress}`, JSON.stringify({ sig, expiry: Date.now() + 86400000 * 30 }));
             finalizeLogin();
         } catch { showToast("Login Cancelled"); }
     }
     async function finalizeLogin() {
-        isConnected = true;
-        document.getElementById("connectBtn").innerText = "Wallet Info";
-        document.getElementById("connectBtn").classList.add("connected");
-        showToast("Connected"); refreshGameData();
+        isConnected = true;     
+        const btn = document.getElementById("connectBtn");
+        btn.innerHTML = `
+            <img src="wallet.svg" style="width: 20px; height: 20px;"> 
+            <span>Wallet Info</span>
+        `;
+        btn.classList.add("connected");
+        showToast("Connected"); 
+        refreshGameData();
     }
 
     // --- SOCIAL LOGIC ---
     async function submitRating(rid, stars) {
-        if(!isConnected) { showToast("Connect First"); return; }
+        if(!isConnected) { showToast("Connect Wallet First"); return; }
         try {
             const u = await gameContract.users(userAddress);
             // Contoh untuk submitRating (terapkan logika sama ke submitLike & triggerBetModal)
@@ -863,7 +1189,7 @@ if(!u[1]) {
             console.error(e);
             showToast("Failed: " + (e.reason||"Error")); 
         }
-    }
+     }
     
     async function updateSocialStats(rid) {
         try {
@@ -946,6 +1272,12 @@ if(!u[1]) {
                     <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;"><span style="font-size:0.7em; color:#555;">Loading...</span></div>
                     
                     <div class="social-bar">
+                        
+                        <button class="btn-like-single" onclick="submitLike(${r})">
+                            <img src="like.png" style="width: 25px; height: 25px;"> 
+                            <span id="likes-count-${r}">0</span>
+                        </button>
+
                         <div class="star-group" onmouseleave="resetStarHover(${r})">
                             <span id="star-${r}-1" class="star-btn" onmouseenter="previewStarRating(${r}, 1)" onclick="submitRating(${r},1)">★</span>
                             <span id="star-${r}-2" class="star-btn" onmouseenter="previewStarRating(${r}, 2)" onclick="submitRating(${r},2)">★</span>
@@ -954,12 +1286,13 @@ if(!u[1]) {
                             <span id="star-${r}-5" class="star-btn" onmouseenter="previewStarRating(${r}, 5)" onclick="submitRating(${r},5)">★</span>
                             <span id="vote-count-${r}" class="star-count">(0)</span>
                         </div>
-                        <div class="like-wrapper" style="gap:10px;">
-                            <button class="btn-like-single" onclick="submitLike(${r})">👍 <span id="likes-count-${r}">0</span></button>
-                            <button class="btn-comment-toggle" onclick="toggleComments(${r})">
-                                💬 <span id="comment-count-badge-${r}">${commentCount}</span>
-                            </button>
-                        </div>
+
+                        <button class="btn-comment-toggle" onclick="toggleComments(${r})">
+                            <img src="comment.png" style="width: 25px; height: 25px;"> 
+                            <span id="comment-count-badge-${r}">${commentCount}</span>
+                        </button>
+
+                    </div>
                     </div>
 
                     <div id="comments-section-${r}" class="comments-container">
@@ -968,7 +1301,7 @@ if(!u[1]) {
                         </div>
                         <div class="comment-input-area">
                             <textarea id="input-comment-${r}" class="input-comment" placeholder="Write comment..."></textarea>
-                            <button class="btn-post-comment" onclick="postComment(${r})">➤</button>
+                            <button class="btn-post-comment" onclick="postComment(${r})"><img src="send.svg" style="width: 18px; height: 18px;"></button>
                         </div>
                     </div>
                 `;
@@ -1056,9 +1389,10 @@ if(!u[1]) {
                 if(d.eth>0n) pay+=`<div style="color:#627EEA">+${parseFloat(ethers.formatEther(d.eth)).toFixed(4)} ETH</div>`;
                 if(d.usdt>0n) pay+=`<div style="color:#26A17B">+${parseFloat(ethers.formatUnits(d.usdt,6)).toFixed(2)} USDT</div>`;
                 if(d.shib>0n) pay+=`<div style="color:#FFA409">+${parseFloat(ethers.formatUnits(d.shib,18)).toLocaleString()} SHIB</div>`;
-                
+
                 div.innerHTML = `<div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;"><div style="display:flex; justify-content:space-between;"><div style="text-align:left;"><div style="font-size:0.65em; color:#888;">WINNER</div><div style="color:var(--gold); font-weight:bold; font-size:0.85em;" id="nick-${r}">🏆 ${d.topAddr.substring(0,4)}...</div></div><div style="text-align:right; font-size:0.75em; font-weight:bold;">${pay}</div></div></div>`;
-                gameContract.users(d.topAddr).then(u=>{ if(u[0]) document.getElementById(`nick-${r}`).innerText=`🏆 ${u[0]}`; }).catch(()=>{});
+
+                gameContract.users(d.topAddr).then(u=>{ if(u[0]) document.getElementById(`nick-${r}`).innerText=`🏆 ${u[0]}`; }).catch(()=>{}); 
             }
         } catch (e) { console.log("Fetch error", e); }
     }
@@ -1146,7 +1480,8 @@ if(!u[1]) {
                         <div style="font-weight:bold; color:var(--text);">Result: <span style="color:var(--accent);">${win.outcome}</span></div>
                     </div>
                     <div style="text-align:right;">
-                        <span class="badge badge-win" style="border-color:var(--gold); color:var(--gold);">🏆 VICTORY</span>
+                        <span class="badge badge-win" style="border-color:var(--gold); color:var(--gold); display: inline-flex; align-items: center; gap: 5px;">
+                        <img src="cup.png" style="width: 20px; height: 20px;">VICTORY</span>
                         <div style="margin-top:5px; font-weight:bold; color:${colorHex}; font-size:1.1em;">
                             + ${valStr} <span style="font-size:0.7em;">${symbol}</span>
                         </div>
@@ -1360,7 +1695,7 @@ if (isConnected) {
         if (currentSelectedAnimal.index === -1) return;
         const idx = currentSelectedAnimal.index;
         closeModal('paymentModal');
-        showToast(`Processing ${currencyType}...`);
+        showToast(`Processing Place Bet ${currencyType}...`);
         try {
             let tx;
             if (currencyType === 'ETH') {
@@ -1467,11 +1802,11 @@ if (isConnected) {
             // Matikan animasi manual jika error
             spinIntervals.forEach(clearInterval);
             isSpinning = false;
-            showToast("Draw Error: " + (err.reason || err.message)); 
+            showToast("Draw Failed. Try Again!.: " + (err.reason || err.message)); 
         }
     }
 
-    async function checkRoundResult(roundId) {
+    function checkRoundResult(roundId) {
 
         if (isProcessingResult) return; 
 
@@ -1631,7 +1966,7 @@ if (isConnected) {
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function showToast(msg) {
         const x = document.getElementById("toast"); x.innerText = msg; x.className = "show";
-        setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
+        setTimeout(() => { x.className = x.className.replace("show", ""); }, 8000);
     }
 
     async function openWalletDashboard() {
@@ -1808,7 +2143,7 @@ if (isConnected) {
             showToast("Comment posted!");
             loadComments(roundId);
         } catch (e) {
-            showToast("Failed: " + (e.reason || "Error"));
+            showToast("Posting Comment Failed: " + (e.reason || "Error"));
         }
     }
 
