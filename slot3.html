@@ -2090,33 +2090,37 @@ if (isConnected) {
             for (let i = 0; i < count; i++) {
                 const c = await gameContract.roundComments(roundId, i);
                 
-                // 1. DATA MENTAH
                 const cId = c[0];
                 const author = c[1]; 
-                const rawData = c[2]; // String gabungan
+                const rawData = c[2]; 
                 const time = Number(c[3]);
                 const isEdited = c[4];
 
-                // 2. LOGIKA HIBRID (Pecah Teks & Gambar)
                 let displayMessage = "";
                 let displayImage = "";
 
+                // --- LOGIKA PERBAIKAN URL GAMBAR ---
                 if (rawData.includes(IMG_SEPARATOR)) {
                     const parts = rawData.split(IMG_SEPARATOR);
                     displayMessage = parts[0]; 
-                    const imgUrl = parts[1];   
-                    displayImage = `<img src="${imgUrl}" class="comment-image-result" onclick="window.open('${imgUrl}','_blank')">`;
+                    
+                    // Ambil bagian URL dan bersihkan spasi
+                    let rawUrl = parts[1] ? parts[1].trim() : "";
+
+                    // Cek apakah URL valid (harus ada isinya dan dimulai http)
+                    if (rawUrl.length > 5 && rawUrl.startsWith("http")) {
+                        // Tambahkan onerror: Jika gambar gagal loading, sembunyikan elemennya
+                        displayImage = `<img src="${rawUrl}" class="comment-image-result" onclick="window.open('${rawUrl}','_blank')" onerror="this.style.display='none'">`;
+                    }
                 } else {
                     displayMessage = rawData; 
                 }
+                // -----------------------------------
 
-                // 3. LOGIKA LAINNYA
                 const isMyComment = (userAddress && author.toLowerCase() === userAddress.toLowerCase());
                 const dateStr = new Date(time * 1000).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'});
                 const nameElementId = `author-name-${roundId}-${cId}`;
 
-                // --- TOMBOL EDIT (Kanan Atas) ---
-                // Perhatikan penggunaan .replace(/'/g, "\\'") untuk mencegah error tanda kutip
                 const editIconHtml = `
                     <button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${cId}, '${displayMessage.replace(/'/g, "\\'")}')" title="Edit">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2126,14 +2130,13 @@ if (isConnected) {
                     </button>
                 `;
 
-                // --- TOMBOL PROFIL (Kanan Bawah) ---
+                // Ini icon User Profile (yang Anda tanyakan user.png)
                 const viewProfileHtml = `
                     <button class="btn-view-profile" onclick="openPlayerProfile('${author}')" title="View Profile">
                         <img src="user.png" style="width:14px; height:14px; opacity:0.8;">
                     </button>
                 `;
 
-                // 4. SUSUN HTML
                 const item = document.createElement('div');
                 item.className = 'comment-item';
 
@@ -2159,12 +2162,9 @@ if (isConnected) {
                     </div>
                 `;
                 
-                // Masukkan Teks Bersih
                 item.querySelector(`#text-${roundId}-${cId}`).innerText = displayMessage;
-                
                 listDiv.appendChild(item);
 
-                // 5. FETCH NICKNAME
                 gameContract.users(author).then(u => {
                     const nick = u[0]; 
                     const el = document.getElementById(nameElementId);
