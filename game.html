@@ -3,407 +3,406 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Battle Pot — Full Features (Demo)</title>
+<title>Bambang Pass Royale — Bomb Countdown (Demo)</title>
 <style>
   :root{
-    --bg:#060814; --panel:#0f1220; --muted:#94a3b8; --accent:#7c3aed;
-    --good:#38bdf8; --danger:#fb7185;
+    --bg:#071021; --panel:#0d1724; --accent:#ef7b3a; --muted:#9fb0c8;
+    --danger:#fb7185; --good:#34d399; --bar-bg: rgba(255,255,255,0.04);
   }
   *{box-sizing:border-box}
-  body{margin:0;background:
-    radial-gradient(800px 300px at 10% 10%, rgba(124,58,237,0.06), transparent),
-    linear-gradient(180deg,#030414,#06102a 60%); color:#e6eef8; font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial; padding:22px;}
-  .wrap{max-width:1150px;margin:0 auto;display:grid;grid-template-columns:360px 1fr;gap:18px;align-items:start;}
-  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:16px; border-radius:12px; box-shadow:0 10px 30px rgba(2,6,23,0.6);}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#e6eef8;background:
+    radial-gradient(800px 300px at 10% 10%, rgba(239,123,58,0.06), transparent),
+    linear-gradient(180deg,#041021,#071226);padding:20px}
+  .wrap{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:360px 1fr;gap:16px;}
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
   h1{margin:0 0 6px 0;font-size:20px}
   label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
   input, select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:#e6eef8}
-  button{padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),#4f46e5);color:#fff;cursor:pointer}
+  button{padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),#d95a1f);color:#fff;cursor:pointer}
   .muted{color:var(--muted);font-size:13px}
-  .players { max-height:460px; overflow:auto;margin-top:12px;display:grid;grid-template-columns:repeat(2,1fr);gap:8px; }
-  .card{padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:6px;min-height:62px;position:relative}
-  .name{font-weight:700}
-  .meta{font-size:12px;color:var(--muted)}
+  .players-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .avatar{width:120px;height:110px;border-radius:10px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;transition:all .45s ease;position:relative;overflow:hidden}
+  .avatar .name{font-weight:800}
+  .avatar .meta{font-size:12px;color:var(--muted)}
+  .avatar.bomb{box-shadow:0 12px 40px rgba(239,123,58,0.25);transform:scale(1.06)}
+  .avatar.elim{opacity:.25;filter:grayscale(90%);text-decoration:line-through;transform:scale(.94)}
   .controls{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-  .avatar{width:100%;height:72px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);display:flex;align-items:center;justify-content:space-between;padding:10px;transition:all .6s ease}
-  .avatar.elim{filter:grayscale(90%) brightness(.5);opacity:.25;transform:scale(.92) rotate(-2deg); text-decoration:line-through}
-  .center-stage{display:flex;gap:18px;flex-direction:column}
-  .arena{height:420px;border-radius:12px;background:linear-gradient(180deg,#061124,#051022);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-  .overlay-info{position:absolute;left:18px;top:18px;color:var(--muted);font-size:14px}
-  .pot{font-size:20px;font-weight:800}
-  .big-winner{position:absolute;right:18px;top:18px;background:rgba(0,0,0,0.45);padding:8px 12px;border-radius:10px;color:#fff}
-  .log{max-height:110px;overflow:auto;margin-top:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:13px;color:var(--muted)}
-  .footer-note{font-size:12px;color:var(--muted);margin-top:8px}
-  .switch{display:flex;gap:8px;align-items:center}
-  .split-input{display:flex;gap:6px}
-  .split-input input{width:72px}
-  .wallet-box{display:flex;gap:8px;align-items:center}
-  @media (max-width:980px){ .wrap{grid-template-columns:1fr} .players{grid-template-columns:repeat(1,1fr)} .arena{height:300px} }
+  .arena{height:420px;border-radius:12px;background:linear-gradient(180deg,#051229,#02111d);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+  .center-info{position:absolute;left:18px;top:18px;color:var(--muted)}
+  .right-info{position:absolute;right:18px;top:18px;color:var(--muted);text-align:right}
+  .log{max-height:120px;overflow:auto;margin-top:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:13px;color:var(--muted)}
+  .winnerBox{margin-top:10px;padding:10px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);font-weight:700}
+  .small{font-size:12px;color:var(--muted)}
+  /* Countdown bar */
+  .countdown-wrapper{position:absolute;left:8px;right:8px;bottom:8px;height:14px;border-radius:8px;background:var(--bar-bg);overflow:hidden}
+  .countdown-bar{height:100%;width:0%;background:linear-gradient(90deg,#ffb86b,#ef7b3a);transition:width .08s linear}
+  .countdown-text{position:absolute;right:10px;bottom:18px;font-size:12px;color:#fff;font-weight:700;background:rgba(0,0,0,0.28);padding:4px 8px;border-radius:8px}
+  @media (max-width:980px){ .wrap{grid-template-columns:1fr} .avatar{width:48%;} .arena{height:320px} }
 </style>
 </head>
 <body>
   <div class="wrap">
-    <!-- LEFT: Controls -->
+    <!-- Left controls -->
     <div class="panel">
-      <h1>Battle Pot — Full Features</h1>
-      <div class="muted">Mode: Survival Random Elimination. Semua client-side demo. Untuk production gunakan server / on-chain VRF.</div>
+      <h1>Bambang Pass Royale — Countdown</h1>
+      <div class="muted">Added visual countdown bar + numeric timer for current bomb holder.</div>
 
-      <label>Connect Wallet (Metamask) — Demo</label>
-      <div style="display:flex;gap:8px;align-items:center">
-        <button id="connectWalletBtn">Connect Wallet</button>
-        <div id="walletAddr" class="muted">Not connected</div>
-      </div>
-      <div class="footer-note">(Connect hanya membaca address; tidak melakukan transfer di demo ini.)</div>
-
-      <label style="margin-top:12px">Tambah Pemain / Ticket Mode</label>
-      <div style="display:flex;gap:8px">
-        <input id="newName" placeholder="Nama pemain (ex: Riko)">
-        <input id="tickets" type="number" min="1" value="1" style="width:88px">
-      </div>
+      <label style="margin-top:12px">Tambah Pemain</label>
+      <input id="nameInput" placeholder="Nama pemain (contoh: Bambang)">
       <div style="display:flex;gap:8px;margin-top:8px">
-        <input id="bet" type="number" min="0" value="1" style="width:120px">
+        <input id="ticketsInput" type="number" min="1" value="1" style="width:120px">
+        <input id="betInput" type="number" min="0.01" step="0.01" value="1" style="width:120px">
+      </div>
+      <div class="controls">
         <button id="addBtn">Tambah</button>
+        <button id="autoBtn">Auto-fill 12</button>
       </div>
 
-      <label style="margin-top:12px">Mode Eliminasi</label>
-      <div class="switch">
-        <label><input type="radio" name="mode" value="weighted" checked> Weighted (by tickets)</label>
-        <label style="margin-left:8px"><input type="radio" name="mode" value="equal"> Equal random</label>
+      <label style="margin-top:10px">Mode Pass</label>
+      <div class="small">
+        <label><input type="radio" name="passMode" value="weighted" checked> Weighted (by tickets)</label><br>
+        <label><input type="radio" name="passMode" value="equal"> Equal (random)</label>
       </div>
 
-      <label style="margin-top:12px">Payout Split (Top 3) — jumlah total harus 100%</label>
-      <div class="split-input" style="margin-top:6px">
-        <input id="split1" type="number" min="0" max="100" value="70">%
-        <input id="split2" type="number" min="0" max="100" value="20">%
-        <input id="split3" type="number" min="0" max="100" value="10">%
+      <label style="margin-top:10px">Bomb Timer (ms) — explosion occurs after a random time in this range</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <input id="minTimer" type="number" value="1800" style="width:120px">
+        <input id="maxTimer" type="number" value="4200" style="width:120px">
+      </div>
+
+      <label style="margin-top:10px">Pass Interval (ms)</label>
+      <input id="passInterval" type="number" value="600">
+
+      <label style="margin-top:10px">Payout Split Top3 (%) — must total 100</label>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <input id="split1" type="number" value="60" style="width:72px">%
+        <input id="split2" type="number" value="25" style="width:72px">%
+        <input id="split3" type="number" value="15" style="width:72px">%
       </div>
 
       <div class="controls" style="margin-top:12px">
-        <button id="startBtn">Start Royale</button>
+        <button id="startBtn">Mulai Game</button>
         <button id="stopBtn" disabled style="background:#ff5a5a">Stop</button>
         <button id="resetBtn" style="background:#444">Reset</button>
       </div>
 
-      <label style="margin-top:12px">Quick Actions</label>
-      <div class="controls">
-        <button id="autofillBtn">Auto-fill 16 players</button>
-        <button id="demoAllBtn">Demo: Start (auto)</button>
-      </div>
-
-      <div class="footer-note" style="margin-top:12px">
-        Catatan produksi: gunakan server-side randomness (VRF/Chainlink), simpan deposit on-chain / smart contract, audit log, dan prosedur KYC/kompliansi sesuai hukum.
+      <div style="margin-top:12px" class="small">
+        Catatan: Ini demo client-side. Untuk fairness production gunakan VRF/server-side RNG dan smart contract escrow.
       </div>
     </div>
 
-    <!-- RIGHT: Arena & players -->
-    <div class="panel center-stage">
+    <!-- Right arena -->
+    <div class="panel">
       <div class="arena" id="arena">
-        <div class="overlay-info">
-          <div class="muted">Players:</div>
-          <div id="countPlayers" class="pot">0</div>
-          <div class="muted" style="margin-top:6px">Total Pot:</div>
-          <div id="totalPot" class="pot">0 USDT</div>
+        <div class="center-info">
+          <div class="small">Players:</div>
+          <div id="count" style="font-weight:800;font-size:20px">0</div>
+          <div class="small" style="margin-top:8px">Total Pot:</div>
+          <div id="pot" style="font-weight:800;font-size:18px">0 USDT</div>
+        </div>
+        <div class="right-info">
+          <div class="small">Current Holder:</div>
+          <div id="currentHolder" style="font-weight:800">-</div>
         </div>
 
-        <div class="big-winner" id="winnersBox">Winners: -</div>
+        <div id="playersArea" style="width:92%;height:86%;display:flex;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;gap:12px;padding:10px;pointer-events:none"></div>
 
-        <!-- avatars grid -->
-        <div id="avatarsGrid" style="position:relative; width:86%; height:86%; display:flex;flex-wrap:wrap;align-content:flex-start;justify-content:center;gap:12px; padding:12px; pointer-events:none;"></div>
+        <!-- Global countdown UI (shows when there's a holder) -->
+        <div id="globalCountdownText" class="countdown-text" style="display:none">--</div>
       </div>
 
       <div style="display:flex;gap:12px;margin-top:12px">
         <div style="flex:1">
-          <div class="muted">Last Events</div>
-          <div class="log" id="log"></div>
+          <div class="muted">Event Log</div>
+          <div id="log" class="log"></div>
         </div>
-        <div style="width:220px">
-          <div class="muted">Players List</div>
-          <div class="players" id="playersList"></div>
+        <div style="width:240px">
+          <div class="muted">Winners / Payout</div>
+          <div id="winnersBox" class="winnerBox">-</div>
         </div>
       </div>
     </div>
   </div>
 
 <script>
-/* ===========================
-   Battle Pot — Full Prototype
-   - Weighted / Equal elimination
-   - Top3 payout split
-   - Animated eliminations + sounds
-   - Wallet connect (Metamask) demo (no real tx)
-   =========================== */
+/* Bambang Pass Royale — Demo with visual countdown
+   - Adds a progress bar inside the avatar of the current holder
+   - Also shows a global numeric countdown near arena
+   - All client-side
+*/
 
 const state = {
-  players: [], // {id,name,tickets,bet,out:false}
-  potPerTicket: 1.0,
+  players: [], // {id, name, tickets, bet, out:false}
+  bombHolderId: null,
   running: false,
-  winners: [],
+  passTimer: null,
+  explodeTimer: null,
+  tickInterval: null,
+  countdownInterval: null,
+  explodeAt: null, // timestamp ms
   audioCtx: null
 };
 
-/* ---------------------------
-   Utilities
---------------------------- */
 const $ = id => document.getElementById(id);
 function uid(n=6){ return Math.random().toString(36).slice(2,2+n); }
-function log(msg){ const el=$('log'); el.innerHTML = `<div>${new Date().toLocaleTimeString()} — ${msg}</div>` + el.innerHTML; if(el.scrollTop<50) el.scrollTop=0; }
-function sumTickets(){ return state.players.reduce((s,p)=>s.tickets + s,0); }
-function totalPot(){ return state.players.reduce((s,p)=>s + (p.bet || 0),0); }
+function log(msg){ const el = $('log'); el.innerHTML = `<div>${new Date().toLocaleTimeString()} — ${msg}</div>` + el.innerHTML; if(el.scrollTop<50) el.scrollTop=0; }
+function totalPot(){ return state.players.reduce((s,p)=>s + (p.bet||0),0); }
+function countAlive(){ return state.players.filter(p=>!p.out).length; }
+function getAlive(){ return state.players.filter(p=>!p.out); }
 
-/* ---------------------------
-   Audio (WebAudio oscillator beeps)
---------------------------- */
-function playBeep(freq=420,dur=0.08, vol=0.06){
+/* Audio helpers */
+function initAudio(){ if(!state.audioCtx) state.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+function beep(freq=440, dur=0.05, vol=0.06){
   try{
-    if(!state.audioCtx) state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    initAudio();
     const ctx = state.audioCtx;
     const o = ctx.createOscillator();
     const g = ctx.createGain();
-    o.type = 'sine'; o.frequency.setValueAtTime(freq, ctx.currentTime);
+    o.type='sine'; o.frequency.setValueAtTime(freq, ctx.currentTime);
     g.gain.value = vol;
     o.connect(g); g.connect(ctx.destination);
     o.start();
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
     setTimeout(()=>{ o.stop(); o.disconnect(); g.disconnect(); }, dur*1000 + 20);
-  }catch(e){ /* silent */ }
+  }catch(e){}
 }
 
-/* ---------------------------
-   DOM: add player, render
---------------------------- */
-function renderPlayers(){
-  $('playersList').innerHTML = '';
-  const grid = $('avatarsGrid'); grid.innerHTML = '';
+/* UI render (including countdown bar in each avatar) */
+function render(){
+  const area = $('playersArea'); area.innerHTML = '';
   state.players.forEach(p=>{
-    const card = document.createElement('div'); card.className='card';
-    card.style.gridColumn='span 1';
-    card.innerHTML = `<div class="name">${p.name}</div><div class="meta">${p.tickets} tiket • ${p.bet} USDT</div>`;
-    $('playersList').appendChild(card);
-
-    // avatar tile (large)
-    const av = document.createElement('div'); av.className='avatar'; av.id = 'av_'+p.id;
-    av.innerHTML = `<div style="font-weight:800">${p.name}</div><div class="meta">${p.tickets}</div>`;
-    av.style.width = '160px'; av.style.height='84px'; av.style.pointerEvents='none';
-    grid.appendChild(av);
+    const el = document.createElement('div');
+    el.className = 'avatar' + (p.out ? ' elim' : (state.bombHolderId===p.id && !p.out ? ' bomb' : ''));
+    el.id = 'av_'+p.id;
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;width:100%;justify-content:center">
+        <div style="text-align:center">
+          <div class="name">${p.name}</div>
+          <div class="meta">${p.tickets} tk • ${p.bet} USDT</div>
+        </div>
+      </div>
+      <div class="countdown-wrapper" style="display:${(state.bombHolderId===p.id && !p.out) ? 'block' : 'none'}">
+        <div class="countdown-bar" id="bar_${p.id}" style="width:0%"></div>
+      </div>
+    `;
+    area.appendChild(el);
   });
-  $('countPlayers').innerText = state.players.length;
-  $('totalPot').innerText = totalPot().toFixed(2) + ' USDT';
+  $('count').innerText = countAlive();
+  $('pot').innerText = totalPot().toFixed(2) + ' USDT';
+  $('currentHolder').innerText = state.bombHolderId ? (state.players.find(x=>x.id===state.bombHolderId)?.name||'-') : '-';
 }
 
-/* ---------------------------
-   Actions: add / autofill / reset
---------------------------- */
+/* Add player */
 $('addBtn').onclick = ()=>{
-  const name = $('newName').value.trim() || ('P'+Math.floor(Math.random()*9999));
-  const t = Math.max(1, parseInt($('tickets').value) || 1);
-  const b = Math.max(0.01, parseFloat($('bet').value) || 1);
+  const name = ($('nameInput').value.trim()) || ('P'+Math.floor(Math.random()*9999));
+  const tickets = Math.max(1, parseInt($('ticketsInput').value) || 1);
+  const bet = Math.max(0.01, parseFloat($('betInput').value) || 1);
   const id = uid(5);
-  state.players.push({ id, name, tickets: t, bet: b, out:false });
-  $('newName').value=''; $('tickets').value='1'; $('bet').value='1';
-  renderPlayers(); log(`Added ${name} — ${t} tickets, ${b} USDT`);
+  state.players.push({ id, name, tickets, bet, out:false });
+  $('nameInput').value=''; $('ticketsInput').value='1'; $('betInput').value='1';
+  render(); log(`Added ${name} (${tickets} tickets, ${bet} USDT)`);
 };
 
-$('autofillBtn').onclick = ()=>{
-  const sample = ['Riko','Sari','Joko','Luna','Aldi','Nina','Bayu','Tara','Fikri','Dedi','Maya','Rizal','Hendra','Putri','Gilang','Eka'];
+/* Auto-fill */
+$('autoBtn').onclick = ()=>{
+  const sample = ['Bambang','Tari','Gilang','Riko','Sari','Joko','Luna','Dedi','Bayu','Nina','Indra','Rizal'];
   state.players = [];
-  sample.forEach((n,i)=>{
-    const t = Math.floor(Math.random()*5)+1;
-    const b = (Math.floor(Math.random()*8)+1);
+  sample.forEach(n=>{
+    const t = Math.floor(Math.random()*6)+1;
+    const b = Math.floor(Math.random()*6)+1;
     state.players.push({ id: uid(5), name: n, tickets: t, bet: b, out:false });
   });
-  renderPlayers(); log('Auto-filled players');
+  render(); log('Auto-filled players');
 };
 
-$('resetBtn').onclick = ()=>{
-  if(state.running) { alert('Stop dulu sebelum reset'); return; }
-  state.players = []; state.winners = []; renderPlayers(); $('winnersBox').innerText='Winners: -'; $('log').innerHTML='';
-  log('Reset all');
-};
-
-/* ---------------------------
-   Wallet connect (Metamask demo)
-   - only reads address, does not send tx
---------------------------- */
-let connectedAddress = null;
-$('connectWalletBtn').onclick = async ()=>{
-  if(window.ethereum){
-    try{
-      const accs = await window.ethereum.request({ method:'eth_requestAccounts' });
-      connectedAddress = accs[0];
-      $('walletAddr').innerText = connectedAddress;
-      log('Wallet connected: ' + connectedAddress);
-    }catch(err){ log('Wallet connect rejected'); }
-  }else{
-    alert('No Ethereum provider found. Install Metamask for real wallet connect.');
-  }
-};
-
-/* ---------------------------
-   Random helpers (weighted/equal)
---------------------------- */
-function pickWeightedAlive(alive){
-  // build array of owner ids repeated by tickets
+/* Random pick helpers */
+function pickWeighted(alive){
   const pool = [];
-  alive.forEach(p=>{
-    for(let i=0;i<p.tickets;i++) pool.push(p);
-  });
+  alive.forEach(p=>{ for(let i=0;i<p.tickets;i++) pool.push(p); });
   if(pool.length===0) return alive[Math.floor(Math.random()*alive.length)];
   return pool[Math.floor(Math.random()*pool.length)];
 }
-function pickEqualAlive(alive){
-  return alive[Math.floor(Math.random()*alive.length)];
+function pickEqual(alive){ return alive[Math.floor(Math.random()*alive.length)]; }
+
+/* Schedule explosion: set explodeAt timestamp, start countdown interval updating bars */
+function scheduleExplosion(){
+  if(state.explodeTimer){ clearTimeout(state.explodeTimer); state.explodeTimer = null; }
+  if(state.countdownInterval){ clearInterval(state.countdownInterval); state.countdownInterval = null; }
+
+  const minT = Math.max(100, parseInt($('minTimer').value) || 1200);
+  const maxT = Math.max(minT+50, parseInt($('maxTimer').value) || 3800);
+  const delay = Math.floor(minT + Math.random()*(maxT-minT));
+  state.explodeAt = Date.now() + delay;
+
+  // update numeric global countdown and per-avatar bar frequently
+  const updateMs = 30;
+  const barId = 'bar_' + state.bombHolderId;
+  $('globalCountdownText').style.display = 'block';
+
+  state.countdownInterval = setInterval(()=>{
+    const now = Date.now();
+    let remain = Math.max(0, state.explodeAt - now);
+    // visual easing: show percent remaining reversed (0% = exploded, 100% = fresh)
+    const total = Math.max(1, delay);
+    const progress = Math.max(0, Math.min(1, remain / total)); // 1 at start -> 0 at explosion
+    const pct = Math.round(progress * 100);
+    // apply to bar width (we show fill decreasing as explosion approaches)
+    const barEl = document.getElementById(barId);
+    if(barEl) barEl.style.width = (pct) + '%';
+    // global numeric: show seconds with 2 decimals
+    const s = (remain/1000);
+    $('globalCountdownText').innerText = s.toFixed(2) + 's';
+    // speed-up pulse: optionally change bar color near end (handled by CSS if wanted)
+    if(remain <= 0){
+      // time up — clear and call explode
+      clearInterval(state.countdownInterval); state.countdownInterval = null;
+    }
+  }, updateMs);
+
+  // schedule actual explosion
+  state.explodeTimer = setTimeout(()=>{
+    // ensure bars update to 0
+    const barEl = document.getElementById(barId);
+    if(barEl) barEl.style.width = '0%';
+    $('globalCountdownText').style.display = 'none';
+    explodeBomb();
+  }, delay);
+
+  log(`Bomb scheduled to explode in ${Math.round(delay)} ms (holder: ${state.players.find(p=>p.id===state.bombHolderId)?.name||'-'})`);
 }
 
-/* ---------------------------
-   Elimination loop
-   Params:
-    - mode: 'weighted' or 'equal'
-    - topN: how many winners to select (e.g., 3)
-    - pace: interval (ms)
---------------------------- */
-let eliminationTimer = null;
-async function startElimination(){
+/* Pass bomb to next player */
+function passBomb(){
+  if(!state.running) return;
+  const alive = getAlive();
+  if(alive.length <= 1) return;
+  const mode = document.querySelector('input[name="passMode"]:checked').value;
+  const candidates = alive.filter(p=>p.id !== state.bombHolderId);
+  if(candidates.length === 0) return;
+  const next = (mode === 'weighted') ? pickWeighted(candidates) : pickEqual(candidates);
+  state.bombHolderId = next.id;
+  render();
+  beep(760, 0.06, 0.06);
+  // reset explosion schedule (we keep same explodeAt but visually we restart schedule each time in this demo
+  // for clearer UX: when pass happens, we restart explosion timer with a new random delay
+  if(state.explodeTimer){ clearTimeout(state.explodeTimer); state.explodeTimer = null; }
+  if(state.countdownInterval){ clearInterval(state.countdownInterval); state.countdownInterval = null; }
+  // schedule new explosion
+  scheduleExplosion();
+  // schedule next pass
+  const interval = Math.max(60, parseInt($('passInterval').value) || 600);
+  if(state.passTimer) clearTimeout(state.passTimer);
+  state.passTimer = setTimeout(()=> { passBomb(); }, interval + Math.random()*200);
+}
+
+/* Explosion: eliminate current holder */
+function explodeBomb(){
+  if(state.tickInterval){ clearInterval(state.tickInterval); state.tickInterval=null; }
+  if(state.explodeTimer){ clearTimeout(state.explodeTimer); state.explodeTimer=null; }
+  if(state.countdownInterval){ clearInterval(state.countdownInterval); state.countdownInterval = null; }
+  if(!state.bombHolderId) return;
+  const victim = state.players.find(p=>p.id===state.bombHolderId);
+  if(!victim || victim.out) return;
+  victim.out = true;
+  const el = document.getElementById('av_'+victim.id);
+  if(el){
+    el.classList.add('elim');
+    el.animate([{ transform:'scale(1)' },{ transform:'scale(.6) rotate(-10deg)', opacity:0.2 }], { duration:520, easing:'cubic-bezier(.2,.9,.3,1)' });
+  }
+  beep(220,0.18,0.12);
+  setTimeout(()=> beep(120,0.24,0.14), 90);
+  log(`💥 Bomb exploded! ${victim.name} eliminated.`);
+  // pick a new holder among alive (if any)
+  const alive = getAlive();
+  if(alive.length > 0){
+    state.bombHolderId = alive[Math.floor(Math.random()*alive.length)].id;
+    render();
+  } else {
+    state.bombHolderId = null;
+    render();
+  }
+  checkWinners();
+  if(state.running && countAlive() > 3){
+    passBomb(); // will schedule explosion inside
+  } else {
+    $('globalCountdownText').style.display = 'none';
+  }
+}
+
+/* Check winners condition (<=3 alive) */
+function checkWinners(){
+  const alive = getAlive();
+  if(alive.length <= 3){
+    stopGame();
+    const pool = totalPot();
+    const s1 = (parseFloat($('split1').value)||0)/100;
+    const s2 = (parseFloat($('split2').value)||0)/100;
+    const s3 = (parseFloat($('split3').value)||0)/100;
+    const ranked = alive.slice().sort((a,b)=>b.tickets - a.tickets);
+    const payouts = [
+      { rank:1, name:ranked[0]?.name||'-', amount: +(pool*s1).toFixed(4), id:ranked[0]?.id||null },
+      { rank:2, name:ranked[1]?.name||'-', amount: +(pool*s2).toFixed(4), id:ranked[1]?.id||null },
+      { rank:3, name:ranked[2]?.name||'-', amount: +(pool*s3).toFixed(4), id:ranked[2]?.id||null },
+    ];
+    $('winnersBox').innerHTML = payouts.map(p=>`${p.rank} • ${p.name} — ${p.amount} USDT`).join('<br>');
+    log('🎉 Game ended. Winners: ' + payouts.map(p=>`${p.rank}:${p.name}(${p.amount}USDT)`).join(' | '));
+    document.querySelectorAll('.avatar').forEach(av=> av.classList.add('elim'));
+    payouts.forEach((p,i)=>{ if(!p.id) return; const el = document.getElementById('av_'+p.id); if(el){ el.classList.remove('elim'); el.style.transform='scale(1.06)'; el.style.boxShadow='0 12px 30px rgba(46, 204, 113, 0.12)'; } });
+  }
+}
+
+/* Start game */
+function startGame(){
   if(state.running) return;
-  if(state.players.length < 2) { alert('Butuh minimal 2 pemain'); return; }
+  if(state.players.length < 4){ alert('Butuh minimal 4 pemain untuk mode 3 winners.'); return; }
+  const totalSplit = (parseFloat($('split1').value)||0) + (parseFloat($('split2').value)||0) + (parseFloat($('split3').value)||0);
+  if(Math.abs(totalSplit - 100) > 0.1) if(!confirm('Split payout tidak 100%. Lanjutkan?')) return;
 
-  const mode = document.querySelector('input[name="mode"]:checked').value;
-  const top1 = parseFloat($('split1').value)||0;
-  const top2 = parseFloat($('split2').value)||0;
-  const top3 = parseFloat($('split3').value)||0;
-  if(Math.abs((top1+top2+top3) - 100) > 0.1){ if(!confirm('Split tidak 100%. Lanjutkan?')) return; }
-
+  state.players.forEach(p=>p.out=false);
+  const mode = document.querySelector('input[name="passMode"]:checked').value;
+  const alive = getAlive();
+  const starter = (mode === 'weighted') ? pickWeighted(alive) : pickEqual(alive);
+  state.bombHolderId = starter.id;
   state.running = true;
   $('startBtn').disabled = true; $('stopBtn').disabled = false;
-  $('winnersBox').innerText = 'Winners: -';
-  state.winners = [];
-
-  // prepare working set
-  state.players.forEach(p=> p.out = false);
-
-  // make a local copy of active players
-  const pace = 700; // ms per elimination (tweak)
-  const selectFn = (mode === 'weighted') ? pickWeightedAlive : pickEqualAlive;
-
-  log(`Start elimination — mode: ${mode}. Selecting top 3...`);
-  playBeep(680,0.12,0.08);
-
-  // elimination loop until only N winners left
-  const winnersTarget = 3;
-  let active = state.players.filter(p=>!p.out);
-
-  function step(){
-    if(!state.running) return;
-    active = state.players.filter(p=>!p.out);
-    if(active.length <= winnersTarget){
-      // remaining are winners; order them by tickets desc for ranking
-      const ranked = active.slice().sort((a,b)=>b.tickets - a.tickets);
-      state.winners = ranked;
-      finalizeWinners(ranked);
-      return;
-    }
-    // pick victim
-    const victim = selectFn(active);
-    victim.out = true;
-    // animate victim
-    const el = document.getElementById('av_'+victim.id);
-    if(el){
-      el.classList.add('elim');
-      el.animate([
-        { transform: 'scale(1)', opacity:1 },
-        { transform: 'scale(.7) rotate(-6deg)', opacity:0.2 }
-      ], { duration: pace*0.7, easing: 'cubic-bezier(.2,.9,.3,1)' });
-    }
-    playBeep(320 + Math.random()*120, 0.06, 0.04);
-    log(`Eliminated: ${victim.name} (tickets ${victim.tickets})`);
-    renderPlayers();
-    // schedule next
-    eliminationTimer = setTimeout(step, pace + Math.random()*180);
-  }
-  step();
+  $('winnersBox').innerHTML = '-';
+  render();
+  log(`Game started. Initial holder: ${starter.name}`);
+  passBomb(); // will call scheduleExplosion
 }
 
-function stopElimination(){
+/* Stop game gracefully */
+function stopGame(){
   state.running = false;
+  if(state.passTimer){ clearTimeout(state.passTimer); state.passTimer = null; }
+  if(state.explodeTimer){ clearTimeout(state.explodeTimer); state.explodeTimer = null; }
+  if(state.countdownInterval){ clearInterval(state.countdownInterval); state.countdownInterval = null; }
+  if(state.tickInterval){ clearInterval(state.tickInterval); state.tickInterval = null; }
   $('startBtn').disabled = false; $('stopBtn').disabled = true;
-  if(eliminationTimer) { clearTimeout(eliminationTimer); eliminationTimer = null; }
-  log('Elimination stopped by operator');
+  $('globalCountdownText').style.display = 'none';
+  log('Game stopped.');
 }
 
-/* ---------------------------
-   Finalize winners and payout (demo)
---------------------------- */
-function finalizeWinners(ranked){
-  state.running = false; $('startBtn').disabled=false; $('stopBtn').disabled=true;
-  // compute pool total
-  const pool = totalPot();
-  const s1 = (parseFloat($('split1').value)||0)/100;
-  const s2 = (parseFloat($('split2').value)||0)/100;
-  const s3 = (parseFloat($('split3').value)||0)/100;
-  const payouts = [
-    { name: ranked[0]?.name||'—', id: ranked[0]?.id||null, amount: +(pool * s1).toFixed(4), rank:1 },
-    { name: ranked[1]?.name||'—', id: ranked[1]?.id||null, amount: +(pool * s2).toFixed(4), rank:2 },
-    { name: ranked[2]?.name||'—', id: ranked[2]?.id||null, amount: +(pool * s3).toFixed(4), rank:3 }
-  ];
-  // emit log, highlight winners
-  playBeep(1100,0.2,0.12);
-  playBeep(880,0.16,0.1);
-  $('winnersBox').innerText = 'Winners: ' + payouts.filter(p=>p.id).map(p=>`${p.rank}•${p.name} (${p.amount} USDT)`).join(' | ');
-  log('Winners: ' + payouts.map(p=>`${p.rank} ${p.name} => ${p.amount} USDT`).join(' | '));
-  // visual highlight
-  document.querySelectorAll('.avatar').forEach(av => av.classList.add('elim'));
-  payouts.forEach((p,idx)=>{
-    if(!p.id) return;
-    const el = document.getElementById('av_'+p.id);
-    if(el){
-      el.classList.remove('elim');
-      el.style.transform = 'scale(1.08)';
-      el.style.boxShadow='0 14px 40px rgba(124,58,237,0.22)';
-      // small winner pulse
-      el.animate([{ transform:'scale(1.00)' },{ transform:'scale(1.08)' },{ transform:'scale(1.00)' }], { duration:900 + idx*120, easing:'ease-out' });
-    }
-  });
-}
-
-/* ---------------------------
-   Hooks for start/stop/demo
---------------------------- */
-$('startBtn').onclick = startElimination;
-$('stopBtn').onclick = stopElimination;
-$('demoAllBtn').onclick = async ()=>{
-  $('autofillBtn').click();
-  await new Promise(r=>setTimeout(r,600));
-  $('startBtn').click();
-};
-$('autofillBtn').onclick = ()=>{
-  $('autofillBtn').disabled = true;
-  // call autofill from earlier; ensure some ticket variance
-  const sample = ['Riko','Sari','Joko','Luna','Aldi','Nina','Bayu','Tara','Fikri','Dedi','Maya','Rizal','Hendra','Putri','Gilang','Eka'];
+/* Reset */
+$('resetBtn').onclick = ()=>{
+  if(state.running){ if(!confirm('Game berjalan. Stop dan reset?')) return; stopGame(); }
   state.players = [];
-  sample.forEach((n,i)=>{
-    const t = Math.floor(Math.random()*6)+1;
-    const b = Math.max(1, Math.floor(Math.random()*12));
-    state.players.push({ id: uid(5), name: n, tickets: t, bet: b, out:false });
-  });
-  renderPlayers(); log('Auto-filled players');
-  setTimeout(()=> $('autofillBtn').disabled=false, 800);
+  state.bombHolderId = null;
+  $('winnersBox').innerHTML = '-';
+  $('log').innerHTML = '';
+  render();
+  log('Reset all.');
 };
 
-/* ---------------------------
-   Initial render
---------------------------- */
-renderPlayers();
-log('Prototype ready — add players or auto-fill then Start.');
+/* Hook start/stop */
+$('startBtn').onclick = startGame;
+$('stopBtn').onclick = stopGame;
 
-/* ---------------------------
-   Safety & production notes (console)
---------------------------- */
-console.log(`
-Battle Pot Demo loaded.
-- THIS IS CLIENT-SIDE DEMO: RNG = Math.random(), not secure.
-- For production: use server-side VRF (Chainlink/Drand) or on-chain VRF to pick victims/winners.
-- For real money: collect deposits into a smart-contract pool (only release via verified winner).
-- Keep audit logs, KYC, and legal compliance.
-`);
+/* Initial render */
+render(); log('Bambang Pass Royale (with countdown) ready. Tambah pemain, lalu Start.');
+
+/* Safety logs */
+console.log('Bambang Pass Royale countdown demo loaded. Client-side RNG (Math.random). For production: use VRF/server-side RNG and smart contract escrow.');
 </script>
 </body>
 </html>
