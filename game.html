@@ -3,406 +3,426 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Bambang Pass Royale — Bomb Countdown (Demo)</title>
+<title>Bambang Pass Royale — Minimal Game UI</title>
 <style>
   :root{
-    --bg:#071021; --panel:#0d1724; --accent:#ef7b3a; --muted:#9fb0c8;
-    --danger:#fb7185; --good:#34d399; --bar-bg: rgba(255,255,255,0.04);
+    --bg:#08101a;
+    --panel:#0b1724;
+    --muted:#93a6bd;
+    --accent:#5eead4; /* teal */
+    --accent2:#7c3aed; /* purple */
+    --danger:#ff6b6b;
+    --card-bg: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#e6eef8;background:
-    radial-gradient(800px 300px at 10% 10%, rgba(239,123,58,0.06), transparent),
-    linear-gradient(180deg,#041021,#071226);padding:20px}
-  .wrap{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:360px 1fr;gap:16px;}
-  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:14px;border-radius:12px;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
-  h1{margin:0 0 6px 0;font-size:20px}
-  label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
-  input, select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);color:#e6eef8}
-  button{padding:10px 12px;border-radius:10px;border:0;background:linear-gradient(90deg,var(--accent),#d95a1f);color:#fff;cursor:pointer}
-  .muted{color:var(--muted);font-size:13px}
-  .players-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
-  .avatar{width:120px;height:110px;border-radius:10px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px;transition:all .45s ease;position:relative;overflow:hidden}
-  .avatar .name{font-weight:800}
-  .avatar .meta{font-size:12px;color:var(--muted)}
-  .avatar.bomb{box-shadow:0 12px 40px rgba(239,123,58,0.25);transform:scale(1.06)}
-  .avatar.elim{opacity:.25;filter:grayscale(90%);text-decoration:line-through;transform:scale(.94)}
-  .controls{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-  .arena{height:420px;border-radius:12px;background:linear-gradient(180deg,#051229,#02111d);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
-  .center-info{position:absolute;left:18px;top:18px;color:var(--muted)}
-  .right-info{position:absolute;right:18px;top:18px;color:var(--muted);text-align:right}
-  .log{max-height:120px;overflow:auto;margin-top:10px;padding:8px;border-radius:8px;background:rgba(255,255,255,0.02);font-size:13px;color:var(--muted)}
-  .winnerBox{margin-top:10px;padding:10px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);font-weight:700}
-  .small{font-size:12px;color:var(--muted)}
-  /* Countdown bar */
-  .countdown-wrapper{position:absolute;left:8px;right:8px;bottom:8px;height:14px;border-radius:8px;background:var(--bar-bg);overflow:hidden}
-  .countdown-bar{height:100%;width:0%;background:linear-gradient(90deg,#ffb86b,#ef7b3a);transition:width .08s linear}
-  .countdown-text{position:absolute;right:10px;bottom:18px;font-size:12px;color:#fff;font-weight:700;background:rgba(0,0,0,0.28);padding:4px 8px;border-radius:8px}
-  @media (max-width:980px){ .wrap{grid-template-columns:1fr} .avatar{width:48%;} .arena{height:320px} }
+  html,body{height:100%}
+  body{
+    margin:0; min-height:100%; background:
+      radial-gradient(600px 200px at 10% 10%, rgba(124,58,237,0.04), transparent),
+      linear-gradient(180deg,var(--bg),#03101a 80%); color:#e6eef8;
+    font-family: Inter, system-ui, -apple-system, "Helvetica Neue", Arial; -webkit-font-smoothing:antialiased;
+    padding:18px;
+  }
+
+  .app{max-width:1100px;margin:0 auto; display:grid; grid-template-columns: 1fr 360px; gap:18px; align-items:start;}
+  @media (max-width:980px){ .app{grid-template-columns:1fr; padding-bottom:60px} .right-col{order:2} }
+
+  /* LEFT: arena + header */
+  .stage{background:var(--card-bg); border-radius:14px; padding:18px; box-shadow:0 8px 30px rgba(2,6,23,0.6); position:relative}
+  .header-row{display:flex; align-items:center; gap:12px; margin-bottom:12px}
+  .title{font-weight:800; font-size:20px; letter-spacing:0.2px}
+  .sub{color:var(--muted); font-size:13px}
+  .big-cta{margin-left:auto; display:flex; gap:10px; align-items:center}
+  .btn{background:linear-gradient(90deg,var(--accent2),#4f46e5); color:#03101a; padding:10px 14px; border-radius:12px; font-weight:700; border:none; cursor:pointer; box-shadow:0 8px 30px rgba(76,29,149,0.15)}
+  .ghost{background:transparent; border:1px solid rgba(255,255,255,0.04); color:var(--muted); padding:8px 10px; border-radius:10px}
+
+  /* arena */
+  .arena-wrap{display:flex; gap:18px; align-items:stretch}
+  .arena{
+    flex:1; min-height:420px; background: radial-gradient(circle at 50% 20%, rgba(124,58,237,0.03), transparent 30%), linear-gradient(180deg,#041022,#02111b);
+    border-radius:12px; display:flex; flex-direction:column; align-items:center; padding:16px; position:relative; overflow:hidden;
+  }
+  .arena-canvas{position:relative; width:100%; height:320px; display:flex; align-items:center; justify-content:center}
+  .ring{width:320px; height:320px; border-radius:999px; position:relative;
+       background: radial-gradient(circle at 50% 45%, rgba(255,255,255,0.02), transparent 20%);
+       box-shadow: inset 0 0 40px rgba(124,58,237,0.03);}
+  .avatar{
+    width:66px; height:66px; border-radius:999px; display:flex; align-items:center; justify-content:center; flex-direction:column;
+    font-weight:800; font-size:12px; position:absolute; transition:transform .3s ease, box-shadow .3s ease, opacity .45s ease;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border: 2px solid rgba(255,255,255,0.03);
+    color:#fff;
+  }
+  .avatar .icon{ font-size:22px; margin-bottom:2px}
+  .avatar.bomb{ box-shadow: 0 14px 40px rgba(255,83,83,0.16); transform:scale(1.06); border-color: rgba(255,110,110,0.8) }
+  .avatar.elim{ opacity:.22; transform:scale(.9) rotate(-8deg) }
+  /* countdown ring inside avatar */
+  .count-ring{ position:absolute; width:76px; height:76px; border-radius:999px; left:-5px; top:-5px; pointer-events:none; display:none }
+  .count-ring svg { width:100%; height:100%; transform:rotate(-90deg) }
+
+  /* center bomb */
+  .bomb-center{ position:absolute; width:86px; height:86px; border-radius:999px; background: linear-gradient(180deg,#ffbfbf,#ff7777); display:flex; align-items:center; justify-content:center; color:#2a0a0a; font-weight:900; font-size:26px; box-shadow:0 18px 50px rgba(255,90,90,0.18) }
+  .hud{margin-top:12px; display:flex; gap:12px; width:100%; align-items:center}
+  .hud .panel{flex:1; background:rgba(255,255,255,0.02); padding:10px; border-radius:10px; text-align:center}
+  .hud .panel .num{font-weight:800; font-size:20px}
+  .log{ margin-top:12px; font-size:13px; color:var(--muted); max-height:86px; overflow:auto; padding:8px; border-radius:8px; background:rgba(255,255,255,0.01) }
+
+  /* RIGHT: selector cards minimal like screenshot */
+  .right-col{display:flex; flex-direction:column; gap:12px}
+  .card-grid{ display:grid; grid-template-columns: repeat(2,1fr); gap:10px }
+  .card{
+    background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent); border-radius:12px; padding:12px; position:relative;
+    border:2px solid rgba(255,255,255,0.03); cursor:pointer; transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .card:hover{ transform:translateY(-6px); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+  .card.selected{ border-color: var(--accent); box-shadow: 0 8px 30px rgba(94,234,212,0.06); }
+  .card .emoji{font-size:28px; margin-bottom:8px}
+  .card .name{font-weight:800}
+  .card .meta{font-size:12px;color:var(--muted); margin-top:6px}
+
+  /* footer small controls */
+  .controls-ctas{ display:flex; gap:8px; margin-top:10px}
+  .mini{padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03); color:var(--muted)}
+  /* podium */
+  .podium{ position:absolute; left:50%; transform:translateX(-50%); bottom:12px; display:flex; gap:12px; pointer-events:none }
+  .podium .slot{ width:74px; height:62px; border-radius:8px; background: linear-gradient(180deg, rgba(0,0,0,0.45), rgba(255,255,255,0.01)); color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:800; font-size:13px; opacity:0; transform:translateY(20px) }
+  .podium.show .slot{ opacity:1; transform:translateY(0); transition:all .6s cubic-bezier(.2,.9,.3,1) }
+
+  /* small mobile adjustments */
+  @media (max-width:520px){
+    .avatar{ width:56px; height:56px; font-size:11px }
+    .ring{ width:260px; height:260px }
+    .arena-canvas{ height:260px }
+    .card-grid{ grid-template-columns: repeat(3,1fr) }
+  }
+
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <!-- Left controls -->
-    <div class="panel">
-      <h1>Bambang Pass Royale — Countdown</h1>
-      <div class="muted">Added visual countdown bar + numeric timer for current bomb holder.</div>
 
-      <label style="margin-top:12px">Tambah Pemain</label>
-      <input id="nameInput" placeholder="Nama pemain (contoh: Bambang)">
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <input id="ticketsInput" type="number" min="1" value="1" style="width:120px">
-        <input id="betInput" type="number" min="0.01" step="0.01" value="1" style="width:120px">
+<div class="app">
+  <!-- LEFT: Arena -->
+  <div class="stage">
+    <div class="header-row">
+      <div>
+        <div class="title">Bambang Pass Royale</div>
+        <div class="sub">Minimal game-feel UI — 1 bomb, last 3 winners</div>
       </div>
-      <div class="controls">
-        <button id="addBtn">Tambah</button>
-        <button id="autoBtn">Auto-fill 12</button>
-      </div>
-
-      <label style="margin-top:10px">Mode Pass</label>
-      <div class="small">
-        <label><input type="radio" name="passMode" value="weighted" checked> Weighted (by tickets)</label><br>
-        <label><input type="radio" name="passMode" value="equal"> Equal (random)</label>
-      </div>
-
-      <label style="margin-top:10px">Bomb Timer (ms) — explosion occurs after a random time in this range</label>
-      <div style="display:flex;gap:8px;margin-top:6px">
-        <input id="minTimer" type="number" value="1800" style="width:120px">
-        <input id="maxTimer" type="number" value="4200" style="width:120px">
-      </div>
-
-      <label style="margin-top:10px">Pass Interval (ms)</label>
-      <input id="passInterval" type="number" value="600">
-
-      <label style="margin-top:10px">Payout Split Top3 (%) — must total 100</label>
-      <div style="display:flex;gap:6px;margin-top:6px">
-        <input id="split1" type="number" value="60" style="width:72px">%
-        <input id="split2" type="number" value="25" style="width:72px">%
-        <input id="split3" type="number" value="15" style="width:72px">%
-      </div>
-
-      <div class="controls" style="margin-top:12px">
-        <button id="startBtn">Mulai Game</button>
-        <button id="stopBtn" disabled style="background:#ff5a5a">Stop</button>
-        <button id="resetBtn" style="background:#444">Reset</button>
-      </div>
-
-      <div style="margin-top:12px" class="small">
-        Catatan: Ini demo client-side. Untuk fairness production gunakan VRF/server-side RNG dan smart contract escrow.
+      <div class="big-cta">
+        <button class="btn" id="autoFill">Auto-Fill</button>
+        <button class="btn" id="startBtn">Start</button>
+        <button class="ghost" id="stopBtn" style="display:none">Stop</button>
       </div>
     </div>
 
-    <!-- Right arena -->
-    <div class="panel">
-      <div class="arena" id="arena">
-        <div class="center-info">
-          <div class="small">Players:</div>
-          <div id="count" style="font-weight:800;font-size:20px">0</div>
-          <div class="small" style="margin-top:8px">Total Pot:</div>
-          <div id="pot" style="font-weight:800;font-size:18px">0 USDT</div>
-        </div>
-        <div class="right-info">
-          <div class="small">Current Holder:</div>
-          <div id="currentHolder" style="font-weight:800">-</div>
+    <div class="arena-wrap">
+      <div class="arena">
+        <div class="arena-canvas">
+          <div class="ring" id="ring"></div>
+          <!-- avatars injected here -->
+          <div class="bomb-center" id="bombCenter" style="display:none">💣</div>
         </div>
 
-        <div id="playersArea" style="width:92%;height:86%;display:flex;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;gap:12px;padding:10px;pointer-events:none"></div>
-
-        <!-- Global countdown UI (shows when there's a holder) -->
-        <div id="globalCountdownText" class="countdown-text" style="display:none">--</div>
-      </div>
-
-      <div style="display:flex;gap:12px;margin-top:12px">
-        <div style="flex:1">
-          <div class="muted">Event Log</div>
-          <div id="log" class="log"></div>
+        <div class="hud">
+          <div class="panel">
+            <div class="sub">Players</div>
+            <div class="num" id="count">0</div>
+          </div>
+          <div class="panel">
+            <div class="sub">Total Pot</div>
+            <div class="num" id="pot">0 USDT</div>
+          </div>
+          <div class="panel">
+            <div class="sub">Holder</div>
+            <div class="num" id="holderName">-</div>
+          </div>
         </div>
-        <div style="width:240px">
-          <div class="muted">Winners / Payout</div>
-          <div id="winnersBox" class="winnerBox">-</div>
+
+        <div class="log" id="log">Event log...</div>
+
+        <div class="podium" id="podium">
+          <div class="slot" id="p2" style="transform:translateY(6px);">2</div>
+          <div class="slot" id="p1" style="width:90px;height:76px;font-size:15px;background:linear-gradient(90deg,#ffd86b,#ffb86b);color:#111">1</div>
+          <div class="slot" id="p3" style="transform:translateY(6px);">3</div>
         </div>
       </div>
     </div>
   </div>
 
-<script>
-/* Bambang Pass Royale — Demo with visual countdown
-   - Adds a progress bar inside the avatar of the current holder
-   - Also shows a global numeric countdown near arena
-   - All client-side
-*/
-
-const state = {
-  players: [], // {id, name, tickets, bet, out:false}
-  bombHolderId: null,
-  running: false,
-  passTimer: null,
-  explodeTimer: null,
-  tickInterval: null,
-  countdownInterval: null,
-  explodeAt: null, // timestamp ms
-  audioCtx: null
-};
-
-const $ = id => document.getElementById(id);
-function uid(n=6){ return Math.random().toString(36).slice(2,2+n); }
-function log(msg){ const el = $('log'); el.innerHTML = `<div>${new Date().toLocaleTimeString()} — ${msg}</div>` + el.innerHTML; if(el.scrollTop<50) el.scrollTop=0; }
-function totalPot(){ return state.players.reduce((s,p)=>s + (p.bet||0),0); }
-function countAlive(){ return state.players.filter(p=>!p.out).length; }
-function getAlive(){ return state.players.filter(p=>!p.out); }
-
-/* Audio helpers */
-function initAudio(){ if(!state.audioCtx) state.audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-function beep(freq=440, dur=0.05, vol=0.06){
-  try{
-    initAudio();
-    const ctx = state.audioCtx;
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type='sine'; o.frequency.setValueAtTime(freq, ctx.currentTime);
-    g.gain.value = vol;
-    o.connect(g); g.connect(ctx.destination);
-    o.start();
-    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
-    setTimeout(()=>{ o.stop(); o.disconnect(); g.disconnect(); }, dur*1000 + 20);
-  }catch(e){}
-}
-
-/* UI render (including countdown bar in each avatar) */
-function render(){
-  const area = $('playersArea'); area.innerHTML = '';
-  state.players.forEach(p=>{
-    const el = document.createElement('div');
-    el.className = 'avatar' + (p.out ? ' elim' : (state.bombHolderId===p.id && !p.out ? ' bomb' : ''));
-    el.id = 'av_'+p.id;
-    el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;width:100%;justify-content:center">
-        <div style="text-align:center">
-          <div class="name">${p.name}</div>
-          <div class="meta">${p.tickets} tk • ${p.bet} USDT</div>
+  <!-- RIGHT: Character selector minimal -->
+  <div class="right-col">
+    <div style="background:var(--card-bg); padding:14px; border-radius:12px; box-shadow:0 8px 30px rgba(2,6,23,0.6)">
+      <div style="display:flex;justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-weight:800">SELECT CHARACTER</div>
+          <div class="sub" style="margin-top:6px">Click to toggle participation</div>
+        </div>
+        <div style="text-align:right">
+          <div class="sub">Ticket</div>
+          <select id="ticketPerJoin" style="width:86px;margin-top:6px">
+            <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+          </select>
         </div>
       </div>
-      <div class="countdown-wrapper" style="display:${(state.bombHolderId===p.id && !p.out) ? 'block' : 'none'}">
-        <div class="countdown-bar" id="bar_${p.id}" style="width:0%"></div>
+
+      <div class="card-grid" id="charGrid" style="margin-top:12px">
+        <!-- cards injected -->
       </div>
-    `;
-    area.appendChild(el);
+
+      <div class="controls-ctas" style="margin-top:12px">
+        <button class="mini" id="resetBtn">Reset</button>
+        <button class="mini" id="fastDemo">Demo Play</button>
+      </div>
+    </div>
+
+    <div style="background:var(--card-bg); padding:12px; border-radius:12px; margin-top:12px; text-align:center">
+      <div style="font-weight:800">PAYOUT (Top 3)</div>
+      <div class="sub" style="margin-top:6px">70% / 20% / 10%</div>
+      <div style="margin-top:10px"><button class="mini" id="rulesBtn">Rules</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Minimal game-feel Bambang Pass Royale
+   - Improved minimal UI styled after provided screenshot vibe
+   - Avatars arranged in ring, bomb passes randomly, explosion eliminates holder
+   - Stops when <= 3 survivors (podium shows)
+   - Auto-fill, demo play, reset
+*/
+
+// characters sample (emoji used for simplicity)
+const CHAR = [
+  { id:'A', name:'TUNA', emoji:'🐟'},
+  { id:'B', name:'CRAB', emoji:'🦀'},
+  { id:'C', name:'SHARK', emoji:'🦈'},
+  { id:'D', name:'OCTO', emoji:'🐙'},
+  { id:'E', name:'SHRIMP', emoji:'🦐'},
+  { id:'F', name:'ORCA', emoji:'🐋'},
+  { id:'G', name:'RAY', emoji:'🐠'},
+  { id:'H', name:'SQUID', emoji:'🦑'},
+];
+
+let players = []; // {id, name, emoji, tickets, bet, out}
+let bombHolder = null;
+let running = false;
+let passTimer = null, explodeTimer = null, countdownInterval = null;
+
+// ui refs
+const ring = document.getElementById('ring'), logEl = document.getElementById('log'), charGrid = document.getElementById('charGrid');
+const countEl = document.getElementById('count'), potEl = document.getElementById('pot'), holderEl = document.getElementById('holderName');
+const bombCenter = document.getElementById('bombCenter'), podium = document.getElementById('podium');
+
+function uiLog(s){ logEl.innerHTML = `<div style="margin-bottom:6px">${new Date().toLocaleTimeString()} • ${s}</div>` + logEl.innerHTML; }
+function totalPot(){ return players.reduce((s,p)=>s + (p.bet||0), 0); }
+function alive(){ return players.filter(p=>!p.out); }
+
+function renderCharGrid(){
+  charGrid.innerHTML = '';
+  CHAR.forEach(c=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = c.id;
+    card.innerHTML = `<div class="emoji">${c.emoji}</div><div class="name">${c.name}</div><div class="meta">E:0 U:0 S:0</div>`;
+    card.onclick = ()=> {
+      toggleJoin(c);
+    };
+    charGrid.appendChild(card);
   });
-  $('count').innerText = countAlive();
-  $('pot').innerText = totalPot().toFixed(2) + ' USDT';
-  $('currentHolder').innerText = state.bombHolderId ? (state.players.find(x=>x.id===state.bombHolderId)?.name||'-') : '-';
 }
 
-/* Add player */
-$('addBtn').onclick = ()=>{
-  const name = ($('nameInput').value.trim()) || ('P'+Math.floor(Math.random()*9999));
-  const tickets = Math.max(1, parseInt($('ticketsInput').value) || 1);
-  const bet = Math.max(0.01, parseFloat($('betInput').value) || 1);
-  const id = uid(5);
-  state.players.push({ id, name, tickets, bet, out:false });
-  $('nameInput').value=''; $('ticketsInput').value='1'; $('betInput').value='1';
-  render(); log(`Added ${name} (${tickets} tickets, ${bet} USDT)`);
-};
+function toggleJoin(c){
+  const joinTicket = parseInt(document.getElementById('ticketPerJoin').value) || 1;
+  const found = players.find(p=>p.id === c.id);
+  if(found){
+    // remove (toggle off)
+    players = players.filter(p=>p.id !== c.id);
+    uiLog(`${c.name} left`);
+  } else {
+    players.push({ id:c.id, name:c.name, emoji:c.emoji, tickets:joinTicket, bet: joinTicket, out:false });
+    uiLog(`${c.name} joined (x${joinTicket})`);
+  }
+  renderAll();
+}
 
-/* Auto-fill */
-$('autoBtn').onclick = ()=>{
-  const sample = ['Bambang','Tari','Gilang','Riko','Sari','Joko','Luna','Dedi','Bayu','Nina','Indra','Rizal'];
-  state.players = [];
-  sample.forEach(n=>{
-    const t = Math.floor(Math.random()*6)+1;
-    const b = Math.floor(Math.random()*6)+1;
-    state.players.push({ id: uid(5), name: n, tickets: t, bet: b, out:false });
+function renderAll(){
+  // avatars in ring
+  // clear old avatars
+  // remove any children except ring styling
+  Array.from(ring.querySelectorAll('.avatar')).forEach(n=>n.remove());
+  const slotCount = players.length || 1;
+  const radius = Math.min(ring.clientWidth, ring.clientHeight)/2 - 36;
+  const cx = ring.clientWidth/2, cy = ring.clientHeight/2;
+  players.forEach((p,i)=>{
+    const ang = (i/slotCount) * Math.PI*2 - Math.PI/2; // start top
+    const x = cx + Math.cos(ang)*radius - 33;
+    const y = cy + Math.sin(ang)*radius - 33;
+    const el = document.createElement('div');
+    el.className = 'avatar' + (p.out ? ' elim' : (bombHolder && bombHolder.id === p.id ? ' bomb' : ''));
+    el.id = 'av_'+p.id;
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.innerHTML = `<div class="icon">${p.emoji}</div><div style="font-size:10px;margin-top:4px">${p.name}</div>
+      <div class="count-ring" id="ring_${p.id}"><svg viewBox="0 0 36 36">
+        <path stroke="rgba(255,255,255,0.06)" stroke-width="3" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+        <path id="progress_${p.id}" stroke="#ff8b8b" stroke-width="3" stroke-linecap="round" fill="none" stroke-dasharray="100" stroke-dashoffset="100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+      </svg></div>`;
+    ring.appendChild(el);
   });
-  render(); log('Auto-filled players');
+  // update HUD
+  countEl.innerText = players.length;
+  potEl.innerText = totalPot().toFixed(2) + ' USDT';
+  holderEl.innerText = bombHolder ? bombHolder.name : '-';
+  // podium hide
+  podium.classList.remove('show');
+  // show/hide bomb center
+  if(bombHolder) bombCenter.style.display = 'block'; else bombCenter.style.display = 'none';
+}
+
+// auto-fill
+document.getElementById('autoFill').onclick = ()=> {
+  players = CHAR.slice(0,8).map((c,i)=>({ id:c.id, name:c.name, emoji:c.emoji, tickets: Math.floor(Math.random()*4)+1, bet: Math.floor(Math.random()*4)+1, out:false }));
+  uiLog('Auto-filled players');
+  renderAll();
 };
 
-/* Random pick helpers */
-function pickWeighted(alive){
+// start / stop / reset
+document.getElementById('startBtn').onclick = ()=> {
+  if(players.length < 4){ alert('Minimal 4 pemain untuk mode 3 winners'); return; }
+  if(running) return;
+  running = true;
+  document.getElementById('startBtn').style.display='none';
+  document.getElementById('stopBtn').style.display='inline-block';
+  // pick initial holder
+  bombHolder = pickWeighted(alive());
+  uiLog('Game started. Initial holder: ' + bombHolder.name);
+  renderAll();
+  passLoop();
+  scheduleExplosion();
+};
+document.getElementById('stopBtn').onclick = ()=> { stopGame(); };
+document.getElementById('resetBtn').onclick = ()=> {
+  if(running) stopGame();
+  players = [];
+  bombHolder = null;
+  uiLog('Reset');
+  renderAll();
+};
+document.getElementById('fastDemo').onclick = ()=> {
+  document.getElementById('autoFill').click();
+  setTimeout(()=> document.getElementById('startBtn').click(), 300);
+};
+
+// helpers: weighted pick
+function pickWeighted(list){
   const pool = [];
-  alive.forEach(p=>{ for(let i=0;i<p.tickets;i++) pool.push(p); });
-  if(pool.length===0) return alive[Math.floor(Math.random()*alive.length)];
+  list.forEach(p=>{ for(let i=0;i<p.tickets;i++) pool.push(p); });
+  if(pool.length === 0) return list[Math.floor(Math.random()*list.length)];
   return pool[Math.floor(Math.random()*pool.length)];
 }
-function pickEqual(alive){ return alive[Math.floor(Math.random()*alive.length)]; }
+function pickEqual(list){ return list[Math.floor(Math.random()*list.length)]; }
 
-/* Schedule explosion: set explodeAt timestamp, start countdown interval updating bars */
+// pass loop
+function passLoop(){
+  if(!running) return;
+  clearTimeout(passTimer);
+  const interval = Math.max(200, 550 + Math.random()*260);
+  passTimer = setTimeout(()=>{
+    // choose next holder excluding current
+    const cand = alive().filter(p=>p.id !== bombHolder.id);
+    if(cand.length === 0) return;
+    const next = pickWeighted(cand);
+    bombHolder = next;
+    uiLog('Bomb passed to ' + bombHolder.name);
+    renderAll();
+    passLoop();
+  }, interval);
+}
+
+// schedule explosion
 function scheduleExplosion(){
-  if(state.explodeTimer){ clearTimeout(state.explodeTimer); state.explodeTimer = null; }
-  if(state.countdownInterval){ clearInterval(state.countdownInterval); state.countdownInterval = null; }
+  clearTimeout(explodeTimer);
+  clearInterval(countdownInterval);
+  const minT = 1400, maxT = 4000;
+  const delay = Math.floor(minT + Math.random()*(maxT - minT));
+  const explodeAt = Date.now() + delay;
+  // animate circular progress for holder
+  const id = bombHolder.id;
+  const prog = document.getElementById('progress_'+id);
+  if(prog){
+    prog.style.transition = `stroke-dashoffset ${delay}ms linear`;
+    prog.style.strokeDashoffset = 0;
+    // show the ring
+    const ringEl = document.getElementById('ring_'+id);
+    if(ringEl) ringEl.style.display = 'block';
+  }
+  // numeric countdown in holder hud
+  countdownInterval = setInterval(()=>{
+    const remain = Math.max(0, explodeAt - Date.now());
+    holderEl.innerText = bombHolder ? bombHolder.name + ' • ' + (remain/1000).toFixed(2) + 's' : '-';
+    if(remain <= 0){ clearInterval(countdownInterval); countdownInterval = null; }
+  }, 60);
 
-  const minT = Math.max(100, parseInt($('minTimer').value) || 1200);
-  const maxT = Math.max(minT+50, parseInt($('maxTimer').value) || 3800);
-  const delay = Math.floor(minT + Math.random()*(maxT-minT));
-  state.explodeAt = Date.now() + delay;
-
-  // update numeric global countdown and per-avatar bar frequently
-  const updateMs = 30;
-  const barId = 'bar_' + state.bombHolderId;
-  $('globalCountdownText').style.display = 'block';
-
-  state.countdownInterval = setInterval(()=>{
-    const now = Date.now();
-    let remain = Math.max(0, state.explodeAt - now);
-    // visual easing: show percent remaining reversed (0% = exploded, 100% = fresh)
-    const total = Math.max(1, delay);
-    const progress = Math.max(0, Math.min(1, remain / total)); // 1 at start -> 0 at explosion
-    const pct = Math.round(progress * 100);
-    // apply to bar width (we show fill decreasing as explosion approaches)
-    const barEl = document.getElementById(barId);
-    if(barEl) barEl.style.width = (pct) + '%';
-    // global numeric: show seconds with 2 decimals
-    const s = (remain/1000);
-    $('globalCountdownText').innerText = s.toFixed(2) + 's';
-    // speed-up pulse: optionally change bar color near end (handled by CSS if wanted)
-    if(remain <= 0){
-      // time up — clear and call explode
-      clearInterval(state.countdownInterval); state.countdownInterval = null;
+  explodeTimer = setTimeout(()=> {
+    // explode: eliminate current holder if still alive
+    const victim = players.find(p=>p.id === bombHolder.id);
+    if(victim && !victim.out){
+      victim.out = true;
+      uiLog(`💥 ${victim.name} exploded and eliminated`);
+      // visual: fade avatar
+      const el = document.getElementById('av_'+victim.id);
+      if(el){ el.classList.add('elim'); }
+      // reset holder to random alive
+      const survivors = alive();
+      if(survivors.length > 0) bombHolder = survivors[Math.floor(Math.random()*survivors.length)];
+      else bombHolder = null;
+      renderAll();
+      // clear progress for victim
+      const progV = document.getElementById('progress_'+victim.id); if(progV){ progV.style.transition='none'; progV.style.strokeDashoffset=100; }
     }
-  }, updateMs);
-
-  // schedule actual explosion
-  state.explodeTimer = setTimeout(()=>{
-    // ensure bars update to 0
-    const barEl = document.getElementById(barId);
-    if(barEl) barEl.style.width = '0%';
-    $('globalCountdownText').style.display = 'none';
-    explodeBomb();
+    // check end condition
+    const remaining = alive();
+    if(remaining.length <= 3){
+      endGame();
+    } else {
+      // continue
+      passLoop();
+      scheduleExplosion();
+    }
   }, delay);
-
-  log(`Bomb scheduled to explode in ${Math.round(delay)} ms (holder: ${state.players.find(p=>p.id===state.bombHolderId)?.name||'-'})`);
 }
 
-/* Pass bomb to next player */
-function passBomb(){
-  if(!state.running) return;
-  const alive = getAlive();
-  if(alive.length <= 1) return;
-  const mode = document.querySelector('input[name="passMode"]:checked').value;
-  const candidates = alive.filter(p=>p.id !== state.bombHolderId);
-  if(candidates.length === 0) return;
-  const next = (mode === 'weighted') ? pickWeighted(candidates) : pickEqual(candidates);
-  state.bombHolderId = next.id;
-  render();
-  beep(760, 0.06, 0.06);
-  // reset explosion schedule (we keep same explodeAt but visually we restart schedule each time in this demo
-  // for clearer UX: when pass happens, we restart explosion timer with a new random delay
-  if(state.explodeTimer){ clearTimeout(state.explodeTimer); state.explodeTimer = null; }
-  if(state.countdownInterval){ clearInterval(state.countdownInterval); state.countdownInterval = null; }
-  // schedule new explosion
-  scheduleExplosion();
-  // schedule next pass
-  const interval = Math.max(60, parseInt($('passInterval').value) || 600);
-  if(state.passTimer) clearTimeout(state.passTimer);
-  state.passTimer = setTimeout(()=> { passBomb(); }, interval + Math.random()*200);
-}
-
-/* Explosion: eliminate current holder */
-function explodeBomb(){
-  if(state.tickInterval){ clearInterval(state.tickInterval); state.tickInterval=null; }
-  if(state.explodeTimer){ clearTimeout(state.explodeTimer); state.explodeTimer=null; }
-  if(state.countdownInterval){ clearInterval(state.countdownInterval); state.countdownInterval = null; }
-  if(!state.bombHolderId) return;
-  const victim = state.players.find(p=>p.id===state.bombHolderId);
-  if(!victim || victim.out) return;
-  victim.out = true;
-  const el = document.getElementById('av_'+victim.id);
-  if(el){
-    el.classList.add('elim');
-    el.animate([{ transform:'scale(1)' },{ transform:'scale(.6) rotate(-10deg)', opacity:0.2 }], { duration:520, easing:'cubic-bezier(.2,.9,.3,1)' });
-  }
-  beep(220,0.18,0.12);
-  setTimeout(()=> beep(120,0.24,0.14), 90);
-  log(`💥 Bomb exploded! ${victim.name} eliminated.`);
-  // pick a new holder among alive (if any)
-  const alive = getAlive();
-  if(alive.length > 0){
-    state.bombHolderId = alive[Math.floor(Math.random()*alive.length)].id;
-    render();
-  } else {
-    state.bombHolderId = null;
-    render();
-  }
-  checkWinners();
-  if(state.running && countAlive() > 3){
-    passBomb(); // will schedule explosion inside
-  } else {
-    $('globalCountdownText').style.display = 'none';
-  }
-}
-
-/* Check winners condition (<=3 alive) */
-function checkWinners(){
-  const alive = getAlive();
-  if(alive.length <= 3){
-    stopGame();
-    const pool = totalPot();
-    const s1 = (parseFloat($('split1').value)||0)/100;
-    const s2 = (parseFloat($('split2').value)||0)/100;
-    const s3 = (parseFloat($('split3').value)||0)/100;
-    const ranked = alive.slice().sort((a,b)=>b.tickets - a.tickets);
-    const payouts = [
-      { rank:1, name:ranked[0]?.name||'-', amount: +(pool*s1).toFixed(4), id:ranked[0]?.id||null },
-      { rank:2, name:ranked[1]?.name||'-', amount: +(pool*s2).toFixed(4), id:ranked[1]?.id||null },
-      { rank:3, name:ranked[2]?.name||'-', amount: +(pool*s3).toFixed(4), id:ranked[2]?.id||null },
-    ];
-    $('winnersBox').innerHTML = payouts.map(p=>`${p.rank} • ${p.name} — ${p.amount} USDT`).join('<br>');
-    log('🎉 Game ended. Winners: ' + payouts.map(p=>`${p.rank}:${p.name}(${p.amount}USDT)`).join(' | '));
-    document.querySelectorAll('.avatar').forEach(av=> av.classList.add('elim'));
-    payouts.forEach((p,i)=>{ if(!p.id) return; const el = document.getElementById('av_'+p.id); if(el){ el.classList.remove('elim'); el.style.transform='scale(1.06)'; el.style.boxShadow='0 12px 30px rgba(46, 204, 113, 0.12)'; } });
-  }
-}
-
-/* Start game */
-function startGame(){
-  if(state.running) return;
-  if(state.players.length < 4){ alert('Butuh minimal 4 pemain untuk mode 3 winners.'); return; }
-  const totalSplit = (parseFloat($('split1').value)||0) + (parseFloat($('split2').value)||0) + (parseFloat($('split3').value)||0);
-  if(Math.abs(totalSplit - 100) > 0.1) if(!confirm('Split payout tidak 100%. Lanjutkan?')) return;
-
-  state.players.forEach(p=>p.out=false);
-  const mode = document.querySelector('input[name="passMode"]:checked').value;
-  const alive = getAlive();
-  const starter = (mode === 'weighted') ? pickWeighted(alive) : pickEqual(alive);
-  state.bombHolderId = starter.id;
-  state.running = true;
-  $('startBtn').disabled = true; $('stopBtn').disabled = false;
-  $('winnersBox').innerHTML = '-';
-  render();
-  log(`Game started. Initial holder: ${starter.name}`);
-  passBomb(); // will call scheduleExplosion
-}
-
-/* Stop game gracefully */
 function stopGame(){
-  state.running = false;
-  if(state.passTimer){ clearTimeout(state.passTimer); state.passTimer = null; }
-  if(state.explodeTimer){ clearTimeout(state.explodeTimer); state.explodeTimer = null; }
-  if(state.countdownInterval){ clearInterval(state.countdownInterval); state.countdownInterval = null; }
-  if(state.tickInterval){ clearInterval(state.tickInterval); state.tickInterval = null; }
-  $('startBtn').disabled = false; $('stopBtn').disabled = true;
-  $('globalCountdownText').style.display = 'none';
-  log('Game stopped.');
+  running = false;
+  clearTimeout(passTimer); clearTimeout(explodeTimer); clearInterval(countdownInterval);
+  document.getElementById('startBtn').style.display='inline-block';
+  document.getElementById('stopBtn').style.display='none';
+  uiLog('Game stopped');
 }
 
-/* Reset */
-$('resetBtn').onclick = ()=>{
-  if(state.running){ if(!confirm('Game berjalan. Stop dan reset?')) return; stopGame(); }
-  state.players = [];
-  state.bombHolderId = null;
-  $('winnersBox').innerHTML = '-';
-  $('log').innerHTML = '';
-  render();
-  log('Reset all.');
-};
+// end game: show podium and payouts (simple split)
+function endGame(){
+  running = false;
+  clearTimeout(passTimer); clearTimeout(explodeTimer); clearInterval(countdownInterval);
+  const surv = alive().slice().sort((a,b)=>b.tickets - a.tickets);
+  // simple split: 70/20/10
+  const pool = totalPot();
+  const s = [0.7,0.2,0.1];
+  const payouts = surv.map((p,i)=>({ name:p.name, amount: (pool * (s[i]||0)).toFixed(2) }));
+  uiLog('🎉 Game ended. Winners: ' + payouts.map(x=>`${x.name} ${x.amount}`).join(' | '));
+  // show podium
+  document.getElementById('p1').innerText = payouts[0] ? `${payouts[0].name}` : '-';
+  document.getElementById('p2').innerText = payouts[1] ? `${payouts[1].name}` : '-';
+  document.getElementById('p3').innerText = payouts[2] ? `${payouts[2].name}` : '-';
+  podium.classList.add('show');
+  document.getElementById('startBtn').style.display='inline-block';
+  document.getElementById('stopBtn').style.display='none';
+}
 
-/* Hook start/stop */
-$('startBtn').onclick = startGame;
-$('stopBtn').onclick = stopGame;
+// initial render chars
+renderCharGrid();
+renderAll();
 
-/* Initial render */
-render(); log('Bambang Pass Royale (with countdown) ready. Tambah pemain, lalu Start.');
-
-/* Safety logs */
-console.log('Bambang Pass Royale countdown demo loaded. Client-side RNG (Math.random). For production: use VRF/server-side RNG and smart contract escrow.');
 </script>
 </body>
 </html>
