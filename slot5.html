@@ -1097,7 +1097,7 @@
 
     function handleWalletClick() { isConnected ? openWalletDashboard() : connectWallet(); }
     async function connectWallet() {
-        if (!window.ethereum) { showToast("MetaMask missing"); return; }
+        if (!window.ethereum) { showToast("Please Install MetaMask First"); return; }
         try {
             provider = new ethers.BrowserProvider(window.ethereum);
             const accounts = await provider.send("eth_requestAccounts", []);
@@ -1112,7 +1112,7 @@
     async function switchNetwork() { try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_SEPOLIA_HEX }] }); } catch {} }
     async function requestSignature() {
         try {
-            const msg = `Login Faylotto\nUser: ${userAddress}\nTs: ${Date.now()}`;
+            const msg = `Welcome To Faylotto\nUser: ${userAddress}\nTs: ${Date.now()}`;
             const sig = await signer.signMessage(msg);
             localStorage.setItem(`auth_${userAddress}`, JSON.stringify({ sig, expiry: Date.now() + 86400000 * 30 }));
             finalizeLogin();
@@ -1127,7 +1127,7 @@
 
     // --- SOCIAL LOGIC ---
     async function submitRating(rid, stars) {
-        if(!isConnected) { showToast("Connect First"); return; }
+        if(!isConnected) { showToast("Connect Wallet First"); return; }
         try {
             const u = await gameContract.users(userAddress);
             // Contoh untuk submitRating (terapkan logika sama ke submitLike & triggerBetModal)
@@ -1142,7 +1142,7 @@ if(!u[1]) {
         } catch(e){ showToast("Failed: " + (e.reason||"Error")); }
     }
     async function submitLike(rid) {
-        if(!isConnected) { showToast("Connect First"); return; }
+        if(!isConnected) { showToast("Connect Wallet First"); return; }
         try {
             const u = await gameContract.users(userAddress);
             // Contoh untuk submitRating (terapkan logika sama ke submitLike & triggerBetModal)
@@ -1666,7 +1666,7 @@ if (isConnected) {
         if (currentSelectedAnimal.index === -1) return;
         const idx = currentSelectedAnimal.index;
         closeModal('paymentModal');
-        showToast(`Processing ${currencyType}...`);
+        showToast(`Processing Place Bet ${currencyType}...`);
         try {
             let tx;
             if (currencyType === 'ETH') {
@@ -1773,11 +1773,11 @@ if (isConnected) {
             // Matikan animasi manual jika error
             spinIntervals.forEach(clearInterval);
             isSpinning = false;
-            showToast("Draw Error: " + (err.reason || err.message)); 
+            showToast("Draw Failed. Try Again!.: " + (err.reason || err.message)); 
         }
     }
 
-    async function checkRoundResult(roundId) {
+    function checkRoundResult(roundId) {
 
         if (isProcessingResult) return; 
 
@@ -1937,7 +1937,7 @@ if (isConnected) {
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function showToast(msg) {
         const x = document.getElementById("toast"); x.innerText = msg; x.className = "show";
-        setTimeout(() => { x.className = x.className.replace("show", ""); }, 3000);
+        setTimeout(() => { x.className = x.className.replace("show", ""); }, 8000);
     }
 
     async function openWalletDashboard() {
@@ -2114,7 +2114,7 @@ if (isConnected) {
             showToast("Comment posted!");
             loadComments(roundId);
         } catch (e) {
-            showToast("Failed: " + (e.reason || "Error"));
+            showToast("Posting Comment Failed: " + (e.reason || "Error"));
         }
     }
 
