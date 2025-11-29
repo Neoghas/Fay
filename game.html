@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Ticket War • Wheel • Royale Demo</title>
+<style>
+  :root{
+    --bg:#0b0f18; --panel:#0f1724; --accent:#7c3aed; --muted:#98a1b2;
+    --glass: rgba(255,255,255,0.03);
+  }
+  body{ margin:0; font-family:Inter,system-ui,Segoe UI,Roboto,Arial; background:
+    linear-gradient(180deg,#071226 0%, #081226 60%), radial-gradient(1000px 400px at 10% 10%, rgba(124,58,237,0.08), transparent);
+    color:#e6eef8; min-height:100vh; display:flex; align-items:flex-start; justify-content:center; padding:28px; }
+  .app{ width:1100px; max-width:98%; display:grid; grid-template-columns: 380px 1fr; gap:20px; }
+  .panel{ background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:18px; box-shadow: 0 8px 30px rgba(2,6,23,0.6); }
+  h2{ margin:0 0 12px 0; font-size:18px; color:#fff; letter-spacing:0.3px;}
+  label{ display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+  .row{ display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+  input[type="text"], input[type="number"], select{
+    background:var(--glass); border:1px solid rgba(255,255,255,0.03); color: #e6eef8; padding:8px 10px; border-radius:8px; width:100%;
+  }
+  button{ background:linear-gradient(90deg,var(--accent),#4f46e5); color:white; padding:10px 12px; border-radius:10px; border:0; cursor:pointer; box-shadow: 0 6px 18px rgba(124,58,237,0.14);}
+  .muted{color:var(--muted); font-size:13px;}
+  .players-list{ max-height:360px; overflow:auto; margin-top:8px; border-radius:8px; padding:8px; background:rgba(255,255,255,0.01); }
+  .player-item{ display:flex; justify-content:space-between; align-items:center; padding:8px; border-radius:8px; margin-bottom:6px; background: linear-gradient(90deg, rgba(255,255,255,0.01), transparent); }
+  .player-item .meta{ font-size:13px; color:var(--muted); }
+  .stats{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+  .stat{ background:rgba(255,255,255,0.02); padding:8px 10px; border-radius:8px; font-weight:600; }
+  /* right column */
+  .stage{ display:flex; gap:18px; align-items:stretch; }
+  .wheel-wrap, .royale-wrap{ background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01)); padding:16px; border-radius:12px; width:100%; }
+  canvas{ width:100%; height:420px; display:block; border-radius:10px; background: linear-gradient(180deg,#061124,#051022); }
+  .controls{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .tickets-list{ margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; }
+  .ticket-pill{ padding:6px 8px; background:rgba(255,255,255,0.03); border-radius:999px; font-size:13px; }
+  .avatar-grid{ display:flex; gap:8px; flex-wrap:wrap; padding:8px; max-height:330px; overflow:auto; }
+  .avatar{ width:72px; height:72px; border-radius:10px; background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; position:relative;}
+  .avatar.elim{ filter:grayscale(90%) brightness(.5); opacity:.35; transform:scale(.9); transition:all .6s ease; }
+  .big-title{ font-size:22px; margin-bottom:6px; color:#fff; }
+  .note{ font-size:13px; color:var(--muted); margin-top:8px; }
+  footer { margin-top:12px; color:var(--muted); font-size:13px; }
+  @media (max-width:900px){ .app{ grid-template-columns: 1fr; } canvas{ height:300px } }
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT: Lobby / Ticket War -->
+    <div class="panel">
+      <h2>Ticket War • Lobby</h2>
+      <div class="muted">Tambahkan player (nama) & beli tiket. Tiap tiket = 1 chance.</div>
+
+      <div style="margin-top:12px;">
+        <label>Nama pemain</label>
+        <div class="row">
+          <input id="playerName" type="text" placeholder="Masukkan nama (contoh: Riko)" />
+          <button id="addPlayerBtn">Tambah</button>
+        </div>
+
+        <label style="margin-top:8px">Beli tiket untuk pemain terpilih</label>
+        <div class="row">
+          <select id="selectPlayer" style="width:100%"></select>
+          <input id="ticketCount" type="number" min="1" value="1" style="width:90px" />
+          <button id="buyTicketBtn">Beli</button>
+        </div>
+
+        <div class="stats">
+          <div class="stat">Players: <span id="statPlayers">0</span></div>
+          <div class="stat">Total Tickets: <span id="statTickets">0</span></div>
+          <div class="stat">Pool (mock): <span id="statPool">0 USDT</span></div>
+        </div>
+
+        <div class="players-list" id="playersList"></div>
+
+        <div style="margin-top:8px;">
+          <label>Tickets (visual)</label>
+          <div class="tickets-list" id="ticketsList"></div>
+        </div>
+
+        <footer>
+          <div class="note"><strong>Catatan:</strong> Demo ini memakai RNG browser (Math.random). Untuk produksi, gunakan server-side RNG & commit-reveal / chain randomness agar adil & auditable. Pastikan juga patuhi regulasi setempat.</div>
+        </footer>
+      </div>
+    </div>
+
+    <!-- RIGHT: Wheel + Royale -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <div class="panel stage">
+        <div class="wheel-wrap" style="flex:1.1">
+          <div class="big-title">Wheel of Winners</div>
+          <canvas id="wheelCanvas" width="720" height="420"></canvas>
+          <div class="controls">
+            <button id="spinBtn">Putar Roda & Pilih 1 Winner</button>
+            <button id="spinFastBtn">Putar Cepat</button>
+            <button id="clearBtn">Reset Semua</button>
+            <div style="margin-left:auto" class="muted" id="wheelResult">Result: -</div>
+          </div>
+          <div class="muted note">Roda menampilkan segmen proporsional berdasarkan jumlah tiket.</div>
+        </div>
+
+        <div class="royale-wrap" style="width:360px">
+          <div class="big-title">Battle Royale • Elimination</div>
+          <div class="muted">Tekan mulai untuk mengeliminasi pemain secara acak sampai 1 tersisa.</div>
+          <div style="margin-top:10px" class="avatar-grid" id="avatarGrid"></div>
+          <div class="controls" style="margin-top:10px">
+            <button id="startRoyaleBtn">Mulai Eliminasi</button>
+            <button id="stopRoyaleBtn" disabled>Stop</button>
+            <div style="margin-left:auto" class="muted" id="royaleResult">Winner: -</div>
+          </div>
+          <div class="note">Animasi sederhana — di production, jalankan server-side elimination dan rekam RNG.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Quick Controls & Tips</h2>
+        <div class="muted">Tips untuk demo: tambahkan beberapa pemain cepat (Auto-Fill) untuk lihat efek roda & royale.</div>
+        <div style="margin-top:10px" class="row">
+          <button id="autoFillBtn">Auto-fill 12 players (random tickets)</button>
+          <button id="demoDrawBtn">Demo: Spin + Royale</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ---------- Model ---------- */
+const state = { players: [], tickets: [], poolPerTicket: 1.0 };
+
+/* ---------- Helpers ---------- */
+function uid(len=6){ return Math.random().toString(36).slice(2,2+len); }
+function $(id){ return document.getElementById(id); }
+function updateStats(){
+  $('statPlayers').innerText = state.players.length;
+  const totalTickets = state.tickets.reduce((s,t)=>s+t.count,0);
+  $('statTickets').innerText = totalTickets;
+  $('statPool').innerText = (totalTickets * state.poolPerTicket).toFixed(2) + ' USDT';
+  renderPlayers();
+  renderTicketsVisual();
+  renderAvatars();
+}
+function addPlayer(name){
+  const id = uid(5);
+  state.players.push({ id, name, tickets:0 });
+  const opt = document.createElement('option'); opt.value = id; opt.text = name; $('selectPlayer').appendChild(opt);
+  updateStats();
+}
+function findPlayer(id){ return state.players.find(p=>p.id===id); }
+function buyTickets(playerId, count){
+  const p = findPlayer(playerId); if(!p) return;
+  p.tickets += count;
+  // add to ticket pool records
+  state.tickets.push({ ownerId: playerId, count });
+  updateStats();
+}
+function clearAll(){
+  state.players = [];
+  state.tickets = [];
+  $('selectPlayer').innerHTML = '';
+  $('wheelResult').innerText = 'Result: -';
+  $('royaleResult').innerText = 'Winner: -';
+  updateStats();
+}
+
+/* ---------- UI render ---------- */
+function renderPlayers(){
+  const wrap = $('playersList'); wrap.innerHTML = '';
+  state.players.forEach(p=>{
+    const el = document.createElement('div'); el.className='player-item';
+    el.innerHTML = `<div>
+        <div style="font-weight:700">${p.name}</div>
+        <div class="meta">${p.tickets} tiket</div>
+      </div>
+      <div style="text-align:right">
+        <div class="meta">ID ${p.id}</div>
+        <div style="margin-top:6px"><button data-id="${p.id}" class="refundBtn" style="background:transparent;border:1px solid rgba(255,255,255,0.04);padding:6px;border-radius:8px;color:var(--muted)">Refund</button></div>
+      </div>`;
+    wrap.appendChild(el);
+  });
+  // bind refund
+  wrap.querySelectorAll('.refundBtn').forEach(b=>{
+    b.onclick = ()=> {
+      const id = b.getAttribute('data-id');
+      // remove tickets associated
+      state.tickets = state.tickets.filter(t=>t.ownerId !== id);
+      const p = findPlayer(id); if(p) p.tickets = 0;
+      updateStats();
+    };
+  });
+}
+function renderTicketsVisual(){
+  const wrap = $('ticketsList'); wrap.innerHTML = '';
+  state.players.forEach(p=>{
+    if(p.tickets>0){
+      const pill = document.createElement('div'); pill.className='ticket-pill';
+      pill.innerText = `${p.name} × ${p.tickets}`;
+      wrap.appendChild(pill);
+    }
+  });
+}
+function renderAvatars(){
+  const grid = $('avatarGrid'); grid.innerHTML = '';
+  state.players.forEach(p=>{
+    const a = document.createElement('div'); a.className='avatar'; a.id = 'av_'+p.id;
+    const initials = p.name.split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase();
+    a.innerHTML = `<div>${initials}</div><div style="position:absolute;left:6px;bottom:6px;font-size:11px;color:var(--muted)">${p.tickets}</div>`;
+    grid.appendChild(a);
+  });
+}
+
+/* ---------- DOM events ---------- */
+$('addPlayerBtn').onclick = ()=>{
+  const name = $('playerName').value.trim();
+  if(!name) return alert('Masukkan nama dulu.');
+  addPlayer(name);
+  $('playerName').value='';
+};
+$('buyTicketBtn').onclick = ()=>{
+  const pid = $('selectPlayer').value;
+  const c = parseInt($('ticketCount').value) || 1;
+  if(!pid) return alert('Pilih player dari dropdown.');
+  buyTickets(pid, c);
+};
+$('clearBtn').onclick = clearAll;
+$('autoFillBtn').onclick = ()=>{
+  const sample = ['Riko','Sari','Joko','Luna','Aldi','Nina','Bayu','Tara','Fikri','Dedi','Maya','Rizal'];
+  clearAll();
+  sample.forEach(n=>{
+    addPlayer(n);
+    const p = state.players[state.players.length-1];
+    const tk = Math.floor(Math.random()*4)+1;
+    buyTickets(p.id, tk);
+  });
+};
+$('demoDrawBtn').onclick = async ()=>{
+  if(state.tickets.length===0){ alert('Tidak ada tiket. Auto-fill dulu.'); $('autoFillBtn').click(); return; }
+  await spinWheel(6000);
+  await new Promise(r=>setTimeout(r,1200));
+  startRoyale();
+};
+
+/* ---------- Weighted helper ---------- */
+function weightedPick(players){
+  // players: [{id,name,tickets}]
+  const entries = [];
+  players.forEach(p=>{
+    for(let i=0;i<p.tickets;i++) entries.push(p.id);
+  });
+  if(entries.length===0) return null;
+  const idx = Math.floor(Math.random()*entries.length);
+  return entries[idx];
+}
+
+/* ---------- Wheel Implementation ---------- */
+const canvas = $('wheelCanvas'); const ctx = canvas.getContext('2d');
+let wheelAnimating = false;
+
+function buildWheelSegments(){
+  // segments from players aggregated tickets
+  const aggregated = state.players.filter(p=>p.tickets>0).map(p=>({ id:p.id, name:p.name, count:p.tickets }));
+  const total = aggregated.reduce((s,x)=>s+x.count,0);
+  if(total===0) return { segments: [], total };
+  const segments = aggregated.map(p=>({ ...p, angle: (p.count/total) * Math.PI*2 }));
+  return { segments, total };
+}
+
+function drawWheel(rotation=0){
+  const { segments } = buildWheelSegments();
+  const cx = canvas.width/2, cy = canvas.height/2;
+  const radius = Math.min(cx,cy)-18;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // background circle
+  ctx.beginPath(); ctx.arc(cx,cy,radius+6,0,Math.PI*2); ctx.fillStyle = 'rgba(255,255,255,0.02)'; ctx.fill();
+  let start = rotation;
+  segments.forEach((seg,i)=>{
+    const end = start + seg.angle;
+    // color palette generator (cyber-ish)
+    const h = (i*73) % 360;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,radius,start,end); ctx.closePath();
+    ctx.fillStyle = `hsl(${h} 70% 45% / .75)`; ctx.fill();
+    // text
+    const mid = (start+end)/2;
+    ctx.save();
+    ctx.translate(cx + Math.cos(mid)*(radius*0.58), cy + Math.sin(mid)*(radius*0.58));
+    ctx.rotate(mid + Math.PI/2);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px sans-serif';
+    const text = `${seg.name} x${seg.count}`;
+    ctx.textAlign='center'; ctx.fillText(text,0,0);
+    ctx.restore();
+    start = end;
+  });
+  // center
+  ctx.beginPath(); ctx.arc(cx,cy,56,0,Math.PI*2); ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font='bold 18px sans-serif'; ctx.textAlign='center'; ctx.fillText('SPIN', cx, cy+6);
+
+  // pointer triangle
+  ctx.beginPath();
+  ctx.moveTo(canvas.width-28, cy-18);
+  ctx.lineTo(canvas.width-8, cy);
+  ctx.lineTo(canvas.width-28, cy+18);
+  ctx.closePath();
+  ctx.fillStyle = 'linear-gradient(#fff,#ddd)'; ctx.fillStyle = '#fffb'; ctx.fill();
+}
+
+let currentRotation = 0;
+function spinWheel(duration=5000){
+  return new Promise((resolve)=>{
+    if(wheelAnimating) return resolve(null);
+    const { segments, total } = buildWheelSegments();
+    if(!segments || segments.length===0){ alert('Tidak ada tiket!'); return resolve(null); }
+    wheelAnimating = true;
+    // pick winner via weighted pick to choose final angle deterministically for demo
+    const winnerId = weightedPick(state.players);
+    const winner = state.players.find(p=>p.id===winnerId);
+    // compute target rotation so that winner lands at pointer (right side)
+    // find mid-angle of winner segment
+    let acc = 0; let targetMid = 0;
+    for(const s of segments){
+      if(s.id === winnerId){
+        const segAngle = (s.count/total)*Math.PI*2;
+        targetMid = acc + segAngle/2;
+        break;
+      }
+      acc += (s.count/total)*Math.PI*2;
+    }
+    // We want targetMid to align with pointer angle (which is -90deg? Actually pointer at 0 radians to the right)
+    // Our wheel draws with rotation offset; pointer points to 0 radians (to the right) => we need wheel rotation so that segment mid equals 0.
+    // So rotation such that (currentRotation + targetMid) % 2pi = 0  => rotation = -targetMid + k*2pi
+    const spins = 3; // full spins
+    const finalRotation = currentRotation + spins*Math.PI*2 - targetMid + (Math.random()-0.5)*0.2; // small jitter
+    const startRotation = currentRotation;
+    const startTime = performance.now();
+    function animate(now){
+      const t = Math.min(1, (now-startTime)/duration);
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      currentRotation = startRotation + (finalRotation - startRotation)*eased;
+      drawWheel(currentRotation);
+      if(t<1) requestAnimationFrame(animate);
+      else {
+        wheelAnimating = false;
+        // resolve winner (we used weightedPick earlier)
+        $('wheelResult').innerText = `Result: ${winner.name} (ID ${winner.id})`;
+        resolve(winner);
+      }
+    }
+    requestAnimationFrame(animate);
+  });
+}
+$('spinBtn').onclick = ()=> spinWheel(7000);
+$('spinFastBtn').onclick = ()=> spinWheel(2200);
+
+/* ---------- Royale elimination ---------- */
+let royaleRunning = false;
+function startRoyale(){
+  if(state.players.length===0){ alert('Tidak ada pemain.'); return; }
+  const alive = state.players.filter(p=>p.tickets>0).map(p=>({ ...p }));
+  if(alive.length===0){ alert('Semua pemain tiket 0.'); return; }
+  royaleRunning = true;
+  $('startRoyaleBtn').disabled = true; $('stopRoyaleBtn').disabled = false;
+  $('royaleResult').innerText = 'Winner: -';
+  const avatars = alive.map(a=>a.id);
+  const eliminateStep = ()=>{
+    if(!royaleRunning) return;
+    if(avatars.length<=1){
+      const winId = avatars[0];
+      const winner = state.players.find(p=>p.id===winId);
+      $('royaleResult').innerText = `Winner: ${winner.name} (ID ${winner.id})`;
+      $('startRoyaleBtn').disabled = false; $('stopRoyaleBtn').disabled = true;
+      royaleRunning = false;
+      // highlight winner visually
+      document.querySelectorAll('.avatar').forEach(av=> av.classList.add('elim'));
+      const el = document.getElementById('av_'+winId);
+      if(el){ el.classList.remove('elim'); el.style.transform='scale(1.08)'; el.style.boxShadow='0 10px 30px rgba(124,58,237,0.25)'; }
+      return;
+    }
+    // choose random victim weighted by tickets
+    // compute weighted pick among current avatars (use their tickets)
+    const pool = [];
+    avatars.forEach(id=>{
+      const p = state.players.find(x=>x.id===id);
+      for(let i=0;i<p.tickets;i++) pool.push(id);
+    });
+    if(pool.length===0){
+      // fallback equal
+      avatars.splice(Math.floor(Math.random()*avatars.length),1);
+    } else {
+      const victim = pool[Math.floor(Math.random()*pool.length)];
+      // animate elimination
+      const avEl = document.getElementById('av_'+victim);
+      if(avEl){
+        avEl.classList.add('elim');
+        avEl.animate([{ transform: 'scale(1.0)', opacity:1 },{ transform:'scale(.7)', opacity:0.2 }], { duration:600, easing:'ease' });
+      }
+      // remove from active
+      const idx = avatars.indexOf(victim); if(idx>=0) avatars.splice(idx,1);
+    }
+    // schedule next elimination
+    setTimeout(eliminateStep, 700 + Math.random()*600);
+  };
+  // initial reset visuals
+  document.querySelectorAll('.avatar').forEach(av=> av.classList.remove('elim'));
+  eliminateStep();
+}
+$('startRoyaleBtn').onclick = startRoyale;
+$('stopRoyaleBtn').onclick = ()=> { royaleRunning=false; $('startRoyaleBtn').disabled=false; $('stopRoyaleBtn').disabled=true; };
+
+/* ---------- On load ---------- */
+(function init(){
+  // sample initial state
+  addPlayer('Host'); buyTickets(state.players[0].id, 1);
+  updateStats();
+  // draw initial empty wheel
+  drawWheel(0);
+})();
+
+/* ---------- utility: weightedPick uses player.tickets; override for different selections ---------- */
+function weightedPick(players){
+  // players = state.players (with .tickets)
+  const entries = [];
+  players.forEach(p=>{
+    for(let i=0;i<p.tickets;i++) entries.push(p.id);
+  });
+  if(entries.length===0) return null;
+  return entries[Math.floor(Math.random()*entries.length)];
+}
+</script>
+</body>
+  </html>
