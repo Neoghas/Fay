@@ -825,57 +825,75 @@ if(!u[1]) {
             showToast("Rating..."); await tx.wait(); showToast("Rated!"); updateSocialStats(rid);
         } catch(e){ showToast("Failed: " + (e.reason||"Error")); }
     }
+
     async function submitLike(rid) {
         if(!isConnected) { showToast("Connect First"); return; }
+        
         try {
             const u = await gameContract.users(userAddress);
-            // Contoh untuk submitRating (terapkan logika sama ke submitLike & triggerBetModal)
-if(!u[1]) { 
-    showToast("Please Register in Referral Panel below!"); 
-    // Scroll otomatis ke panel referral
-    document.getElementById('referralPanel').scrollIntoView({behavior: "smooth"});
-    return; 
-}
-            const tx = await gameContract.setReaction(rid, 1, {gasLimit: 500000});
-            showToast("Liking..."); await tx.wait(); showToast("Liked!"); updateSocialStats(rid);
-        } catch(e){ showToast("Failed: " + (e.reason||"Error")); }
+            if(!u[1]) { 
+                showToast("Please Register in Referral Panel below!"); 
+                document.getElementById('referralPanel').scrollIntoView({behavior: "smooth"});
+                return; 
+            }
+
+            // Kirim Transaksi ke Blockchain
+            const tx = await gameContract.setReaction(rid, 1); 
+            showToast("Liking..."); 
+            
+            // Tunggu Konfirmasi
+            await tx.wait(); 
+            showToast("Liked!"); 
+
+            // --- PERBAIKAN UTAMA DI SINI ---
+            // Langsung update angka di layar (Optimistic Update)
+            const el = document.getElementById(`likes-count-${rid}`);
+            if(el) {
+                let currentVal = parseInt(el.innerText) || 0;
+                el.innerText = currentVal + 1; // Paksa tambah 1
+                
+                // Beri efek visual warna hijau sesaat
+                el.style.color = "var(--success)";
+            }
+
+            // Update data asli dari blockchain setelah delay 3 detik (biar RPC sempat sync)
+            setTimeout(() => { updateSocialStats(rid); }, 3000);
+
+        } catch(e){ 
+            console.error(e);
+            showToast("Failed: " + (e.reason||"Error")); 
+        }
     }
+    
     async function updateSocialStats(rid) {
         try {
-            // Ambil data dari kontrak
             const [score, count, likes] = await Promise.all([
-                gameContract.totalRatingScore(rid), // Ini TOTAL BINTANG (Contoh: 8)
-                gameContract.totalRatingCount(rid), // Ini TOTAL ORANG (Contoh: 2)
+                gameContract.totalRatingScore(rid),
+                gameContract.totalRatingCount(rid),
                 gameContract.likeCounts(rid)
             ]);
 
-            // 1. Logika Bintang Visual (Tetap Pakai Rata-rata)
-            // Supaya tampilan bintangnya akurat (8 / 2 orang = 4 Bintang menyala)
+            // Update Bintang (Rating)
             const avg = count > 0n ? Math.round(Number(score)/Number(count)) : 0;
-            
             for(let i=1; i<=5; i++) {
                 const s = document.getElementById(`star-${rid}-${i}`);
-                if(s) { 
-                    // Pastikan tidak menimpa efek hover user saat ini
-                    if (!s.classList.contains('hover-gold') && !s.classList.contains('dimmed')) {
-                        if(i <= avg) s.classList.add('active'); 
-                        else s.classList.remove('active'); 
-                    }
+                if(s && !s.classList.contains('hover-gold')) { 
+                    if(i <= avg) s.classList.add('active'); else s.classList.remove('active'); 
                 }
             }
-
-            // 2. Logika Text Count (YANG ANDA MINTA)
-            // Ganti variable 'count' menjadi 'score'
-            const elCount = document.getElementById(`vote-count-${rid}`);
             
-            // Tampilkan total skor bintang (score), bukan jumlah orang (count)
-            if(elCount) elCount.innerText = `(${score})`; 
+            // Update Text Count Bintang (Total Score)
+            const elCount = document.getElementById(`vote-count-${rid}`);
+            if(elCount) elCount.innerText = `(${score})`;
 
-            // 3. Update Like
+            // Update Like Count
             const elLike = document.getElementById(`likes-count-${rid}`);
-            if(elLike) elLike.innerText = likes;
+            if(elLike) {
+                elLike.innerText = likes; // Isi dengan data real dari blockchain
+                elLike.style.color = ""; // Reset warna
+            }
 
-        } catch(e) { console.log(e); }
+        } catch(e){}
     }
 
     function switchTab(tab) {
