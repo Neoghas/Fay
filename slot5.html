@@ -621,11 +621,18 @@
     /* Container Utama Bar Sosial */
     .social-bar {  
         display: flex;  
-        justify-content: space-between;  
+        justify-content: space-between; /* Kunci agar elemen menyebar rata */
         align-items: center;  
-        margin-top: 15px;  
-        padding-top: 12px;  
-        border-top: 1px solid rgba(255, 255, 255, 0.05); /* Garis pemisah tipis */ 
+        margin-top: 10px;  
+        padding-top: 8px;  
+        border-top: 1px solid rgba(255,255,255,0.05);  
+        width: 100%;
+    }
+    
+    /* Opsional: Agar Tombol Like dan Komen punya lebar sama 
+       supaya Bintang benar-benar persis di tengah layar */
+    .btn-like-single, .btn-comment-toggle {
+        min-width: 60px; /* Atur lebar minimal */
     }  
 
     /* Grup Bintang Rating */
@@ -1171,7 +1178,14 @@ if(!u[1]) {
                     <div class="history-outcome" style="margin-top:5px;">${formatOutcomeText(res.outcome, res.reels)}</div>
                     <div id="winner-info-${r}" style="margin-top:8px; border-top:1px dashed #444; padding-top:5px; min-height:20px;"><span style="font-size:0.7em; color:#555;">Loading...</span></div>
                     
-                    <div class="star-group" onmouseleave="resetStarHover(${r})">
+                    <div class="social-bar">
+                        
+                        <button class="btn-like-single" onclick="submitLike(${r})">
+                            <img src="like.svg" style="width: 25px; height: 25px;"> 
+                            <span id="likes-count-${r}">0</span>
+                        </button>
+
+                        <div class="star-group" onmouseleave="resetStarHover(${r})">
                             <span id="star-${r}-1" class="star-btn" onmouseenter="previewStarRating(${r}, 1)" onclick="submitRating(${r},1)">★</span>
                             <span id="star-${r}-2" class="star-btn" onmouseenter="previewStarRating(${r}, 2)" onclick="submitRating(${r},2)">★</span>
                             <span id="star-${r}-3" class="star-btn" onmouseenter="previewStarRating(${r}, 3)" onclick="submitRating(${r},3)">★</span>
@@ -1179,17 +1193,13 @@ if(!u[1]) {
                             <span id="star-${r}-5" class="star-btn" onmouseenter="previewStarRating(${r}, 5)" onclick="submitRating(${r},5)">★</span>
                             <span id="vote-count-${r}" class="star-count">(0)</span>
                         </div>
-                        <div class="like-wrapper" style="gap:10px;">
-                            <button class="btn-like-single" onclick="submitLike(${r})">
-                                <img src="like.svg" style="width: 25px; height: 25px;"> 
-                                <span id="likes-count-${r}">0</span>
-                            </button>
-                            
-                            <button class="btn-comment-toggle" onclick="toggleComments(${r})">
-                                <img src="comment.svg" style="width: 25px; height: 25px;"> 
-                                <span id="comment-count-badge-${r}">${commentCount}</span>
-                            </button>
-                        </div>
+
+                        <button class="btn-comment-toggle" onclick="toggleComments(${r})">
+                            <img src="comment.svg" style="width: 25px; height: 25px;"> 
+                            <span id="comment-count-badge-${r}">${commentCount}</span>
+                        </button>
+
+                    </div>
                     </div>
 
                     <div id="comments-section-${r}" class="comments-container">
