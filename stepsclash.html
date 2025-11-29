@@ -1,0 +1,386 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>100 STEPS CLASH — Prototype</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#0f1724; --accent:#00e6a8; --danger:#ff5c77; --muted:#9aa4b2;
+  }
+  body{margin:0;font-family:Inter, system-ui, Arial;background:linear-gradient(180deg,#061124 0%, #08131c 100%);color:#e8eef6;}
+  .app{max-width:1200px;margin:20px auto;padding:18px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 6px 30px rgba(2,6,23,0.6);}
+  header{display:flex;gap:16px;align-items:center;justify-content:space-between}
+  h1{margin:0;font-size:20px;letter-spacing:0.6px}
+  .controls{display:flex;gap:8px;align-items:center}
+  label{font-size:13px;color:var(--muted)}
+  input[type=number]{width:96px;padding:6px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit}
+  button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;color:#032a1f;font-weight:600;cursor:pointer}
+  button.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted);padding:6px 10px}
+  .main{display:grid;grid-template-columns: 1fr 360px;gap:18px;margin-top:16px}
+  .board-wrap{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.005));padding:12px;border-radius:10px;height:600px;overflow:auto}
+  .board{display:flex;flex-wrap:wrap;width:1200px;gap:6px;padding:6px}
+  .cell{width:110px;height:48px;border-radius:8px;background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:space-between;padding:6px;font-size:12px;box-shadow:inset 0 -2px 0 rgba(255,255,255,0.01)}
+  .cell.finish{background:linear-gradient(90deg,#0affd3,#00b3ff);color:#022}
+  .cell.start{background:rgba(255,255,255,0.03)}
+  .players-on-cell{display:flex;gap:6px}
+  .avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#031; font-weight:700}
+  .panel{background:var(--panel);padding:12px;border-radius:10px}
+  .player-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .player-card{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border:1px solid rgba(255,255,255,0.02)}
+  .player-meta{flex:1}
+  .hp{font-size:13px}
+  .log{height:220px;overflow:auto;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);font-size:13px;color:var(--muted)}
+  .center{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .big{font-size:28px;font-weight:700;color:var(--accent)}
+  .muted{color:var(--muted);font-size:13px}
+  .pool{font-weight:700;color:#fff;padding:8px;border-radius:8px;background:linear-gradient(90deg, rgba(0,0,0,0.3), rgba(255,255,255,0.02));text-align:center}
+  .respawn{display:flex;gap:6px;align-items:center}
+  .badge{padding:4px 6px;border-radius:6px;background:rgba(255,255,255,0.03);font-size:12px}
+  footer{margin-top:12px;font-size:12px;color:var(--muted);text-align:center}
+  @media (max-width:1100px){ .main{grid-template-columns:1fr} .board{width:100%} .cell{width:calc(25% - 8px)} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>100 STEPS CLASH — Prototype</h1>
+      <div class="muted">Single-file prototype: roll, move, kick (3 lives), respawn buy-in, pool</div>
+    </div>
+    <div class="controls">
+      <label>Players</label>
+      <input id="numPlayers" type="number" min="2" max="8" value="4" />
+      <label>Buy-in</label>
+      <input id="buyInInput" type="number" min="0" value="1" step="0.1" />
+      <button id="startBtn">Start Game</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="board-wrap panel">
+      <div><strong>Board (100 steps)</strong></div>
+      <div style="height:8px"></div>
+      <div id="board" class="board" aria-hidden="false"></div>
+    </div>
+
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="muted">Current Turn</div>
+          <div id="currentTurn" class="big">—</div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted">Pool</div>
+          <div id="pool" class="pool">0</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div class="center">
+        <button id="rollBtn" style="width:160px;padding:10px;font-weight:700" disabled>Roll (1-6)</button>
+        <div class="muted">Last Roll: <span id="lastRoll">-</span></div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div><strong>Players</strong></div>
+      <div class="player-list" id="playerList"></div>
+
+      <div style="height:12px"></div>
+
+      <div><strong>Actions / Respawn</strong></div>
+      <div class="muted">When player defeated (hp 0) they can respawn by paying full buy-in into the pool.</div>
+      <div style="height:8px"></div>
+      <div id="actions"></div>
+
+      <div style="height:12px"></div>
+
+      <div><strong>Game Log</strong></div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+  <footer>Prototype — behavior simplified for demo. You can inspect code to extend features.</footer>
+</div>
+
+<script>
+/* --- Prototype Game Logic --- */
+const boardEl = document.getElementById('board');
+const playerListEl = document.getElementById('playerList');
+const poolEl = document.getElementById('pool');
+const currentTurnEl = document.getElementById('currentTurn');
+const logEl = document.getElementById('log');
+const rollBtn = document.getElementById('rollBtn');
+const lastRollEl = document.getElementById('lastRoll');
+const actionsEl = document.getElementById('actions');
+
+let NUM_CELLS = 100;
+let players = [];
+let turnIndex = 0;
+let pool = 0;
+let buyIn = 1;
+let running = false;
+
+/* helpers */
+function q(sel){return document.querySelector(sel)}
+function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a}
+function log(msg){ 
+  const time = new Date().toLocaleTimeString();
+  logEl.innerHTML = `<div>[${time}] ${escapeHtml(msg)}</div>` + logEl.innerHTML;
+}
+function escapeHtml(s){ return (s+'').replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+function buildBoard(){
+  boardEl.innerHTML = '';
+  for(let i=1;i<=NUM_CELLS;i++){
+    const cell = document.createElement('div');
+    cell.className = 'cell' + (i===1? ' start': '') + (i===NUM_CELLS? ' finish' : '');
+    cell.dataset.index = i;
+    cell.innerHTML = `<div style="opacity:0.8">#${i}</div><div class="players-on-cell" id="cell-${i}"></div>`;
+    boardEl.appendChild(cell);
+  }
+}
+
+function createPlayers(n){
+  players = [];
+  const colors = ['#FFB86B','#9AE6B4','#A3BFFA','#FFB2DE','#FFD580','#B8F2E6','#E6B8FF','#CFCFCF'];
+  for(let i=0;i<n;i++){
+    players.push({
+      id: 'P'+(i+1),
+      pos: 1,
+      hp: 3,
+      color: colors[i%colors.length],
+      isAlive: true,
+      totalKicked: 0,
+      defeated: false
+    });
+  }
+}
+
+function renderPlayers(){
+  // clear cells
+  for(let i=1;i<=NUM_CELLS;i++){
+    const el = document.getElementById(`cell-${i}`);
+    if(el) el.innerHTML = '';
+  }
+  // render each player
+  players.forEach(p=>{
+    if(!p.isAlive) return;
+    const container = document.getElementById(`cell-${p.pos}`);
+    if(!container) return;
+    const a = document.createElement('div');
+    a.className = 'avatar';
+    a.style.background = p.color;
+    a.textContent = p.id.replace('P','');
+    a.title = `${p.id} — HP ${p.hp}`;
+    container.appendChild(a);
+  });
+  renderPlayerList();
+  updatePool();
+}
+
+function renderPlayerList(){
+  playerListEl.innerHTML = '';
+  players.forEach((p, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'player-card';
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.style.background = p.color;
+    avatar.textContent = p.id.replace('P','');
+    const meta = document.createElement('div');
+    meta.className = 'player-meta';
+    meta.innerHTML = `<div><strong>${p.id}</strong> ${p.defeated?'<span class="badge">DEFEATED</span>':''}</div>
+                      <div class="muted">Position: ${p.pos} • Kicked: ${p.totalKicked}</div>`;
+    const hp = document.createElement('div');
+    hp.className = 'hp';
+    hp.innerHTML = 'HP: ' + '❤️'.repeat(p.hp) + (p.hp===0? ' ☠️' : '');
+    card.appendChild(avatar);
+    card.appendChild(meta);
+    card.appendChild(hp);
+
+    playerListEl.appendChild(card);
+  });
+}
+
+function updatePool(){
+  poolEl.textContent = pool.toFixed(2);
+}
+
+function startGame(){
+  const n = parseInt(document.getElementById('numPlayers').value) || 2;
+  buyIn = Math.max(0, parseFloat(document.getElementById('buyInInput').value) || 1);
+  pool = 0;
+  // collect buy-ins from players to pool
+  pool += n * buyIn;
+  createPlayers(n);
+  buildBoard();
+  renderPlayers();
+  turnIndex = 0;
+  running = true;
+  log(`Game started with ${n} players. Buy-in ${buyIn}. Pool = ${pool.toFixed(2)}`);
+  rollBtn.disabled = false;
+  updateUIForTurn();
+  actionsEl.innerHTML = '';
+}
+
+function resetGame(){
+  running = false;
+  players = [];
+  buildBoard();
+  renderPlayers();
+  rollBtn.disabled = true;
+  currentTurnEl.textContent = '-';
+  lastRollEl.textContent = '-';
+  pool = 0;
+  updatePool();
+  log('Game reset.');
+  actionsEl.innerHTML = '';
+}
+
+function updateUIForTurn(){
+  if(!running) return;
+  // find next alive player if current is dead
+  if(players.every(p=>!p.isAlive)){
+    currentTurnEl.textContent = 'No players alive';
+    rollBtn.disabled = true;
+    return;
+  }
+  // ensure turnIndex points to an alive player
+  let tries = 0;
+  while(!players[turnIndex] || !players[turnIndex].isAlive){
+    turnIndex = (turnIndex+1) % players.length;
+    if(++tries > players.length) break;
+  }
+  const p = players[turnIndex];
+  currentTurnEl.textContent = p.id;
+}
+
+function nextTurn(){
+  // advance to next alive player
+  for(let i=1;i<=players.length;i++){
+    const idx = (turnIndex + i) % players.length;
+    if(players[idx].isAlive){
+      turnIndex = idx;
+      return;
+    }
+  }
+  // no alive left
+}
+
+function roll(){
+  if(!running) return;
+  const p = players[turnIndex];
+  if(!p || !p.isAlive) { nextTurn(); updateUIForTurn(); return; }
+  const r = randInt(1,6);
+  lastRollEl.textContent = r;
+  log(`${p.id} rolled ${r}`);
+  movePlayer(p, r);
+  // check win
+  if(p.pos >= NUM_CELLS){
+    p.pos = NUM_CELLS;
+    renderPlayers();
+    log(`🏁 ${p.id} reached Finish and wins the game!`);
+    // distribute pool (simple: winner gets 70%)
+    const winnerShare = pool * 0.7;
+    const runnerUpShare = pool * 0.15;
+    const platform = pool * 0.1;
+    const bonus = pool - (winnerShare + runnerUpShare + platform);
+    log(`Pool ${pool.toFixed(2)} distributed — Winner ${winnerShare.toFixed(2)}, Runner-up ${runnerUpShare.toFixed(2)}, Platform ${platform.toFixed(2)}, Bonus ${bonus.toFixed(2)}`);
+    pool = 0;
+    updatePool();
+    rollBtn.disabled = true;
+    running = false;
+    currentTurnEl.textContent = 'Finished';
+    return;
+  }
+  // continue game
+  renderPlayers();
+  nextTurn();
+  updateUIForTurn();
+}
+
+function movePlayer(p, steps){
+  p.pos += steps;
+  if(p.pos > NUM_CELLS) p.pos = NUM_CELLS;
+  // check landing on other players
+  const others = players.filter(o => o !== p && o.isAlive && o.pos === p.pos);
+  if(others.length > 0){
+    // pick first to kick (if multiple, will sequentially kick the one found)
+    const victim = others[0];
+    handleKick(attacker=p, victim=victim);
+  }
+}
+
+function handleKick(attacker, victim){
+  log(`${attacker.id} landed on ${victim.id} → Kick!`);
+  // victim loses 1 hp, moved to start
+  victim.hp -= 1;
+  victim.totalKicked += 1;
+  // penalties: Kick1 -> 5%, Kick2 ->10% (of buyIn)
+  if(victim.hp === 2){
+    const pen = buyIn * 0.05;
+    pool += pen;
+    log(`${victim.id} lost 1 HP (kick1). Penalty ${pen.toFixed(2)} added to pool.`);
+  } else if(victim.hp === 1){
+    const pen = buyIn * 0.10;
+    pool += pen;
+    log(`${victim.id} lost 1 HP (kick2). Penalty ${pen.toFixed(2)} added to pool.`);
+  } else if(victim.hp <= 0){
+    // defeated
+    victim.isAlive = false;
+    victim.defeated = true;
+    victim.pos = 0;
+    log(`💀 ${victim.id} was defeated (kick 3). Must respawn by paying buy-in ${buyIn}.`);
+    // add defeated marker to actions to allow respawn
+    addRespawnAction(victim);
+  }
+  // attacker may get small reward (optional) - omitted but could add
+  // reset victim position to start if still alive
+  if(victim.isAlive) victim.pos = 1;
+  updatePool();
+}
+
+function addRespawnAction(victim){
+  const id = 'respawn-' + victim.id;
+  const exists = document.getElementById(id);
+  if(exists) return;
+  const wrap = document.createElement('div');
+  wrap.id = id;
+  wrap.className = 'respawn';
+  wrap.innerHTML = `<div><strong>${victim.id}</strong> is defeated.</div>`;
+  const btn = document.createElement('button');
+  btn.textContent = `Respawn (pay ${buyIn})`;
+  btn.onclick = ()=>{
+    if(pool < 0) pool = 0;
+    // player pays buyIn to pool (simulated: we just add buy-in into pool to resurrect)
+    pool += buyIn;
+    victim.isAlive = true;
+    victim.defeated = false;
+    victim.hp = 3;
+    victim.pos = 1;
+    log(`${victim.id} paid ${buyIn.toFixed(2)} and respawned at Start.`);
+    wrap.remove();
+    renderPlayers();
+    updateUIForTurn();
+  };
+  wrap.appendChild(btn);
+  actionsEl.appendChild(wrap);
+}
+
+/* controls */
+document.getElementById('startBtn').addEventListener('click', ()=> startGame());
+document.getElementById('resetBtn').addEventListener('click', ()=> resetGame());
+rollBtn.addEventListener('click', ()=> roll());
+
+/* initial build */
+buildBoard();
+renderPlayers();
+log('Prototype ready. Set players and press Start.');
+</script>
+</body>
+</html>
