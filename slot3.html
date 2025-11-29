@@ -845,6 +845,18 @@
   -webkit-text-fill-color: transparent;
     }
 
+    .comment-image-result {
+        margin-top: 8px;
+        max-width: 100%;
+        max-height: 150px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.2);
+        cursor: pointer;
+        transition: 0.2s;
+        display: block; /* Biar turun ke bawah */
+    }
+    .comment-image-result:hover { opacity: 0.8; }
+
 </style>
 </head>
 <body>
@@ -1049,7 +1061,9 @@
         
     const IMAGE_NAMES = ['tuna', 'crab', 'shark', 'octopus', 'shrimp', 'orcha'];
     const IMAGE_LIST = ["tuna.svg", "crab.svg", "shark.svg", "octo.svg", "shrimp.svg", "orcha.svg", "zonk.svg"]; 
-    const MIN_SPIN_TIME = 35000; 
+    const MIN_SPIN_TIME = 35000;
+    const IMGBB_API_KEY = "6e65bf08578a486ff931a91267b96708"; // API Key Anda
+    const IMG_SEPARATOR = " ||IMG|| "; // Kode rahasia pemisah Text dan Gambar
     let spinStartTime = 0; let spinIntervals = [];
     let isSpinning = false;
     let provider, signer, userAddress;
@@ -1062,6 +1076,7 @@
     let isProcessingResult = false;
     let gameContract;      // Kontrak Utama (via RPC/Metamask) -> Untuk Bet & Transaksi
     let listenerContract;
+    let selectedFiles = {}; // Simpan file sementara
     
     // --- TAMBAHKAN VARIABEL INI ---
     let myBetCounts = [0, 0, 0, 0, 0, 0];
@@ -1299,9 +1314,27 @@ if(!u[1]) {
                         <div id="comments-list-${r}" class="comment-list">
                             <div style="text-align:center; color:#555; font-size:0.8em;">Loading comments...</div>
                         </div>
+
+                        <div id="preview-box-${r}" style="display:none; padding:10px; background:#111; margin-top:5px; border-radius:8px; position:relative;">
+                            <img id="img-preview-${r}" src="" style="height:80px; border-radius:6px; border:1px solid var(--primary);">
+                            <button onclick="clearImage(${r})" style="position:absolute; top:5px; left:85px; background:var(--danger); color:white; border:none; width:20px; height:20px; border-radius:50%; cursor:pointer;">&times;</button>
+                        </div>
+
                         <div class="comment-input-area">
+                            <input type="file" id="file-upload-${r}" 
+       accept="image/png, image/jpeg, image/gif, image/webp" 
+       style="display:none;" 
+       onchange="handleFileSelect(event, ${r})">
+       
+                            <button class="btn-icon-upload" onclick="document.getElementById('file-upload-${r}').click()" title="Attach Image" style="margin-right:5px; background:none; border:none; cursor:pointer;">
+                                <img src="image.png" style="width:24px; height:24px;"> 
+                            </button>
+
                             <textarea id="input-comment-${r}" class="input-comment" placeholder="Write comment..."></textarea>
-                            <button class="btn-post-comment" onclick="postComment(${r})"><img src="send.svg" style="width: 18px; height: 18px;"></button>
+                            
+                            <button class="btn-post-comment" onclick="postComment(${r})">
+                                <img src="send.png" style="width:18px; height:18px; object-fit:contain;">
+                            </button>
                         </div>
                     </div>
                 `;
@@ -2056,19 +2089,38 @@ if (isConnected) {
 
             for (let i = 0; i < count; i++) {
                 const c = await gameContract.roundComments(roundId, i);
+                
+                // 1. AMBIL DATA MENTAH
                 const cId = c[0];
                 const author = c[1]; 
-                const text = c[2];
+                const rawData = c[2]; // <--- Ini string gabungan (Teks + Kode Gambar)
                 const time = Number(c[3]);
                 const isEdited = c[4];
 
+                // 2. LOGIKA HIBRID (PEMECAHAN GAMBAR & TEKS)
+                // Pastikan variabel IMG_SEPARATOR sudah didefinisikan di atas script (const IMG_SEPARATOR = " ||IMG|| ";)
+                let displayMessage = "";
+                let displayImage = "";
+
+                if (rawData.includes(IMG_SEPARATOR)) {
+                    const parts = rawData.split(IMG_SEPARATOR);
+                    displayMessage = parts[0]; // Bagian Teks
+                    const imgUrl = parts[1];   // Bagian URL Gambar
+                    
+                    // Buat HTML Gambar
+                    displayImage = `<img src="${imgUrl}" class="comment-image-result" onclick="window.open('${imgUrl}','_blank')">`;
+                } else {
+                    displayMessage = rawData; // Jika tidak ada gambar, semua adalah teks
+                }
+
+                // 3. LOGIKA LAINNYA (User, Date, Buttons)
                 const isMyComment = (userAddress && author.toLowerCase() === userAddress.toLowerCase());
                 const dateStr = new Date(time * 1000).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'});
-                
                 const nameElementId = `author-name-${roundId}-${cId}`;
 
+                // Tombol Edit (Kanan Atas)
                 const editIconHtml = `
-                    <button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${cId})" title="Edit Comment">
+                    <button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${cId}, '${displayMessage.replace(/'/g, "\\'")}')" title="Edit">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -2076,10 +2128,16 @@ if (isConnected) {
                     </button>
                 `;
 
-                // --- PERBAIKAN: DEFINISIKAN ITEM DULU ---
+                // Tombol Profil (Kanan Bawah - Agar tidak kosong)
+                const viewProfileHtml = `
+                    <button class="btn-view-profile" onclick="openPlayerProfile('${author}')" title="View Profile">
+                        <img src="user.png" style="width:14px; height:14px; opacity:0.8;">
+                    </button>
+                `;
+
+                // 4. SUSUN HTML
                 const item = document.createElement('div');
                 item.className = 'comment-item';
-                // ----------------------------------------
 
                 item.innerHTML = `
                     <div class="comment-bubble" id="bubble-${roundId}-${cId}">
@@ -2089,61 +2147,81 @@ if (isConnected) {
                         <div class="comment-author" id="${nameElementId}" style="color:var(--accent);">
                             Loading...
                         </div>
-                        <br>
+                        
                         <div class="comment-text" id="text-${roundId}-${cId}"></div> 
                         
+                        ${displayImage}
+
                         <div class="comment-meta">
                             <span>${dateStr}</span>
                             ${isEdited ? '<span>(Edited)</span>' : ''}
                         </div>
+
+                        ${viewProfileHtml}
                     </div>
                 `;
                 
-                // Set text aman
-                item.querySelector(`#text-${roundId}-${cId}`).innerText = text;
+                // Masukkan Teks Bersih (Tanpa URL gambar) ke div text
+                item.querySelector(`#text-${roundId}-${cId}`).innerText = displayMessage;
+                
                 listDiv.appendChild(item);
 
-                // Fetch Nickname
+                // 5. FETCH NICKNAME (Background)
                 gameContract.users(author).then(u => {
                     const nick = u[0]; 
                     const el = document.getElementById(nameElementId);
-                    if (el && nick) {
-                        el.innerText = nick; 
-                    }
+                    if (el && nick) el.innerText = nick; 
                 }).catch(() => {});
             }
         } catch (e) {
             console.error(e);
             listDiv.innerHTML = '<div style="color:red; font-size:0.8em;">Failed to load.</div>';
         }
-    }
+        }
 
     async function postComment(roundId) {
-        if(!isConnected) { showToast("Connect wallet first!"); return; }
-        
-        try {
-            const u = await gameContract.users(userAddress);
-            if(!u[1]) { 
-                showToast("Register profile first!");
-                document.getElementById('referralPanel').scrollIntoView({behavior: "smooth"});
-                return; 
-            }
-        } catch(e) {}
-
         const input = document.getElementById(`input-comment-${roundId}`);
-        const text = input.value;
-        
-        if (!text.trim()) return;
+        const rawText = input.value.trim();
+        const file = selectedFiles[roundId];
+
+        if (!isConnected) { showToast("Connect wallet first!"); return; }
+        if (!rawText && !file) return;
+
+        const btn = document.querySelector(`#comments-section-${roundId} .btn-post-comment`);
+        btn.disabled = true; // Cegah klik ganda
 
         try {
-            showToast("Posting comment...");
-            const tx = await gameContract.addComment(roundId, text);
-            input.value = ""; 
+            let finalContent = rawText; // Default isinya cuma teks
+
+            // Jika ada gambar, upload dulu
+            if (file) {
+                showToast("Uploading image...");
+                const imgUrl = await uploadToImgBB(file);
+                if (imgUrl) {
+                    // --- PACKING DATA: GABUNGKAN TEKS + SEPARATOR + URL ---
+                    finalContent = rawText + IMG_SEPARATOR + imgUrl;
+                } else {
+                    showToast("Image upload failed");
+                    btn.disabled = false;
+                    return;
+                }
+            }
+
+            showToast("Posting to blockchain...");
+            // Kirim string gabungan ke kontrak (kontrak taunya ini cuma teks biasa)
+            const tx = await gameContract.addComment(roundId, finalContent);
             await tx.wait();
-            showToast("Comment posted!");
+
+            showToast("Success!");
+            input.value = "";
+            clearImage(roundId);
             loadComments(roundId);
+
         } catch (e) {
-            showToast("Posting Comment Failed: " + (e.reason || "Error"));
+            console.error(e);
+            showToast("Error posting.");
+        } finally {
+            btn.disabled = false;
         }
     }
 
@@ -2179,6 +2257,72 @@ if (isConnected) {
         } catch(e) {
             showToast("Update failed: " + (e.reason || "Error"));
         }
+    }
+
+        // 1. Helper: Saat file dipilih
+
+    function handleFileSelect(event, rId) {
+
+        const file = event.target.files[0];
+
+        if (!file) return;
+
+        selectedFiles[rId] = file;
+
+        
+
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+
+            document.getElementById(`preview-box-${rId}`).style.display = 'block';
+
+            document.getElementById(`img-preview-${rId}`).src = e.target.result;
+
+        };
+
+        reader.readAsDataURL(file);
+
+    }
+
+
+
+    // 2. Helper: Batal upload
+
+    function clearImage(rId) {
+
+        delete selectedFiles[rId];
+
+        document.getElementById(`preview-box-${rId}`).style.display = 'none';
+
+        document.getElementById(`file-upload-${rId}`).value = "";
+
+    }
+
+
+
+    // 3. Helper: Upload ke ImgBB
+
+    async function uploadToImgBB(file) {
+
+        const formData = new FormData();
+
+        formData.append("image", file);
+
+        try {
+
+            const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+
+                method: "POST", body: formData
+
+            });
+
+            const data = await res.json();
+
+            return data.success ? data.data.url : null;
+
+        } catch(e) { return null; }
+
     }
     
     function setupEventListeners() {
