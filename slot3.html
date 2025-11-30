@@ -881,6 +881,125 @@
         color: white;
     }
 
+    /* ========================================= */
+    /* CSS PLAYER PROFILE (CARD STYLE)      */
+    /* ========================================= */
+
+    /* 1. Container Avatar (Lingkaran Luar dengan Glow) */
+    .profile-avatar {
+        width: 90px; 
+        height: 90px;
+        margin: 0 auto 15px auto;
+        border-radius: 50%;
+        padding: 3px; /* Jarak antara border pelangi dan gambar */
+        
+        /* Efek Border Gradient Cyberpunk berputar */
+        background: linear-gradient(135deg, var(--primary), var(--accent)); 
+        
+        /* Efek Bersinar (Glow) */
+        box-shadow: 0 0 25px rgba(0, 210, 255, 0.4); 
+        position: relative;
+    }
+
+    /* 2. Gambar Avatar (Robot/User) */
+    .profile-avatar img, #my-avatar-img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        background: #0b0c15; /* Background gelap di belakang robot transparan */
+        display: block;
+        border: 3px solid #1a1b26; /* Border dalam pemisah */
+    }
+
+    /* 3. Teks Nickname Besar */
+    #pp-nickname {
+        font-size: 1.6em;
+        font-weight: 800;
+        color: #fff;
+        text-shadow: 0 0 15px var(--primary); /* Teks menyala biru */
+        margin-bottom: 8px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
+
+    /* 4. Alamat Wallet (Gaya Coding/Hacker) */
+    #pp-address {
+        font-family: 'Courier New', monospace; /* Font coding */
+        font-size: 0.75em;
+        color: #aaa;
+        background: rgba(0,0,0,0.4);
+        padding: 6px 12px;
+        border-radius: 20px;
+        border: 1px solid rgba(255,255,255,0.1);
+        display: inline-block;
+        letter-spacing: 0.5px;
+        transition: 0.3s;
+    }
+    #pp-address:hover {
+        border-color: var(--primary);
+        color: #fff;
+        background: rgba(0, 210, 255, 0.1);
+    }
+
+    /* 5. Kotak Statistik (Wins & Bets) */
+    .profile-stat-box {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.05);
+        padding: 15px 10px;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: 0.3s;
+    }
+    .profile-stat-box:hover {
+        background: rgba(255,255,255,0.06);
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+
+    /* Khusus Kotak WIN (Warna Emas) */
+    .stat-win-box {
+        border-color: rgba(255, 215, 0, 0.3) !important;
+        background: radial-gradient(circle, rgba(255, 215, 0, 0.05) 0%, transparent 90%);
+        box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.05);
+    }
+
+    /* 6. Item List Riwayat (Recent Activity) */
+    /* Ini menggantikan style inline JS sebelumnya */
+    .pp-history-item {
+        padding: 10px;
+        background: rgba(255,255,255,0.02);
+        border-radius: 8px;
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        margin-bottom: 6px;
+        border-left: 2px solid #333;
+        transition: 0.2s;
+        font-size: 0.8em;
+    }
+    .pp-history-item:hover {
+        background: rgba(255,255,255,0.05);
+        border-left-color: var(--primary);
+    }
+
+    /* 7. Scrollbar Custom di dalam Modal */
+    #pp-history-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    #pp-history-list::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1); 
+    }
+    #pp-history-list::-webkit-scrollbar-thumb {
+        background: #333; 
+        border-radius: 2px;
+    }
+    #pp-history-list::-webkit-scrollbar-thumb:hover {
+        background: var(--primary);
+    }
 </style>
 </head>
 <body>
@@ -1069,6 +1188,41 @@
     </div>
 </div>
 
+    <div id="playerProfileModal" class="modal-overlay">
+    <div class="modal-content" style="border-color: var(--accent); box-shadow: 0 0 40px rgba(208, 0, 255, 0.2);">
+        <button class="close-modal" onclick="closeModal('playerProfileModal')">&times;</button>
+        
+        <div style="margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
+            <div style="font-size:0.7em; color:var(--primary); letter-spacing:2px; margin-bottom:10px; font-weight:bold;">PLAYER CARD</div>
+            
+            <div class="profile-avatar" style="overflow:hidden; padding:0; border:2px solid #fff; width:70px; height:70px; margin:0 auto 10px auto; border-radius:50%; box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);">
+                <img id="pp-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; background:#1f222e;">
+            </div>
+            
+            <div id="pp-nickname">Loading...</div>
+            <div id="pp-address">0x...</div>
+        </div>
+
+        <div class="dash-balance-grid" style="grid-template-columns: 1fr 1fr; gap:10px;">
+            <div class="profile-stat-box stat-win-box">
+                <span class="dash-label" style="color:var(--gold);">TOTAL WINS</span>
+                <span class="dash-val" id="pp-wins" style="color:var(--gold); font-size:1.4em;">0</span>
+            </div>
+            <div class="profile-stat-box">
+                <span class="dash-label">TOTAL BETS</span>
+                <span class="dash-val" id="pp-bets" style="font-size:1.4em;">0</span>
+            </div>
+        </div>
+
+        <div class="withdraw-section" style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
+            <div class="withdraw-title">RECENT ACTIVITY (Last 5)</div>
+            <div id="pp-history-list" style="max-height:150px; overflow-y:auto; font-size:0.75em; text-align:left; color:#aaa; display:flex; flex-direction:column; gap:5px;">
+                Fetching data...
+            </div>
+        </div>
+    </div>
+    </div>
+
 <div id="toast">Notification</div>
 
 <script>
@@ -1104,6 +1258,10 @@
     
     // --- TAMBAHKAN VARIABEL INI ---
     let myBetCounts = [0, 0, 0, 0, 0, 0];
+
+    function getAvatar(address) {
+        return `https://api.dicebear.com/7.x/bottts/svg?seed=${address}&backgroundColor=transparent`;
+    }
 
     window.onload = async () => {
         document.querySelectorAll('.reel-img').forEach(img => img.src = "what.svg");
@@ -1599,6 +1757,8 @@ if (isConnected) {
         // Update UI Profil (Logika Lama)
         document.getElementById('displayNick').innerText = userData[0];
         document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
+        const robotUrl = getAvatar(userAddress);
+        document.getElementById('my-avatar-img').src = robotUrl;
         
         const pending = Number(userData[4]);
         document.getElementById('pendingBonus').innerText = pending * 10000;
@@ -2127,6 +2287,7 @@ if (isConnected) {
                 const rawData = c[2]; // Data mentah dari Blockchain
                 const time = Number(c[3]);
                 const isEdited = c[4];
+                const avatarUrl = getAvatar(author);
 
                 // --- DEBUGGING (Cek di Console F12) ---
                 // Kita lihat apa isi sebenarnya dari rawData
@@ -2184,8 +2345,9 @@ if (isConnected) {
                         
                         ${isMyComment ? editIconHtml : ''}
 
-                        <div class="comment-author" id="${nameElementId}" style="color:var(--accent);">
-                            Loading...
+                        <div class="comment-author" id="${nameElementId}" style="display:flex; align-items:center; gap:8px; color:var(--accent);">
+                        <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:#000;">
+                        <span>Loading...</span>
                         </div>
                         
                         <div class="comment-text" id="text-${roundId}-${cId}"></div> 
@@ -2205,10 +2367,16 @@ if (isConnected) {
                 listDiv.appendChild(item);
 
                 gameContract.users(author).then(u => {
-                    const nick = u[0]; 
-                    const el = document.getElementById(nameElementId);
-                    if (el && nick) el.innerText = nick; 
-                }).catch(() => {});
+    const nick = u[0]; 
+    const el = document.getElementById(nameElementId);
+    if (el && nick) {
+        // Gunakan innerHTML agar Avatar + Nama baru dirender ulang bersamaan
+        el.innerHTML = `
+            <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:#000;">
+            <span>${nick}</span>
+        `;
+    }
+}).catch(() => {});
             }
         } catch (e) {
             console.error(e);
@@ -2437,6 +2605,68 @@ if (isConnected) {
             }
             reader.onerror = error => reject(error);
         });
+    }
+
+    async function openPlayerProfile(targetAddress) {
+        // 1. Buka Modal & Reset
+        document.getElementById('playerProfileModal').style.display = 'flex';
+        document.getElementById('pp-nickname').innerText = "Loading...";
+        document.getElementById('pp-address').innerText = targetAddress.substring(0,10) + "..." + targetAddress.substring(38);
+        document.getElementById('pp-wins').innerText = "...";
+        document.getElementById('pp-bets').innerText = "...";
+        const historyDiv = document.getElementById('pp-history-list');
+        historyDiv.innerHTML = '<div style="text-align:center; padding:10px;">Scanning Blockchain...</div>';
+
+        // --- UPDATE AVATAR ROBOT ORANG LAIN ---
+        // Otomatis generate berdasarkan wallet mereka
+        document.getElementById('pp-avatar-img').src = getAvatar(targetAddress);
+        // --------------------------------------
+
+        try {
+            // 2. Ambil Nickname
+            const u = await gameContract.users(targetAddress);
+            document.getElementById('pp-nickname').innerText = u[0] || "Unknown";
+
+            // 3. Scan Statistik (Win & Bet)
+            // ... (Kode scan manual sama seperti sebelumnya) ...
+            
+            // CONTOH SINGKAT BAGIAN SCAN (Biar Lengkap):
+            const filterWin = gameContract.filters.WinDistributed(targetAddress);
+            const winLogs = await gameContract.queryFilter(filterWin, 0, "latest");
+            document.getElementById('pp-wins').innerText = winLogs.length;
+
+            const filterBet = gameContract.filters.NewBet(targetAddress);
+            const betLogs = await gameContract.queryFilter(filterBet, 0, "latest");
+            document.getElementById('pp-bets').innerText = betLogs.length;
+
+            // 4. Render History
+            historyDiv.innerHTML = '';
+            if (betLogs.length === 0) {
+                historyDiv.innerHTML = '<div style="text-align:center; padding:10px;">No history.</div>';
+                return;
+            }
+            const recent = betLogs.slice(-5).reverse();
+            for (let log of recent) {
+                const animalIdx = Number(log.args[1]);
+                const animalName = IMAGE_NAMES[animalIdx].toUpperCase();
+                const row = document.createElement('div');
+                row.className = 'pp-history-item'; 
+            
+            row.innerHTML = `
+                <span style="color:#ddd;">
+                    Bet <b style="color:var(--primary); text-transform:uppercase;">${animalName}</b>
+                </span>
+                <span style="font-size:0.9em; color:#666; font-family:monospace;">
+                    Block #${log.blockNumber}
+                </span>
+            `;
+            historyDiv.appendChild(row);
+            }
+
+        } catch (e) {
+            console.error(e);
+            historyDiv.innerHTML = '<div style="color:var(--danger); text-align:center;">Failed to load data.</div>';
+        }
     }
     
     function setupEventListeners() {
