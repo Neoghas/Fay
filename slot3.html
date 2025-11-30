@@ -2092,25 +2092,38 @@ if (isConnected) {
                 
                 const cId = c[0];
                 const author = c[1]; 
-                const rawData = c[2]; 
+                const rawData = c[2]; // Data mentah dari Blockchain
                 const time = Number(c[3]);
                 const isEdited = c[4];
+
+                // --- DEBUGGING (Cek di Console F12) ---
+                // Kita lihat apa isi sebenarnya dari rawData
+                // console.log(`Comment #${cId} Raw Data:`, rawData); 
 
                 let displayMessage = "";
                 let displayImage = "";
 
-                // --- LOGIKA PERBAIKAN URL GAMBAR ---
-                if (rawData.includes(IMG_SEPARATOR)) {
-                    const parts = rawData.split(IMG_SEPARATOR);
-                    displayMessage = parts[0]; 
+                // --- LOGIKA PERBAIKAN URL ---
+                // Kita gunakan separator tanpa spasi di deteksi agar lebih aman
+                // Pastikan variabel IMG_SEPARATOR di atas script isinya " ||IMG|| "
+                
+                if (rawData.includes("||IMG||")) { 
+                    // Kita split berdasarkan string unik "||IMG||" (abaikan spasi dulu)
+                    const parts = rawData.split("||IMG||");
                     
-                    // Ambil bagian URL dan bersihkan spasi
+                    displayMessage = parts[0].trim(); // Hapus spasi di teks pesan
+                    
+                    // Ambil bagian belakang sebagai URL dan HAPUS SEMUA SPASI (trim)
                     let rawUrl = parts[1] ? parts[1].trim() : "";
 
-                    // Cek apakah URL valid (harus ada isinya dan dimulai http)
-                    if (rawUrl.length > 5 && rawUrl.startsWith("http")) {
-                        // Tambahkan onerror: Jika gambar gagal loading, sembunyikan elemennya
-                        displayImage = `<img src="${rawUrl}" class="comment-image-result" onclick="window.open('${rawUrl}','_blank')" onerror="this.style.display='none'">`;
+                    // Validasi ketat: Harus dimulai http dan diakhiri ekstensi gambar umum atau dari imgbb
+                    // Atau minimal dimulai dengan http
+                    if (rawUrl.startsWith("http")) {
+                        // Tampilkan gambar
+                        // Saya hapus onerror='hide' sementara supaya kalau error kelihatan icon pecahnya
+                        displayImage = `<img src="${rawUrl}" class="comment-image-result" onclick="window.open('${rawUrl}','_blank')">`;
+                    } else {
+                        console.warn("URL Gambar tidak valid:", rawUrl);
                     }
                 } else {
                     displayMessage = rawData; 
@@ -2130,7 +2143,6 @@ if (isConnected) {
                     </button>
                 `;
 
-                // Ini icon User Profile (yang Anda tanyakan user.png)
                 const viewProfileHtml = `
                     <button class="btn-view-profile" onclick="openPlayerProfile('${author}')" title="View Profile">
                         <img src="user.png" style="width:14px; height:14px; opacity:0.8;">
@@ -2176,6 +2188,7 @@ if (isConnected) {
             listDiv.innerHTML = '<div style="color:red; font-size:0.8em;">Failed to load.</div>';
         }
     }
+
 
     async function postComment(roundId) {
         const input = document.getElementById(`input-comment-${roundId}`);
