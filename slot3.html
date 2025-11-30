@@ -1000,6 +1000,45 @@
     #pp-history-list::-webkit-scrollbar-thumb:hover {
         background: var(--primary);
     }
+
+    /* --- CSS UNTUK MODE EDIT --- */
+    
+    /* Container untuk indikator gambar lama & preview baru */
+    .edit-image-container {
+        background: rgba(0,0,0,0.3);
+        border: 1px solid #333;
+        padding: 8px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Thumbnail gambar di mode edit */
+    .edit-thumb {
+        width: 50px; height: 50px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #555;
+        margin-right: 10px;
+    }
+
+    /* Tombol X Merah (Hapus Gambar) */
+    .btn-delete-img {
+        background: rgba(220, 53, 69, 0.2); /* Merah transparan */
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        width: 30px; height: 30px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; font-weight: bold; font-size: 1.2em;
+        transition: 0.2s;
+    }
+    .btn-delete-img:hover {
+        background: var(--danger);
+        color: white;
+    }
 </style>
 </head>
 <body>
@@ -1256,6 +1295,7 @@
     let listenerContract;
     let selectedFiles = {}; // Simpan file sementara
     let selectedEditFiles = {};
+    let editImageDeleteStatus = {};
     
     // --- TAMBAHKAN VARIABEL INI ---
     let myBetCounts = [0, 0, 0, 0, 0, 0];
@@ -2440,35 +2480,53 @@ if (isConnected) {
     }
 
     function enableEditMode(roundId, cId, encodedData) {
-        // 1. DECODE DATA
         const rawData = decodeURIComponent(encodedData);
-        
         const bubble = document.getElementById(`bubble-${roundId}-${cId}`);
-        const uniqueId = `${roundId}-${cId}`; // ID unik untuk elemen input file
+        const uniqueId = `${roundId}-${cId}`;
         
         let textOnly = rawData;
-        let hiddenImgUrl = "";
+        let oldImgUrl = "";
 
-        // 2. LOGIKA MEMISAHKAN GAMBAR
+        // Pisahkan Teks dan URL Gambar Lama
         if (rawData.includes("||IMG||")) {
             const parts = rawData.split("||IMG||");
             textOnly = parts[0];
-            hiddenImgUrl = parts[1];
+            oldImgUrl = parts[1] ? parts[1].trim() : "";
         }
         
-        // Reset: Hapus file sisa jika user pernah buka edit sebelumnya tapi cancel
-        if (typeof selectedEditFiles !== 'undefined') {
-            delete selectedEditFiles[uniqueId];
-        }
+        // Reset status helper sebelumnya
+        delete selectedEditFiles[uniqueId];
+        delete editImageDeleteStatus[uniqueId];
 
-        // 3. RENDER FORM EDIT
+        // --- RENDER TAMPILAN MODE EDIT BARU ---
         bubble.innerHTML = `
             <div style="font-size:0.8em; font-weight:bold; color:var(--accent); margin-bottom:5px;">EDIT COMMENT</div>
             
             <textarea id="edit-input-${uniqueId}" 
                    style="width:100%; background:#111; color:white; border:1px solid #555; padding:8px; border-radius:8px; margin-bottom:8px; min-height:60px; font-family:inherit; white-space:pre-wrap; resize:vertical;"></textarea>
             
-            ${hiddenImgUrl ? `<div style="font-size:0.7em; color:var(--primary); margin-bottom:8px; background:rgba(0,210,255,0.1); padding:4px 8px; border-radius:4px; display:inline-block;">🖼️ Current image will be kept.</div>` : ''}
+            ${oldImgUrl ? `
+                <div id="edit-old-image-${uniqueId}" class="edit-image-container">
+                    <div style="display:flex; align-items:center;">
+                        <img src="${oldImgUrl}" class="edit-thumb">
+                        <div style="font-size:0.75em; color:var(--primary);">
+                            <div><img src="image.png" style="width:14px; height:14px;">Current image will be kept.</div>
+                            <div style="font-size:0.8em; color:#888;">Will be kept unless deleted.</div>
+                        </div>
+                    </div>
+                    <button class="btn-delete-img" onclick="deleteOldImage('${uniqueId}')" title="Delete Image">×</button>
+                </div>
+            ` : ''}
+
+            <div id="edit-preview-new-${uniqueId}" class="edit-image-container" style="display:none; border-color:var(--success);">
+                <div style="display:flex; align-items:center;">
+                    <img id="edit-thumb-new-${uniqueId}" src="" class="edit-thumb">
+                    <div style="font-size:0.75em; color:var(--success);">
+                        <div><img src="str.png" style="width:14px; height:14px;">New image selected!</div>
+                        <div style="font-size:0.8em; color:#888;">Will replace old image.</div>
+                    </div>
+                </div>
+            </div>
 
             <input type="file" id="file-edit-${uniqueId}" 
                    accept="image/png, image/jpeg, image/gif, image/webp" 
@@ -2476,23 +2534,19 @@ if (isConnected) {
                    onchange="handleEditFileSelect(event, ${roundId}, ${cId})">
 
             <div style="display:flex; justify-content: space-between; align-items: center; margin-top:5px;">
-                
                 <div style="display:flex; gap:8px;">
                     <button class="btn-copy" style="background:var(--success); padding: 5px 15px;" 
                             id="btn-save-edit-${uniqueId}"
-                            data-old-img="${hiddenImgUrl}" 
+                            data-old-img="${oldImgUrl}" 
                             onclick="saveEditComment(${roundId}, ${cId})">Save</button>
-                    
                     <button class="btn-copy" style="background:#555; padding: 5px 10px;" onclick="loadComments(${roundId})">Cancel</button>
                 </div>
-
                 <div>
                      <button id="btn-edit-upload-${uniqueId}" onclick="document.getElementById('file-edit-${uniqueId}').click()" title="Change/Add Image" 
                             style="background: transparent; border: 1px solid #555; border-radius: 8px; padding: 5px; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition:0.2s;">
                         <img src="image.png" style="width:20px; height:20px; object-fit:contain; opacity:0.8;">
                     </button>
                 </div>
-
             </div>
         `;
         
@@ -2506,40 +2560,45 @@ if (isConnected) {
         const saveBtn = document.getElementById(`btn-save-edit-${uniqueId}`);
         
         const newText = input.value;
-        const oldImgUrl = saveBtn.getAttribute('data-old-img'); // Ambil URL lama dari atribut tombol
-        const newFile = selectedEditFiles[uniqueId]; // Ambil file baru jika ada
+        const oldImgUrl = saveBtn.getAttribute('data-old-img');
+        const newFile = selectedEditFiles[uniqueId]; // File baru
+        const isDeleteRequested = editImageDeleteStatus[uniqueId]; // Status hapus (true/false)
 
-        if(!newText.trim() && !newFile && !oldImgUrl) return; // Jangan simpan kalau kosong semua
+        // Validasi: Jangan simpan jika teks kosong DAN tidak ada gambar sama sekali (gambar lama dihapus atau tidak ada, gambar baru juga tidak ada)
+        const willHaveImage = (oldImgUrl && !isDeleteRequested) || newFile;
+        if(!newText.trim() && !willHaveImage) {
+            showToast("Comment cannot be empty!");
+            return;
+        }
 
-        // Kunci tombol save
         saveBtn.disabled = true;
-        saveBtn.innerText = "⏳";
+        saveBtn.innerHTML = `<img src="loading.png" style="width:16px; height:16px; animation: spin 1s linear infinite;">`;
 
         try {
             showToast("Processing update...");
             
-            let finalImgUrl = oldImgUrl; // Defaultnya pakai URL lama
+            let finalImgUrl = ""; // Default kosong
 
-            // --- LOGIKA UPLOAD BARU ---
-            // Jika user memilih file baru saat edit, upload dulu
+            // --- LOGIKA PENENTUAN GAMBAR AKHIR ---
             if (newFile) {
+                // KASUS 1: Ada file baru dipilih -> Upload dan pakai URL baru
                 showToast("Uploading new image...");
-                // Gunakan kompresi jika ada, jika tidak langsung uploadToImgBB(newFile)
                 const compressedFile = (typeof compressImage === 'function') ? await compressImage(newFile) : newFile;
-                
                 const uploadedUrl = await uploadToImgBB(compressedFile);
                 if (uploadedUrl) {
-                    finalImgUrl = uploadedUrl; // URL baru menggantikan yang lama
+                    finalImgUrl = uploadedUrl;
                 } else {
                     throw new Error("Image upload failed");
                 }
+            } else if (oldImgUrl && !isDeleteRequested) {
+                // KASUS 2: Tidak ada file baru, TAPI gambar lama ADA dan TIDAK DIMINTA HAPUS -> Pakai URL lama
+                finalImgUrl = oldImgUrl;
             }
+            // KASUS 3: Jika isDeleteRequested = true, maka finalImgUrl tetap "", artinya gambar dihapus.
 
-            // --- PENGGABUNGAN (PACKING) ---
+            // --- PACKING DATA ---
             let finalContent = newText;
-            // Jika ada URL gambar (entah lama atau baru), gabungkan
             if (finalImgUrl && finalImgUrl.length > 5) {
-                 // Gunakan separator dari variabel global Anda
                 finalContent = newText + IMG_SEPARATOR + finalImgUrl;
             }
 
@@ -2549,9 +2608,9 @@ if (isConnected) {
             await tx.wait();
             
             showToast("Comment updated!");
-            // Bersihkan memory file
+            // Bersihkan memory
             delete selectedEditFiles[uniqueId];
-            // Refresh komentar
+            delete editImageDeleteStatus[uniqueId];
             loadComments(roundId);
 
         } catch(e) {
@@ -2602,21 +2661,84 @@ if (isConnected) {
 
     }
 
-    function handleEditFileSelect(event, roundId, cId) {
+     function handleEditFileSelect(event, roundId, cId) {
+
         const file = event.target.files[0];
+
         const uniqueId = `${roundId}-${cId}`;
+
         
+
         if (file) {
+
             selectedEditFiles[uniqueId] = file;
-            // Beri indikasi visual bahwa file terpilih (ubah border jadi hijau)
+
+            
+
+            // Tampilkan Preview Gambar Baru
+
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+
+                const previewBox = document.getElementById(`edit-preview-new-${uniqueId}`);
+
+                const previewImg = document.getElementById(`edit-thumb-new-${uniqueId}`);
+
+                previewImg.src = e.target.result;
+
+                previewBox.style.display = 'flex'; // Munculkan container preview
+
+
+
+                // Sembunyikan container gambar lama (karena akan diganti yang baru)
+
+                const oldImageBox = document.getElementById(`edit-old-image-${uniqueId}`);
+
+                if (oldImageBox) oldImageBox.style.display = 'none';
+
+            };
+
+            reader.readAsDataURL(file);
+
+
+
+            // Ubah warna tombol upload jadi hijau
+
             const uploadBtn = document.getElementById(`btn-edit-upload-${uniqueId}`);
-            if(uploadBtn) {
-                uploadBtn.style.borderColor = 'var(--success)';
-                uploadBtn.style.background = 'rgba(0,255,0,0.1)';
-            }
+
+            if(uploadBtn) uploadBtn.style.borderColor = 'var(--success)';
+
         }
+
     }
 
+
+
+    // Fungsi saat tombol X merah diklik (Menandai gambar lama untuk dihapus)
+
+    function deleteOldImage(uniqueId) {
+
+        // Tandai status hapus menjadi TRUE
+
+        editImageDeleteStatus[uniqueId] = true;
+
+        
+
+        // Sembunyikan container gambar lama secara visual
+
+        const oldImageBox = document.getElementById(`edit-old-image-${uniqueId}`);
+
+        if (oldImageBox) {
+
+            oldImageBox.style.display = 'none';
+
+            showToast("Image marked for deletion.");
+
+        }
+
+    }
+    
     // 3. Helper: Upload ke ImgBB
     async function uploadToImgBB(file) {
         const formData = new FormData();
