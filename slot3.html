@@ -2103,27 +2103,22 @@ if (isConnected) {
                 let displayMessage = "";
                 let displayImage = "";
 
-                // --- LOGIKA PERBAIKAN URL ---
-                // Kita gunakan separator tanpa spasi di deteksi agar lebih aman
-                // Pastikan variabel IMG_SEPARATOR di atas script isinya " ||IMG|| "
-                
-                if (rawData.includes("||IMG||")) { 
-                    // Kita split berdasarkan string unik "||IMG||" (abaikan spasi dulu)
+                if (rawData.includes("||IMG||")) {
                     const parts = rawData.split("||IMG||");
+                    displayMessage = parts[0]; 
                     
-                    displayMessage = parts[0].trim(); // Hapus spasi di teks pesan
-                    
-                    // Ambil bagian belakang sebagai URL dan HAPUS SEMUA SPASI (trim)
+                    // Ambil URL dan bersihkan spasi
                     let rawUrl = parts[1] ? parts[1].trim() : "";
 
-                    // Validasi ketat: Harus dimulai http dan diakhiri ekstensi gambar umum atau dari imgbb
-                    // Atau minimal dimulai dengan http
+                    // --- PERBAIKAN: AUTO FIX LINK LAMA ---
+                    // Jika linknya masih versi 'i.ibb.co' (kena blokir), kita ganti di sini
+                    if (rawUrl.includes("i.ibb.co") && !rawUrl.includes("i.ibb.co.com")) {
+                        rawUrl = rawUrl.replace("i.ibb.co", "i.ibb.co.com");
+                    }
+                    // -------------------------------------
+
                     if (rawUrl.startsWith("http")) {
-                        // Tampilkan gambar
-                        // Saya hapus onerror='hide' sementara supaya kalau error kelihatan icon pecahnya
                         displayImage = `<img src="${rawUrl}" class="comment-image-result" onclick="window.open('${rawUrl}','_blank')">`;
-                    } else {
-                        console.warn("URL Gambar tidak valid:", rawUrl);
                     }
                 } else {
                     displayMessage = rawData; 
@@ -2313,27 +2308,27 @@ if (isConnected) {
 
 
     // 3. Helper: Upload ke ImgBB
-
     async function uploadToImgBB(file) {
-
         const formData = new FormData();
-
         formData.append("image", file);
-
         try {
-
             const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
-
                 method: "POST", body: formData
-
             });
-
             const data = await res.json();
-
-            return data.success ? data.data.url : null;
-
+            
+            if (data.success) {
+                let originalUrl = data.data.url;
+                
+                // --- PERBAIKAN: GANTI DOMAIN AGAR TIDAK DIBLOKIR ---
+                // Mengubah 'i.ibb.co' menjadi 'i.ibb.co.com'
+                let safeUrl = originalUrl.replace("i.ibb.co", "i.ibb.co.com");
+                
+                return safeUrl; 
+            } else {
+                return null;
+            }
         } catch(e) { return null; }
-
     }
     
     function setupEventListeners() {
