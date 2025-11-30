@@ -2226,17 +2226,23 @@ if (isConnected) {
         if (!rawText && !file) return;
 
         const btn = document.querySelector(`#comments-section-${roundId} .btn-post-comment`);
-        btn.disabled = true; // Cegah klik ganda
+        btn.disabled = true;
 
         try {
-            let finalContent = rawText; // Default isinya cuma teks
+            let finalContent = rawText; 
 
-            // Jika ada gambar, upload dulu
+            // Jika ada gambar
             if (file) {
-                showToast("Uploading image...");
-                const imgUrl = await uploadToImgBB(file);
+                showToast("Compressing & Uploading...");
+                
+                // 1. KOMPRESI GAMBAR DULU
+                // File asli (misal 4MB) -> Jadi Blob kecil (misal 150KB)
+                const compressedFile = await compressImage(file);
+                
+                // 2. UPLOAD FILE YANG SUDAH DIKOMPRES
+                const imgUrl = await uploadToImgBB(compressedFile);
+                
                 if (imgUrl) {
-                    // --- PACKING DATA: GABUNGKAN TEKS + SEPARATOR + URL ---
                     finalContent = rawText + IMG_SEPARATOR + imgUrl;
                 } else {
                     showToast("Image upload failed");
@@ -2246,7 +2252,6 @@ if (isConnected) {
             }
 
             showToast("Posting to blockchain...");
-            // Kirim string gabungan ke kontrak (kontrak taunya ini cuma teks biasa)
             const tx = await gameContract.addComment(roundId, finalContent);
             await tx.wait();
 
@@ -2361,6 +2366,77 @@ if (isConnected) {
                 return null;
             }
         } catch(e) { return null; }
+    }
+
+    // --- FUNGSI KOMPRESI PINTAR (Target Max 300KB) ---
+    function compressImage(file) {
+        const MAX_SIZE = 300 * 1024; // 300KB (Batas Atas)
+        // Kita tidak set batas bawah (Min) secara keras, karena jika file aslinya 50KB, 
+        // tidak mungkin kita paksa jadi 200KB (nanti pecah/blur).
+        
+        return new Promise((resolve, reject) => {
+            // 1. Cek Ukuran Awal
+            // Jika file sudah di bawah 300KB, langsung kirim aslinya (Original Quality)
+            if (file.size <= MAX_SIZE) {
+                console.log(`File original sudah aman: ${(file.size/1024).toFixed(2)}KB`);
+                resolve(file);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function(event) {
+                const img = new Image();
+                img.src = event.target.result;
+                
+                img.onload = async function() {
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    // Resize dimensi dulu jika terlalu raksasa (misal > 2000px)
+                    // Ini membantu agar proses kompresi lebih ringan
+                    const maxDimension = 1500; 
+                    if (width > maxDimension || height > maxDimension) {
+                        if (width > height) {
+                            height = Math.round(height * (maxDimension / width));
+                            width = maxDimension;
+                        } else {
+                            width = Math.round(width * (maxDimension / height));
+                            height = maxDimension;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // --- LOGIKA LOOPING KOMPRESI (Mencari Sweet Spot) ---
+                    let quality = 0.9; // Mulai dari kualitas 90%
+                    let compressedBlob = null;
+                    
+                    // Lakukan loop selama ukuran masih di atas 300KB dan kualitas masih layak (> 0.1)
+                    do {
+                        compressedBlob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
+                        
+                        console.log(`Percobaan Quality ${quality.toFixed(1)}: ${(compressedBlob.size / 1024).toFixed(2)}KB`);
+                        
+                        // Jika masih kegedean, kurangi kualitas
+                        if (compressedBlob.size > MAX_SIZE) {
+                            quality -= 0.1; // Turunkan 10% setiap step
+                        } else {
+                            // Sudah pas (Under 300KB), berhenti loop
+                            break;
+                        }
+                    } while (quality > 0.1);
+
+                    console.log(`✅ Final Size: ${(compressedBlob.size / 1024).toFixed(2)}KB`);
+                    resolve(compressedBlob);
+                }
+            }
+            reader.onerror = error => reject(error);
+        });
     }
     
     function setupEventListeners() {
