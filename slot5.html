@@ -1806,6 +1806,31 @@ if (isConnected) {
         }
     }
 
+    // --- FUNGSI BARU: RESET KE TANDA TANYA ---
+    function resetReelsToDefault() {
+        const reels = [
+            document.getElementById('imgReel1'), 
+            document.getElementById('imgReel2'), 
+            document.getElementById('imgReel3')
+        ];
+
+        reels.forEach((img, index) => {
+            // Beri sedikit delay antar reel biar keren
+            setTimeout(() => {
+                img.style.transition = "0.5s"; // Efek halus
+                img.style.filter = "blur(5px)"; // Blur dulu
+                img.style.opacity = "0.5";      // Redup
+                
+                setTimeout(() => {
+                    img.src = "what.svg";       // GANTI KE TANDA TANYA
+                    img.style.filter = "none";
+                    img.style.opacity = "1";
+                    img.style.transform = "scale(1)";
+                }, 300);
+            }, index * 100);
+        });
+    }
+
     async function withdraw(curr) {
         try {
             showToast(`Withdrawing ${curr}...`);
@@ -2130,6 +2155,11 @@ if (isConnected) {
                     document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
             }, 8000);
 
+            setTimeout(() => {
+                resetReelsToDefault();
+            }, 5000);
+
+            spinStartTime = 0;
             refreshGameData();
         });      
     }
