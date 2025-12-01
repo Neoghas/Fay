@@ -845,6 +845,20 @@
   -webkit-text-fill-color: transparent;
     }
 
+    /* --- CSS TIMER COUNTDOWN --- */
+    .draw-timer {
+        font-family: 'Courier New', monospace; /* Font ala digital */
+        font-size: 1.5em;
+        font-weight: bold;
+        color: var(--primary); /* Warna Biru Neon */
+        text-shadow: 0 0 10px var(--primary);
+        margin: 5px 0;
+        letter-spacing: 2px;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 5px 15px;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 210, 255, 0.2);
+    }
 </style>
 </head>
 <body>
@@ -874,7 +888,8 @@
             <div class="reel"><img id="imgReel3" src="what.svg" class="reel-img"></div>
         </div>
         <div class="draw-section">
-            <button id="drawBtn" class="btn-draw" onclick="executeDraw()" disabled>DRAW NOW!</button>
+            <button id="drawBtn" class="btn-draw" onclick="executeDraw()" disabled>DRAW NOW!</button>           
+            <div id="drawTimer" class="draw-timer" style="display:none;">00:35</div>            
             <div id="drawStatus" class="status-text">Waiting for players...</div>
         </div>
     </div>
@@ -1062,6 +1077,7 @@
     let isProcessingResult = false;
     let gameContract;      // Kontrak Utama (via RPC/Metamask) -> Untuk Bet & Transaksi
     let listenerContract;
+    let countdownInterval = null; // Simpan ID interval timer
     
     // --- TAMBAHKAN VARIABEL INI ---
     let myBetCounts = [0, 0, 0, 0, 0, 0];
@@ -1780,6 +1796,35 @@ if (isConnected) {
         }, 1400);
     }
 
+    // --- FUNGSI HITUNG MUNDUR VISUAL ---
+    function startCountdown(durationMs) {
+        const timerEl = document.getElementById('drawTimer');
+        timerEl.style.display = 'block'; // Munculkan timer
+        
+        // Waktu target berhenti
+        const targetTime = Date.now() + durationMs;
+
+        // Bersihkan timer lama jika ada
+        if (countdownInterval) clearInterval(countdownInterval);
+
+        countdownInterval = setInterval(() => {
+            const now = Date.now();
+            const distance = targetTime - now;
+
+            if (distance < 0) {
+                // Waktu habis
+                clearInterval(countdownInterval);
+                timerEl.innerText = "00:00";
+                // timerEl.style.display = 'none'; // Opsional: Sembunyikan kalau mau
+                return;
+            }
+
+            // Format Detik (00:xx)
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            timerEl.innerText = `00:${seconds < 10 ? '0' : ''}${seconds}`;
+        }, 100); // Update tiap 100ms biar smooth
+    }
+
     function forceStopAnimation() {
         spinIntervals.forEach(clearInterval); spinIntervals = [];
         document.querySelectorAll('.reel-img').forEach(img => { img.style.filter = "none"; img.style.transform = "scale(1)"; img.src = "what.svg"; });
@@ -1788,21 +1833,39 @@ if (isConnected) {
     async function executeDraw() {
         try {
             showToast("Initiating Draw...");
+            
+            // 1. Kirim Transaksi
             const tx = await gameContract.executeDraw();
             
-            // --- MULAI DARI 0 ---
-            spinStartTime = Date.now(); // Set waktu mulai SEKARANG
+            // 2. MULAI VISUAL SEGERA (Agar admin tidak menunggu lama)
+            spinStartTime = Date.now(); 
             startSpinAnimation();
             
+            // --- TAMBAHAN: JALANKAN TIMER 35 DETIK ---
+            startCountdown(35000); 
+            // -----------------------------------------
+            
             showToast("Broadcasting to Blockchain... (Wait 35s)");
+            
+            // 3. Tunggu Konfirmasi Blockchain
             await tx.wait(); 
+            
+            // Tidak perlu stop di sini, biarkan Event Listener (WSS) yang mengurus stop-nya
+            // agar sinkron dengan user lain.
             
         } catch (err) { 
             console.error(err); 
-            // Matikan animasi manual jika error
+            
+            // --- JIKA ERROR (Misal: Reject Metamask) ---
+            // 1. Matikan Animasi Putar
             spinIntervals.forEach(clearInterval);
             isSpinning = false;
-            showToast("Draw Failed. Try Again!.: " + (err.reason || err.message)); 
+            
+            // 2. Matikan Timer Countdown
+            if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
+            document.getElementById('drawTimer').style.display = 'none';
+            
+            showToast("Draw Failed. Try Again!: " + (err.reason || err.message)); 
         }
     }
 
@@ -2089,61 +2152,57 @@ if (isConnected) {
         // 1. Listener Bet Baru (Lewat WSS - Cepat)
         listenerContract.on("NewBet", () => { 
             console.log("New Bet detected via WSS");
-            refreshGameData(); // Refresh data tetap pakai RPC biasa
+            refreshGameData(); 
         });
 
-        // 2. Listener LIVE DRAW (Fixed 35s Logic)
+        // 2. Listener LIVE DRAW
         listenerContract.on("BattleResult", async (reels, outcome, roundId) => {
             const rId = Number(roundId);
             console.log(`⚡ RESULT RECEIVED! Round #${rId}`);
 
-            // Jika animasi belum jalan (user baru masuk), jalankan sekarang
+            // --- A. SYNC START ANIMATION ---
             if (!isSpinning) {
                 startSpinAnimation();
-                // Kalau user baru masuk pas result keluar, 
-                // anggap dia telat, jadi set start time agak mundur biar gak nunggu 35s penuh (opsional)
-                // Tapi untuk sinkronisasi ketat, kita set Date.now()
+                // Jika user telat masuk, set waktu mulai sekarang
                 if (spinStartTime === 0) spinStartTime = Date.now(); 
             }
-
-            // Jika user adalah admin yg tekan tombol, spinStartTime sudah ada isinya.
-            // Jika user biasa, kita isi sekarang jika masih 0
             if (spinStartTime === 0) spinStartTime = Date.now();
 
-            const DURATION = 35000; // 35 Detik Wajib
-            
-            // Hitung sudah berapa lama berputar sejak startSpinAnimation dipanggil?
+            // --- B. HITUNG DURASI ---
+            const DURATION = 35000; 
             const now = Date.now();
             const elapsed = now - spinStartTime;
-            
-            // Hitung sisa waktu yang HARUS ditunggu
             let remaining = DURATION - elapsed;
 
-            // Safety: Jangan sampai minus
             if (remaining < 0) remaining = 0;
 
-            console.log(`⏳ Elapsed: ${elapsed}ms | Waiting: ${remaining}ms`);
+            console.log(`⏳ Waiting: ${remaining}ms`);
 
+            // --- C. JALANKAN TIMER DIGITAL (JIKA SISA WAKTU > 0) ---
             if (remaining > 0) {
+                startCountdown(remaining); 
                 showToast(`Revealing winner in ${Math.ceil(remaining/1000)}s...`);
+            } else {
+                // Jika waktu sudah habis (telat banget), pastikan timer 00:00
+                document.getElementById('drawTimer').innerText = "00:00";
             }
 
-            // Tunggu sisa waktu
+            // --- D. TUNGGU SAMPAI WAKTU HABIS ---
             await new Promise(r => setTimeout(r, remaining));
 
-            // --- EKSEKUSI FINAL ---
+            // --- E. STOP SEMUANYA ---
+            clearInterval(countdownInterval); // Matikan Timer Digital
+            document.getElementById('drawTimer').style.display = 'none'; // Sembunyikan Timer
+
+            // Stop Slot di gambar pemenang
             const r1 = Number(reels[0]);
             const r2 = Number(reels[1]);
             const r3 = Number(reels[2]);
-
             stopSpinAnimation(r1, r2, r3); 
 
             showToast(`Result: ${outcome}`);
             
-            // Reset Variable Global
-            spinStartTime = 0; 
-            
-            // Efek Glamour
+            // Efek Glamour (8 Detik)
             const winnersIndices = new Set([r1, r2, r3]);
             for (let i = 0; i < 6; i++) {
                 const card = document.getElementById(`card-${i}`);
@@ -2155,12 +2214,15 @@ if (isConnected) {
                     document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
             }, 8000);
 
+            // --- F. RESET GAMBAR KE '?' SETELAH 5 DETIK ---
+            // (User lihat hasil 5 detik, baru reset)
             setTimeout(() => {
                 resetReelsToDefault();
             }, 5000);
 
-            spinStartTime = 0;
-            refreshGameData();
+            // --- G. RESET LOGIKA SISTEM (LANGSUNG) ---
+            spinStartTime = 0; // Reset waktu agar siap ronde baru
+            refreshGameData(); // Update saldo user
         });      
     }
 </script>
