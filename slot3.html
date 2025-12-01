@@ -2834,64 +2834,82 @@ if (isConnected) {
     }
 
     async function openPlayerProfile(targetAddress) {
-        // 1. Buka Modal & Reset
+        // 1. Tampilkan Modal & Reset UI
         document.getElementById('playerProfileModal').style.display = 'flex';
         document.getElementById('pp-nickname').innerText = "Loading...";
         document.getElementById('pp-address').innerText = targetAddress.substring(0,10) + "..." + targetAddress.substring(38);
         document.getElementById('pp-wins').innerText = "...";
         document.getElementById('pp-bets').innerText = "...";
+        
         const historyDiv = document.getElementById('pp-history-list');
-        historyDiv.innerHTML = '<div style="text-align:center; padding:10px;">Scanning Blockchain...</div>';
+        historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#aaa;">Scanning Blockchain...</div>';
 
-        // --- UPDATE AVATAR ROBOT ORANG LAIN ---
-        // Otomatis generate berdasarkan wallet mereka
+        // Update Avatar Robot
         document.getElementById('pp-avatar-img').src = getAvatar(targetAddress);
-        // --------------------------------------
 
         try {
-            // 2. Ambil Nickname
+            // 2. Ambil Nickname (Data Ringan)
             const u = await gameContract.users(targetAddress);
             document.getElementById('pp-nickname').innerText = u[0] || "Unknown";
 
-            // 3. Scan Statistik (Win & Bet)
-            // ... (Kode scan manual sama seperti sebelumnya) ...
+            // 3. SCAN HISTORY (Data Berat)
             
-            // CONTOH SINGKAT BAGIAN SCAN (Biar Lengkap):
+            // --- PERBAIKAN UTAMA DI SINI ---
+            // Jangan scan dari blok 0. Gunakan blok estimasi Base Sepolia (Nov 2024).
+            // Angka ini (17000000) adalah blok sekitar bulan lalu.
+            // Ini membuat loading JAUH lebih cepat dan anti-error.
+            const SAFE_BLOCK_START = 17000000; 
+            // -------------------------------
+
+            // A. Hitung Total Kemenangan
             const filterWin = gameContract.filters.WinDistributed(targetAddress);
-            const winLogs = await gameContract.queryFilter(filterWin, 0, "latest");
+            const winLogs = await gameContract.queryFilter(filterWin, SAFE_BLOCK_START, "latest");
             document.getElementById('pp-wins').innerText = winLogs.length;
 
+            // B. Hitung Total Taruhan
             const filterBet = gameContract.filters.NewBet(targetAddress);
-            const betLogs = await gameContract.queryFilter(filterBet, 0, "latest");
+            const betLogs = await gameContract.queryFilter(filterBet, SAFE_BLOCK_START, "latest");
             document.getElementById('pp-bets').innerText = betLogs.length;
 
-            // 4. Render History
+            // 4. Render Riwayat 5 Terakhir
             historyDiv.innerHTML = '';
+            
             if (betLogs.length === 0) {
-                historyDiv.innerHTML = '<div style="text-align:center; padding:10px;">No history.</div>';
+                historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">No recent history.</div>';
                 return;
             }
+
+            // Ambil 5 data paling baru
             const recent = betLogs.slice(-5).reverse();
+
             for (let log of recent) {
+                // Decode data hewan (args[1] adalah animalChoice)
                 const animalIdx = Number(log.args[1]);
-                const animalName = IMAGE_NAMES[animalIdx].toUpperCase();
+                
+                // Pastikan nama hewan ada (safety check)
+                const animalName = (IMAGE_NAMES[animalIdx]) ? IMAGE_NAMES[animalIdx].toUpperCase() : "UNKNOWN";
+                
                 const row = document.createElement('div');
                 row.className = 'pp-history-item'; 
             
-            row.innerHTML = `
-                <span style="color:#ddd;">
-                    Bet <b style="color:var(--primary); text-transform:uppercase;">${animalName}</b>
-                </span>
-                <span style="font-size:0.9em; color:#666; font-family:monospace;">
-                    Block #${log.blockNumber}
-                </span>
-            `;
-            historyDiv.appendChild(row);
+                row.innerHTML = `
+                    <span style="color:#ddd;">
+                        Bet <b style="color:var(--primary); text-transform:uppercase;">${animalName}</b>
+                    </span>
+                    <span style="font-size:0.9em; color:#666; font-family:monospace;">
+                        Block #${log.blockNumber}
+                    </span>
+                `;
+                historyDiv.appendChild(row);
             }
 
         } catch (e) {
-            console.error(e);
-            historyDiv.innerHTML = '<div style="color:var(--danger); text-align:center;">Failed to load data.</div>';
+            console.error("Profile Error:", e); // Cek Console F12 untuk detail error
+            historyDiv.innerHTML = '<div style="color:var(--danger); text-align:center; font-size:0.8em; padding:10px;">Connection Timeout.<br>Try refreshing.</div>';
+            
+            // Set angka jadi 0 jika gagal, jangan biarkan "..."
+            if(document.getElementById('pp-wins').innerText === "...") document.getElementById('pp-wins').innerText = "0";
+            if(document.getElementById('pp-bets').innerText === "...") document.getElementById('pp-bets').innerText = "0";
         }
     }
     
