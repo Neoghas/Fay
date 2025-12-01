@@ -1482,6 +1482,7 @@
     let selectedEditFiles = {};
     let editImageDeleteStatus = {};
     let countdownInterval = null;
+    let safetyTimer = null; // Timer pengaman anti-macet
     
     // --- TAMBAHKAN VARIABEL INI ---
     let myBetCounts = [0, 0, 0, 0, 0, 0];
@@ -2261,6 +2262,72 @@ if(!u[1]) {
         });
     }
 
+    // --- FUNGSI PENGAMAN CERDAS ---
+    async function smartEmergencyStop() {
+        if (!isSpinning) return; // Jika sudah berhenti duluan, abaikan
+
+        console.warn("⚠️ Event Missed. Fetching result manually...");
+        showToast("Syncing result from blockchain...");
+
+        try {
+            // 1. TARIK DATA PAKSA DARI KONTRAK
+            // Kita ambil data ronde terakhir (Current Round - 1)
+            const currId = await gameContract.currentRoundId();
+            const lastRoundId = currId - 1n; 
+            
+            const result = await gameContract.getRoundResult(lastRoundId);
+            
+            // Konversi Data
+            const r1 = Number(result[0][0]);
+            const r2 = Number(result[0][1]);
+            const r3 = Number(result[0][2]);
+            const outcomeStr = result[1];
+
+            // 2. STOP ANIMASI SESUAI HASIL ASLI
+            // Ini membuat gambar berhenti di hewan yang benar (bukan reset)
+            stopSpinAnimation(r1, r2, r3); 
+            
+            showToast(`Result: ${outcomeStr}`);
+
+            // 3. NYALAKAN EFEK GLOWING (WINNER)
+            // Ini menjawab request Anda: Efek tetap jalan!
+            const winnersIndices = new Set([r1, r2, r3]);
+            for (let i = 0; i < 6; i++) {
+                const card = document.getElementById(`card-${i}`);
+                if (winnersIndices.has(i)) card.classList.add('winner-glamour');
+                else card.classList.remove('winner-glamour');
+            }
+            
+            // Matikan efek glow setelah 8 detik
+            setTimeout(() => { 
+                for (let i = 0; i < 6; i++) 
+                    document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
+            }, 8000);
+
+            // 4. RESET KE TANDA TANYA (3 Detik kemudian)
+            setTimeout(() => {
+                resetReelsToDefault();
+            }, 3000);
+
+        } catch (e) {
+            console.error("Manual Fetch Failed:", e);
+            // Jika internet mati total dan gagal tarik data, baru kita reset paksa (opsi terakhir)
+            forceStopAnimation(); 
+            showToast("Connection Error. Please Refresh.");
+        }
+
+        // 5. BERSIHKAN TIMER & STATE
+        if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
+        const timerEl = document.getElementById('drawTimer');
+        if(timerEl) timerEl.style.display = 'none';
+        
+        isSpinning = false;
+        spinStartTime = 0;
+        
+        // Refresh Saldo
+        setTimeout(() => { refreshGameData(); }, 3000);
+    }
+
     function forceStopAnimation() {
         spinIntervals.forEach(clearInterval); spinIntervals = [];
         document.querySelectorAll('.reel-img').forEach(img => { img.style.filter = "none"; img.style.transform = "scale(1)"; img.src = "what.svg"; });
@@ -2270,39 +2337,36 @@ if(!u[1]) {
         try {
             showToast("Initiating Draw...");
             
-            // 1. Kirim Transaksi ke Blockchain
+            // 1. Kirim Transaksi
             const tx = await gameContract.executeDraw();
             
-            // 2. MULAI VISUAL SEGERA (Agar admin tidak menunggu loading)
+            // 2. Mulai Visual
             spinStartTime = Date.now(); 
             startSpinAnimation();
-            
-            // --- [BAGIAN PENTING YANG KURANG TADI] ---
-            // Jalankan timer 35 detik untuk Admin
             startCountdown(35000); 
-            // -----------------------------------------
             
-            showToast("Broadcasting to Blockchain... (Wait 35s)");
+            showToast("Broadcasting... (Wait 35s)");
+
+            if (safetyTimer) clearTimeout(safetyTimer);
             
-            // 3. Tunggu Konfirmasi Blok
+            // 2. Set Timer Darurat (Misal 45 Detik)
+            // Jika lewat 45 detik belum ada kabar, panggil Smart Stop
+            safetyTimer = setTimeout(() => {
+                smartEmergencyStop(); 
+            }, 45000);
+            
             await tx.wait(); 
-            
-            // Selesai. Tidak perlu stop disini. 
-            // Biarkan Event Listener (WSS) yang menghentikan animasi & timer 
-            // supaya sinkron dengan user lain.
             
         } catch (err) { 
             console.error(err); 
             
-            // --- JIKA ERROR / REJECT ---
-            // 1. Matikan Animasi Putar
+            // Matikan semua jika error (Reject wallet dll)
+            if (safetyTimer) clearTimeout(safetyTimer);
             spinIntervals.forEach(clearInterval);
             isSpinning = false;
             
-            // 2. Matikan Timer Countdown (PENTING)
             if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
-            const timerEl = document.getElementById('drawTimer');
-            if (timerEl) timerEl.style.display = 'none';
+            document.getElementById('drawTimer').style.display = 'none';
             
             showToast("Draw Failed: " + (err.reason || err.message)); 
         }
@@ -3097,6 +3161,7 @@ if(!u[1]) {
 
         // 2. Listener LIVE DRAW (LENGKAP: Timer + Reset 3 Detik)
         listenerContract.on("BattleResult", async (reels, outcome, roundId) => {
+            if (safetyTimer) clearTimeout(safetyTimer);
             const rId = Number(roundId);
             console.log(`⚡ RESULT RECEIVED! Round #${rId}`);
 
