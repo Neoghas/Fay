@@ -1280,6 +1280,7 @@
         <p style="margin-top:15px; color:#ff9f43; font-size:0.7em;">*Min 5 more Players required to Draw</p>
 
         <div id="referralPanel" class="referral-panel">
+            
             <div id="view-register" style="display:none;">
                 <div class="ref-label" style="color:var(--gold);">NEW PLAYER REGISTRATION</div>
                 <p style="font-size:0.8em; color:#aaa; margin:5px 0 15px 0;">Create a nickname to start betting & earning.</p>
@@ -1293,14 +1294,20 @@
             </div>
         
             <div id="view-profile" style="display:none;">
-                <div class="ref-label">Player Profile Nickname:</div>
-                <div style="font-size:1.2em; font-weight:bold; color:var(--gold); margin-bottom:10px;" id="displayNick">...</div>
+                <div class="ref-label">Player Profile</div>
+                
+                <div style="position:relative; width:80px; height:80px; margin:0 auto 10px auto;">
+                    <img id="my-avatar-img" src="" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border:2px solid var(--primary); box-shadow:0 0 15px var(--primary); background: rgba(0,0,0,0.3);">
+                </div>
+
+                <div style="font-size:1.2em; font-weight:bold; color:white; margin-bottom:10px;" id="displayNick">...</div>
                 
                 <div class="ref-stats-grid">
                     <div class="ref-stat-item">
                         <span class="rs-val" id="totalInvited">0</span>
                         <span class="rs-lbl">Total Invited</span>
                     </div>
+                    
                     <div class="ref-stat-item">
                         <span class="rs-val" style="color:var(--gold);" id="pendingBonus">0</span>
                         <span class="rs-lbl">Pending Bonus</span>
@@ -1309,12 +1316,22 @@
                 
                 <div id="claimBonusBtnContainer"></div>
                 
-                <div class="ref-label">Referral Link</div>
+                <div class="ref-label" style="margin-top:15px;">Referral Link</div>
                 <div class="ref-box">
                     <span id="displayRefLink" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">...</span>
                     <button class="btn-copy" onclick="copyRefLink()">Copy</button>
                 </div>
-                <div class="comm-info">*0.25% Commission from winnings is automatically added to your Game Credit.</div>
+
+                <div style="margin-top:15px; border-top:1px dashed #444; padding-top:10px;">
+                     <div class="ref-label">Check Friend Status</div>
+                     <div style="display:flex; gap:5px; margin-top:5px;">
+                        <input type="text" id="checkRefNick" placeholder="Nickname..." style="flex:1; padding:5px; border-radius:4px; border:none; background:#111; color:white;">
+                        <button class="btn-copy" onclick="verifyDownline()">Check</button>
+                     </div>
+                     <div id="verifyResult" style="font-size:0.7em; margin-top:3px; color:#aaa;"></div>
+                </div>
+
+                <div class="comm-info" style="margin-top:10px;">*0.25% Commission from winnings is automatically added to your Game Credit.</div>
             </div>
         </div>
         
@@ -1970,20 +1987,32 @@ if(!u[1]) {
         try {
             // 1. UPDATE DATA USER & REFERRAL (LOGIKA YANG HILANG SUDAH DIKEMBALIKAN)
             if (isConnected) {
-                document.getElementById('referralPanel').style.display = 'block'; 
-
+                document.getElementById('referralPanel').style.display = 'block';
+                
                 const userData = await gameContract.users(userAddress);
-                const isReg = userData[1]; // boolean isRegistered
+                const userData = await gameContract.users(userAddress);
+
+                const isReg = userData[1]; // Ambil status registrasi (Index 1)
 
                 if (isReg) {
-                    // JIKA SUDAH DAFTAR -> Tampilkan Profil
+                    // TAMPILAN SUDAH DAFTAR
                     document.getElementById('view-profile').style.display = 'block';
                     document.getElementById('view-register').style.display = 'none';
 
-                    // Isi Data Profil
+                    // 1. Nickname (Index 0)
                     document.getElementById('displayNick').innerText = userData[0];
                     document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
                     
+                    // 2. Avatar
+                    const robotUrl = getAvatar(userAddress);
+                    document.getElementById('my-avatar-img').src = robotUrl;
+                    
+                    // 3. Total Invited (Index 5 - Langsung dari Kontrak)
+                    document.getElementById('totalInvited').innerText = userData[5]; 
+
+                    // 4. Pending Bonus (Index 4)
+                    const pending = Number(userData[4]);
+                    document.getElementById('pendingBonus').innerText = pending * 10000;
                     // Update Avatar Robot
                     if (typeof getAvatar === 'function') {
                         const robotUrl = getAvatar(userAddress);
