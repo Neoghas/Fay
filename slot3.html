@@ -2169,6 +2169,29 @@ if(!u[1]) {
         }, 1400);
     }
 
+    // --- FUNGSI RESET GAMBAR KE DEFAULT ---
+    function resetReelsToDefault() {
+        const reels = [
+            document.getElementById('imgReel1'), 
+            document.getElementById('imgReel2'), 
+            document.getElementById('imgReel3')
+        ];
+
+        reels.forEach((img, index) => {
+            // Beri efek blur sedikit sebelum ganti
+            img.style.transition = "0.5s"; 
+            img.style.filter = "blur(5px)"; 
+            img.style.opacity = "0.5";      
+            
+            setTimeout(() => {
+                img.src = "what.svg";       // GANTI KE TANDA TANYA
+                img.style.filter = "none";
+                img.style.opacity = "1";
+                img.style.transform = "scale(1)";
+            }, 300);
+        });
+    }
+
     function forceStopAnimation() {
         spinIntervals.forEach(clearInterval); spinIntervals = [];
         document.querySelectorAll('.reel-img').forEach(img => { img.style.filter = "none"; img.style.transform = "scale(1)"; img.src = "what.svg"; });
@@ -2989,6 +3012,11 @@ if(!u[1]) {
                     document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
             }, 8000);
 
+            setTimeout(() => {
+                resetReelsToDefault();
+            }, 5000);
+
+            spinStartTime = 0;
             refreshGameData();
         });      
     }
