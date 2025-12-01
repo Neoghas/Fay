@@ -1949,12 +1949,67 @@ if(!u[1]) {
 
     async function refreshGameData() {
         try {
-            // 1. Update Data User
+            // 1. UPDATE DATA USER & REFERRAL (LOGIKA YANG HILANG SUDAH DIKEMBALIKAN)
             if (isConnected) {
-                // ... (Kode bagian user data biarkan saja sama) ...
                 document.getElementById('referralPanel').style.display = 'block'; 
-                // ...
-                // ... (Sampai updateReferralCount)
+
+                const userData = await gameContract.users(userAddress);
+                const isReg = userData[1]; // boolean isRegistered
+
+                if (isReg) {
+                    // JIKA SUDAH DAFTAR -> Tampilkan Profil
+                    document.getElementById('view-profile').style.display = 'block';
+                    document.getElementById('view-register').style.display = 'none';
+
+                    // Isi Data Profil
+                    document.getElementById('displayNick').innerText = userData[0];
+                    document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
+                    
+                    // Update Avatar Robot
+                    if (typeof getAvatar === 'function') {
+                        const robotUrl = getAvatar(userAddress);
+                        const avatarEl = document.getElementById('my-avatar-img');
+                        if(avatarEl) avatarEl.src = robotUrl;
+                    }
+                    
+                    // Update Bonus
+                    const pending = Number(userData[4]);
+                    document.getElementById('pendingBonus').innerText = pending * 10000;
+                    
+                    // Tombol Claim
+                    const claimContainer = document.getElementById('claimBonusBtnContainer');
+                    if (pending > 0) {
+                        claimContainer.innerHTML = `<button class="wallet-btn" style="width:100%; margin-bottom:10px; background:var(--gold); color:black;" onclick="claimReferralBonus()">Claim ${pending * 10000} SHIB Bonus</button>`;
+                    } else {
+                        claimContainer.innerHTML = '';
+                    }
+                    
+                    // Update Total Invited (Jika fungsi ada)
+                    if (typeof updateReferralCount === 'function') updateReferralCount();
+
+                } else {
+                    // JIKA BELUM DAFTAR -> Tampilkan Register
+                    document.getElementById('view-profile').style.display = 'none';
+                    document.getElementById('view-register').style.display = 'block';
+                    
+                    if(detectedReferrer) {
+                        document.getElementById('panelRefInfo').innerText = "Invited by: " + detectedReferrer;
+                    }
+                }
+                
+                // Update Saldo Wallet (ETH/USDT/SHIB)
+                try {
+                    const bonus = await gameContract.freeShibCredits(userAddress);
+                    const btnFree = document.getElementById('btnFreeBet');
+                    if (btnFree) {
+                        const bonusVal = document.getElementById('userBonusBalance');
+                        if(bonusVal) bonusVal.innerText = Number(ethers.formatEther(bonus)).toLocaleString();
+                        
+                        btnFree.disabled = bonus < ethers.parseEther("10000");
+                        if (bonus >= ethers.parseEther("10000")) btnFree.style.background = "var(--success)";
+                        else btnFree.style.background = "#333";
+                    }
+                } catch(e){}
             }
 
             // 2. Fetch Data Ronde
@@ -1969,16 +2024,12 @@ if(!u[1]) {
                 } catch { break; }
             }
 
-            // 3. --- PERBAIKAN DI SINI (RESET VARIABEL) ---
+            // 3. RESET VARIABEL BET (Perbaikan Versi 2)
             let counts = [0, 0, 0, 0, 0, 0]; 
             let pools = { eth: 0, usdt: 0, shib: 0 }; 
             
-            // RESET myBetCounts AGAR DATA TIDAK TUMPUK
             myBetCounts = [0, 0, 0, 0, 0, 0]; 
-            
-            // DEFINISIKAN ULANG animalCurrCounts (PENTING!)
             let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
-            // ---------------------------------------------
 
             // 4. Loop Analisa Bet
             bets.forEach(b => {
@@ -1995,7 +2046,7 @@ if(!u[1]) {
                 // Total Count
                 counts[animalIdx]++;
 
-                // My Bet Count (Reset di atas tadi)
+                // My Bet Count
                 if (isConnected && b[0].toLowerCase() === userAddress.toLowerCase()) {
                     myBetCounts[animalIdx]++;
                 }
