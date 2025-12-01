@@ -1949,60 +1949,15 @@ if(!u[1]) {
 
     async function refreshGameData() {
         try {
-            // 1. Update Data User (Referral & Bonus) jika terkoneksi
-            // GANTI BAGIAN LOGIC USER DATA DI DALAM refreshGameData()
-if (isConnected) {
-    // Selalu tampilkan panel jika wallet connect
-    document.getElementById('referralPanel').style.display = 'block'; 
+            // 1. Update Data User
+            if (isConnected) {
+                // ... (Kode bagian user data biarkan saja sama) ...
+                document.getElementById('referralPanel').style.display = 'block'; 
+                // ...
+                // ... (Sampai updateReferralCount)
+            }
 
-    const userData = await gameContract.users(userAddress);
-    const isReg = userData[1]; // boolean isRegistered
-
-    if (isReg) {
-        // JIKA SUDAH DAFTAR: Tampilkan View Profile, Sembunyikan View Register
-        document.getElementById('view-profile').style.display = 'block';
-        document.getElementById('view-register').style.display = 'none';
-
-        // Update UI Profil (Logika Lama)
-        document.getElementById('displayNick').innerText = userData[0];
-        document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
-        const robotUrl = getAvatar(userAddress);
-        document.getElementById('my-avatar-img').src = robotUrl;
-        
-        const pending = Number(userData[4]);
-        document.getElementById('pendingBonus').innerText = pending * 10000;
-        
-        const claimContainer = document.getElementById('claimBonusBtnContainer');
-        if (pending > 0) {
-            claimContainer.innerHTML = `<button class="wallet-btn" style="width:100%; margin-bottom:10px; background:var(--gold); color:black;" onclick="claimReferralBonus()">Claim ${pending * 10000} SHIB Bonus</button>`;
-        } else {
-            claimContainer.innerHTML = '';
-        }
-        updateReferralCount();
-    } else {
-        // JIKA BELUM DAFTAR: Tampilkan View Register, Sembunyikan View Profile
-        document.getElementById('view-profile').style.display = 'none';
-        document.getElementById('view-register').style.display = 'block';
-        
-        // Tampilkan info referrer jika ada link
-        if(detectedReferrer) {
-            document.getElementById('panelRefInfo').innerText = "Invited by: " + detectedReferrer;
-        }
-    }
-    
-    // Update Bonus Balance (Sama seperti sebelumnya)
-    const bonus = await gameContract.freeShibCredits(userAddress);
-    document.getElementById('userBonusBalance').innerText = Number(ethers.formatEther(bonus)).toLocaleString();
-    
-    const btnFree = document.getElementById('btnFreeBet');
-    if (btnFree) {
-        btnFree.disabled = bonus < ethers.parseEther("10000");
-        if (bonus >= ethers.parseEther("10000")) btnFree.style.background = "var(--success)";
-        else btnFree.style.background = "#333";
-    }
-}
-
-            // 2. Fetch Data Ronde Saat Ini
+            // 2. Fetch Data Ronde
             const currR = Number(await gameContract.currentRoundId());
             let bets = [];
             let idx = 0;
@@ -2014,55 +1969,56 @@ if (isConnected) {
                 } catch { break; }
             }
 
-            // 3. Inisialisasi Variabel Hitungan
+            // 3. --- PERBAIKAN DI SINI (RESET VARIABEL) ---
             let counts = [0, 0, 0, 0, 0, 0]; 
             let pools = { eth: 0, usdt: 0, shib: 0 }; 
+            
+            // RESET myBetCounts AGAR DATA TIDAK TUMPUK
             myBetCounts = [0, 0, 0, 0, 0, 0]; 
             
-            // --- PERBAIKAN: Array Penampung Statistik E/U/S per Hewan ---
+            // DEFINISIKAN ULANG animalCurrCounts (PENTING!)
             let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
+            // ---------------------------------------------
 
             // 4. Loop Analisa Bet
             bets.forEach(b => {
-                let curr = Number(b[2]); // 0=ETH, 1=USDT, 2=SHIB
+                let curr = Number(b[2]); 
                 let animalIdx = Number(b[4]);
                 let decimal = curr === 1 ? 6 : 18;
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
-                // Update Global Pool
+                // Global Pool
                 if (curr === 0) pools.eth += amt;
                 else if (curr === 1) pools.usdt += amt;
                 else pools.shib += amt;
 
-                // Update Total Count Hewan
+                // Total Count
                 counts[animalIdx]++;
 
-                // Update Bet Saya (Untuk Limit Max 2)
+                // My Bet Count (Reset di atas tadi)
                 if (isConnected && b[0].toLowerCase() === userAddress.toLowerCase()) {
                     myBetCounts[animalIdx]++;
                 }
 
-                // --- PERBAIKAN: Update Counter E/U/S per Kartu ---
+                // E/U/S Count
                 if (curr === 0) animalCurrCounts[animalIdx].eth++;
                 else if (curr === 1) animalCurrCounts[animalIdx].usdt++;
                 else animalCurrCounts[animalIdx].shib++;
             });
 
-            // 5. Update Tampilan Pool & Kartu
+            // 5. Update Tampilan
             roundPools = pools;
             updatePoolDisplay();
 
             for (let i = 0; i < 6; i++) {
-                // Update Angka Besar (Total Populasi)
                 document.getElementById(`count-${i}`).innerText = counts[i];
                 
-                // Update Styling (Biru jika user bet)
                 let c = document.getElementById(`card-${i}`);
                 c.classList.remove('my-bet', 'open');
                 if (myBetCounts[i] > 0) c.classList.add('my-bet'); 
                 else c.classList.add('open');
 
-                // --- PERBAIKAN: Update Angka Kecil (E:.. U:.. S:..) ---
+                // Update E/U/S
                 document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
                 document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
                 document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
@@ -2096,8 +2052,7 @@ if (isConnected) {
             console.error("Refresh Error:", e);
         }
     }
-
-
+        
     function updateHistorySection(roundId) {
         historyCursor = roundId - 1; 
         if (isInitialLoad) {
