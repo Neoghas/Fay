@@ -2328,128 +2328,6 @@ if (isConnected) {
             showToast("Draw Failed. Try Again!: " + (err.reason || err.message)); 
         }
     }
-    
-    function checkRoundResult(roundId) {
-
-        if (isProcessingResult) return; 
-
-        isProcessingResult = true;
-
-        
-
-        // Reset flag setelah 10 detik (safety)
-
-        setTimeout(() => { isProcessingResult = false; }, 10000);
-
-
-
-        // Hitung sisa waktu spin
-
-        const elapsed = Date.now() - spinStartTime;
-
-        const remainingTime = MIN_SPIN_TIME - elapsed;
-
-        const delay = remainingTime > 0 ? remainingTime : 0;
-
-
-
-        console.log(`Waiting ${delay}ms to show result for Round ${roundId}...`);
-
-
-
-        setTimeout(async () => {
-
-            try {
-
-                // 1. AMBIL DATA KONTRAK (Truth Source)
-
-                const result = await gameContract.getRoundResult(roundId);
-
-                
-
-                // Konversi BigInt/Struct ke Angka Biasa
-
-                const r1 = Number(result[0][0]);
-
-                const r2 = Number(result[0][1]);
-
-                const r3 = Number(result[0][2]);
-
-                const outcomeStr = result[1];
-
-
-
-                // 2. LOG UNTUK BUKTI (Cek Console F12)
-
-                console.log("🔥 CONTRACT RESULT:", { 
-
-                    Reels: [r1, r2, r3], 
-
-                    Names: [IMAGE_NAMES[r1], IMAGE_NAMES[r2], IMAGE_NAMES[r3]], 
-
-                    Outcome: outcomeStr 
-
-                });
-
-
-
-                // 3. EKSEKUSI ANIMASI STOP (Kirim Index Pasti)
-
-                stopSpinAnimation(r1, r2, r3);
-
-                
-
-                // 4. UPDATE TEXT & GLAMOUR
-
-                showToast(`Result: ${outcomeStr}`);
-
-
-
-                const winnersIndices = new Set([r1, r2, r3]);
-
-                for (let i = 0; i < 6; i++) {
-
-                    const card = document.getElementById(`card-${i}`);
-
-                    if (winnersIndices.has(i) && i < 6) card.classList.add('winner-glamour');
-
-                    else card.classList.remove('winner-glamour');
-
-                }
-
-                
-
-                setTimeout(() => { 
-
-                    for (let i = 0; i < 6; i++) 
-
-                        document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
-
-                }, 8000);
-
-
-
-                // 5. REFRESH DATA (Saldo, History, dll)
-
-                refreshGameData();
-
-
-
-            } catch (e) { 
-
-                console.error("Result Error:", e); 
-
-                forceStopAnimation(); 
-
-            } finally {
-
-                isProcessingResult = false;
-
-            }
-
-        }, delay);
-
-    }
 
     async function withdraw(curr) {
         try {
@@ -3176,26 +3054,25 @@ if (isConnected) {
     
     function setupEventListeners() {
         
-        // 1. Listener Bet Baru (Lewat WSS - Cepat)
+        // 1. Listener Bet Baru (Dengan Delay dikit biar RPC Sync)
         listenerContract.on("NewBet", () => { 
             console.log("New Bet detected via WSS");
-            refreshGameData(); 
+            setTimeout(() => { refreshGameData(); }, 2000); // Tunda 2 detik
         });
 
-        // 2. Listener LIVE DRAW
+        // 2. Listener LIVE DRAW (LENGKAP: Timer + Reset + Sync)
         listenerContract.on("BattleResult", async (reels, outcome, roundId) => {
             const rId = Number(roundId);
             console.log(`⚡ RESULT RECEIVED! Round #${rId}`);
 
-            // --- A. SYNC START ANIMATION ---
+            // A. Pastikan Animasi Jalan (Sync Start)
             if (!isSpinning) {
                 startSpinAnimation();
-                // Jika user telat masuk, set waktu mulai sekarang
                 if (spinStartTime === 0) spinStartTime = Date.now(); 
             }
             if (spinStartTime === 0) spinStartTime = Date.now();
 
-            // --- B. HITUNG DURASI ---
+            // B. Hitung Sisa Waktu
             const DURATION = 35000; 
             const now = Date.now();
             const elapsed = now - spinStartTime;
@@ -3203,25 +3080,22 @@ if (isConnected) {
 
             if (remaining < 0) remaining = 0;
 
-            console.log(`⏳ Waiting: ${remaining}ms`);
-
-            // --- C. JALANKAN TIMER DIGITAL (JIKA SISA WAKTU > 0) ---
+            // --- [FITUR 1] JALANKAN TIMER COUNTDOWN ---
             if (remaining > 0) {
-                startCountdown(remaining); 
+                startCountdown(remaining); // Panggil fungsi helper timer
                 showToast(`Revealing winner in ${Math.ceil(remaining/1000)}s...`);
             } else {
-                // Jika waktu sudah habis (telat banget), pastikan timer 00:00
                 document.getElementById('drawTimer').innerText = "00:00";
             }
+            // ------------------------------------------
 
-            // --- D. TUNGGU SAMPAI WAKTU HABIS ---
+            // C. Tunggu Waktu Habis
             await new Promise(r => setTimeout(r, remaining));
 
-            // --- E. STOP SEMUANYA ---
-            clearInterval(countdownInterval); // Matikan Timer Digital
-            document.getElementById('drawTimer').style.display = 'none'; // Sembunyikan Timer
+            // D. Stop Timer & Animasi
+            clearInterval(countdownInterval); // Matikan timer
+            document.getElementById('drawTimer').style.display = 'none'; // Sembunyikan timer
 
-            // Stop Slot di gambar pemenang
             const r1 = Number(reels[0]);
             const r2 = Number(reels[1]);
             const r3 = Number(reels[2]);
@@ -3229,7 +3103,7 @@ if (isConnected) {
 
             showToast(`Result: ${outcome}`);
             
-            // Efek Glamour (8 Detik)
+            // E. Efek Glamour (8 Detik)
             const winnersIndices = new Set([r1, r2, r3]);
             for (let i = 0; i < 6; i++) {
                 const card = document.getElementById(`card-${i}`);
@@ -3241,17 +3115,22 @@ if (isConnected) {
                     document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
             }, 8000);
 
-            // --- F. RESET GAMBAR KE '?' SETELAH 5 DETIK ---
-            // (User lihat hasil 5 detik, baru reset)
+            // --- [FITUR 2] RESET GAMBAR KE '?' (5 Detik kemudian) ---
             setTimeout(() => {
                 resetReelsToDefault();
             }, 5000);
+            // --------------------------------------------------------
 
-            // --- G. RESET LOGIKA SISTEM (LANGSUNG) ---
-            spinStartTime = 0; // Reset waktu agar siap ronde baru
-            refreshGameData(); // Update saldo user
+            // --- [FITUR 3] RESET LOGIKA & REFRESH DATA ---
+            spinStartTime = 0; 
+            
+            // Tunggu 3 detik agar blockchain RPC update saldo pemenang
+            setTimeout(() => { 
+                console.log("Refreshing Data...");
+                refreshGameData(); 
+            }, 3000);
         });      
-    }
+       }
 </script>
 </body>
                                                                                                                                                                                                      </html>
