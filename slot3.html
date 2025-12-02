@@ -3592,16 +3592,20 @@ if(!u[1]) {
         // 1. Listener Bet Baru
         listenerContract.on("NewBet", () => { 
             console.log("New Bet detected via WSS");
-            setTimeout(() => { refreshGameData(); }, 2000);
+            setTimeout(() => { refreshGameData(); }, 2000); 
         });
 
-        // 2. Listener LIVE DRAW (LENGKAP: Timer + Reset 3 Detik)
+        // 2. Listener LIVE DRAW
         listenerContract.on("BattleResult", async (reels, outcome, roundId) => {
-            if (safetyTimer) clearTimeout(safetyTimer);
+            // --- [INI YANG TADI TERLEWAT] ---
+            // Matikan Safety Timer agar tidak bentrok
+            if (typeof safetyTimer !== 'undefined' && safetyTimer) clearTimeout(safetyTimer);
+            // --------------------------------
+
             const rId = Number(roundId);
             console.log(`⚡ RESULT RECEIVED! Round #${rId}`);
 
-            // A. Sync Animasi jika user telat masuk
+            // A. Sync Animasi
             if (!isSpinning) {
                 startSpinAnimation();
                 if (spinStartTime === 0) spinStartTime = Date.now(); 
@@ -3616,25 +3620,22 @@ if(!u[1]) {
 
             if (remaining < 0) remaining = 0;
 
-            console.log(`⏳ Waiting: ${remaining}ms`);
-
-            // --- C. JALANKAN TIMER SESUAI SISA WAKTU ---
+            // C. Jalankan Timer Visual
             if (remaining > 0) {
                 startCountdown(remaining); 
                 showToast(`Revealing winner in ${Math.ceil(remaining/1000)}s...`);
             } else {
                 document.getElementById('drawTimer').innerText = "00:00";
             }
-            // -------------------------------------------
 
             // D. Tunggu Waktu Habis
             await new Promise(r => setTimeout(r, remaining));
 
-            // E. Stop Timer & Sembunyikan
-            if (countdownInterval) clearInterval(countdownInterval);
-            document.getElementById('drawTimer').style.display = 'none'; 
+            // E. Stop Timer & Animasi
+            if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
+            const timerEl = document.getElementById('drawTimer');
+            if (timerEl) timerEl.style.display = 'none'; 
 
-            // F. Stop Slot & Tampilkan Hasil
             const r1 = Number(reels[0]);
             const r2 = Number(reels[1]);
             const r3 = Number(reels[2]);
@@ -3642,30 +3643,32 @@ if(!u[1]) {
 
             showToast(`Result: ${outcome}`);
             
-            // G. Efek Glamour
+            // F. Efek Glamour
             const winnersIndices = new Set([r1, r2, r3]);
             for (let i = 0; i < 6; i++) {
                 const card = document.getElementById(`card-${i}`);
                 if (winnersIndices.has(i)) card.classList.add('winner-glamour');
                 else card.classList.remove('winner-glamour');
             }
+            // Hapus efek setelah 8 detik
             setTimeout(() => { 
                 for (let i = 0; i < 6; i++) 
                     document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
             }, 8000);
 
-            document.getElementById("year").innerText = new Date().getFullYear();
-
-            // --- H. RESET GAMBAR & DATA (3 DETIK) ---
-            setTimeout(() => {
-                resetReelsToDefault(); // Gambar balik ke '?'
-            }, 3000);
-
-            spinStartTime = 0; 
+            // --- FITUR RESET & REFRESH (3 DETIK) ---
             
+            // 1. Reset Gambar
+            setTimeout(() => {
+                resetReelsToDefault();
+            }, 3000); 
+
+            // 2. Reset Logika & Data
+            spinStartTime = 0;
+
             setTimeout(() => { 
                 console.log("Refreshing Data...");
-                refreshGameData(); // Saldo update
+                refreshGameData(); 
             }, 3000);
         });      
     }
