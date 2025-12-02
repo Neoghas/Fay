@@ -2076,102 +2076,80 @@ if(!u[1]) {
         }
     }
 
+    // --- FUNGSI LOAD DAFTAR TEMAN (VERSI RINGAN & STABIL) ---
     async function loadReferralList() {
-
         const listDiv = document.getElementById('referralListDisplay');
-
         listDiv.innerHTML = '<div style="text-align:center; color:#aaa; padding:10px;">Scanning...</div>';
 
-
-
         try {
-
-            // Gunakan filter event untuk mencari siapa yang mendaftar dengan referrer = userAddress
-
+            // 1. Ambil Data Event Referral
             const filter = gameContract.filters.ReferralLinked(null, userAddress);
-
-            
-
-            // Gunakan blok start yang aman agar tidak timeout
-
             const SAFE_BLOCK_START = 17000000; 
-
             const logs = await gameContract.queryFilter(filter, SAFE_BLOCK_START, "latest");
 
-
-
             if (logs.length === 0) {
-
                 listDiv.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No referrals yet.</div>';
-
                 return;
-
             }
 
+            listDiv.innerHTML = ''; // Bersihkan loading
 
-
-            listDiv.innerHTML = ''; // Bersihkan
-
-
-
-            // Loop data (Balik urutan biar terbaru diatas)
-
-            // Batasi tampilkan 20 terakhir saja biar ringan
-
+            // 2. Loop Data (Terbaru di atas)
             const recentLogs = logs.reverse().slice(0, 20);
 
-
-
             for (let log of recentLogs) {
-
-                // Decode address invitee (Topic 1)
-
+                // Ambil alamat wallet teman (Invitee)
                 const inviteeAddr = ethers.dataSlice(log.topics[1], 12);
-
                 
+                // Format alamat wallet (0x1234...ABCD)
+                const shortAddr = inviteeAddr.substring(0,6) + "..." + inviteeAddr.substring(38);
 
+                // Cek Status Active Bet (Panggil struct user sekali saja)
+                let statusBet = '<span style="color:#666;">Checking...</span>';
+                
+                // Kita render barisnya dulu (Optimistic)
+                const rowId = `ref-row-${log.blockNumber}`;
+                
                 const row = document.createElement('div');
-
                 row.className = 'ref-item-row';
-
+                row.id = rowId;
+                
                 row.innerHTML = `
-
-                    <div style="display:flex; align-items:center; gap:5px;">
-
-                        <img src="${getAvatar(inviteeAddr)}" style="width:20px; height:20px; border-radius:50%;">
-
-                        <span id="ref-nick-${log.blockNumber}" style="color:var(--primary);">Loading...</span>
-
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <img src="${getAvatar(inviteeAddr)}" style="width:24px; height:24px; border-radius:50%; border:1px solid #444;">
+                        
+                        <span style="color:var(--primary); font-family:monospace; font-size:0.9em;">${shortAddr}</span>
                     </div>
-
-                    <span style="font-family:monospace; color:#666;">${inviteeAddr.substring(0,4)}...${inviteeAddr.substring(38)}</span>
-
+                    
+                    <div id="status-${log.blockNumber}" style="font-size:0.7em; font-weight:bold;">
+                        ${statusBet}
+                    </div>
                 `;
-
                 listDiv.appendChild(row);
 
-
-
-                // Ambil Nickname Asli
-
+                // Cek Status Bet di Background (Async)
                 gameContract.users(inviteeAddr).then(u => {
-
-                    document.getElementById(`ref-nick-${log.blockNumber}`).innerText = u[0];
-
+                    const hasBet = u[3]; // Index 3 adalah bool hasBet
+                    const statusEl = document.getElementById(`status-${log.blockNumber}`);
+                    
+                    if (statusEl) {
+                        if (hasBet) {
+                            statusEl.innerHTML = `<span style="color:var(--success);">ACTIVE ✅</span>`;
+                        } else {
+                            statusEl.innerHTML = `<span style="color:var(--danger);">INACTIVE ❌</span>`;
+                        }
+                    }
+                }).catch(() => {
+                    // Jika gagal cek status, biarkan kosong atau tanda tanya
+                     const statusEl = document.getElementById(`status-${log.blockNumber}`);
+                     if(statusEl) statusEl.innerHTML = `<span style="color:#666;">?</span>`;
                 });
-
             }
 
-
-
         } catch (e) {
-
             console.error(e);
-
-            listDiv.innerHTML = '<div style="text-align:center; color:var(--danger); padding:10px;">Failed to load list.</div>';
-
+            listDiv.innerHTML = '<div style="text-align:center; color:var(--danger); padding:10px;">Failed to load list (RPC Error).</div>';
         }
-
     }
     
     async function refreshGameData() {
