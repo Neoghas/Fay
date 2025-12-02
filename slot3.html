@@ -1227,6 +1227,58 @@
         border: 1px solid rgba(0, 210, 255, 0.3);
         display: inline-block;
     }
+
+    /* --- REFERRAL LIST STYLE --- */
+    .ref-status-box {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 0.8em;
+        color: #ccc;
+        text-align: left;
+    }
+    
+    .ref-requirement {
+        display: flex; justify-content: space-between; margin-bottom: 5px;
+    }
+    .req-ok { color: var(--success); }
+    .req-no { color: var(--danger); }
+
+    .referral-list-container {
+        margin-top: 15px;
+        max-height: 150px;
+        overflow-y: auto;
+        background: #0b0c15;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 5px;
+    }
+    
+    .ref-item-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        font-size: 0.75em;
+    }
+    .ref-item-row:last-child { border-bottom: none; }
+    
+    /* Tombol Create Nickname yang diperbaiki */
+    .btn-create-nick {
+        width: 60%; 
+        background: linear-gradient(90deg, var(--primary), var(--accent));
+        border: none;
+        color: white;
+        padding: 10px;
+        border-radius: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 10px;
+        box-shadow: 0 0 10px var(--primary);
+        transition: 0.3s;
+    }
+    .btn-create-nick:hover { transform: scale(1.05); }
 </style>
 </head>
 <body>
@@ -1323,6 +1375,7 @@
         <p style="margin-top:15px; color:#ff9f43; font-size:0.7em;">*Min 5 more Players required to Draw</p>
 
         <div id="referralPanel" class="referral-panel">
+            
             <div id="view-register" style="display:none;">
                 <div class="ref-label" style="color:var(--gold);">NEW PLAYER REGISTRATION</div>
                 <p style="font-size:0.8em; color:#aaa; margin:5px 0 15px 0;">Create a nickname to start betting & earning.</p>
@@ -1332,14 +1385,17 @@
                 
                 <div id="panelRefInfo" style="font-size:0.75em; color:var(--success); margin-bottom:10px; font-style:italic;"></div>
                 
-                <button class="wallet-btn" style="width:50%; font-size:0.9em; background:background: linear-gradient(90deg, #03a9f4, #f441a5);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;" onclick="registerUser()">CREATE NICKNAME</button>
+                <button class="btn-create-nick" onclick="registerUser()">CREATE ACCOUNT</button>
             </div>
         
             <div id="view-profile" style="display:none;">
-                <div class="ref-label">Player Profile Nickname:</div>
-                <div style="font-size:1.2em; font-weight:bold; color:var(--gold); margin-bottom:10px;" id="displayNick">...</div>
+                <div class="ref-label">Player Profile</div>
+                
+                <div style="position:relative; width:80px; height:80px; margin:0 auto 10px auto;">
+                    <img id="my-avatar-img" src="" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border:2px solid var(--primary); box-shadow:0 0 15px var(--primary); background: rgba(0,0,0,0.3);">
+                </div>
+
+                <div style="font-size:1.2em; font-weight:bold; color:white; margin-bottom:5px;" id="displayNick">...</div>
                 
                 <div class="ref-stats-grid">
                     <div class="ref-stat-item">
@@ -1351,15 +1407,42 @@
                         <span class="rs-lbl">Pending Bonus</span>
                     </div>
                 </div>
+
+                <div class="ref-status-box">
+                    <div style="font-size:0.7em; color:#888; text-transform:uppercase; margin-bottom:5px;">Bonus Requirement:</div>
+                    
+                    <div class="ref-requirement">
+                        <span>1. Min 6 Referrals</span>
+                        <span id="req-1-status">❌</span>
+                    </div>
+                    <div class="ref-requirement">
+                        <span>2. Active Bettor</span>
+                        <span id="req-2-status">❌</span>
+                    </div>
+                </div>
                 
-                <div id="claimBonusBtnContainer"></div>
+                <div id="claimBonusBtnContainer" style="margin-top:10px;"></div>
                 
-                <div class="ref-label">Referral Link</div>
+                <div class="ref-label" style="margin-top:15px;">Referral Link</div>
                 <div class="ref-box">
                     <span id="displayRefLink" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">...</span>
                     <button class="btn-copy" onclick="copyRefLink()">Copy</button>
                 </div>
-                <div class="comm-info">*0.25% Commission from winnings is automatically added to your Game Credit.</div>
+
+                <div style="margin-top:15px; text-align:left;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="ref-label">INVITED FRIENDS</span>
+                        <button onclick="loadReferralList()" style="background:none; border:none; color:var(--accent); font-size:1.2em; cursor:pointer;">↻</button>
+                    </div>
+                    <div id="referralListDisplay" class="referral-list-container">
+                        <div style="text-align:center; color:#555; font-size:0.7em; padding:10px;">Click refresh to load list.</div>
+                    </div>
+                </div>
+
+                <div class="comm-info" style="margin-top:15px;">
+                    *0.25% Commission from direct referral winnings.<br>
+                    *Bonus Credit is for betting only (Non-withdrawable).
+                </div>
             </div>
         </div>
         
@@ -1993,89 +2076,249 @@ if(!u[1]) {
         }
     }
 
-    async function updateReferralCount() {
-        if(!isConnected || !userAddress) return;
+    async function loadReferralList() {
+
+        const listDiv = document.getElementById('referralListDisplay');
+
+        listDiv.innerHTML = '<div style="text-align:center; color:#aaa; padding:10px;">Scanning...</div>';
+
+
+
         try {
+
+            // Gunakan filter event untuk mencari siapa yang mendaftar dengan referrer = userAddress
+
             const filter = gameContract.filters.ReferralLinked(null, userAddress);
+
             
-            // SAYA SUDAH SET BLOCK NUMBER OTOMATIS (Estimasi Nov 2024 Base Sepolia)
-            // Ini agar scan tidak terlalu jauh ke belakang (block 0) yang bikin error/lama.
-            const safeStartBlock = 18000000; 
 
-            const logs = await gameContract.queryFilter(filter, safeStartBlock, "latest");
-            document.getElementById('totalInvited').innerText = logs.length;
-        } catch(e) { 
-            console.error("Gagal load history referral:", e);
-            // Jika error, tampilkan 0 dulu
-            document.getElementById('totalInvited').innerText = "0";
-        }
-    }
+            // Gunakan blok start yang aman agar tidak timeout
 
-    async function refreshGameData() {
-        try {
-            // 1. UPDATE DATA USER & REFERRAL (LOGIKA YANG HILANG SUDAH DIKEMBALIKAN)
-            if (isConnected) {
-                document.getElementById('referralPanel').style.display = 'block'; 
+            const SAFE_BLOCK_START = 17000000; 
 
-                const userData = await gameContract.users(userAddress);
-                const isReg = userData[1]; // boolean isRegistered
+            const logs = await gameContract.queryFilter(filter, SAFE_BLOCK_START, "latest");
 
-                if (isReg) {
-                    // JIKA SUDAH DAFTAR -> Tampilkan Profil
-                    document.getElementById('view-profile').style.display = 'block';
-                    document.getElementById('view-register').style.display = 'none';
 
-                    // Isi Data Profil
-                    document.getElementById('displayNick').innerText = userData[0];
-                    document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
-                    
-                    // Update Avatar Robot
-                    if (typeof getAvatar === 'function') {
-                        const robotUrl = getAvatar(userAddress);
-                        const avatarEl = document.getElementById('my-avatar-img');
-                        if(avatarEl) avatarEl.src = robotUrl;
-                    }
-                    
-                    // Update Bonus
-                    const pending = Number(userData[4]);
-                    document.getElementById('pendingBonus').innerText = pending * 10000;
-                    
-                    // Tombol Claim
-                    const claimContainer = document.getElementById('claimBonusBtnContainer');
-                    if (pending > 0) {
-                        claimContainer.innerHTML = `<button class="wallet-btn" style="width:100%; margin-bottom:10px; background:var(--gold); color:black;" onclick="claimReferralBonus()">Claim ${pending * 10000} SHIB Bonus</button>`;
-                    } else {
-                        claimContainer.innerHTML = '';
-                    }
-                    
-                    // Update Total Invited (Jika fungsi ada)
-                    if (typeof updateReferralCount === 'function') updateReferralCount();
 
-                } else {
-                    // JIKA BELUM DAFTAR -> Tampilkan Register
-                    document.getElementById('view-profile').style.display = 'none';
-                    document.getElementById('view-register').style.display = 'block';
-                    
-                    if(detectedReferrer) {
-                        document.getElementById('panelRefInfo').innerText = "Invited by: " + detectedReferrer;
-                    }
-                }
-                
-                // Update Saldo Wallet (ETH/USDT/SHIB)
-                try {
-                    const bonus = await gameContract.freeShibCredits(userAddress);
-                    const btnFree = document.getElementById('btnFreeBet');
-                    if (btnFree) {
-                        const bonusVal = document.getElementById('userBonusBalance');
-                        if(bonusVal) bonusVal.innerText = Number(ethers.formatEther(bonus)).toLocaleString();
-                        
-                        btnFree.disabled = bonus < ethers.parseEther("10000");
-                        if (bonus >= ethers.parseEther("10000")) btnFree.style.background = "var(--success)";
-                        else btnFree.style.background = "#333";
-                    }
-                } catch(e){}
+            if (logs.length === 0) {
+
+                listDiv.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No referrals yet.</div>';
+
+                return;
+
             }
 
+
+
+            listDiv.innerHTML = ''; // Bersihkan
+
+
+
+            // Loop data (Balik urutan biar terbaru diatas)
+
+            // Batasi tampilkan 20 terakhir saja biar ringan
+
+            const recentLogs = logs.reverse().slice(0, 20);
+
+
+
+            for (let log of recentLogs) {
+
+                // Decode address invitee (Topic 1)
+
+                const inviteeAddr = ethers.dataSlice(log.topics[1], 12);
+
+                
+
+                const row = document.createElement('div');
+
+                row.className = 'ref-item-row';
+
+                row.innerHTML = `
+
+                    <div style="display:flex; align-items:center; gap:5px;">
+
+                        <img src="${getAvatar(inviteeAddr)}" style="width:20px; height:20px; border-radius:50%;">
+
+                        <span id="ref-nick-${log.blockNumber}" style="color:var(--primary);">Loading...</span>
+
+                    </div>
+
+                    <span style="font-family:monospace; color:#666;">${inviteeAddr.substring(0,4)}...${inviteeAddr.substring(38)}</span>
+
+                `;
+
+                listDiv.appendChild(row);
+
+
+
+                // Ambil Nickname Asli
+
+                gameContract.users(inviteeAddr).then(u => {
+
+                    document.getElementById(`ref-nick-${log.blockNumber}`).innerText = u[0];
+
+                });
+
+            }
+
+
+
+        } catch (e) {
+
+            console.error(e);
+
+            listDiv.innerHTML = '<div style="text-align:center; color:var(--danger); padding:10px;">Failed to load list.</div>';
+
+        }
+
+    }
+    
+    async function refreshGameData() {
+
+        try {
+
+            // 1. UPDATE DATA USER (LOGIKA V2)
+
+            if (isConnected) {
+
+                document.getElementById('referralPanel').style.display = 'block'; 
+
+
+
+                // Ambil data Struct (Array)
+
+                const userData = await gameContract.users(userAddress);
+
+                
+
+                // [0]: Nick, [1]: Reg, [2]: Ref, [3]: Bet, [4]: BonusCount, [5]: TotalRef
+
+                const isReg = userData[1]; 
+
+
+
+                if (isReg) {
+
+                    document.getElementById('view-profile').style.display = 'block';
+
+                    document.getElementById('view-register').style.display = 'none';
+
+
+
+                    // --- ISI DATA ---
+
+                    document.getElementById('displayNick').innerText = userData[0];
+
+                    document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
+
+                    document.getElementById('my-avatar-img').src = getAvatar(userAddress);
+
+                    
+
+                    // V2: AMBIL TOTAL INVITED LANGSUNG (Index 5)
+
+                    const totalRef = Number(userData[5]);
+
+                    document.getElementById('totalInvited').innerText = totalRef; 
+
+
+
+                    // V2: PENDING BONUS (Index 4)
+
+                    const pendingCount = Number(userData[4]);
+
+                    const bonusAmount = pendingCount * 10000; // 10k SHIB per active user
+
+                    document.getElementById('pendingBonus').innerText = bonusAmount;
+
+
+
+                    // --- LOGIKA SYARAT CLAIM (V2) ---
+
+                    const req1 = document.getElementById('req-1-status');
+
+                    const req2 = document.getElementById('req-2-status');
+
+                    const claimDiv = document.getElementById('claimBonusBtnContainer');
+
+
+
+                    // Cek Syarat 1: Minimal 6 Orang
+
+                    const isReq1Pass = totalRef >= 6;
+
+                    req1.innerHTML = isReq1Pass ? "✅" : `<span style='color:var(--danger)'>${totalRef}/6</span>`;
+
+
+
+                    // Cek Syarat 2: Ada Saldo Pending (Artinya ada yg Bet)
+
+                    const isReq2Pass = pendingCount > 0;
+
+                    req2.innerHTML = isReq2Pass ? "✅" : "❌";
+
+
+
+                    // Tombol Claim
+
+                    if (isReq1Pass && isReq2Pass) {
+
+                        claimDiv.innerHTML = `<button class="wallet-btn" style="width:100%; background:var(--gold); color:black;" onclick="claimReferralBonus()">CLAIM ${bonusAmount} SHIB CREDIT</button>`;
+
+                    } else {
+
+                        if (!isReq1Pass) {
+
+                            claimDiv.innerHTML = `<button class="wallet-btn" style="width:100%; background:#333; color:#666; cursor:not-allowed;">LOCKED (Need 6 Invites)</button>`;
+
+                        } else {
+
+                            claimDiv.innerHTML = `<button class="wallet-btn" style="width:100%; background:#333; color:#666; cursor:not-allowed;">WAITING FOR BETS</button>`;
+
+                        }
+
+                    }
+
+
+
+                } else {
+
+                    document.getElementById('view-profile').style.display = 'none';
+
+                    document.getElementById('view-register').style.display = 'block';
+
+                    if(detectedReferrer) document.getElementById('panelRefInfo').innerText = "Invited by: " + detectedReferrer;
+
+                }
+
+                
+
+                // Update Saldo
+
+                try {
+
+                    const bonus = await gameContract.freeShibCredits(userAddress);
+
+                    const btnFree = document.getElementById('btnFreeBet');
+
+                    if (btnFree) {
+
+                        const userBonusEl = document.getElementById('userBonusBalance');
+
+                        if(userBonusEl) userBonusEl.innerText = Number(ethers.formatEther(bonus)).toLocaleString();
+
+                        
+
+                        btnFree.disabled = bonus < ethers.parseEther("10000");
+
+                        btnFree.style.background = (bonus >= ethers.parseEther("10000")) ? "var(--success)" : "#333";
+
+                    }
+
+                } catch(e){}
+
+            }
             // 2. Fetch Data Ronde
             const currR = Number(await gameContract.currentRoundId());
             let bets = [];
@@ -3263,6 +3506,8 @@ if(!u[1]) {
                     document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
             }, 8000);
 
+            document.getElementById("year").innerText = new Date().getFullYear();
+
             // --- H. RESET GAMBAR & DATA (3 DETIK) ---
             setTimeout(() => {
                 resetReelsToDefault(); // Gambar balik ke '?'
@@ -3274,8 +3519,6 @@ if(!u[1]) {
                 console.log("Refreshing Data...");
                 refreshGameData(); // Saldo update
             }, 3000);
-
-            document.getElementById("year").innerText = new Date().getFullYear();
         });      
     }
 </script>
