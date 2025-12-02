@@ -1991,8 +1991,9 @@ if(!u[1]) {
             if (totalWins === 0) return;
 
             // 2. Loop Mundur
-            // Kita ubah struktur penyimpanan: RoundID => [Array Pemenang]
+            // UBAH STRUKTUR: RoundID -> [Array of Winners]
             let matchesFound = {}; 
+            
             let startIndex = totalWins - 1;
             let limitScan = Math.max(0, totalWins - 100); 
 
@@ -2005,62 +2006,56 @@ if(!u[1]) {
                 if (rId <= maxRound && rId >= minRound) {
                     const player = winData.player;
                     const amount = winData.winAmount;
-                    const currIdx = Number(winData.currency); // 0=ETH, 1=USDT, 2=SHIB
-                    
-                    // Inisialisasi array jika belum ada
+                    const currIdx = Number(winData.currency); 
+
+                    // Inisialisasi Array jika belum ada
                     if (!matchesFound[rId]) {
                         matchesFound[rId] = [];
                     }
                     
-                    // SIMPAN SEMUA DATA (Push ke Array)
+                    // PUSH DATA (Jangan di-overwrite)
                     matchesFound[rId].push({ player: player, amount: amount, curr: currIdx });
                 }
             }
 
-            // 3. Update UI (Render Semua Pemenang)
+            // 3. Update UI (Render SEMUA Pemenang)
             for (let r = maxRound; r >= minRound; r--) {
-                const winnersList = matchesFound[r];
+                const winnersList = matchesFound[r]; // Ini sekarang Array
                 const div = document.getElementById(`winner-info-${r}`);
                 
                 if (div && winnersList && winnersList.length > 0) {
                     // Kosongkan div dulu
-                    div.innerHTML = "";
+                    div.innerHTML = ""; 
 
-                    // Loop setiap pemenang di ronde ini
-                    // Gunakan Promise.all untuk fetch nickname paralel agar cepat
-                    const htmlPromises = winnersList.map(async (data) => {
+                    // Loop setiap item kemenangan di ronde ini
+                    for (let data of winnersList) {
                         
                         // Format Nilai Menang
                         let payStr = "";
                         if (data.curr === 0) { 
                             const val = parseFloat(ethers.formatEther(data.amount)).toFixed(4);
-                            payStr = `<span style="color:#627EEA;">+${val} ETH</span>`;
+                            payStr = `<span style="color:var(--eth-color);">+${val} ETH</span>`;
                         } else if (data.curr === 1) { 
-                            const val = parseFloat(ethers.formatUnits(data.amount, 18)).toFixed(2);
-                            payStr = `<span style="color:#26A17B;">+${val} USDT</span>`;
+                            const val = parseFloat(ethers.formatUnits(data.amount, 6)).toFixed(2);
+                            payStr = `<span style="color:var(--usdt-color);">+${val} USDT</span>`;
                         } else { 
                             const val = parseFloat(ethers.formatUnits(data.amount, 18)).toLocaleString();
-                            payStr = `<span style="color:#FFA409;">+${val} SHIB</span>`;
+                            payStr = `<span style="color:var(--shib-color);">+${val} SHIB</span>`;
                         }
 
-                        // Ambil Nickname
-                        let displayName = "Loading...";
-                        try {
-                            const u = await gameContract.users(data.player);
-                            displayName = u[0] ? u[0] : (data.player.substring(0,6) + "...");
-                        } catch(e) { 
-                            displayName = data.player.substring(0,6) + "..."; 
-                        }
+                        // ID Unik untuk Nickname (karena 1 ronde bisa banyak baris)
+                        // Kita pakai random ID sederhana
+                        const nickId = `nick-${r}-${Math.floor(Math.random()*10000)}`;
 
-                        // Return HTML Baris Pemenang
-                        return `
-                            <div class="winner-info-box" style="display:block; border-top:1px solid rgba(255,255,255,0.1); margin-top:8px; padding-top:5px;">
+                        // Tambahkan HTML Baris Baru (Append)
+                        const rowHtml = `
+                            <div class="winner-info-box" style="display:block; border-top:1px solid rgba(255,255,255,0.1); margin-top:5px; padding-top:5px;">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <div style="text-align:left;">
                                         <div style="font-size:0.65em; color:#888;">WINNER</div>
-                                        <div style="color:var(--gold); font-weight:bold; font-size:0.85em; display:flex; align-items:center;">
-                                            <img src="cup.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;">
-                                            ${displayName}
+                                        <div style="color:var(--gold); font-weight:bold; font-size:0.85em; display:flex; align-items:center;" id="${nickId}">
+                                            <img src="trophy.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;">
+                                            Loading...
                                         </div>
                                     </div>
                                     <div style="text-align:right; font-size:0.75em; font-weight:bold;">
@@ -2069,11 +2064,17 @@ if(!u[1]) {
                                 </div>
                             </div>
                         `;
-                    });
+                        div.insertAdjacentHTML('beforeend', rowHtml);
 
-                    // Tunggu semua nickname selesai di-load, lalu gabungkan HTML
-                    const finalHtmlArray = await Promise.all(htmlPromises);
-                    div.innerHTML = finalHtmlArray.join("");
+                        // Fetch Nickname
+                        gameContract.users(data.player).then(u => {
+                            const el = document.getElementById(nickId);
+                            if(el) {
+                                const name = u[0] ? u[0] : (data.player.substring(0,6) + "...");
+                                el.innerHTML = `<img src="trophy.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;"> ${name}`;
+                            }
+                        }).catch(()=>{});
+                    }
 
                 } else if (div) {
                      div.innerHTML = '<span style="font-size:0.7em; color:#555;">No Winners</span>';
