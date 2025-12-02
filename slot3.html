@@ -2076,61 +2076,68 @@ if(!u[1]) {
         }
     }
 
-    // --- FUNGSI LOAD DAFTAR TEMAN (VERSI RINGAN & STABIL) ---
+    // --- FUNGSI LOAD DAFTAR TEMAN (OPTIMAL) ---
     async function loadReferralList() {
         const listDiv = document.getElementById('referralListDisplay');
-        listDiv.innerHTML = '<div style="text-align:center; color:#aaa; padding:10px;">Scanning...</div>';
+        listDiv.innerHTML = '<div style="text-align:center; color:#aaa; padding:10px;">Scanning Blockchain...</div>';
 
         try {
-            // 1. Ambil Data Event Referral
+            // 1. AMBIL DATA EVENT (ReferralLinked)
             const filter = gameContract.filters.ReferralLinked(null, userAddress);
-            const SAFE_BLOCK_START = 17000000; 
-            const logs = await gameContract.queryFilter(filter, SAFE_BLOCK_START, "latest");
+            
+            // GANTI STRATEGI:
+            // Coba ambil dari blok awal kontrak. Jika error, ambil 10000 blok terakhir saja.
+            let logs = [];
+            try {
+                // Blok estimasi kontrak deploy (Ganti dengan blok asli jika tahu)
+                // Base Sepolia saat ini sekitar blok 19 Juta.
+                // Kita scan dari blok 17 Juta (Aman).
+                const SAFE_BLOCK = 17000000; 
+                logs = await gameContract.queryFilter(filter, SAFE_BLOCK, "latest");
+            } catch (errRPC) {
+                console.warn("Full scan failed, trying recent blocks...", errRPC);
+                // Fallback: Scan 50.000 blok terakhir saja jika full scan gagal
+                const currentBlock = await provider.getBlockNumber();
+                logs = await gameContract.queryFilter(filter, currentBlock - 50000, "latest");
+            }
 
             if (logs.length === 0) {
-                listDiv.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No referrals yet.</div>';
+                listDiv.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No referrals found in recent blocks.</div>';
                 return;
             }
 
             listDiv.innerHTML = ''; // Bersihkan loading
 
-            // 2. Loop Data (Terbaru di atas)
-            const recentLogs = logs.reverse().slice(0, 20);
+            // 2. LOOP DATA (Terbaru di atas)
+            // Kita batasi 10 orang terakhir agar tidak berat saat cek HasBet satu-satu
+            const recentLogs = logs.reverse().slice(0, 10);
 
             for (let log of recentLogs) {
-                // Ambil alamat wallet teman (Invitee)
+                // Decode address teman (Invitee) dari Topic 1
                 const inviteeAddr = ethers.dataSlice(log.topics[1], 12);
-                
-                // Format alamat wallet (0x1234...ABCD)
                 const shortAddr = inviteeAddr.substring(0,6) + "..." + inviteeAddr.substring(38);
-
-                // Cek Status Active Bet (Panggil struct user sekali saja)
-                let statusBet = '<span style="color:#666;">Checking...</span>';
-                
-                // Kita render barisnya dulu (Optimistic)
                 const rowId = `ref-row-${log.blockNumber}`;
-                
+
+                // Render Baris HTML (Status awal: Checking...)
                 const row = document.createElement('div');
                 row.className = 'ref-item-row';
-                row.id = rowId;
-                
                 row.innerHTML = `
                     <div style="display:flex; align-items:center; gap:8px;">
                         <img src="${getAvatar(inviteeAddr)}" style="width:24px; height:24px; border-radius:50%; border:1px solid #444;">
-                        
                         <span style="color:var(--primary); font-family:monospace; font-size:0.9em;">${shortAddr}</span>
                     </div>
                     
-                    <div id="status-${log.blockNumber}" style="font-size:0.7em; font-weight:bold;">
-                        ${statusBet}
+                    <div id="status-${rowId}" style="font-size:0.7em; font-weight:bold; color:#888;">
+                        Checking...
                     </div>
                 `;
                 listDiv.appendChild(row);
 
-                // Cek Status Bet di Background (Async)
+                // 3. CEK STATUS BET (ASYNC BACKGROUND)
+                // Panggil data struct user: userData[3] adalah hasBet (boolean)
                 gameContract.users(inviteeAddr).then(u => {
-                    const hasBet = u[3]; // Index 3 adalah bool hasBet
-                    const statusEl = document.getElementById(`status-${log.blockNumber}`);
+                    const hasBet = u[3]; // Index 3 = bool hasBet
+                    const statusEl = document.getElementById(`status-${rowId}`);
                     
                     if (statusEl) {
                         if (hasBet) {
@@ -2140,15 +2147,14 @@ if(!u[1]) {
                         }
                     }
                 }).catch(() => {
-                    // Jika gagal cek status, biarkan kosong atau tanda tanya
-                     const statusEl = document.getElementById(`status-${log.blockNumber}`);
-                     if(statusEl) statusEl.innerHTML = `<span style="color:#666;">?</span>`;
+                    const statusEl = document.getElementById(`status-${rowId}`);
+                    if(statusEl) statusEl.innerHTML = `?`;
                 });
             }
 
         } catch (e) {
             console.error(e);
-            listDiv.innerHTML = '<div style="text-align:center; color:var(--danger); padding:10px;">Failed to load list (RPC Error).</div>';
+            listDiv.innerHTML = '<div style="text-align:center; color:var(--danger); padding:10px;">Network Busy. Try again later.</div>';
         }
     }
     
@@ -2200,7 +2206,7 @@ if(!u[1]) {
 
                     document.getElementById('totalInvited').innerText = totalRef; 
 
-
+                    const myHasBet = userData[3];
 
                     // V2: PENDING BONUS (Index 4)
 
