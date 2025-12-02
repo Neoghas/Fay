@@ -1984,14 +1984,13 @@ if(!u[1]) {
 
     async function fetchWinnersFromContract(maxRound, minRound) {
         try {
-            // 1. Ambil Total Data
             const totalWinsBig = await gameContract.getGlobalWinCount();
             const totalWins = Number(totalWinsBig);
 
             if (totalWins === 0) return;
 
-            // 2. Loop & GABUNGKAN DATA (Logic Baru)
-            // Struktur: RoundID -> { player: address, eth: 0, usdt: 0, shib: 0 }
+            // 1. KUMPULKAN & GABUNGKAN DATA DULU (Aggregating)
+            // Struktur: MatchesFound[RoundID][PlayerAddress] = { eth: 0, usdt: 0, shib: 0, currenciesWon: [] }
             let matchesFound = {}; 
             
             let startIndex = totalWins - 1;
@@ -2008,75 +2007,87 @@ if(!u[1]) {
                     const amount = winData.winAmount;
                     const currIdx = Number(winData.currency); 
 
-                    // Inisialisasi Objek Gabungan
-                    if (!matchesFound[rId]) {
-                        matchesFound[rId] = { 
-                            player: player, 
-                            eth: 0n, 
-                            usdt: 0n, 
-                            shib: 0n 
+                    // Siapkan objek per ronde
+                    if (!matchesFound[rId]) matchesFound[rId] = {};
+                    
+                    // Siapkan objek per player di ronde itu
+                    if (!matchesFound[rId][player]) {
+                        matchesFound[rId][player] = { 
+                            eth: 0n, usdt: 0n, shib: 0n, 
+                            winCount: 0 // Hitung berapa kali dia menang (untuk diulang)
                         };
                     }
 
-                    // Tambahkan saldo ke masing-masing dompet virtual
-                    if (currIdx === 0) matchesFound[rId].eth += amount;
-                    else if (currIdx === 1) matchesFound[rId].usdt += amount;
-                    else matchesFound[rId].shib += amount;
+                    // Tambah saldo
+                    if (currIdx === 0) matchesFound[rId][player].eth += amount;
+                    else if (currIdx === 1) matchesFound[rId][player].usdt += amount;
+                    else matchesFound[rId][player].shib += amount;
+
+                    // Tambah counter kemenangan
+                    matchesFound[rId][player].winCount++;
                 }
             }
 
-            // 3. Update UI (Tampilkan Gabungan)
+            // 2. RENDER UI (Looping Multi-Baris)
             for (let r = maxRound; r >= minRound; r--) {
-                const data = matchesFound[r];
+                const roundWinners = matchesFound[r]; // Objek berisi { PlayerA: Data, PlayerB: Data }
                 const div = document.getElementById(`winner-info-${r}`);
                 
-                if (div && data) {
-                    // Bangun string pembayaran (Gabungan)
-                    let payStr = "";
-                    
-                    if (data.eth > 0n) {
-                        payStr += `<div style="color:var(--eth-color);">+${parseFloat(ethers.formatEther(data.eth)).toFixed(4)} ETH</div>`;
-                    }
-                    if (data.usdt > 0n) {
-                        // USDT pakai 6 desimal
-                        payStr += `<div style="color:var(--usdt-color);">+${parseFloat(ethers.formatUnits(data.usdt, 6)).toFixed(2)} USDT</div>`;
-                    }
-                    if (data.shib > 0n) {
-                        payStr += `<div style="color:var(--shib-color);">+${parseFloat(ethers.formatUnits(data.shib, 18)).toLocaleString()} SHIB</div>`;
-                    }
+                if (div && roundWinners) {
+                    div.innerHTML = ""; // Bersihkan
 
-                    // Tampilkan HTML
-                    div.innerHTML = `
-                        <div class="winner-info-box" style="display:block; border-top:1px solid rgba(255,255,255,0.1); margin-top:8px; padding-top:5px;">
-                            <div style="display:flex; justify-content:space-between; align-items:start;">
-                                <div style="text-align:left;">
-                                    <div style="font-size:0.65em; color:#888;">WINNER</div>
-                                    <div style="color:var(--gold); font-weight:bold; font-size:0.85em; display:flex; align-items:center;" id="nick-${r}">
-                                        <img src="cup.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;">
-                                        Loading...
+                    // Loop setiap player yang menang di ronde ini
+                    for (const [playerAddr, data] of Object.entries(roundWinners)) {
+                        
+                        // --- BUAT STRING TOTAL HADIAH (LENGKAP 3 KOIN) ---
+                        let payStr = "";
+                        if (data.eth > 0n) payStr += `<div style="color:var(--eth-color);">+${parseFloat(ethers.formatEther(data.eth)).toFixed(4)} ETH</div>`;
+                        if (data.usdt > 0n) payStr += `<div style="color:var(--usdt-color);">+${parseFloat(ethers.formatUnits(data.usdt, 6)).toFixed(2)} USDT</div>`;
+                        if (data.shib > 0n) payStr += `<div style="color:var(--shib-color);">+${parseFloat(ethers.formatUnits(data.shib, 18)).toLocaleString()} SHIB</div>`;
+
+                        // --- LOOPING TAMPILAN (REPEATER) ---
+                        // Jika dia menang 3 jenis koin, kita tampilkan barisnya 3 kali
+                        // Tapi isinya tetap "Total Lengkap"
+                        
+                        for(let k=0; k < data.winCount; k++) {
+                             const nickId = `nick-${r}-${playerAddr}-${k}`; // ID Unik
+
+                             const rowHtml = `
+                                <div class="winner-info-box" style="display:block; border-top:1px solid rgba(255,255,255,0.1); margin-top:5px; padding-top:5px;">
+                                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                                        <div style="text-align:left;">
+                                            <div style="font-size:0.65em; color:#888;">WINNER</div>
+                                            <div style="color:var(--gold); font-weight:bold; font-size:0.85em; display:flex; align-items:center;" id="${nickId}">
+                                                <img src="trophy.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;">
+                                                Loading...
+                                            </div>
+                                        </div>
+                                        <div style="text-align:right; font-size:0.75em; font-weight:bold;">
+                                            ${payStr} </div>
                                     </div>
                                 </div>
-                                <div style="text-align:right; font-size:0.75em; font-weight:bold;">
-                                    ${payStr}
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                            `;
+                            div.insertAdjacentHTML('beforeend', rowHtml);
 
-                    // Fetch Nickname
-                    gameContract.users(data.player).then(u => {
-                        const el = document.getElementById(`nick-${r}`);
-                        if(el) {
-                            const name = u[0] ? u[0] : (data.player.substring(0,6) + "...");
-                            el.innerHTML = `<img src="cup.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;"> ${name}`;
+                            // Fetch Nickname
+                            gameContract.users(playerAddr).then(u => {
+                                const el = document.getElementById(nickId);
+                                if(el) {
+                                    const name = u[0] ? u[0] : (playerAddr.substring(0,6) + "...");
+                                    el.innerHTML = `<img src="trophy.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;"> ${name}`;
+                                }
+                            }).catch(()=>{});
                         }
-                    }).catch(()=>{});
+                    }
 
                 } else if (div) {
                      div.innerHTML = '<span style="font-size:0.7em; color:#555;">No Winners</span>';
                 }
             }
-        } catch (e) { console.error("Fetch V2 Error:", e); }
+
+        } catch (e) { 
+            console.error("Fetch Winners Error:", e); 
+        }
     }
     
     async function loadMoreHistory() { const btn=document.getElementById('btnLoadMore'); btn.innerText="Loading..."; btn.disabled=true; await fetchBatchHistory(15); btn.innerText="Load More"; btn.disabled=false; }
