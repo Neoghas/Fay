@@ -1984,51 +1984,114 @@ if(!u[1]) {
 
     async function fetchWinnersFromContract(maxRound, minRound) {
         try {
-            let currentBatchData = {};
+            // 1. Ambil Total Data Kemenangan (Pakai Fungsi Cepat V2)
+            const totalWinsBig = await gameContract.getGlobalWinCount();
+            const totalWins = Number(totalWinsBig);
+
+            if (totalWins === 0) return;
+
+            // 2. Loop & GABUNGKAN DATA (Logic Baru)
+            // Kita gunakan objek untuk menyimpan akumulasi per player per ronde
+            // Struktur: aggregatedData[RoundID][PlayerAddress] = { eth: 0, usdt: 0, shib: 0 }
+            let aggregatedData = {}; 
             
-            if (globalHistoryLength === -1) {
-                let low = 0, high = 1;
-                try { await gameContract.globalWinHistory(0); } catch { globalHistoryLength = 0; return; }
-                while(true) { try { await gameContract.globalWinHistory(high); low = high; high *= 2; } catch(e) { break; } }
-                let foundLen = low;
-                while (low <= high) {
-                    let mid = Math.floor((low + high) / 2);
-                    try { await gameContract.globalWinHistory(mid); foundLen = mid + 1; low = mid + 1; } catch (e) { high = mid - 1; }
-                }
-                globalHistoryLength = foundLen;
-            }
-            if (globalHistoryLength === 0) return;
+            let startIndex = totalWins - 1;
+            let limitScan = Math.max(0, totalWins - 100); 
 
-            let endScan = globalHistoryLength - 1, startScan = Math.max(0, endScan - 100); 
-            const promises = [];
-            for(let i = endScan; i >= startScan; i--) promises.push(gameContract.globalWinHistory(i));
-            const winnersData = await Promise.all(promises);
+            for (let i = startIndex; i >= limitScan; i--) {
+                const winData = await gameContract.globalWinHistory(i);
+                const rId = Number(winData.roundId);
+                
+                if (rId < minRound) break; 
 
-            for(let d of winnersData) {
-                const rId = Number(d[3]);
                 if (rId <= maxRound && rId >= minRound) {
-                    if (!currentBatchData[rId]) currentBatchData[rId] = { eth:0n, usdt:0n, shib:0n, topAddr:d[0], topAmt:d[1] };
-                    if(Number(d[2])===0) currentBatchData[rId].eth+=d[1]; else if(Number(d[2])===1) currentBatchData[rId].usdt+=d[1]; else currentBatchData[rId].shib+=d[1];
-                    if(d[1] > currentBatchData[rId].topAmt) { currentBatchData[rId].topAmt=d[1]; currentBatchData[rId].topAddr=d[0]; }
+                    const player = winData.player;
+                    const amount = winData.winAmount;
+                    const currIdx = Number(winData.currency); 
+
+                    // Siapkan objek Ronde
+                    if (!aggregatedData[rId]) aggregatedData[rId] = {};
+                    
+                    // Siapkan objek Player
+                    if (!aggregatedData[rId][player]) {
+                        aggregatedData[rId][player] = { 
+                            eth: 0n, usdt: 0n, shib: 0n,
+                            topAddr: player // Simpan alamat buat ditampilkan nanti
+                        };
+                    }
+
+                    // AKUMULASI (TAMBAHKAN, JANGAN DITIMPA)
+                    if (currIdx === 0) aggregatedData[rId][player].eth += amount;
+                    else if (currIdx === 1) aggregatedData[rId][player].usdt += amount;
+                    else aggregatedData[rId][player].shib += amount;
                 }
             }
 
+            // 3. Render UI
             for (let r = maxRound; r >= minRound; r--) {
-                const div = document.getElementById(`winner-info-${r}`); if (!div) continue;
-                div.innerHTML = '';
+                const roundData = aggregatedData[r];
+                const div = document.getElementById(`winner-info-${r}`);
                 
-                const d = currentBatchData[r];
-                if (!d) { div.innerHTML = '<span style="font-size:0.7em; color:#666;">No Winners</span>'; continue; }
-                
-                let pay = ""; 
-                if(d.eth>0n) pay+=`<div style="color:#627EEA">+${parseFloat(ethers.formatEther(d.eth)).toFixed(4)} ETH</div>`;
-                if(d.usdt>0n) pay+=`<div style="color:#26A17B">+${parseFloat(ethers.formatUnits(d.usdt,6)).toFixed(2)} USDT</div>`;
-                if(d.shib>0n) pay+=`<div style="color:#FFA409">+${parseFloat(ethers.formatUnits(d.shib,18)).toLocaleString()} SHIB</div>`;
-                
-                div.innerHTML = `<div class="winner-info-box" style="display:block; border-top:1px solid #333; margin-top:5px; padding-top:5px;"><div style="display:flex; justify-content:space-between;"><div style="text-align:left;"><div style="font-size:0.65em; color:#888;">WINNER</div><div style="color:var(--gold); font-weight:bold; font-size:0.85em;" id="nick-${r}">🏆 ${d.topAddr.substring(0,4)}...</div></div><div style="text-align:right; font-size:0.75em; font-weight:bold;">${pay}</div></div></div>`;
-                gameContract.users(d.topAddr).then(u=>{ if(u[0]) document.getElementById(`nick-${r}`).innerText=`🏆 ${u[0]}`; }).catch(()=>{});
+                if (div && roundData) {
+                    div.innerHTML = ""; // Bersihkan
+
+                    // Loop setiap player yang menang di ronde ini
+                    // (Biasanya cuma 1 orang, tapi kode ini support jika ada banyak pemenang)
+                    for (const [playerAddr, d] of Object.entries(roundData)) {
+                        
+                        // Bangun string pembayaran (Gabungan)
+                        let payStr = "";
+                        
+                        // Cek ETH
+                        if (d.eth > 0n) {
+                            payStr += `<div style="color:var(--eth-color);">+${parseFloat(ethers.formatEther(d.eth)).toFixed(4)} ETH</div>`;
+                        }
+                        // Cek USDT (Pakai 6 desimal)
+                        if (d.usdt > 0n) {
+                            payStr += `<div style="color:var(--usdt-color);">+${parseFloat(ethers.formatUnits(d.usdt, 6)).toFixed(2)} USDT</div>`;
+                        }
+                        // Cek SHIB
+                        if (d.shib > 0n) {
+                            payStr += `<div style="color:var(--shib-color);">+${parseFloat(ethers.formatUnits(d.shib, 18)).toLocaleString()} SHIB</div>`;
+                        }
+
+                        // ID Unik buat Nickname
+                        const nickId = `nick-${r}-${playerAddr}`;
+
+                        // Tampilkan HTML
+                        const rowHtml = `
+                            <div class="winner-info-box" style="display:block; border-top:1px solid rgba(255,255,255,0.1); margin-top:8px; padding-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:start;">
+                                    <div style="text-align:left;">
+                                        <div style="font-size:0.65em; color:#888;">WINNER</div>
+                                        <div style="color:var(--gold); font-weight:bold; font-size:0.85em; display:flex; align-items:center;" id="${nickId}">
+                                            <img src="trophy.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;">
+                                            Loading...
+                                        </div>
+                                    </div>
+                                    <div style="text-align:right; font-size:0.75em; font-weight:bold;">
+                                        ${payStr}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        div.insertAdjacentHTML('beforeend', rowHtml);
+
+                        // Fetch Nickname
+                        gameContract.users(playerAddr).then(u => {
+                            const el = document.getElementById(nickId);
+                            if(el) {
+                                const name = u[0] ? u[0] : (playerAddr.substring(0,6) + "...");
+                                el.innerHTML = `<img src="trophy.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;"> ${name}`;
+                            }
+                        }).catch(()=>{});
+                    }
+
+                } else if (div) {
+                     div.innerHTML = '<span style="font-size:0.7em; color:#555;">No Winners</span>';
+                }
             }
-        } catch (e) { console.log("Fetch error", e); }
+        } catch (e) { console.error("Fetch V2 Error:", e); }
     }
     
     async function loadMoreHistory() { const btn=document.getElementById('btnLoadMore'); btn.innerText="Loading..."; btn.disabled=true; await fetchBatchHistory(15); btn.innerText="Load More"; btn.disabled=false; }
