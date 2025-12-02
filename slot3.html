@@ -291,37 +291,100 @@
     @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }  
     @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
 
-    /* --- WINNER GLAMOUR --- */
-    .winner-glamour { 
-        border-color: var(--gold) !important; 
-        background: radial-gradient(circle, rgba(255, 215, 0, 0.15) 0%, rgba(255, 165, 0, 0.05) 100%) !important; 
-        animation: glamourPulse 0.8s infinite alternate !important; 
-        z-index: 10; transform-origin: center; 
-        box-shadow: 0 0 30px rgba(255, 215, 0, 0.3) !important;
-    }  
-    .winner-glamour::before { 
-        /* 1. Hapus emoji piala, sisakan teksnya saja */
-        content: "WINNER"; 
-        
-        position: absolute; 
-        top: -15px; 
-        
-        /* 2. GABUNGKAN GAMBAR PNG + GRADIENT WARNA */
-        /* Format: url('gambar') posisi / ukuran, gradient-warna */
-        background: url('cup.png') no-repeat 8px center / 14px auto, 
-                    linear-gradient(45deg, #ffd700, #ffaa00);
-        
-        /* 3. Atur Padding Kiri lebih besar (untuk tempat gambar) */
-        padding: 4px 12px 4px 28px; 
-        
-        color: #000; 
-        font-weight: 800; 
-        font-size: 0.7em; 
-        border-radius: 20px; 
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); 
-        animation: bounce 0.8s infinite; 
-        border: 1px solid #fff;
+    /* --- WINNER GLAMOUR EXTREME --- */
+.winner-glamour { 
+    border-color: var(--gold) !important; 
+    position: relative;
+    
+    background: radial-gradient(circle, rgba(255,215,0,0.35) 0%, rgba(255,165,0,0.10) 70%) !important;
+
+    animation: glamourPulseExtreme 0.5s infinite alternate ease-in-out !important; 
+
+    box-shadow: 
+        0 0 25px rgba(255,215,0,0.6),
+        0 0 50px rgba(255,215,0,0.4),
+        0 0 80px rgba(255,215,0,0.2) !important;
+
+    transform-origin: center;
+    z-index: 20;
+}
+
+/* --- SPARKLE BERKELILING --- */
+.winner-glamour::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: inherit;
+
+    border: 2px dashed rgba(255,255,255,0.8);
+    filter: drop-shadow(0 0 8px gold);
+
+    animation: rotateSparkle 2s linear infinite;
+    pointer-events: none;
+}
+
+/* --- BADGE WINNER --- */
+.winner-glamour::before { 
+    content: "WINNER";
+
+    position: absolute; 
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    background: 
+        url("cup.png") no-repeat 8px center / 16px auto,
+        linear-gradient(45deg, #fff2a8, #ffca28, #ff9100);
+
+    padding: 5px 16px 5px 32px;
+    font-size: 0.9em;
+    font-weight: 900;
+    color: #000;
+
+    border-radius: 20px;
+    border: 2px solid #fff;
+
+    box-shadow: 
+        0 0 15px rgba(255,215,0,1),
+        0 0 30px rgba(255,185,0,0.9),
+        0 0 45px rgba(255,165,0,0.8);
+
+    animation: winnerBounceExtreme 0.7s infinite ease-in-out,
+               winnerGlow 1.2s infinite alternate ease-in-out;
+}
+
+/* --- ANIMASI --- */
+
+/* Border + scale pulsating gila */
+@keyframes glamourPulseExtreme {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 20px rgba(255,215,0,0.5);
     }
+    100% {
+        transform: scale(1.06);
+        box-shadow: 0 0 60px rgba(255,215,0,0.9);
+    }
+}
+
+/* Sparkle rotating */
+@keyframes rotateSparkle {
+    0% { rotate: 0deg; }
+    100% { rotate: 360deg; }
+}
+
+/* Lompatan ekstrem untuk badge WINNER */
+@keyframes winnerBounceExtreme {
+    0% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(-8px) scale(1.2); }
+    100% { transform: translateX(-50%) translateY(0); }
+}
+
+/* Glow warna naik turun */
+@keyframes winnerGlow {
+    0% { filter: drop-shadow(0 0 5px gold); }
+    100% { filter: drop-shadow(0 0 20px orange); }
+}
     
     /* --- HISTORY CARDS --- */
     .history-section { margin-top: 30px; width: 100%; }  
