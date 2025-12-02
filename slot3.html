@@ -1984,101 +1984,104 @@ if(!u[1]) {
 
     async function fetchWinnersFromContract(maxRound, minRound) {
         try {
-            // 1. Ambil Total Data Kemenangan (INSTAN)
+            // 1. Ambil Total Data Kemenangan
             const totalWinsBig = await gameContract.getGlobalWinCount();
             const totalWins = Number(totalWinsBig);
 
             if (totalWins === 0) return;
 
-            // 2. Loop Mundur dari data terbaru
-            // Kita cari data yang Round ID-nya cocok dengan yang sedang tampil
+            // 2. Loop Mundur
+            // Kita ubah struktur penyimpanan: RoundID => [Array Pemenang]
             let matchesFound = {}; 
-            
-            // Optimization: Kita batasi scan max 50 data terakhir agar cepat
-            // (Asumsi pemenang ronde ini ada di tumpukan data terakhir)
             let startIndex = totalWins - 1;
             let limitScan = Math.max(0, totalWins - 100); 
 
             for (let i = startIndex; i >= limitScan; i--) {
-                // Ambil data per item (Cepat karena direct access)
                 const winData = await gameContract.globalWinHistory(i);
-                
                 const rId = Number(winData.roundId);
                 
-                // Jika Round ID terlalu tua (di bawah yg kita cari), stop scanning biar hemat
                 if (rId < minRound) break; 
 
-                // Jika Round ID masuk dalam range yg kita tampilkan
                 if (rId <= maxRound && rId >= minRound) {
                     const player = winData.player;
                     const amount = winData.winAmount;
                     const currIdx = Number(winData.currency); // 0=ETH, 1=USDT, 2=SHIB
-
-                    // Simpan data pemenang (Logic Top Winner / Akumulasi)
+                    
+                    // Inisialisasi array jika belum ada
                     if (!matchesFound[rId]) {
-                        matchesFound[rId] = { player: player, amount: amount, curr: currIdx };
-                    } else {
-                        // Jika ada multi-winner, bisa kita update logikanya disini
-                        // Saat ini kita ambil yang terbaru saja
-                        if (amount > matchesFound[rId].amount) {
-                            matchesFound[rId] = { player: player, amount: amount, curr: currIdx };
-                        }
+                        matchesFound[rId] = [];
                     }
+                    
+                    // SIMPAN SEMUA DATA (Push ke Array)
+                    matchesFound[rId].push({ player: player, amount: amount, curr: currIdx });
                 }
             }
 
-            // 3. Update UI (Hanya untuk ronde yang punya pemenang)
+            // 3. Update UI (Render Semua Pemenang)
             for (let r = maxRound; r >= minRound; r--) {
-                const data = matchesFound[r];
+                const winnersList = matchesFound[r];
                 const div = document.getElementById(`winner-info-${r}`);
                 
-                if (div && data) {
-                    // Format Nilai Menang
-                    let payStr = "";
-                    if (data.curr === 0) { // ETH
-                        payStr = `<span style="color:var(--eth-color);">+${parseFloat(ethers.formatEther(data.amount)).toFixed(4)} ETH</span>`;
-                    } else if (data.curr === 1) { // USDT
-                        payStr = `<span style="color:var(--usdt-color);">+${parseFloat(ethers.formatUnits(data.amount, 6)).toFixed(2)} USDT</span>`;
-                    } else { // SHIB
-                        payStr = `<span style="color:var(--shib-color);">+${parseFloat(ethers.formatUnits(data.amount, 18)).toLocaleString()} SHIB</span>`;
-                    }
+                if (div && winnersList && winnersList.length > 0) {
+                    // Kosongkan div dulu
+                    div.innerHTML = "";
 
-                    // Tampilkan HTML Pemenang
-                    div.innerHTML = `
-                        <div class="winner-info-box" style="display:block; border-top:1px solid rgba(255,255,255,0.1); margin-top:8px; padding-top:5px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div style="text-align:left;">
-                                    <div style="font-size:0.65em; color:#888;">WINNER</div>
-                                    <div style="color:var(--gold); font-weight:bold; font-size:0.85em; display:flex; align-items:center;" id="nick-${r}">
-                                        <img src="cup.png" style="width:14px; height:14px; margin-right:4px;">
-                                        Loading...
+                    // Loop setiap pemenang di ronde ini
+                    // Gunakan Promise.all untuk fetch nickname paralel agar cepat
+                    const htmlPromises = winnersList.map(async (data) => {
+                        
+                        // Format Nilai Menang
+                        let payStr = "";
+                        if (data.curr === 0) { 
+                            const val = parseFloat(ethers.formatEther(data.amount)).toFixed(4);
+                            payStr = `<span style="color:#627EEA;">+${val} ETH</span>`;
+                        } else if (data.curr === 1) { 
+                            const val = parseFloat(ethers.formatUnits(data.amount, 18)).toFixed(2);
+                            payStr = `<span style="color:#26A17B;">+${val} USDT</span>`;
+                        } else { 
+                            const val = parseFloat(ethers.formatUnits(data.amount, 18)).toLocaleString();
+                            payStr = `<span style="color:#FFA409;">+${val} SHIB</span>`;
+                        }
+
+                        // Ambil Nickname
+                        let displayName = "Loading...";
+                        try {
+                            const u = await gameContract.users(data.player);
+                            displayName = u[0] ? u[0] : (data.player.substring(0,6) + "...");
+                        } catch(e) { 
+                            displayName = data.player.substring(0,6) + "..."; 
+                        }
+
+                        // Return HTML Baris Pemenang
+                        return `
+                            <div class="winner-info-box" style="display:block; border-top:1px solid rgba(255,255,255,0.1); margin-top:8px; padding-top:5px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div style="text-align:left;">
+                                        <div style="font-size:0.65em; color:#888;">WINNER</div>
+                                        <div style="color:var(--gold); font-weight:bold; font-size:0.85em; display:flex; align-items:center;">
+                                            <img src="cup.png" style="width:14px; height:14px; margin-right:4px; object-fit:contain;">
+                                            ${displayName}
+                                        </div>
+                                    </div>
+                                    <div style="text-align:right; font-size:0.75em; font-weight:bold;">
+                                        ${payStr}
                                     </div>
                                 </div>
-                                <div style="text-align:right; font-size:0.75em; font-weight:bold;">
-                                    ${payStr}
-                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
+                    });
 
-                    // Fetch Nickname Pemenang
-                    gameContract.users(data.player).then(u => {
-                        const el = document.getElementById(`nick-${r}`);
-                        if(el && u[0]) {
-                            el.innerHTML = `<img src="cup.png" style="width:14px; height:14px; margin-right:4px;"> ${u[0]}`;
-                        } else if(el) {
-                            // Jika tidak ada nickname, tampilkan address pendek
-                            const short = data.player.substring(0,6) + "..." + data.player.substring(38);
-                            el.innerHTML = `<img src="cup.png" style="width:14px; height:14px; margin-right:4px;"> ${short}`;
-                        }
-                    }).catch(()=>{});
+                    // Tunggu semua nickname selesai di-load, lalu gabungkan HTML
+                    const finalHtmlArray = await Promise.all(htmlPromises);
+                    div.innerHTML = finalHtmlArray.join("");
+
                 } else if (div) {
                      div.innerHTML = '<span style="font-size:0.7em; color:#555;">No Winners</span>';
                 }
             }
 
         } catch (e) { 
-            console.error("Fetch Winners V2 Error:", e); 
+            console.error("Fetch Winners Error:", e); 
         }
     }
     
