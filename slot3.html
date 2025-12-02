@@ -2038,7 +2038,7 @@ if(!u[1]) {
                     if (data.curr === 0) { // ETH
                         payStr = `<span style="color:var(--eth-color);">+${parseFloat(ethers.formatEther(data.amount)).toFixed(4)} ETH</span>`;
                     } else if (data.curr === 1) { // USDT
-                        payStr = `<span style="color:var(--usdt-color);">+${parseFloat(ethers.formatUnits(data.amount, 18)).toFixed(2)} USDT</span>`;
+                        payStr = `<span style="color:var(--usdt-color);">+${parseFloat(ethers.formatUnits(data.amount, 6)).toFixed(2)} USDT</span>`;
                     } else { // SHIB
                         payStr = `<span style="color:var(--shib-color);">+${parseFloat(ethers.formatUnits(data.amount, 18)).toLocaleString()} SHIB</span>`;
                     }
@@ -2408,41 +2408,53 @@ if(!u[1]) {
 
                     }
 
-                    /* --- STATISTIK HERO (Earnings & Winners) --- */
-    .winning-box {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-        border: 1px solid var(--gold); /* Default warna Emas */
-        border-radius: 12px;
-        padding: 15px 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        position: relative;
-        overflow: hidden;
-        text-align: center;
-        transition: 0.3s;
-    }
-    
-    /* Efek Hover */
-    .winning-box:hover {
-        transform: translateY(-2px);
-        background: rgba(255, 255, 255, 0.05);
-    }
+                    const heroStats = document.getElementById('hero-stats-container');
 
-    /* Efek Kilatan Cahaya (Shine) */
-    .winning-box::after {
-        content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-        animation: shine 3s infinite;
-    }
-    @keyframes shine { 100% { left: 200%; } }
+                    if(heroStats) heroStats.style.display = 'block';
 
-    /* Angka Statistik */
-    .winning-value {
-        font-family: 'Courier New', monospace;
-        font-weight: 900;
-        color: var(--gold);
-        text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-        letter-spacing: -0.5px;
-    }
+                    
+
+                    try {
+
+                        // 1. AMBIL TOTAL EARNINGS SAYA (Pribadi)
+
+                        // Pastikan fungsi getUserTotalWinnings ada di ABI
+
+                        const totalWonRaw = await gameContract.getUserTotalWinnings(userAddress);
+
+                        
+
+                        // Format angka (4 desimal cukup)
+
+                        const totalWonFmt = parseFloat(ethers.formatEther(totalWonRaw)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4});
+
+                        
+
+                        document.getElementById('heroTotalWon').innerText = totalWonFmt;
+
+
+
+                        // 2. AMBIL TOTAL PEMENANG GLOBAL (Platform)
+
+                        // Pastikan fungsi getGlobalWinCount ada di ABI
+
+                        const globalCountRaw = await gameContract.getGlobalWinCount();
+
+                        document.getElementById('heroGlobalCount').innerText = globalCountRaw;
+
+                        
+
+                    } catch (e) {
+
+                        console.log("Gagal ambil stats hero:", e);
+
+                        // Jika gagal/error, set default 0
+
+                        document.getElementById('heroTotalWon').innerText = "0.00";
+
+                        document.getElementById('heroGlobalCount').innerText = "0";
+
+                    }
 
                 } catch(e){}
 
