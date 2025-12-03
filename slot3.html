@@ -2395,168 +2395,482 @@ if(!u[1]) {
                 
 
                 // Update Saldo
-
                 try {
+
+
+
+                    // Saldo Bonus (Free Bet)
+
+
 
                     const bonus = await gameContract.freeShibCredits(userAddress);
 
+
+
                     const btnFree = document.getElementById('btnFreeBet');
+
+
 
                     if (btnFree) {
 
+
+
                         const userBonusEl = document.getElementById('userBonusBalance');
+
+
 
                         if(userBonusEl) userBonusEl.innerText = Number(ethers.formatEther(bonus)).toLocaleString();
 
+
+
                         
+
+
 
                         btnFree.disabled = bonus < ethers.parseEther("10000");
 
+
+
                         btnFree.style.background = (bonus >= ethers.parseEther("10000")) ? "var(--success)" : "#333";
+
+
 
                     }
 
-                    const heroStats = document.getElementById('hero-stats-container');
 
-                    if(heroStats) heroStats.style.display = 'block';
 
                     
 
+
+
+                    // Update Hero Stats (Earnings & Global Wins)
+
+
+
+                    const heroStats = document.getElementById('hero-stats-container');
+
+
+
+                    if(heroStats) heroStats.style.display = 'block';
+
+
+
+                    
+
+
+
                     try {
 
-                        // 1. AMBIL TOTAL EARNINGS SAYA (Pribadi)
 
-                        // Pastikan fungsi getUserTotalWinnings ada di ABI
 
                         const totalWonRaw = await gameContract.getUserTotalWinnings(userAddress);
 
-                        
 
-                        // Format angka (4 desimal cukup)
 
                         const totalWonFmt = parseFloat(ethers.formatEther(totalWonRaw)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4});
 
-                        
+
 
                         document.getElementById('heroTotalWon').innerText = totalWonFmt;
 
 
 
-                        // 2. AMBIL TOTAL PEMENANG GLOBAL (Platform)
 
-                        // Pastikan fungsi getGlobalWinCount ada di ABI
+
+
 
                         const globalCountRaw = await gameContract.getGlobalWinCount();
 
+
+
                         document.getElementById('heroGlobalCount').innerText = globalCountRaw;
 
-                        
 
-                    } catch (e) {
 
-                        console.log("Gagal ambil stats hero:", e);
+                    } catch (e) { }
 
-                        // Jika gagal/error, set default 0
 
-                        document.getElementById('heroTotalWon').innerText = "0.00";
 
-                        document.getElementById('heroGlobalCount').innerText = "0";
 
-                    }
+
+
 
                 } catch(e){}
 
-            }
-            // 2. Fetch Data Ronde
-            const currR = Number(await gameContract.currentRoundId());
-            let bets = [];
-            let idx = 0;
-            while (true) {
-                try {
-                    const bet = await gameContract.roundBets(currR, idx);
-                    bets.push(bet);
-                    idx++;
-                } catch { break; }
+
+
             }
 
-            // 3. RESET VARIABEL BET (Perbaikan Versi 2)
+
+
+
+
+
+
+            // 2. FETCH DATA RONDE (BETTING)
+
+
+
+            const currR = Number(await gameContract.currentRoundId());
+
+
+
+            let bets = [];
+
+
+
+            let idx = 0;
+
+
+
+            while (true) {
+
+
+
+                try {
+
+
+
+                    const bet = await gameContract.roundBets(currR, idx);
+
+
+
+                    bets.push(bet);
+
+
+
+                    idx++;
+
+
+
+                } catch { break; }
+
+
+
+            }
+
+
+
+
+
+
+
+            // 3. RESET VARIABEL
+
+
+
             let counts = [0, 0, 0, 0, 0, 0]; 
+
+
+
             let pools = { eth: 0, usdt: 0, shib: 0 }; 
-            
+
+
+
             myBetCounts = [0, 0, 0, 0, 0, 0]; 
+
+
+
             let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
 
-            // 4. Loop Analisa Bet
+
+
+
+
+
+
+            // 4. LOOP ANALISA BET
+
+
+
             bets.forEach(b => {
-                let curr = Number(b[2]); 
+
+
+
+                let curr = Number(b[2]); // 0=ETH, 1=USDT, 2=SHIB
+
+
+
                 let animalIdx = Number(b[4]);
-                let decimal = curr === 1 ? 18 : 18;
+
+
+
+                
+
+
+
+                // --- PERBAIKAN PENTING: FORMAT DESIMAL USDT ---
+
+
+
+                let decimal = (curr === 1) ? 6 : 18; // Jika USDT (1) pakai 6, lainnya 18
+
+
+
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
+
+
+
+
+
+
                 // Global Pool
+
+
+
                 if (curr === 0) pools.eth += amt;
+
+
+
                 else if (curr === 1) pools.usdt += amt;
+
+
+
                 else pools.shib += amt;
 
+
+
+
+
+
+
                 // Total Count
+
+
+
                 counts[animalIdx]++;
 
+
+
+
+
+
+
                 // My Bet Count
+
+
+
                 if (isConnected && b[0].toLowerCase() === userAddress.toLowerCase()) {
+
+
+
                     myBetCounts[animalIdx]++;
+
+
+
                 }
 
+
+
+
+
+
+
                 // E/U/S Count
+
+
+
                 if (curr === 0) animalCurrCounts[animalIdx].eth++;
+
+
+
                 else if (curr === 1) animalCurrCounts[animalIdx].usdt++;
+
+
+
                 else animalCurrCounts[animalIdx].shib++;
+
+
+
             });
 
-            // 5. Update Tampilan
+
+
+
+
+
+
+            // 5. RENDER TAMPILAN
+
+
+
             roundPools = pools;
+
+
+
             updatePoolDisplay();
 
+
+
+
+
+
+
             for (let i = 0; i < 6; i++) {
+
+
+
                 document.getElementById(`count-${i}`).innerText = counts[i];
+
+
+
                 
+
+
+
                 let c = document.getElementById(`card-${i}`);
+
+
+
                 c.classList.remove('my-bet', 'open');
+
+
+
                 if (myBetCounts[i] > 0) c.classList.add('my-bet'); 
+
+
+
                 else c.classList.add('open');
 
+
+
+
+
+
+
                 // Update E/U/S
+
+
+
                 document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
+
+
+
                 document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
+
+
+
                 document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
+
+
+
             }
+
+
+
+
+
+
 
             // 6. Update Status Tombol Draw
+
+
+
             let active = counts.filter(c => c > 0).length;
+
+
+
             const btnDraw = document.getElementById('drawBtn');
+
+
+
             const drawStatus = document.getElementById('drawStatus');
 
+
+
+
+
+
+
             if (active >= 5) {
+
+
+
                 btnDraw.disabled = false;
+
+
+
                 btnDraw.classList.add('ready');
+
+
+
                 drawStatus.innerText = "READY TO DRAW!";
+
+
+
                 drawStatus.style.color = "var(--success)";
+
+
+
             } else {
+
+
+
                 btnDraw.disabled = true;
+
+
+
                 btnDraw.classList.remove('ready');
+
+
+
                 drawStatus.innerText = `Need ${5 - active} more Players active`;
+
+
+
                 drawStatus.style.color = "var(--danger)";
+
+
+
             }
 
-            // 7. Update History
+
+
+
+
+
+
+            // 7. Update History & Profile
+
+
+
             updateHistorySection(currR);
+
+
+
             
-            if (!document.getElementById('tabPersonal').classList.contains('hidden')) {
+
+
+
+            if (document.getElementById('tabPersonal') && !document.getElementById('tabPersonal').classList.contains('hidden')) {
+
+
+
                 updatePersonalHistory();
+
+
+
             }
+
+
+
+
+
+
 
         } catch (e) {
+
+
+
             console.error("Refresh Error:", e);
+
+
+
         }
+
+
+
     }
         
     function updateHistorySection(roundId) {
