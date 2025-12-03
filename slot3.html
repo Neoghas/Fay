@@ -1596,7 +1596,12 @@
     </div>
 </div>
 
-    <div style="margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
+<div id="playerProfileModal" class="modal-overlay">
+    <div class="modal-content" style="border-color: var(--accent); box-shadow: 0 0 40px rgba(208, 0, 255, 0.2);">
+        
+        <button class="close-modal" onclick="closeModal('playerProfileModal')">&times;</button>
+        
+        <div style="margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
             <div style="font-size:0.7em; color:var(--primary); letter-spacing:2px; margin-bottom:10px; font-weight:bold;">PLAYER CARD</div>
             
             <div class="profile-avatar" style="overflow:hidden; padding:0; border:2px solid #fff; width:70px; height:70px; margin:0 auto 10px auto; border-radius:50%; box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);">
@@ -1628,6 +1633,9 @@
                 Scanning...
             </div>
         </div>
+
+    </div>
+</div>
 
 <div id="toast">Notification</div>
 
@@ -3801,64 +3809,76 @@ if(!u[1]) {
         });
     }
 
+    // --- FUNGSI BUKA PROFIL PEMAIN (V2 SUPPORT) ---
     async function openPlayerProfile(targetAddress) {
-        // 1. UI Reset
+        // 1. UI Reset & Show Modal
         document.getElementById('playerProfileModal').style.display = 'flex';
         document.getElementById('pp-nickname').innerText = "Loading...";
+        // Tampilkan alamat singkat
         document.getElementById('pp-address').innerText = targetAddress.substring(0,10) + "..." + targetAddress.substring(38);
         document.getElementById('pp-wins').innerText = "...";
-        document.getElementById('pp-invited').innerText = "..."; // Ganti ID
+        document.getElementById('pp-invited').innerText = "..."; 
         document.getElementById('pp-upline-container').style.display = 'none';
 
         const historyDiv = document.getElementById('pp-history-list');
-        historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#aaa;">Scanning Data...</div>';
+        historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#aaa;">Fetching data...</div>';
         
-        // Avatar Robot
+        // Set Avatar (Robot Default dulu)
         document.getElementById('pp-avatar-img').src = getAvatar(targetAddress);
 
         try {
-            // 2. AMBIL DATA UTAMA (PARALEL & CEPAT)
-            // V2 punya: users (struct) dan getUserWinCount
+            // 2. AMBIL DATA UTAMA DARI KONTRAK (PARALEL AGAR CEPAT)
+            // Kita memanggil data Struct User dan Win Count sekaligus
             const [userData, winCount] = await Promise.all([
                 gameContract.users(targetAddress),
                 gameContract.getUserWinCount(targetAddress)
             ]);
 
-            // struct UserProfile V2:
-            // [0]: nickname
-            // [2]: referrer (Upline)
-            // [5]: totalReferrals (Data Baru)
-
+            // Struct V2: [0]Nick, [1]Reg, [2]Ref, [3]Bet, [4]Bonus, [5]TotalRef, [6]TotalWon, [7]AvatarUrl
+            
+            // Set Nickname
             document.getElementById('pp-nickname').innerText = userData[0] || "Unknown";
-            document.getElementById('pp-wins').innerText = winCount; // Instan
-            document.getElementById('pp-invited').innerText = userData[5]; // Instan (Total Referral)
+            
+            // Set Statistik Instan
+            document.getElementById('pp-wins').innerText = winCount; 
+            document.getElementById('pp-invited').innerText = userData[5]; 
 
-            // 3. Tampilkan Upline (Jika ada)
+            // Set Custom Avatar (Jika User punya)
+            // Asumsi index ke-7 adalah avatarUrl di kontrak V3. Jika masih V2, bagian ini akan undefined (aman)
+            const customAvatar = userData[7];
+            if (customAvatar && customAvatar.startsWith("http")) {
+                document.getElementById('pp-avatar-img').src = customAvatar;
+            }
+
+            // 3. TAMPILKAN UPLINE (Jika ada)
             const upline = userData[2];
+            // Cek apakah upline valid (bukan address 0)
             if (upline && upline !== "0x0000000000000000000000000000000000000000") {
                 document.getElementById('pp-upline-container').style.display = 'block';
-                // Cek nama upline
+                
+                // Ambil nama upline di background
                 gameContract.users(upline).then(u => {
-                     document.getElementById('pp-upline').innerText = u[0] || (upline.substring(0,6)+"...");
+                     const uplineName = u[0] ? u[0] : (upline.substring(0,6)+"...");
+                     document.getElementById('pp-upline').innerText = uplineName;
+                }).catch(() => {
+                     document.getElementById('pp-upline').innerText = "Unknown";
                 });
             }
 
-            // 4. RIWAYAT MENANG (Bukan Riwayat Bet)
-            // Mengapa? Karena scan event 'NewBet' itu BERAT & SERING GAGAL.
-            // Lebih baik tampilkan riwayat MENANG saja, karena datanya jarang dan lebih prestisius.
-            // Kita cari event WinDistributed khusus user ini.
-            
+            // 4. RIWAYAT KEMENANGAN TERAKHIR (Scanning Event)
             try {
                 const filterWin = gameContract.filters.WinDistributed(targetAddress);
-                // Scan 5000 blok terakhir saja cukup (Biar ringan)
+                
+                // Scan 50.000 blok terakhir saja agar ringan & cepat
                 const currentBlock = await provider.getBlockNumber();
                 const logs = await gameContract.queryFilter(filterWin, currentBlock - 50000, "latest");
 
                 historyDiv.innerHTML = '';
+                
                 if (logs.length === 0) {
                     historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">No recent wins.</div>';
                 } else {
-                    // Ambil 5 kemenangan terakhir
+                    // Ambil 5 kemenangan terakhir, balik urutan (terbaru di atas)
                     const recent = logs.reverse().slice(0, 5);
                     
                     for (let log of recent) {
@@ -3872,21 +3892,25 @@ if(!u[1]) {
                         else winStr = parseFloat(ethers.formatUnits(amount, 18)).toLocaleString() + " SHIB";
 
                         const row = document.createElement('div');
-                        row.style.cssText = "padding:8px; background:rgba(5,255,161,0.05); border-radius:6px; display:flex; justify-content:space-between; border-left:2px solid var(--success); margin-bottom:5px;";
+                        // Gunakan style inline atau class 'activity-row' jika CSS sudah ada
+                        row.style.cssText = "display:flex; justify-content:space-between; padding:8px 5px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.8em;";
+                        
                         row.innerHTML = `
                             <span style="color:var(--success); font-weight:bold;">WON ${winStr}</span>
-                            <span style="font-size:0.8em; color:#666;">Block #${log.blockNumber}</span>
+                            <span style="color:#666;">Block #${log.blockNumber}</span>
                         `;
                         historyDiv.appendChild(row);
                     }
                 }
             } catch (errScan) {
+                console.warn("History scan limit:", errScan);
                 historyDiv.innerHTML = '<div style="text-align:center; color:#666;">History hidden (RPC Limit).</div>';
             }
 
         } catch (e) {
-            console.error("Profile Error:", e);
+            console.error("Profile Load Error:", e);
             document.getElementById('pp-nickname').innerText = "Error";
+            historyDiv.innerHTML = '<div style="text-align:center; color:var(--danger);">Failed to load profile.</div>';
         }
     }
 
