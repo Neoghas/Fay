@@ -3242,27 +3242,67 @@ if(!u[1]) {
     }
 
     async function registerUser() {
-    // Ambil value dari input baru di panel
-    const nick = document.getElementById('panelRegNick').value;
-    
-    if (!nick || nick.length < 3) {
-        showToast("Nickname min 3 chars!");
-        return;
-    }
-
-    try {
-        showToast("Registering...");
-        // Panggil kontrak
-        const tx = await gameContract.register(nick, detectedReferrer || ""); 
-        await tx.wait();
+        // 1. Ambil & Validasi Input
+        const inputEl = document.getElementById('panelRegNick');
+        const nick = inputEl.value.trim();
         
-        showToast("Registration Success!");
-        finalizeLogin(); // Refresh data halaman
-    } catch (e) { 
-        console.error(e);
-        showToast("Reg Failed: " + (e.reason || e.message.slice(0,20))); 
+        if (!nick || nick.length < 3) {
+            showToast("Nickname min 3 chars!");
+            return;
+        }
+
+        // 2. Ubah Tombol jadi Loading (Agar user tahu sedang proses)
+        // Kita cari tombol di dalam div view-register
+        const btn = document.querySelector('#view-register button');
+        const originalText = btn.innerText;
+        
+        btn.disabled = true;
+        btn.innerText = "Processing...";
+
+        try {
+            showToast("Please confirm in Wallet...");
+            
+            // 3. Kirim Transaksi ke Blockchain
+            // Gunakan detectedReferrer jika ada, atau string kosong jika tidak
+            const tx = await gameContract.register(nick, detectedReferrer || ""); 
+            
+            showToast("Transaction sent. Waiting for confirmation...");
+            
+            // 4. TUNGGU SAMPAI TRANSAKSI SUKSES (PENTING!)
+            await tx.wait();
+            
+            // 5. Tampilkan Pesan Sukses (Sesuai Request)
+            showToast("Congratulations, your nickname has been successfully created.");
+            
+            // 6. Bersihkan Input
+            inputEl.value = "";
+            
+            // 7. UPDATE UI KE PROFIL (Jeda 2 detik agar RPC sync)
+            // Ini yang membuat halaman otomatis berubah
+            setTimeout(() => {
+                console.log("Registration complete. Refreshing data...");
+                refreshGameData(); 
+            }, 2000);
+
+        } catch (e) { 
+            console.error(e);
+            
+            // Cek error spesifik
+            if (e.reason && e.reason.includes("taken")) {
+                showToast("Nickname already taken. Try another one.");
+            } else {
+                showToast("Registration Failed: " + (e.reason || e.message.slice(0,25))); 
+            }
+            
+        } finally {
+            // Kembalikan tombol ke semula jika error atau selesai
+            if(btn) {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
     }
-    }
+    
 
     // --- LOGIC KOMENTAR SUPPORT NEW LINE ---
 
