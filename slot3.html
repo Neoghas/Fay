@@ -2448,47 +2448,27 @@ if(!u[1]) {
 
 
                     const heroStats = document.getElementById('hero-stats-container');
-
-
-
                     if(heroStats) heroStats.style.display = 'block';
-
-
-
                     
-
-
-
                     try {
-
-
-
-                        const totalWonRaw = await gameContract.getUserTotalWinnings(userAddress);
-
-
-
-                        const totalWonFmt = parseFloat(ethers.formatEther(totalWonRaw)).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 4});
-
-
-
-                        document.getElementById('heroTotalWon').innerText = totalWonFmt;
-
-
-
-
-
-
-
+                        // 1. TOTAL WINNERS (GLOBAL)
+                        // Panggil fungsi V2: getGlobalWinCount()
+                        // Ini langsung membaca panjang array, loadingnya 0 detik.
                         const globalCountRaw = await gameContract.getGlobalWinCount();
-
-
-
                         document.getElementById('heroGlobalCount').innerText = globalCountRaw;
 
-
-
-                    } catch (e) { }
-
+                        // 2. MY WINNINGS (PERSONAL)
+                        // Karena V2 belum punya 'getUserTotalWinnings' (Total Uang),
+                        // Kita pakai 'getUserWinCount' (Total Kali Menang) yang sudah ada di V2.
+                        const myWinCount = await gameContract.getUserWinCount(userAddress);
+                        document.getElementById('heroTotalWon').innerText = myWinCount;
+                        
+                    } catch (e) {
+                        console.log("Gagal ambil stats (Cek ABI/Kontrak):", e);
+                        // Jika error, tampilkan 0
+                        document.getElementById('heroTotalWon').innerText = "0";
+                        document.getElementById('heroGlobalCount').innerText = "0";
+                    }
 
 
 
