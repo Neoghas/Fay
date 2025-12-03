@@ -1398,12 +1398,34 @@
             </div>
         </div>
 
+        <div class="dash-balance-grid" style="margin-top:10px; width:100%; max-width:480px; margin:10px auto; gap:10px;">
+    
+    <div class="dash-item" style="text-align:center; border-color:var(--primary);">
+        <div style="font-size:0.65em; color:#888; text-transform:uppercase;">TOTAL ROUNDS</div>
+        <div id="statTotalRounds" style="font-size:1.1em; font-weight:bold; color:white;">#0</div>
+    </div>
+
+    <div class="dash-item" style="text-align:center; border-color:var(--accent);">
+        <div style="font-size:0.65em; color:#888; text-transform:uppercase;">LAST RESULT</div>
+        <div id="statLastResult" style="font-size:0.9em; font-weight:bold; color:var(--accent); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">-</div>
+    </div>
+
+</div>
+
+<div style="width:100%; max-width:480px; margin:0 auto 20px auto; background:rgba(0,0,0,0.3); border:1px solid #333; padding:8px; border-radius:8px; text-align:center;">
+    <div style="font-size:0.65em; color:#aaa; margin-bottom:5px;">🔥 CURRENT ROUND ACTIVITY</div>
+    <div style="display:flex; justify-content:space-around; align-items:center; font-size:0.8em; font-weight:bold;">
+        <span style="color:var(--success);">Total Tickets: <span id="statTotalTickets" style="color:white;">0</span></span>
+        <span style="color:var(--gold);">Round ID: <span id="statRoundId" style="color:white;">#...</span></span>
+    </div>
+</div>
+
         <button id="mainBetBtn" class="main-bet-btn" onclick="triggerBetModal()" 
 
         style="display: flex; align-items: center; justify-content: center; gap: 10px;"><img src="bet.png" style="width: 20px;">PLACE BET</button>
         
         <p style="margin-top:15px; color:#ff9f43; font-size:0.7em;">*Min 5 more Players required to Draw</p>
-
+        <br>
         <div id="hero-stats-container" style="display:none; width:100%; max-width:480px; margin:0 auto 20px auto;">
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
         
@@ -3757,82 +3779,72 @@ if(!u[1]) {
     }
 
     async function openPlayerProfile(targetAddress) {
-        // 1. Tampilkan Modal & Reset UI
+        // 1. UI Reset
         document.getElementById('playerProfileModal').style.display = 'flex';
         document.getElementById('pp-nickname').innerText = "Loading...";
         document.getElementById('pp-address').innerText = targetAddress.substring(0,10) + "..." + targetAddress.substring(38);
         document.getElementById('pp-wins').innerText = "...";
         document.getElementById('pp-bets').innerText = "...";
-        
         const historyDiv = document.getElementById('pp-history-list');
-        historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#aaa;">Scanning Blockchain...</div>';
-
-        // Update Avatar Robot
+        historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#aaa;">Fetching data...</div>';
+        
         document.getElementById('pp-avatar-img').src = getAvatar(targetAddress);
 
         try {
-            // 2. Ambil Nickname (Data Ringan)
-            const u = await gameContract.users(targetAddress);
-            document.getElementById('pp-nickname').innerText = u[0] || "Unknown";
+            // 2. AMBIL DATA UTAMA (INSTAN)
+            // Kita panggil Promise.all agar paralel & cepat
+            const [userData, winCount] = await Promise.all([
+                gameContract.users(targetAddress),
+                gameContract.getUserWinCount(targetAddress) // Fitur V2
+            ]);
 
-            // 3. SCAN HISTORY (Data Berat)
-            
-            // --- PERBAIKAN UTAMA DI SINI ---
-            // Jangan scan dari blok 0. Gunakan blok estimasi Base Sepolia (Nov 2024).
-            // Angka ini (17000000) adalah blok sekitar bulan lalu.
-            // Ini membuat loading JAUH lebih cepat dan anti-error.
-            const SAFE_BLOCK_START = 17000000; 
-            // -------------------------------
+            document.getElementById('pp-nickname').innerText = userData[0] || "Unknown";
+            document.getElementById('pp-wins').innerText = winCount; // Langsung dapat angka!
 
-            // A. Hitung Total Kemenangan
-            const filterWin = gameContract.filters.WinDistributed(targetAddress);
-            const winLogs = await gameContract.queryFilter(filterWin, SAFE_BLOCK_START, "latest");
-            document.getElementById('pp-wins').innerText = winLogs.length;
-
-            // B. Hitung Total Taruhan
-            const filterBet = gameContract.filters.NewBet(targetAddress);
-            const betLogs = await gameContract.queryFilter(filterBet, SAFE_BLOCK_START, "latest");
-            document.getElementById('pp-bets').innerText = betLogs.length;
-
-            // 4. Render Riwayat 5 Terakhir
-            historyDiv.innerHTML = '';
-            
-            if (betLogs.length === 0) {
-                historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">No recent history.</div>';
-                return;
-            }
-
-            // Ambil 5 data paling baru
-            const recent = betLogs.slice(-5).reverse();
-
-            for (let log of recent) {
-                // Decode data hewan (args[1] adalah animalChoice)
-                const animalIdx = Number(log.args[1]);
+            // 3. AMBIL TOTAL BET (SCAN RINGAN)
+            // Karena V2 belum ada getUserBetCount, kita terpaksa scan event TAPI hanya 50k blok terakhir
+            // untuk estimasi, atau scan full jika kuat.
+            // Untuk keamanan, kita coba scan full tapi dengan try-catch terpisah
+            try {
+                const filterBet = gameContract.filters.NewBet(targetAddress);
+                // Kita scan dari blok awal tapi jika gagal kita fallback
+                const betLogs = await gameContract.queryFilter(filterBet, 17000000, "latest");
                 
-                // Pastikan nama hewan ada (safety check)
-                const animalName = (IMAGE_NAMES[animalIdx]) ? IMAGE_NAMES[animalIdx].toUpperCase() : "UNKNOWN";
-                
-                const row = document.createElement('div');
-                row.className = 'pp-history-item'; 
-            
-                row.innerHTML = `
-                    <span style="color:#ddd;">
-                        Bet <b style="color:var(--primary); text-transform:uppercase;">${animalName}</b>
-                    </span>
-                    <span style="font-size:0.9em; color:#666; font-family:monospace;">
-                        Block #${log.blockNumber}
-                    </span>
-                `;
-                historyDiv.appendChild(row);
+                document.getElementById('pp-bets').innerText = betLogs.length;
+
+                // 4. RENDER HISTORY (Dari logs bet tadi)
+                historyDiv.innerHTML = '';
+                if (betLogs.length === 0) {
+                    historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">No recent history.</div>';
+                } else {
+                    const recent = betLogs.slice(-5).reverse(); // 5 Terakhir
+                    for (let log of recent) {
+                        const animalIdx = Number(log.args[1]);
+                        const animalName = IMAGE_NAMES[animalIdx] ? IMAGE_NAMES[animalIdx].toUpperCase() : "UNKNOWN";
+                        
+                        const row = document.createElement('div');
+                        row.className = 'pp-history-item'; 
+                        row.innerHTML = `
+                            <span style="color:#ddd;">
+                                Bet <b style="color:var(--primary); text-transform:uppercase;">${animalName}</b>
+                            </span>
+                            <span style="font-size:0.9em; color:#666; font-family:monospace;">
+                                Block #${log.blockNumber}
+                            </span>
+                        `;
+                        historyDiv.appendChild(row);
+                    }
+                }
+
+            } catch (errScan) {
+                console.warn("Scan Error:", errScan);
+                document.getElementById('pp-bets').innerText = "?";
+                historyDiv.innerHTML = '<div style="text-align:center; color:#666;">History not available (RPC Busy).</div>';
             }
 
         } catch (e) {
-            console.error("Profile Error:", e); // Cek Console F12 untuk detail error
-            historyDiv.innerHTML = '<div style="color:var(--danger); text-align:center; font-size:0.8em; padding:10px;">Connection Timeout.<br>Try refreshing.</div>';
-            
-            // Set angka jadi 0 jika gagal, jangan biarkan "..."
-            if(document.getElementById('pp-wins').innerText === "...") document.getElementById('pp-wins').innerText = "0";
-            if(document.getElementById('pp-bets').innerText === "...") document.getElementById('pp-bets').innerText = "0";
+            console.error("Profile Error:", e);
+            document.getElementById('pp-nickname').innerText = "Error";
         }
     }
 
