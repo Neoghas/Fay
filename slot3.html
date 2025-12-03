@@ -2529,33 +2529,95 @@ if(!u[1]) {
             
             // Ambil Hasil Ronde Terakhir
             if (currR > 1) {
+
                 try {
-                    // Kurangi 1 karena array index roundHistory mungkin mulai dari 1 atau 0 tergantung kontrak
-                    // Di kontrak Anda: currentRoundId mulai dari 1.
-                    // Jadi hasil ronde 1 tersimpan di mapping roundHistory[1].
-                    // Jika sekarang ronde 2, kita ambil roundHistory[1].
-                    const lastRoundId = currR - 1;
-                    const lastRes = await gameContract.getRoundResult(lastRoundId);
+
+                    // Coba ambil ronde sebelumnya (R-1)
+
+                    // Di Solidity mapping biasanya index mulai dari 1
+
+                    const lastRoundId = BigInt(currR) - 1n; 
+
                     
-                    // Cek apakah datanya valid (tidak kosong)
-                    if (lastRes && lastRes[0]) {
-                        const r1 = IMAGE_NAMES[Number(lastRes[0][0])].toUpperCase();
-                        const r2 = IMAGE_NAMES[Number(lastRes[0][1])].toUpperCase();
-                        const r3 = IMAGE_NAMES[Number(lastRes[0][2])].toUpperCase();
+
+                    console.log("Fetching Last Result for Round:", lastRoundId.toString());
+
+                    const lastRes = await gameContract.getRoundResult(lastRoundId);
+
+                    
+
+                    // Cek apakah data reels ada isinya (array length 3)
+
+                    if (lastRes && lastRes[0] && lastRes[0].length === 3) {
+
+                        // Decode nama hewan
+
+                        // Pastikan IMAGE_NAMES terdefinisi di atas (const IMAGE_NAMES = [...])
+
+                        const r1 = IMAGE_NAMES[Number(lastRes[0][0])];
+
+                        const r2 = IMAGE_NAMES[Number(lastRes[0][1])];
+
+                        const r3 = IMAGE_NAMES[Number(lastRes[0][2])];
+
                         
-                        document.getElementById('statLastResult').innerText = `${r1} / ${r2} / ${r3}`;
-                        document.getElementById('statLastResult').style.color = "var(--accent)";
+
+                        if (r1 && r2 && r3) {
+
+                             // Tampilkan (Uppercase)
+
+                             const resultText = `${r1.toUpperCase()} - ${r2.toUpperCase()} - ${r3.toUpperCase()}`;
+
+                             const resEl = document.getElementById('statLastResult');
+
+                             if(resEl) {
+
+                                 resEl.innerText = resultText;
+
+                                 resEl.style.color = "var(--accent)";
+
+                             }
+
+                        } else {
+
+                             throw new Error("Invalid animal index");
+
+                        }
+
                     } else {
-                        document.getElementById('statLastResult').innerText = "Waiting...";
+
+                        // Jika data kosong (belum ada draw)
+
+                         if(document.getElementById('statLastResult')) 
+
+                            document.getElementById('statLastResult').innerText = "Waiting...";
+
                     }
+
                 } catch(e) {
-                    console.log("Last result err:", e);
-                    document.getElementById('statLastResult').innerText = "N/A";
+
+                    console.error("Last result fetch error:", e);
+
+                    // Jika gagal, jangan tulis N/A, tapi coba tampilkan info
+
+                    if(document.getElementById('statLastResult')) 
+
+                        document.getElementById('statLastResult').innerText = "Syncing...";
+
                 }
+
             } else {
+
                 // Jika masih Ronde 1
-                document.getElementById('statLastResult').innerText = "New Game";
-                document.getElementById('statLastResult').style.color = "#aaa";
+
+                if(document.getElementById('statLastResult')) {
+
+                    document.getElementById('statLastResult').innerText = "New Game";
+
+                    document.getElementById('statLastResult').style.color = "#888";
+
+                }
+
             }
             
             // -----------------------------
