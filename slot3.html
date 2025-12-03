@@ -1669,7 +1669,7 @@
     
     const ERC20_ABI = [{"inputs":[{"internalType":"uint256","name":"_initialSupply","type":"uint256"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_spender","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_from","type":"address"},{"internalType":"address","name":"_to","type":"address"},{"internalType":"uint256","name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
         
-    const IMAGE_NAMES = ['tuna', 'crab', 'shark', 'octopus', 'shrimp', 'orcha'];
+    const IMAGE_NAMES = ['tuna', 'crab', 'shark', 'octopus', 'shrimp', 'orcha', 'zonk'];
     const IMAGE_LIST = ["tuna.svg", "crab.svg", "shark.svg", "octo.svg", "shrimp.svg", "orcha.svg", "zonk.svg"]; 
     const MIN_SPIN_TIME = 35000;
     const IMGBB_API_KEY = "8903b3e0ea80be404bd2e568cd15521f"; // API Key Anda
@@ -2528,44 +2528,41 @@ if(!u[1]) {
             document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1); 
             
             // Ambil Hasil Ronde Terakhir
-            // --- LOGIKA LAST RESULT (PERBAIKAN ANTI-STUCK) ---
+            // --- LOGIKA LAST RESULT (FIXED ZONK) ---
             const resEl = document.getElementById('statLastResult');
             
             if (currR > 1) {
                 try {
-                    // Ambil ID Ronde sebelumnya (Pastikan tipe datanya benar)
+                    // Ambil ID Ronde sebelumnya
                     const lastRoundId = currR - 1; 
 
                     // Panggil Kontrak
                     const lastRes = await gameContract.getRoundResult(lastRoundId);
                     
-                    // Validasi Data: Apakah array reels [0,1,2] ada isinya?
+                    // Validasi Data
                     if (lastRes && lastRes[0] && lastRes[0].length === 3) {
                         
-                        // Decode Nama Hewan (0-5) ke String
-                        const name1 = IMAGE_NAMES[Number(lastRes[0][0])];
-                        const name2 = IMAGE_NAMES[Number(lastRes[0][1])];
-                        const name3 = IMAGE_NAMES[Number(lastRes[0][2])];
+                        // Decode Nama Hewan (Sekarang Zonk index 6 sudah aman)
+                        const i1 = Number(lastRes[0][0]);
+                        const i2 = Number(lastRes[0][1]);
+                        const i3 = Number(lastRes[0][2]);
 
-                        // Pastikan nama hewan valid (tidak undefined)
-                        if (name1 && name2 && name3) {
-                             resEl.innerText = `${name1.toUpperCase()} - ${name2.toUpperCase()} - ${name3.toUpperCase()}`;
-                             resEl.style.color = "var(--accent)";
-                        } else {
-                             resEl.innerText = "Data Error";
-                        }
+                        const name1 = IMAGE_NAMES[i1] ? IMAGE_NAMES[i1].toUpperCase() : "UNKNOWN";
+                        const name2 = IMAGE_NAMES[i2] ? IMAGE_NAMES[i2].toUpperCase() : "UNKNOWN";
+                        const name3 = IMAGE_NAMES[i3] ? IMAGE_NAMES[i3].toUpperCase() : "UNKNOWN";
+
+                        resEl.innerText = `${name1} - ${name2} - ${name3}`;
+                        resEl.style.color = "var(--accent)";
+                        
                     } else {
-                        // Data kosong dari blockchain (belum dimining sempurna)
                         resEl.innerText = "Waiting...";
                     }
 
                 } catch(e) {
                     console.warn("Gagal load last result:", e);
-                    // Jangan stuck di syncing, tapi tampilkan "-" atau "N/A"
                     resEl.innerText = "-"; 
                 }
             } else {
-                // Ronde 1 (Belum ada hasil sebelumnya)
                 resEl.innerText = "New Game";
                 resEl.style.color = "#888";
             }
