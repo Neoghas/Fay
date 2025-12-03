@@ -1596,19 +1596,19 @@
     </div>
 </div>
 
-    <div id="playerProfileModal" class="modal-overlay">
-    <div class="modal-content" style="border-color: var(--accent); box-shadow: 0 0 40px rgba(208, 0, 255, 0.2);">
-        <button class="close-modal" onclick="closeModal('playerProfileModal')">&times;</button>
-        
-        <div style="margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
+    <div style="margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
             <div style="font-size:0.7em; color:var(--primary); letter-spacing:2px; margin-bottom:10px; font-weight:bold;">PLAYER CARD</div>
             
             <div class="profile-avatar" style="overflow:hidden; padding:0; border:2px solid #fff; width:70px; height:70px; margin:0 auto 10px auto; border-radius:50%; box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);">
                 <img id="pp-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; background:#1f222e;">
             </div>
             
-            <div id="pp-nickname">Loading...</div>
-            <div id="pp-address">0x...</div>
+            <div id="pp-nickname" style="font-size:1.4em; font-weight:800; color:white; text-shadow:0 0 10px var(--primary);">Loading...</div>
+            <div id="pp-address" style="font-size:0.7em; color:#888; font-family:monospace; background:rgba(0,0,0,0.4); padding:4px 8px; border-radius:10px; display:inline-block; margin-top:5px;">0x...</div>
+            
+            <div id="pp-upline-container" style="margin-top:8px; font-size:0.7em; color:#666; display:none;">
+                Invited by: <span id="pp-upline" style="color:var(--accent);">...</span>
+            </div>
         </div>
 
         <div class="dash-balance-grid" style="grid-template-columns: 1fr 1fr; gap:10px;">
@@ -1616,20 +1616,18 @@
                 <span class="dash-label" style="color:var(--gold);">TOTAL WINS</span>
                 <span class="dash-val" id="pp-wins" style="color:var(--gold); font-size:1.4em;">0</span>
             </div>
-            <div class="profile-stat-box">
-                <span class="dash-label">TOTAL BETS</span>
-                <span class="dash-val" id="pp-bets" style="font-size:1.4em;">0</span>
+            <div class="profile-stat-box" style="border-color:var(--success);">
+                <span class="dash-label" style="color:var(--success);">TOTAL INVITED</span>
+                <span class="dash-val" id="pp-invited" style="color:var(--success); font-size:1.4em;">0</span>
             </div>
         </div>
 
         <div class="withdraw-section" style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
-            <div class="withdraw-title">RECENT ACTIVITY (Last 5)</div>
-            <div id="pp-history-list" style="max-height:150px; overflow-y:auto; font-size:0.75em; text-align:left; color:#aaa; display:flex; flex-direction:column; gap:5px;">
-                Fetching data...
+            <div class="withdraw-title">RECENT WINS (Latest)</div>
+            <div id="pp-history-list" style="max-height:120px; overflow-y:auto; font-size:0.75em; text-align:left; color:#aaa; display:flex; flex-direction:column; gap:5px;">
+                Scanning...
             </div>
         </div>
-    </div>
-    </div>
 
 <div id="toast">Notification</div>
 
@@ -3809,62 +3807,81 @@ if(!u[1]) {
         document.getElementById('pp-nickname').innerText = "Loading...";
         document.getElementById('pp-address').innerText = targetAddress.substring(0,10) + "..." + targetAddress.substring(38);
         document.getElementById('pp-wins').innerText = "...";
-        document.getElementById('pp-bets').innerText = "...";
+        document.getElementById('pp-invited').innerText = "..."; // Ganti ID
+        document.getElementById('pp-upline-container').style.display = 'none';
+
         const historyDiv = document.getElementById('pp-history-list');
-        historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#aaa;">Fetching data...</div>';
+        historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#aaa;">Scanning Data...</div>';
         
+        // Avatar Robot
         document.getElementById('pp-avatar-img').src = getAvatar(targetAddress);
 
         try {
-            // 2. AMBIL DATA UTAMA (INSTAN)
-            // Kita panggil Promise.all agar paralel & cepat
+            // 2. AMBIL DATA UTAMA (PARALEL & CEPAT)
+            // V2 punya: users (struct) dan getUserWinCount
             const [userData, winCount] = await Promise.all([
                 gameContract.users(targetAddress),
-                gameContract.getUserWinCount(targetAddress) // Fitur V2
+                gameContract.getUserWinCount(targetAddress)
             ]);
 
+            // struct UserProfile V2:
+            // [0]: nickname
+            // [2]: referrer (Upline)
+            // [5]: totalReferrals (Data Baru)
+
             document.getElementById('pp-nickname').innerText = userData[0] || "Unknown";
-            document.getElementById('pp-wins').innerText = winCount; // Langsung dapat angka!
+            document.getElementById('pp-wins').innerText = winCount; // Instan
+            document.getElementById('pp-invited').innerText = userData[5]; // Instan (Total Referral)
 
-            // 3. AMBIL TOTAL BET (SCAN RINGAN)
-            // Karena V2 belum ada getUserBetCount, kita terpaksa scan event TAPI hanya 50k blok terakhir
-            // untuk estimasi, atau scan full jika kuat.
-            // Untuk keamanan, kita coba scan full tapi dengan try-catch terpisah
+            // 3. Tampilkan Upline (Jika ada)
+            const upline = userData[2];
+            if (upline && upline !== "0x0000000000000000000000000000000000000000") {
+                document.getElementById('pp-upline-container').style.display = 'block';
+                // Cek nama upline
+                gameContract.users(upline).then(u => {
+                     document.getElementById('pp-upline').innerText = u[0] || (upline.substring(0,6)+"...");
+                });
+            }
+
+            // 4. RIWAYAT MENANG (Bukan Riwayat Bet)
+            // Mengapa? Karena scan event 'NewBet' itu BERAT & SERING GAGAL.
+            // Lebih baik tampilkan riwayat MENANG saja, karena datanya jarang dan lebih prestisius.
+            // Kita cari event WinDistributed khusus user ini.
+            
             try {
-                const filterBet = gameContract.filters.NewBet(targetAddress);
-                // Kita scan dari blok awal tapi jika gagal kita fallback
-                const betLogs = await gameContract.queryFilter(filterBet, 17000000, "latest");
-                
-                document.getElementById('pp-bets').innerText = betLogs.length;
+                const filterWin = gameContract.filters.WinDistributed(targetAddress);
+                // Scan 5000 blok terakhir saja cukup (Biar ringan)
+                const currentBlock = await provider.getBlockNumber();
+                const logs = await gameContract.queryFilter(filterWin, currentBlock - 50000, "latest");
 
-                // 4. RENDER HISTORY (Dari logs bet tadi)
                 historyDiv.innerHTML = '';
-                if (betLogs.length === 0) {
-                    historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">No recent history.</div>';
+                if (logs.length === 0) {
+                    historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">No recent wins.</div>';
                 } else {
-                    const recent = betLogs.slice(-5).reverse(); // 5 Terakhir
+                    // Ambil 5 kemenangan terakhir
+                    const recent = logs.reverse().slice(0, 5);
+                    
                     for (let log of recent) {
-                        const animalIdx = Number(log.args[1]);
-                        const animalName = IMAGE_NAMES[animalIdx] ? IMAGE_NAMES[animalIdx].toUpperCase() : "UNKNOWN";
+                        // args[1] = amount, args[2] = currency (0=ETH, 1=USDT, 2=SHIB)
+                        const amount = log.args[1];
+                        const curr = Number(log.args[2]);
                         
+                        let winStr = "";
+                        if(curr === 0) winStr = parseFloat(ethers.formatEther(amount)).toFixed(4) + " ETH";
+                        else if(curr === 1) winStr = parseFloat(ethers.formatUnits(amount, 6)).toFixed(2) + " USDT";
+                        else winStr = parseFloat(ethers.formatUnits(amount, 18)).toLocaleString() + " SHIB";
+
                         const row = document.createElement('div');
-                        row.className = 'pp-history-item'; 
+                        row.style.cssText = "padding:8px; background:rgba(5,255,161,0.05); border-radius:6px; display:flex; justify-content:space-between; border-left:2px solid var(--success); margin-bottom:5px;";
                         row.innerHTML = `
-                            <span style="color:#ddd;">
-                                Bet <b style="color:var(--primary); text-transform:uppercase;">${animalName}</b>
-                            </span>
-                            <span style="font-size:0.9em; color:#666; font-family:monospace;">
-                                Block #${log.blockNumber}
-                            </span>
+                            <span style="color:var(--success); font-weight:bold;">WON ${winStr}</span>
+                            <span style="font-size:0.8em; color:#666;">Block #${log.blockNumber}</span>
                         `;
                         historyDiv.appendChild(row);
                     }
                 }
-
             } catch (errScan) {
-                console.warn("Scan Error:", errScan);
-                document.getElementById('pp-bets').innerText = "?";
-                historyDiv.innerHTML = '<div style="text-align:center; color:#666;">History not available (RPC Busy).</div>';
+                historyDiv.innerHTML = '<div style="text-align:center; color:#666;">History hidden (RPC Limit).</div>';
             }
 
         } catch (e) {
