@@ -1412,7 +1412,7 @@
 
 </div>
 
-<div style="width:100%; max-width:480px; margin:0 auto 20px auto; background:rgba(0,0,0,0.3); border:1px solid #333; padding:8px; border-radius:8px; text-align:center;">
+<div style="width:100%; max-width:480px; margin:0 auto 20px auto; background:#11121a; border:1px solid #333; padding:8px; border-radius:8px; text-align:center;">
     <div style="font-size:0.65em; color:#aaa; margin-bottom:5px;">🔥 CURRENT ROUND ACTIVITY</div>
     <div style="display:flex; justify-content:space-around; align-items:center; font-size:0.8em; font-weight:bold;">
         <span style="color:var(--success);">Total Tickets: <span id="statTotalTickets" style="color:white;">0</span></span>
@@ -2520,47 +2520,50 @@ if(!u[1]) {
 
 
 
-            // 2. FETCH DATA RONDE (BETTING)
-
-
-
+            // 2. FETCH DATA RONDE & ANALISIS STATISTIK (V2)
             const currR = Number(await gameContract.currentRoundId());
-
-
+            
+            // --- UPDATE STATISTIK BARU ---
+            document.getElementById('statRoundId').innerText = `#${currR}`;
+            document.getElementById('statTotalRounds').innerText = (currR - 1); // Total ronde yg sdh selesai
+            
+            // Ambil Hasil Ronde Terakhir (Jika ada)
+            if (currR > 1) {
+                try {
+                    const lastRoundId = currR - 1;
+                    const lastRes = await gameContract.getRoundResult(lastRoundId);
+                    
+                    // Decode Hewan (Reels)
+                    const r1 = IMAGE_NAMES[Number(lastRes[0][0])].toUpperCase();
+                    const r2 = IMAGE_NAMES[Number(lastRes[0][1])].toUpperCase();
+                    const r3 = IMAGE_NAMES[Number(lastRes[0][2])].toUpperCase();
+                    
+                    // Tampilkan Singkatan (Misal: TUNA - CRAB - SHARK)
+                    // Atau format pendek: TUNA/CRAB/SHARK
+                    document.getElementById('statLastResult').innerText = `${r1} / ${r2} / ${r3}`;
+                } catch(e) {
+                    console.log("Gagal load last result", e);
+                }
+            }
+            // -----------------------------
 
             let bets = [];
-
-
-
             let idx = 0;
-
-
+            
+            // Hitung Total Tiket Real-time
+            let totalTicketsLive = 0; 
 
             while (true) {
-
-
-
                 try {
-
-
-
                     const bet = await gameContract.roundBets(currR, idx);
-
-
-
                     bets.push(bet);
-
-
-
                     idx++;
-
-
-
+                    totalTicketsLive++; // Tambah counter tiket
                 } catch { break; }
-
-
-
             }
+            
+            // Update Tampilan Total Tiket
+            document.getElementById('statTotalTickets').innerText = totalTicketsLive;
 
 
 
