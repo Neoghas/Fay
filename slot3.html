@@ -2525,26 +2525,39 @@ if(!u[1]) {
             
             // --- UPDATE STATISTIK BARU ---
             document.getElementById('statRoundId').innerText = `#${currR}`;
-            document.getElementById('statTotalRounds').innerText = (currR - 1); // Total ronde yg sdh selesai
+            document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1); 
             
-            // Ambil Hasil Ronde Terakhir (Jika ada)
+            // Ambil Hasil Ronde Terakhir
             if (currR > 1) {
                 try {
+                    // Kurangi 1 karena array index roundHistory mungkin mulai dari 1 atau 0 tergantung kontrak
+                    // Di kontrak Anda: currentRoundId mulai dari 1.
+                    // Jadi hasil ronde 1 tersimpan di mapping roundHistory[1].
+                    // Jika sekarang ronde 2, kita ambil roundHistory[1].
                     const lastRoundId = currR - 1;
                     const lastRes = await gameContract.getRoundResult(lastRoundId);
                     
-                    // Decode Hewan (Reels)
-                    const r1 = IMAGE_NAMES[Number(lastRes[0][0])].toUpperCase();
-                    const r2 = IMAGE_NAMES[Number(lastRes[0][1])].toUpperCase();
-                    const r3 = IMAGE_NAMES[Number(lastRes[0][2])].toUpperCase();
-                    
-                    // Tampilkan Singkatan (Misal: TUNA - CRAB - SHARK)
-                    // Atau format pendek: TUNA/CRAB/SHARK
-                    document.getElementById('statLastResult').innerText = `${r1} / ${r2} / ${r3}`;
+                    // Cek apakah datanya valid (tidak kosong)
+                    if (lastRes && lastRes[0]) {
+                        const r1 = IMAGE_NAMES[Number(lastRes[0][0])].toUpperCase();
+                        const r2 = IMAGE_NAMES[Number(lastRes[0][1])].toUpperCase();
+                        const r3 = IMAGE_NAMES[Number(lastRes[0][2])].toUpperCase();
+                        
+                        document.getElementById('statLastResult').innerText = `${r1} / ${r2} / ${r3}`;
+                        document.getElementById('statLastResult').style.color = "var(--accent)";
+                    } else {
+                        document.getElementById('statLastResult').innerText = "Waiting...";
+                    }
                 } catch(e) {
-                    console.log("Gagal load last result", e);
+                    console.log("Last result err:", e);
+                    document.getElementById('statLastResult').innerText = "N/A";
                 }
+            } else {
+                // Jika masih Ronde 1
+                document.getElementById('statLastResult').innerText = "New Game";
+                document.getElementById('statLastResult').style.color = "#aaa";
             }
+            
             // -----------------------------
 
             let bets = [];
