@@ -1888,6 +1888,7 @@
     let editImageDeleteStatus = {};
     let countdownInterval = null;
     let safetyTimer = null; // Timer pengaman anti-macet
+    let toastTimeout;
     
     // --- TAMBAHKAN VARIABEL INI ---
     let myBetCounts = [0, 0, 0, 0, 0, 0];
@@ -3239,10 +3240,48 @@ if(!u[1]) {
     }
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function showToast(msg) {
-        const x = document.getElementById("toast"); x.innerText = msg; x.className = "show";
-        setTimeout(() => { x.className = x.className.replace("show", ""); }, 8000);
-    }
+
+    let toastTimeout;
+
+function showToast(msg, type = 'info') {
+    const x = document.getElementById("toast");
+    const icons = {
+        info:    'info-icon.svg',
+        success: 'load.svg,
+        success: 'loading.svg,
+        success: 'success.svg,
+        error:   'error.svg,
+        warning: 'warning.svg',
+        wolf:    'wolf.svg'
+    };
+
+    // URL Icon Close X Merah (Ganti dengan 'x.svg' lokal Anda jika sudah ada)
+    // Saya pakai link dummy merah agar Anda bisa langsung lihat hasilnya.
+    const closeIcon = 'x.svg'; 
+
+    if (!icons[type]) type = 'info';
+
+    // --- UPDATE HTML DISINI ---
+    // 1. Icon utama
+    // 2. Pesan (bungkus span style flex:1 agar rapi)
+    // 3. Tombol Close (x.svg) dengan onclick remove class
+    x.innerHTML = `
+        <img src="${icons[type]}" class="toast-icon" alt="${type}"> 
+        <span style="flex:1;">${msg}</span>
+        <img src="${closeIcon}" class="toast-close" onclick="this.parentElement.className = this.parentElement.className.replace('show', '')" alt="close">
+    `;
+
+    // Reset Class & Trigger Reflow
+    x.className = ''; 
+    void x.offsetWidth; 
+    x.className = `show ${type}`;
+
+    // Timer Logic
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => { 
+        x.className = x.className.replace("show", ""); 
+    }, 10000); 
+  }
 
     async function openWalletDashboard() {
         document.getElementById('walletInfoModal').style.display = 'flex';
