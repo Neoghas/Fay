@@ -285,12 +285,122 @@
     .btn-withdraw-small { background: rgba(5, 255, 161, 0.2); color: var(--success); border: 1px solid var(--success); padding: 4px 8px; border-radius: 4px; font-weight:bold; cursor:pointer; font-size:0.8em; float:right; transition: 0.2s; }  
     .btn-withdraw-small:hover { background: var(--success); color: #000; }
 
-    #toast { visibility: hidden; min-width: 250px; background: linear-gradient(90deg, #03a9f4, #f441a5);
-    color: #fff; text-align: center; border-radius: 8px; padding: 16px; position: fixed; z-index: 999; bottom: 30px; left: 50%; transform: translateX(-50%); border: 1px solid var(--primary); box-shadow: 0 0 20px rgba(0,0,0,0.5); }  
-    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 7.5s; }  
-    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }  
-    @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    /* Base Toast Style */
+#toast {
+    visibility: hidden;
+    min-width: 300px;
+    max-width: 80%;
+    /* ... style lama ... */
+    background-color: #333;
+    color: #fff;
+    border-radius: 12px;
+    /* UPDATE: Padding kanan ditambah agar teks tidak nabrak tombol X */
+    padding: 12px 40px 12px 20px; 
+    position: fixed;
+    z-index: 9999;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 2px solid transparent;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    font-family: sans-serif;
+    font-weight: 500;
+}
 
+/* Style Icon Utama (Kiri) */
+#toast img.toast-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+    object-fit: contain;
+}
+
+/* --- BARU: Tombol Close X Merah --- */
+#toast img.toast-close {
+    position: absolute;    /* Posisi bebas di dalam kotak */
+    top: 8px;              /* Jarak dari atas */
+    right: 8px;            /* Jarak dari kanan */
+    width: 16px;           /* Ukuran X */
+    height: 16px;
+    cursor: pointer;       /* Mouse jadi jari telunjuk */
+    opacity: 0.7;          /* Sedikit transparan */
+    transition: 0.2s;      /* Efek halus saat di-hover */
+}
+
+#toast img.toast-close:hover {
+    opacity: 1;            /* Jelas saat disorot */
+    transform: scale(1.1); /* Sedikit membesar */
+}
+
+/* Tampilkan Toast */
+#toast.show {
+    visibility: visible;
+    animation: slideDown 0.5s, fadeOut 0.5s 4.5s forwards; /* Muncul 0.5s, Diam 4s, Hilang 0.5s */
+}
+
+/* --- VARIAN WARNA & BORDER --- */
+
+/* 1. INFO (Biru) */
+#toast.info {
+    background: #e3f2fd;
+    color: #0d47a1;
+    border-color: #2196f3;
+}
+
+/* 2. SUCCESS (Hijau) */
+#toast.success {
+    background: #e8f5e9;
+    color: #1b5e20;
+    border-color: #4caf50;
+}
+
+/* 3. ERROR (Merah) */
+#toast.error {
+    background: #ffebee;
+    color: #b71c1c;
+    border-color: #f44336;
+}
+
+/* 4. WARNING (Kuning/Oranye) */
+#toast.warning {
+    background: #fff3e0;
+    color: #e65100;
+    border-color: #ff9800;
+}
+
+/* 5. WOLF (Custom - Tema Gelap/Ungu Misterius) */
+#toast.wolf {
+    background: #2c3e50; /* Dark Blue-Grey */
+    color: #ecf0f1;
+    border-color: #8e44ad; /* Ungu terang */
+    background: linear-gradient(90deg, #232526, #414345); /* Gradient sangar */
+}
+
+#toast.load {
+    background: #f5f5f5;      /* Abu-abu terang bersih */
+    color: #333;              /* Teks gelap */
+    border-color: #9e9e9e;    /* Border abu-abu */
+}
+
+#toast.loading {
+    background: #f5f5f5;      /* Abu-abu terang bersih */
+    color: #333;              /* Teks gelap */
+    border-color: #9e9e9e;    /* Border abu-abu */
+}
+
+/* --- ANIMASI DARI ATAS --- */
+@keyframes slideDown {
+    from {top: -50px; opacity: 0;}
+    to {top: 30px; opacity: 1;}
+}
+
+@keyframes fadeOut {
+    from {top: 30px; opacity: 1;}
+    to {top: -50px; opacity: 0;}
+}
+    
     /* --- WINNER GLAMOUR EXTREME --- */
 .winner-glamour { 
     border-color: var(--gold) !important; 
@@ -1718,7 +1828,7 @@
     </div>
 </div>
 
-<div id="toast">Notification</div>
+<div id="toast"></div>
 
 <footer>
     <div id="footer" class="social-icons">
@@ -1778,6 +1888,7 @@
     let editImageDeleteStatus = {};
     let countdownInterval = null;
     let safetyTimer = null; // Timer pengaman anti-macet
+    let toastTimeout;
     
     // --- TAMBAHKAN VARIABEL INI ---
     let myBetCounts = [0, 0, 0, 0, 0, 0];
@@ -1827,7 +1938,7 @@
 
     function handleWalletClick() { isConnected ? openWalletDashboard() : connectWallet(); }
     async function connectWallet() {
-        if (!window.ethereum) { showToast("Please Install MetaMask First"); return; }
+        if (!window.ethereum) { showToast("Please Install MetaMask First", 'wolf'); return; }
         try {
             provider = new ethers.BrowserProvider(window.ethereum);
             const accounts = await provider.send("eth_requestAccounts", []);
@@ -1846,7 +1957,7 @@
             const sig = await signer.signMessage(msg);
             localStorage.setItem(`auth_${userAddress}`, JSON.stringify({ sig, expiry: Date.now() + 86400000 * 30 }));
             finalizeLogin();
-        } catch { showToast("Login Cancelled"); }
+        } catch { showToast("Login Cancelled", 'error'); }
     }
     async function finalizeLogin() {
         isConnected = true;     
@@ -1856,45 +1967,45 @@
             <span>Wallet Info</span>
         `;
         btn.classList.add("connected");
-        showToast("Connected"); 
+        showToast("Connected", 'success'); 
         refreshGameData();
     }
 
     // --- SOCIAL LOGIC ---
     async function submitRating(rid, stars) {
-        if(!isConnected) { showToast("Connect Wallet First"); return; }
+        if(!isConnected) { showToast("Please Connect Wallet First", 'wolf'); return; }
         try {
             const u = await gameContract.users(userAddress);
             // Contoh untuk submitRating (terapkan logika sama ke submitLike & triggerBetModal)
 if(!u[1]) { 
-    showToast("Please Register in Referral Panel below!"); 
+    showToast("Please Register a Nickname First!", 'warning'); 
     // Scroll otomatis ke panel referral
     document.getElementById('referralPanel').scrollIntoView({behavior: "smooth"});
     return; 
 }
             const tx = await gameContract.submitRating(rid, stars, {gasLimit: 500000});
-            showToast("Rating..."); await tx.wait(); showToast("Rated!"); updateSocialStats(rid);
-        } catch(e){ showToast("Failed: " + (e.reason||"Error")); }
+            showToast("Rating...", 'load'); await tx.wait(); showToast("Rated!", 'success'); updateSocialStats(rid);
+        } catch(e){ showToast("Failed: " + (e.reason||"Error"), 'error'); }
     }
 
     async function submitLike(rid) {
-        if(!isConnected) { showToast("Connect First"); return; }
+        if(!isConnected) { showToast("Please Connect Wallet First", 'wolf'); return; }
         
         try {
             const u = await gameContract.users(userAddress);
             if(!u[1]) { 
-                showToast("Please Register in Referral Panel below!"); 
+                showToast("Please Register a Nickname First!", 'warning'); 
                 document.getElementById('referralPanel').scrollIntoView({behavior: "smooth"});
                 return; 
             }
 
             // Kirim Transaksi ke Blockchain
             const tx = await gameContract.setReaction(rid, 1); 
-            showToast("Liking..."); 
+            showToast("Liking...", 'load'); 
             
             // Tunggu Konfirmasi
             await tx.wait(); 
-            showToast("Liked!"); 
+            showToast("Liked!", 'success'); 
 
             // --- PERBAIKAN UTAMA DI SINI ---
             // Langsung update angka di layar (Optimistic Update)
@@ -1912,7 +2023,7 @@ if(!u[1]) {
 
         } catch(e){ 
             console.error(e);
-            showToast("Failed: " + (e.reason||"Error")); 
+            showToast("Failed: " + (e.reason||"Error"), 'error'); 
         }
      }
     
@@ -2909,7 +3020,7 @@ if(!u[1]) {
         if (currentSelectedAnimal.index === -1) return;
         const idx = currentSelectedAnimal.index;
         closeModal('paymentModal');
-        showToast(`Processing Place Bet ${currencyType}...`);
+        showToast(`Processing Place Bet ${currencyType}...`, 'load');
         try {
             let tx;
             if (currencyType === 'ETH') {
@@ -2928,20 +3039,20 @@ if(!u[1]) {
             } else if (currencyType === 'FREE') {
                 tx = await gameContract.betToken(idx, 2, true);
             }
-            showToast("Sending Transaction...");
+            showToast('Sending Transaction...', 'load');
             await tx.wait();
-            showToast("Bet Placed Successfully!");
+            showToast('Bet Placed Successfully!', 'success');
             refreshGameData();
-        } catch (err) { console.error(err); showToast("Failed: " + (err.reason || err.message.slice(0,20))); }
+        } catch (err) { console.error(err); showToast("Failed: " + (err.reason || err.message.slice(0,20)), 'error'); }
     }
 
     async function checkApprove(tokenContract, amountNeeded) {
         const allowance = await tokenContract.allowance(userAddress, CONTRACT_ADDRESS);
         if (allowance < amountNeeded) {
-            showToast("Approving Token...");
+            showToast('Approving Token...', 'load');
             const tx = await tokenContract.approve(CONTRACT_ADDRESS, ethers.MaxUint256);
             await tx.wait();
-            showToast("Approved!");
+            showToast('Approved!', 'success');
         }
     }
 
@@ -3022,7 +3133,7 @@ if(!u[1]) {
         if (!isSpinning) return; // Jika sudah berhenti duluan, abaikan
 
         console.warn("⚠️ Event Missed. Fetching result manually...");
-        showToast("Syncing result from blockchain...");
+        showToast('Syncing result from blockchain...', 'load');
 
         try {
             // 1. TARIK DATA PAKSA DARI KONTRAK
@@ -3042,7 +3153,7 @@ if(!u[1]) {
             // Ini membuat gambar berhenti di hewan yang benar (bukan reset)
             stopSpinAnimation(r1, r2, r3); 
             
-            showToast(`Result: ${outcomeStr}`);
+            showToast('Result: ${outcomeStr}', 'success');
 
             // 3. NYALAKAN EFEK GLOWING (WINNER)
             // Ini menjawab request Anda: Efek tetap jalan!
@@ -3068,7 +3179,7 @@ if(!u[1]) {
             console.error("Manual Fetch Failed:", e);
             // Jika internet mati total dan gagal tarik data, baru kita reset paksa (opsi terakhir)
             forceStopAnimation(); 
-            showToast("Connection Error. Please Refresh.");
+            showToast('Connection Error. Please Refresh.', 'error');
         }
 
         // 5. BERSIHKAN TIMER & STATE
@@ -3090,7 +3201,7 @@ if(!u[1]) {
 
     async function executeDraw() {
         try {
-            showToast("Initiating Draw...");
+            showToast('Initiating Draw...', 'load');
             
             // 1. Kirim Transaksi
             const tx = await gameContract.executeDraw();
@@ -3100,7 +3211,7 @@ if(!u[1]) {
             startSpinAnimation();
             startCountdown(35000); 
             
-            showToast("Broadcasting... (Wait 35s)");
+            showToast('Broadcasting... (Wait 35s)', 'load');
 
             if (safetyTimer) clearTimeout(safetyTimer);
             
@@ -3123,21 +3234,21 @@ if(!u[1]) {
             if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
             document.getElementById('drawTimer').style.display = 'none';
             
-            showToast("Draw Failed: " + (err.reason || err.message)); 
+            showToast("Draw Failed: " + (err.reason || err.message), 'error'); 
         }
     }
 
     async function withdraw(curr) {
         try {
-            showToast(`Withdrawing ${curr}...`);
+            showToast('Withdrawing ${curr}...', 'load');
             let cIdx = curr === 'ETH' ? 0 : (curr === 'USDT' ? 1 : 2);
             const bal = await gameContract.userCredits(userAddress, cIdx);
-            if (bal == 0n) { showToast("No balance to withdraw"); return; }
+            if (bal == 0n) { showToast('No balance to withdraw', 'error'); return; }
             const tx = await gameContract.withdrawCredit(cIdx, bal);
             await tx.wait();
-            showToast("Withdraw Success!");
+            showToast('Withdraw Success!', 'success');
             openWalletDashboard();
-        } catch (err) { showToast("Withdraw Failed: " + (err.reason || err.message)); }
+        } catch (err) { showToast("Withdraw Failed: " + (err.reason || err.message), 'error'); }
     }
 
     async function triggerBetModal() {
@@ -3147,13 +3258,13 @@ if(!u[1]) {
         try {
             const u = await gameContract.users(userAddress);
             if(!u[1]) { 
-                showToast("Please Register in Referral Panel below!"); 
+                showToast('Please Register in Referral Panel below!', 'warning'); 
                 document.getElementById('referralPanel').scrollIntoView({behavior: "smooth"});
                 return; 
             }
         } catch(e) { console.log(e); }
 
-        if (currentSelectedAnimal.index === -1) { showToast("Select Animal First"); return; }
+        if (currentSelectedAnimal.index === -1) { showToast('Select Animal First', 'warning'); return; }
         
         // --- BAGIAN LIMIT MAX 2 SUDAH DIHAPUS ---
         // Sekarang user bisa bet sebanyak apapun
@@ -3163,11 +3274,50 @@ if(!u[1]) {
     }
 
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function showToast(msg) {
-        const x = document.getElementById("toast"); x.innerText = msg; x.className = "show";
-        setTimeout(() => { x.className = x.className.replace("show", ""); }, 8000);
-    }
 
+    function showToast(msg, type = 'info') {
+    const x = document.getElementById("toast");
+
+    // Icon Varian (Kiri)
+    const icons = {
+        info:    'info.svg',
+        load:    'load.svg',
+        wolf:    'loading.svg',  
+        success: 'success.svg',
+        error:   'error.svg',
+        warning: 'warning.svg',
+        wolf:    'wolf.svg'
+    };
+
+    // URL Icon Close X Merah (Ganti dengan 'x.svg' lokal Anda jika sudah ada)
+    // Saya pakai link dummy merah agar Anda bisa langsung lihat hasilnya.
+    const closeIcon = 'x.svg'; 
+
+    if (!icons[type]) type = 'info';
+        
+    // --- UPDATE HTML DISINI ---
+    // 1. Icon utama
+    // 2. Pesan (bungkus span style flex:1 agar rapi)
+    // 3. Tombol Close (x.svg) dengan onclick remove class
+
+    x.innerHTML = `
+        <img src="${icons[type]}" class="toast-icon" alt="${type}"> 
+        <span style="flex:1;">${msg}</span>
+        <img src="${closeIcon}" class="toast-close" onclick="this.parentElement.className = this.parentElement.className.replace('show', '')" alt="close">
+    `;
+
+    // Reset Class & Trigger Reflow
+    x.className = ''; 
+    void x.offsetWidth; 
+    x.className = `show ${type}`;
+
+    // Timer Logic
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => { 
+        x.className = x.className.replace("show", ""); 
+    }, 10000); 
+    }
+    
     async function openWalletDashboard() {
         document.getElementById('walletInfoModal').style.display = 'flex';
         document.getElementById('dashAddress').innerText = userAddress;
@@ -3196,7 +3346,7 @@ if(!u[1]) {
         try {
             const tx = await gameContract.register(nick, detectedReferrer || ""); await tx.wait();
             closeModal('registerModal'); finalizeLogin();
-        } catch (e) { showToast("Reg Failed: " + (e.reason || e.message)); }
+        } catch (e) { showToast("Reg Failed: " + (e.reason || e.message), 'error');; }
     }
     async function claimReferralBonus() {
         try { const tx = await gameContract.claimReferralBonus(); await tx.wait(); showToast("Bonus Claimed!"); refreshGameData(); } catch (e) { showToast("Claim Failed"); }
@@ -3208,7 +3358,7 @@ if(!u[1]) {
         const nick = inputEl.value.trim();
         
         if (!nick || nick.length < 3) {
-            showToast("Nickname min 3 chars!");
+            showToast('Nickname min 3 chars!', 'warning');
             return;
         }
 
@@ -3221,19 +3371,19 @@ if(!u[1]) {
         btn.innerText = "Processing...";
 
         try {
-            showToast("Please confirm in Wallet...");
+            showToast('Please confirm in Wallet...', 'load');
             
             // 3. Kirim Transaksi ke Blockchain
             // Gunakan detectedReferrer jika ada, atau string kosong jika tidak
             const tx = await gameContract.register(nick, detectedReferrer || ""); 
             
-            showToast("Transaction sent. Waiting for confirmation...");
+            showToast('Transaction sent. Waiting for confirmation...', 'load');
             
             // 4. TUNGGU SAMPAI TRANSAKSI SUKSES (PENTING!)
             await tx.wait();
             
             // 5. Tampilkan Pesan Sukses (Sesuai Request)
-            showToast("Congratulations, your nickname has been successfully created.");
+            showToast('Congratulations, your nickname has been successfully created.', 'success');
             
             // 6. Bersihkan Input
             inputEl.value = "";
@@ -3250,9 +3400,9 @@ if(!u[1]) {
             
             // Cek error spesifik
             if (e.reason && e.reason.includes("taken")) {
-                showToast("Nickname already taken. Try another one.");
+                showToast('Nickname already taken. Try another one.', 'warning');
             } else {
-                showToast("Registration Failed: " + (e.reason || e.message.slice(0,25))); 
+                showToast("Registration Failed: " + (e.reason || e.message.slice(0,25)), 'error'); 
             }
             
         } finally {
@@ -3410,7 +3560,7 @@ if(!u[1]) {
         const rawText = input.value.trim();
         const file = selectedFiles[roundId];
 
-        if (!isConnected) { showToast("Connect wallet first!"); return; }
+        if (!isConnected) { showToast('Connect wallet first!', 'wolf'); return; }
         if (!rawText && !file) return;
 
         const btn = document.querySelector(`#comments-section-${roundId} .btn-post-comment`);
@@ -3421,7 +3571,7 @@ if(!u[1]) {
 
             // Jika ada gambar
             if (file) {
-                showToast("Compressing & Uploading...");
+                showToast('Uploading Picture...', 'load');
                 
                 // 1. KOMPRESI GAMBAR DULU
                 // File asli (misal 4MB) -> Jadi Blob kecil (misal 150KB)
@@ -3433,24 +3583,24 @@ if(!u[1]) {
                 if (imgUrl) {
                     finalContent = rawText + IMG_SEPARATOR + imgUrl;
                 } else {
-                    showToast("Image upload failed");
+                    showToast('Image upload failed', 'error');
                     btn.disabled = false;
                     return;
                 }
             }
 
-            showToast("Posting to blockchain...");
+            showToast('Posting to blockchain...', 'load');
             const tx = await gameContract.addComment(roundId, finalContent);
             await tx.wait();
 
-            showToast("Success!");
+            showToast('Success!', 'success');
             input.value = "";
             clearImage(roundId);
             loadComments(roundId);
 
         } catch (e) {
             console.error(e);
-            showToast("Error posting.");
+            showToast('Error posting.', 'error');
         } finally {
             btn.disabled = false;
         }
@@ -3543,7 +3693,7 @@ if(!u[1]) {
         // Validasi: Jangan simpan jika teks kosong DAN tidak ada gambar sama sekali (gambar lama dihapus atau tidak ada, gambar baru juga tidak ada)
         const willHaveImage = (oldImgUrl && !isDeleteRequested) || newFile;
         if(!newText.trim() && !willHaveImage) {
-            showToast("Comment cannot be empty!");
+            showToast('Comment cannot be empty!', 'error');
             return;
         }
 
@@ -3551,14 +3701,14 @@ if(!u[1]) {
         saveBtn.innerHTML = `<img src="loading.png" style="width:16px; height:16px; animation: spin 1s linear infinite;">`;
 
         try {
-            showToast("Processing update...");
+            showToast('Processing update..., 'load');
             
             let finalImgUrl = ""; // Default kosong
 
             // --- LOGIKA PENENTUAN GAMBAR AKHIR ---
             if (newFile) {
                 // KASUS 1: Ada file baru dipilih -> Upload dan pakai URL baru
-                showToast("Uploading new image...");
+                showToast('Uploading new image...', 'load');
                 const compressedFile = (typeof compressImage === 'function') ? await compressImage(newFile) : newFile;
                 const uploadedUrl = await uploadToImgBB(compressedFile);
                 if (uploadedUrl) {
@@ -3579,11 +3729,11 @@ if(!u[1]) {
             }
 
             // --- KIRIM KE BLOCKCHAIN ---
-            showToast("Sending to blockchain...");
+            showToast('Sending to blockchain...', 'load');
             const tx = await gameContract.editComment(roundId, cId, finalContent);
             await tx.wait();
             
-            showToast("Comment updated!");
+            showToast('Comment updated!', 'success');
             // Bersihkan memory
             delete selectedEditFiles[uniqueId];
             delete editImageDeleteStatus[uniqueId];
@@ -3591,7 +3741,7 @@ if(!u[1]) {
 
         } catch(e) {
             console.error(e);
-            showToast("Update failed: " + (e.reason || e.message || "Error"));
+            showToast("Update failed: " + (e.reason || e.message || "Error"), 'error');
             saveBtn.disabled = false;
             saveBtn.innerText = "Save";
         }
@@ -3709,7 +3859,7 @@ if(!u[1]) {
 
             oldImageBox.style.display = 'none';
 
-            showToast("Image marked for deletion.");
+            showToast('Image marked for deletion.', 'success');
 
         }
 
@@ -4142,7 +4292,7 @@ if(!u[1]) {
             // C. Jalankan Timer Visual
             if (remaining > 0) {
                 startCountdown(remaining); 
-                showToast(`Revealing winner in ${Math.ceil(remaining/1000)}s...`);
+                showToast('Revealing winner in ${Math.ceil(remaining/1000)}s..., 'success');
             } else {
                 document.getElementById('drawTimer').innerText = "00:00";
             }
@@ -4160,7 +4310,7 @@ if(!u[1]) {
             const r3 = Number(reels[2]);
             stopSpinAnimation(r1, r2, r3); 
 
-            showToast(`Result: ${outcome}`);
+            showToast('Result: ${outcome}', 'success');
             
             // F. Efek Glamour
             const winnersIndices = new Set([r1, r2, r3]);
