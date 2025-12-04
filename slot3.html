@@ -290,25 +290,42 @@
     visibility: hidden;
     min-width: 300px;
     max-width: 80%;
-    /* ... style lama ... */
     background-color: #333;
     color: #fff;
     border-radius: 12px;
-    /* UPDATE: Padding kanan ditambah agar teks tidak nabrak tombol X */
-    padding: 12px 40px 12px 20px; 
+    padding: 12px 40px 12px 20px;
     position: fixed;
     z-index: 9999;
     top: 30px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateY(-20px) scale(0.9);
+    opacity: 0;
+
     border: 2px solid transparent;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     display: flex;
     align-items: center;
     font-family: sans-serif;
     font-weight: 500;
+
+    transition: 
+        opacity 0.45s ease,
+        transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Saat toast ditampilkan */
+#toast.show {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0px) scale(1);
+}
+
+/* Saat toast ditutup */
+#toast.hide {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px) scale(0.95);
+    }
+    
 /* Style Icon Utama (Kiri) */
 #toast img.toast-icon {
     width: 24px;
@@ -322,8 +339,8 @@
     position: absolute;    /* Posisi bebas di dalam kotak */
     top: 8px;              /* Jarak dari atas */
     right: 8px;            /* Jarak dari kanan */
-    width: 16px;           /* Ukuran X */
-    height: 16px;
+    width: 13px;           /* Ukuran X */
+    height: 13px;
     cursor: pointer;       /* Mouse jadi jari telunjuk */
     opacity: 0.7;          /* Sedikit transparan */
     transition: 0.2s;      /* Efek halus saat di-hover */
@@ -4205,6 +4222,19 @@ if(!u[1]) {
             }
             
         } catch (e) { console.error("Refresh Bet Error:", e); }
+    }
+
+    function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.innerText = message;
+
+    toast.classList.remove("hide");
+    toast.classList.add("show");
+
+    setTimeout(() => {
+        toast.classList.remove("show");
+        toast.classList.add("hide");
+    }, 10000);
     }
     
     function setupEventListeners() {
