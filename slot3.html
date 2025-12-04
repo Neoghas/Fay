@@ -1717,6 +1717,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('ref')) detectedReferrer = urlParams.get('ref');
         
+        // Update Tahun Footer
+        const yearEl = document.getElementById("year");
+        if (yearEl) yearEl.innerText = new Date().getFullYear();
+
         // 1. Setup RPC Provider (Standar untuk baca data)
         provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
         gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, provider);
@@ -1725,7 +1729,7 @@
         try {
             const wssProvider = new ethers.WebSocketProvider(BASE_WSS_URL);
             
-            // Logika Auto-Reconnect sederhana jika WSS putus (Penting!)
+            // Logika Auto-Reconnect sederhana jika WSS putus
             wssProvider.websocket.onerror = (e) => console.error("WSS Error:", e);
             wssProvider.websocket.onclose = (e) => console.log("WSS Closed. Refresh to reconnect.");
 
@@ -1743,6 +1747,7 @@
             setupEventListeners();
         }
 
+        // Panggil refresh data awal
         refreshGameData(); 
     };
 
@@ -2568,344 +2573,200 @@ if(!u[1]) {
             // -----------------------------
 
             let bets = [];
+
             let idx = 0;
-            
-            // Hitung Total Tiket Real-time
+
             let totalTicketsLive = 0; 
 
+
+
+            // Loop manual mengambil data tiket dari blockchain
+
             while (true) {
+
                 try {
+
                     const bet = await gameContract.roundBets(currR, idx);
+
                     bets.push(bet);
+
                     idx++;
+
                     totalTicketsLive++; // Tambah counter tiket
+
                 } catch { break; }
+
             }
+
             
+
             // Update Tampilan Total Tiket
-            document.getElementById('statTotalTickets').innerText = totalTicketsLive;
+
+            const ticketEl = document.getElementById('statTotalTickets');
+
+            if(ticketEl) ticketEl.innerText = totalTicketsLive;
 
 
 
-
-
-
-
-            // 3. RESET VARIABEL
-
-
+            // 3. RESET VARIABEL (PENTING!)
 
             let counts = [0, 0, 0, 0, 0, 0]; 
 
-
-
             let pools = { eth: 0, usdt: 0, shib: 0 }; 
 
-
-
             myBetCounts = [0, 0, 0, 0, 0, 0]; 
-
-
 
             let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
 
 
 
-
-
-
-
             // 4. LOOP ANALISA BET
-
-
 
             bets.forEach(b => {
 
-
-
                 let curr = Number(b[2]); // 0=ETH, 1=USDT, 2=SHIB
-
-
 
                 let animalIdx = Number(b[4]);
 
-
-
                 
-
-
 
                 // --- PERBAIKAN PENTING: FORMAT DESIMAL USDT ---
 
+                // Jika USDT (1) pakai 6 desimal, lainnya 18
 
-
-                let decimal = (curr === 1) ? 18 : 18; // Jika USDT (1) pakai 6, lainnya 18
-
-
+                let decimal = (curr === 1) ? 6 : 18; 
 
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
 
 
-
-
-
-
                 // Global Pool
-
-
 
                 if (curr === 0) pools.eth += amt;
 
-
-
                 else if (curr === 1) pools.usdt += amt;
-
-
 
                 else pools.shib += amt;
 
 
 
-
-
-
-
                 // Total Count
-
-
 
                 counts[animalIdx]++;
 
 
 
-
-
-
-
                 // My Bet Count
-
-
 
                 if (isConnected && b[0].toLowerCase() === userAddress.toLowerCase()) {
 
-
-
                     myBetCounts[animalIdx]++;
-
-
 
                 }
 
 
 
-
-
-
-
                 // E/U/S Count
-
-
 
                 if (curr === 0) animalCurrCounts[animalIdx].eth++;
 
-
-
                 else if (curr === 1) animalCurrCounts[animalIdx].usdt++;
 
-
-
                 else animalCurrCounts[animalIdx].shib++;
-
-
 
             });
 
 
 
-
-
-
-
             // 5. RENDER TAMPILAN
 
-
-
             roundPools = pools;
-
-
 
             updatePoolDisplay();
 
 
 
-
-
-
-
             for (let i = 0; i < 6; i++) {
-
-
 
                 document.getElementById(`count-${i}`).innerText = counts[i];
 
-
-
                 
-
-
 
                 let c = document.getElementById(`card-${i}`);
 
-
-
                 c.classList.remove('my-bet', 'open');
 
-
-
                 if (myBetCounts[i] > 0) c.classList.add('my-bet'); 
-
-
 
                 else c.classList.add('open');
 
 
 
-
-
-
-
                 // Update E/U/S
-
-
 
                 document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
 
-
-
                 document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
-
-
 
                 document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
 
-
-
             }
-
-
-
-
 
 
 
             // 6. Update Status Tombol Draw
 
-
-
             let active = counts.filter(c => c > 0).length;
 
-
-
             const btnDraw = document.getElementById('drawBtn');
-
-
 
             const drawStatus = document.getElementById('drawStatus');
 
 
 
-
-
-
-
             if (active >= 5) {
-
-
 
                 btnDraw.disabled = false;
 
-
-
                 btnDraw.classList.add('ready');
-
-
 
                 drawStatus.innerText = "READY TO DRAW!";
 
-
-
                 drawStatus.style.color = "var(--success)";
-
-
 
             } else {
 
-
-
                 btnDraw.disabled = true;
-
-
 
                 btnDraw.classList.remove('ready');
 
-
-
                 drawStatus.innerText = `Need ${5 - active} more Players active`;
-
-
 
                 drawStatus.style.color = "var(--danger)";
 
-
-
             }
 
 
 
-
-
-
-
-            // 7. Update History & Profile
-
-
+            // 7. Update History
 
             updateHistorySection(currR);
 
-
-
             
-
-
 
             if (document.getElementById('tabPersonal') && !document.getElementById('tabPersonal').classList.contains('hidden')) {
 
-
-
                 updatePersonalHistory();
 
-
-
             }
-
-
-
-
 
 
 
         } catch (e) {
 
-
-
             console.error("Refresh Error:", e);
 
-
-
         }
-
-
 
     }
         
