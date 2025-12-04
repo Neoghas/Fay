@@ -2636,6 +2636,41 @@ if(!u[1]) {
                         </div>
                     `;
 
+                    // --- FITUR BARU: TAMPILKAN UPLINE ---
+                    
+                    // Ambil alamat upline dari struct (index 2)
+                    const uplineAddr = userData[2]; 
+                    const uplineNickEl = document.getElementById('upline-nick');
+                    const uplineAddrEl = document.getElementById('upline-addr');
+
+                    // Cek apakah punya upline yang valid? (Bukan address 0)
+                    if (uplineAddr && uplineAddr !== "0x0000000000000000000000000000000000000000") {
+                        
+                        // Set loading dulu
+                        uplineNickEl.innerText = "Checking...";
+                        uplineAddrEl.innerText = uplineAddr; // Simpan address di elemen tersembunyi (opsional)
+
+                        // Panggil kontrak untuk cari nickname upline
+                        gameContract.users(uplineAddr).then(u => {
+                            const nick = u[0]; // Index 0 = Nickname
+                            if(nick && nick !== "") {
+                                uplineNickEl.innerText = nick;
+                            } else {
+                                // Jika nickname kosong, tampilkan potongan address
+                                uplineNickEl.innerText = uplineAddr.substring(0,6) + "...";
+                            }
+                        }).catch(() => {
+                            uplineNickEl.innerText = "Unknown";
+                        });
+
+                    } else {
+                        // Jika upline adalah 0x000... (artinya dia Root User atau daftar tanpa ref)
+                        uplineNickEl.innerHTML = `<div style="display:flex; align-items:center; gap:5px;">
+                        <span>Faylotto (Root)</span><img src="root.png" style="width:14px;">
+                        </div>`;
+                        uplineNickEl.style.color = "var(--gold)"; // Warna emas khusus root
+                   }
+
                     // --- LOGIKA SYARAT CLAIM (V3) ---
                     const req1 = document.getElementById('req-1-status');
                     const req2 = document.getElementById('req-2-status');
