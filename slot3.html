@@ -3940,15 +3940,144 @@ if(!u[1]) {
         }, 100); 
 
     }
+
+    // --- REFRESH KHUSUS BETTING (RINGAN & CEPAT) ---
+    // Dipanggil oleh Interval 5 detik & Event NewBet
+    async function refreshBetData() {
+        try {
+            const currR = Number(await gameContract.currentRoundId());
+            
+            // A. Update Statistik Hero & Last Result
+            try {
+                // Total Winners & My Wins
+                try {
+                    const globalCountRaw = await gameContract.getGlobalWinCount();
+                    document.getElementById('heroGlobalCount').innerText = globalCountRaw;
+                    const myWinCount = await gameContract.getUserWinCount(userAddress);
+                    document.getElementById('heroTotalWon').innerText = myWinCount;
+                } catch(e) {}
+
+                // Last Result
+                if (currR > 1) {
+                    const lastRoundId = BigInt(currR) - 1n;
+                    const lastRes = await gameContract.getRoundResult(lastRoundId);
+                    if (lastRes && lastRes[0] && lastRes[0].length === 3) {
+                        const r1 = IMAGE_NAMES[Number(lastRes[0][0])];
+                        const r2 = IMAGE_NAMES[Number(lastRes[0][1])];
+                        const r3 = IMAGE_NAMES[Number(lastRes[0][2])];
+                        if(r1 && r2 && r3) {
+                             document.getElementById('statLastResult').innerText = `${r1.toUpperCase()} - ${r2.toUpperCase()} - ${r3.toUpperCase()}`;
+                             document.getElementById('statLastResult').style.color = "var(--accent)";
+                        }
+                    }
+                } else {
+                    document.getElementById('statLastResult').innerText = "New Game";
+                }
+                
+                document.getElementById('statRoundId').innerText = `#${currR}`;
+                document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1);
+            } catch(e) {}
+
+            // B. Ambil Data Tiket
+            let bets = [];
+            let idx = 0;
+            let totalTicketsLive = 0; 
+            while (true) {
+                try {
+                    const bet = await gameContract.roundBets(currR, idx);
+                    bets.push(bet);
+                    idx++;
+                    totalTicketsLive++; 
+                } catch { break; }
+            }
+            document.getElementById('statTotalTickets').innerText = totalTicketsLive;
+
+            // C. Hitung Ulang Pool & E/U/S
+            let counts = [0, 0, 0, 0, 0, 0]; 
+            let pools = { eth: 0, usdt: 0, shib: 0 }; 
+            myBetCounts = [0, 0, 0, 0, 0, 0]; 
+            let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
+
+            bets.forEach(b => {
+                let curr = Number(b[2]); 
+                let animalIdx = Number(b[4]);
+                let decimal = (curr === 1) ? 6 : 18; 
+                let amt = parseFloat(ethers.formatUnits(b[1], decimal));
+
+                if (curr === 0) pools.eth += amt;
+                else if (curr === 1) pools.usdt += amt;
+                else pools.shib += amt;
+
+                counts[animalIdx]++;
+                
+                if (isConnected && b[0].toLowerCase() === userAddress.toLowerCase()) {
+                    myBetCounts[animalIdx]++;
+                }
+
+                if (curr === 0) animalCurrCounts[animalIdx].eth++;
+                else if (curr === 1) animalCurrCounts[animalIdx].usdt++;
+                else animalCurrCounts[animalIdx].shib++;
+            });
+
+            // D. Render Tampilan
+            document.getElementById('poolTotalETH').innerText = pools.eth.toFixed(4);
+            document.getElementById('poolTotalUSDT').innerText = pools.usdt.toFixed(2);
+            document.getElementById('poolTotalSHIB').innerText = pools.shib.toLocaleString();
+
+            for (let i = 0; i < 6; i++) {
+                document.getElementById(`count-${i}`).innerText = counts[i];
+                
+                let c = document.getElementById(`card-${i}`);
+                c.classList.remove('my-bet', 'open');
+                if (myBetCounts[i] > 0) c.classList.add('my-bet'); 
+                else c.classList.add('open');
+
+                document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
+                document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
+                document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
+            }
+
+            // E. Update Status Tombol Draw
+            let active = counts.filter(c => c > 0).length;
+            const btnDraw = document.getElementById('drawBtn');
+            const drawStatus = document.getElementById('drawStatus');
+
+            if (active >= 5) {
+                btnDraw.disabled = false;
+                btnDraw.classList.add('ready');
+                drawStatus.innerText = "READY TO DRAW!";
+                drawStatus.style.color = "var(--success)";
+            } else {
+                btnDraw.disabled = true;
+                btnDraw.classList.remove('ready');
+                drawStatus.innerText = `Need ${5 - active} more Players active`;
+                drawStatus.style.color = "var(--danger)";
+            }
+            
+        } catch (e) { console.error("Refresh Bet Error:", e); }
+    }
     
     function setupEventListeners() {
         
         // 1. Listener Bet Baru
+        // KODE BARU (Lebih Agresif)
         listenerContract.on("NewBet", () => { 
-            console.log("New Bet detected via WSS");
-            setTimeout(() => { refreshGameData(); }, 2000); 
-        });
+            console.log("🔔 New Bet Detected! Syncing...");
+            
+            // Pancingan 1: Langsung (Coba tangkap data instan)
+            refreshBetData();
 
+            // Pancingan 2: Delay 3 Detik (Menunggu RPC lambat)
+            setTimeout(() => { 
+                console.log("🔄 Re-syncing data (Backup)...");
+                refreshBetData(); 
+            }, 3000);
+
+            // Pancingan 3: Delay 6 Detik (Jaga-jaga kalau RPC super lemot)
+            setTimeout(() => { 
+                refreshBetData(); 
+            }, 4000);
+        });
         // 2. Listener LIVE DRAW
         listenerContract.on("BattleResult", async (reels, outcome, roundId) => {
             // --- [INI YANG TADI TERLEWAT] ---
