@@ -1793,41 +1793,34 @@
         const yearEl = document.getElementById("year");
         if (yearEl) yearEl.innerText = new Date().getFullYear();
 
-        // 1. Setup RPC Provider (Standar)
+        // 1. Setup RPC Provider (Standar untuk baca data)
         provider = new ethers.JsonRpcProvider(BASE_RPC_URL);
         gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, provider);
 
-        // 2. Setup WSS Provider (Listener Cepat)
+        // 2. Setup WSS Provider (KHUSUS LISTENER LIVE DRAW)
         try {
             const wssProvider = new ethers.WebSocketProvider(BASE_WSS_URL);
             
-            // Auto-Reconnect Logika
-            wssProvider.websocket.onerror = (e) => console.error("WSS Error (Pakai Polling):", e);
-            wssProvider.websocket.onclose = (e) => console.log("WSS Closed. Polling will handle updates.");
+            // Logika Auto-Reconnect sederhana jika WSS putus
+            wssProvider.websocket.onerror = (e) => console.error("WSS Error:", e);
+            wssProvider.websocket.onclose = (e) => console.log("WSS Closed. Refresh to reconnect.");
 
+            // Buat instance kontrak khusus yang tersambung ke "Jalur Cepat" WSS
             listenerContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, wssProvider);
             console.log("✅ WSS Listener Connected!");
 
+            // Jalankan Listener pakai kontrak WSS
             setupEventListeners(); 
 
         } catch (e) {
-            console.error("Gagal connect WSS, pindah ke mode Polling...", e);
+            console.error("Gagal connect WSS, fallback ke RPC...", e);
+            // Jika WSS mati/salah, pakai RPC biasa sebagai cadangan
             listenerContract = gameContract; 
             setupEventListeners();
         }
 
-        // Panggil data awal
+        // Panggil refresh data awal
         refreshGameData(); 
-
-        // --- [SOLUSI UTAMA: AUTO REFRESH / POLLING] ---
-        // Jalankan refresh setiap 5 detik untuk menjamin sinkronisasi di semua device
-        // meskipun WSS macet atau delay.
-        setInterval(() => {
-            if (!isSpinning) { // Hanya refresh kalau tidak sedang muter slot
-                console.log("🔄 Auto-Syncing Data...");
-                refreshGameData();
-            }
-        }, 3000); // 5000ms = 5 Detik
     };
 
     function handleWalletClick() { isConnected ? openWalletDashboard() : connectWallet(); }
@@ -3950,18 +3943,18 @@ if(!u[1]) {
     
     function setupEventListeners() {
         
-        // 1. Listener Bet Baru (Pemicu Instan)
-        // Ini agar update terasa cepat jika WSS lancar
+        // 1. Listener Bet Baru
         listenerContract.on("NewBet", () => { 
-            console.log("🔔 New Bet Detected via WSS");
-            // Tunda 2 detik biar RPC siap
-            setTimeout(() => { refreshGameData(); }, 2000);
+            console.log("New Bet detected via WSS");
+            setTimeout(() => { refreshGameData(); }, 2000); 
         });
 
         // 2. Listener LIVE DRAW
         listenerContract.on("BattleResult", async (reels, outcome, roundId) => {
-            // Matikan Safety Timer
+            // --- [INI YANG TADI TERLEWAT] ---
+            // Matikan Safety Timer agar tidak bentrok
             if (typeof safetyTimer !== 'undefined' && safetyTimer) clearTimeout(safetyTimer);
+            // --------------------------------
 
             const rId = Number(roundId);
             console.log(`⚡ RESULT RECEIVED! Round #${rId}`);
@@ -3981,7 +3974,7 @@ if(!u[1]) {
 
             if (remaining < 0) remaining = 0;
 
-            // C. Timer Visual
+            // C. Jalankan Timer Visual
             if (remaining > 0) {
                 startCountdown(remaining); 
                 showToast(`Revealing winner in ${Math.ceil(remaining/1000)}s...`);
@@ -3989,10 +3982,10 @@ if(!u[1]) {
                 document.getElementById('drawTimer').innerText = "00:00";
             }
 
-            // D. Tunggu
+            // D. Tunggu Waktu Habis
             await new Promise(r => setTimeout(r, remaining));
 
-            // E. Stop Timer
+            // E. Stop Timer & Animasi
             if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
             const timerEl = document.getElementById('drawTimer');
             if (timerEl) timerEl.style.display = 'none'; 
@@ -4011,21 +4004,24 @@ if(!u[1]) {
                 if (winnersIndices.has(i)) card.classList.add('winner-glamour');
                 else card.classList.remove('winner-glamour');
             }
+            // Hapus efek setelah 8 detik
             setTimeout(() => { 
                 for (let i = 0; i < 6; i++) 
                     document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
             }, 8000);
 
-            // G. Reset Gambar & Data
+            // --- FITUR RESET & REFRESH (3 DETIK) ---
+            
+            // 1. Reset Gambar
             setTimeout(() => {
                 resetReelsToDefault();
-            }, 3000);
+            }, 3000); 
 
+            // 2. Reset Logika & Data
             spinStartTime = 0;
 
-            // Refresh Final (Jamin saldo masuk)
             setTimeout(() => { 
-                console.log("Refreshing Final Data...");
+                console.log("Refreshing Data...");
                 refreshGameData(); 
             }, 3000);
         });      
