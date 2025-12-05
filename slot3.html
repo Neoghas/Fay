@@ -3630,7 +3630,7 @@ if(!u[1]) {
                 }
                 
                 const isMyComment = (userAddress && author.toLowerCase() === userAddress.toLowerCase());
-                const dateStr = new Date(time * 1000).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'});
+                const dateStr = formatDynamicDate(time);
                 const nameElementId = `author-name-${roundId}-${cId}`;
                 const avatarImgId = `avatar-img-${roundId}-${cId}`; // ID untuk gambar avatar
 
@@ -3666,8 +3666,6 @@ if(!u[1]) {
                             <span class="nick-text">...</span>
                         
                         </div>
-                        <br>
-
                         <div class="comment-text" id="text-${roundId}-${cId}"></div> 
                         ${displayImage}
                         
@@ -4519,6 +4517,39 @@ if(!u[1]) {
             }
             
         } catch (e) { console.error("Refresh Bet Error:", e); }
+    }
+
+     // --- FUNGSI FORMAT WAKTU (DENGAN HARI) ---
+    function formatDynamicDate(timestamp) {
+        const date = new Date(timestamp * 1000);
+        const now = new Date();
+        const diffSeconds = Math.floor((now - date) / 1000);
+
+        // 1. Komponen Waktu
+        // 'short' = Mon, Tue, Wed (Inggris) atau Sen, Sel, Rab (Indo tergantung browser)
+        const dayName = date.toLocaleString('default', { weekday: 'short' }); 
+        const month = date.toLocaleString('default', { month: 'short' });
+        const day = date.getDate();
+        const year = date.getFullYear();
+        const hour = date.getHours().toString().padStart(2, '0');
+        const minute = date.getMinutes().toString().padStart(2, '0');
+
+        // A. Jika baru saja (kurang dari 1 menit)
+        if (diffSeconds < 60) return "Just now";
+        
+        // B. Jika kurang dari 1 jam
+        if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)} min ago`;
+        
+        // C. Jika kurang dari 24 jam
+        if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)} hours ago`;
+
+        // D. Jika lebih dari 24 jam (Format Lengkap)
+        // Contoh: "Mon 1 Jan, 08.00"
+        if (year === now.getFullYear()) {
+            return `${dayName} ${day} ${month}, ${hour}.${minute}`; 
+        } else {
+            return `${dayName} ${day} ${month} ${year}, ${hour}.${minute}`;
+        }
     }
 
     function setupEventListeners() {
