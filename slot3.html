@@ -3597,35 +3597,35 @@ if(!u[1]) {
                 
                 const cId = c[0];
                 const author = c[1]; 
-                const rawData = c[2]; // Data mentah dari Blockchain
-                const time = Number(c[3]);
-                const isEdited = c[4];
+                const text = c[2];      // Index 2: HANYA Teks (V3)
+                const rawImgUrl = c[3]; // Index 3: HANYA URL Gambar (V3)
+                const time = Number(c[4]); // Index geser jadi 4
+                const isEdited = c[5];     // Index geser jadi 5
+                
+                // 1. Avatar Robot
                 const avatarUrl = getAvatar(author);
 
-                // --- DEBUGGING (Cek di Console F12) ---
-                // Kita lihat apa isi sebenarnya dari rawData
-                // console.log(`Comment #${cId} Raw Data:`, rawData); 
-
-                let displayMessage = "";
+                // 2. Logika Gambar (V3 Native)
                 let displayImage = "";
+                
+                // Cek apakah ada URL gambar di Index 3?
+                if (rawImgUrl && rawImgUrl.startsWith("http")) {
+                    let safeUrl = rawImgUrl;
 
-                if (rawData.includes("||IMG||")) {
-                    const parts = rawData.split("||IMG||");
-                    displayMessage = parts[0]; 
-                    
-                    // Ambil URL dan bersihkan spasi
-                    let rawUrl = parts[1] ? parts[1].trim() : "";
-
-                    // --- PERBAIKAN: AUTO FIX LINK LAMA ---
-                    // Jika linknya masih versi 'i.ibb.co' (kena blokir), kita ganti di sini
-                    if (rawUrl.includes("i.ibb.co") && !rawUrl.includes("i.ibb.co.com")) {
-                        rawUrl = rawUrl.replace("i.ibb.co", "i.ibb.co.com");
+                    // --- PERBAIKAN: AUTO FIX LINK LAMA (Anti Blokir) ---
+                    // Ubah i.ibb.co menjadi i.ibb.co.com agar bisa dibuka
+                    if (safeUrl.includes("i.ibb.co") && !safeUrl.includes("i.ibb.co.com")) {
+                        safeUrl = safeUrl.replace("i.ibb.co", "i.ibb.co.com");
                     }
-                    // -------------------------------------
+                    // ---------------------------------------------------
 
-                    if (rawUrl.startsWith("http")) {
-                        displayImage = `<img src="${rawUrl}" class="comment-image-result" onclick="window.open('${rawUrl}','_blank')">`;
-                    }
+                    displayImage = `<img src="${safeUrl}" class="comment-image-result" onclick="window.open('${safeUrl}','_blank')">`;
+                }
+
+                // 3. Teks Komentar
+                // Tidak perlu split "||IMG||" lagi, karena text sudah bersih di c[2]
+                let displayMessage = text;
+                
                 } else {
                     displayMessage = rawData; 
                 }
@@ -3739,7 +3739,7 @@ if(!u[1]) {
             }
 
             showToast("Posting to blockchain...", 'loading');
-            const tx = await gameContract.addComment(roundId, finalContent);
+            const tx = await gameContract.addComment(roundId, rawText, imageUrl);
             await tx.wait();
 
             showToast("Success!", 'success');
