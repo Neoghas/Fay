@@ -4600,31 +4600,45 @@ if(!u[1]) {
 
     function setupEventListeners() {
         
-        // 1. Listener Bet Baru
-        // KODE BARU (Lebih Agresif)
+        // 1. LISTENER BET BARU (Agresif Sync)
         listenerContract.on("NewBet", () => { 
             console.log("🔔 New Bet Detected! Syncing...");
             
-            // Pancingan 1: Langsung (Coba tangkap data instan)
+            // Pancingan 1: Langsung (Cek node cepat)
             refreshBetData();
 
-            // Pancingan 2: Delay 3 Detik (Menunggu RPC lambat)
-            setTimeout(() => { 
-                console.log("🔄 Re-syncing data (Backup)...");
-                refreshBetData(); 
-            }, 3000);
+            // Pancingan 2: Delay 2 Detik 
+            setTimeout(() => { refreshBetData(); }, 2000);
 
-            // Pancingan 3: Delay 6 Detik (Jaga-jaga kalau RPC super lemot)
+            // Pancingan 3: Delay 4 Detik (Backup utama)
+            setTimeout(() => { refreshBetData(); }, 4000);
+
+            // Pancingan 4: Delay 7 Detik (Jaga-jaga kalau RPC super lemot)
             setTimeout(() => { 
+                console.log("🔄 Final Sync attempt...");
                 refreshBetData(); 
-            }, 4000);
+            }, 7000);
         });
-        // 2. Listener LIVE DRAW
+
+        // 2. LISTENER KOMENTAR BARU (Real-time Comment)
+        listenerContract.on("CommentAdded", (rId, cId, user) => {
+            // Cek apakah user sedang melihat ronde yang sama
+            gameContract.currentRoundId().then(currR => {
+                const viewingRound = Number(currR); // Atau logika ronde aktif
+                // Kita refresh komentar untuk ronde aktif
+                loadComments(viewingRound);
+            });
+        });
+        
+        // 3. LISTENER EDIT KOMENTAR
+        listenerContract.on("CommentEdited", (rId, cId, user) => {
+             gameContract.currentRoundId().then(currR => { loadComments(Number(currR)); });
+        });
+
+        // 4. LISTENER LIVE DRAW (Lengkap: Timer + Reset + Sync)
         listenerContract.on("BattleResult", async (reels, outcome, roundId) => {
-            // --- [INI YANG TADI TERLEWAT] ---
-            // Matikan Safety Timer agar tidak bentrok
+            // Matikan Safety Timer
             if (typeof safetyTimer !== 'undefined' && safetyTimer) clearTimeout(safetyTimer);
-            // --------------------------------
 
             const rId = Number(roundId);
             console.log(`⚡ RESULT RECEIVED! Round #${rId}`);
@@ -4636,7 +4650,7 @@ if(!u[1]) {
             }
             if (spinStartTime === 0) spinStartTime = Date.now();
 
-            // B. Hitung Sisa Waktu
+            // B. Hitung Durasi
             const DURATION = 35000; 
             const now = Date.now();
             const elapsed = now - spinStartTime;
@@ -4644,7 +4658,7 @@ if(!u[1]) {
 
             if (remaining < 0) remaining = 0;
 
-            // C. Jalankan Timer Visual
+            // C. Jalankan Timer
             if (remaining > 0) {
                 startCountdown(remaining); 
                 showToast(`Revealing winner in ${Math.ceil(remaining/1000)}s...`);
@@ -4655,11 +4669,12 @@ if(!u[1]) {
             // D. Tunggu Waktu Habis
             await new Promise(r => setTimeout(r, remaining));
 
-            // E. Stop Timer & Animasi
+            // E. Stop Timer
             if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
             const timerEl = document.getElementById('drawTimer');
             if (timerEl) timerEl.style.display = 'none'; 
 
+            // F. Stop Slot
             const r1 = Number(reels[0]);
             const r2 = Number(reels[1]);
             const r3 = Number(reels[2]);
@@ -4667,32 +4682,33 @@ if(!u[1]) {
 
             showToast(`Result: ${outcome}`);
             
-            // F. Efek Glamour
+            // G. Efek Glamour
             const winnersIndices = new Set([r1, r2, r3]);
             for (let i = 0; i < 6; i++) {
                 const card = document.getElementById(`card-${i}`);
                 if (winnersIndices.has(i)) card.classList.add('winner-glamour');
                 else card.classList.remove('winner-glamour');
             }
-            // Hapus efek setelah 8 detik
             setTimeout(() => { 
                 for (let i = 0; i < 6; i++) 
                     document.getElementById(`card-${i}`).classList.remove('winner-glamour'); 
             }, 8000);
 
-            // --- FITUR RESET & REFRESH (3 DETIK) ---
-            
-            // 1. Reset Gambar
+            // H. Reset Gambar '?' (3 Detik)
             setTimeout(() => {
                 resetReelsToDefault();
-            }, 3000); 
+            }, 3000);
 
-            // 2. Reset Logika & Data
+            // I. Reset Logika & Refresh Data (3 Detik)
             spinStartTime = 0;
 
             setTimeout(() => { 
-                console.log("Refreshing Data...");
+                console.log("Refreshing Final Data...");
+                // Panggil Refresh Full karena saldo user berubah setelah draw
                 refreshGameData(); 
+                
+                // Jangan lupa refresh history global juga
+                // updateHistorySection(rId + 1); // Opsional
             }, 3000);
         });      
     }
