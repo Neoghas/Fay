@@ -3603,55 +3603,47 @@ if(!u[1]) {
 
             for (let i = 0; i < count; i++) {
                 const c = await gameContract.roundComments(roundId, i);
-                
-                // --- STRUKTUR DATA V3 ---
                 const cId = c[0];
                 const author = c[1]; 
-                const text = c[2];      // Teks Murni
-                const rawImgUrl = c[3]; // URL Gambar Murni
-                const time = Number(c[4]);
-                const isEdited = c[5];
-
-                // 1. Avatar Robot
-                const avatarUrl = getAvatar(author);
-
-                // 2. Logika Gambar (V3)
+                const rawData = c[2]; 
+                const time = Number(c[3]);
+                const isEdited = c[4];
+                
+                // --- BAGIAN PENTING: HANDLING PESAN & GAMBAR ---
+                let displayMessage = "";
                 let displayImage = "";
-                
-                if (rawImgUrl && rawImgUrl.startsWith("http")) {
-                    let safeUrl = rawImgUrl;
-                    // Auto Fix Link ImgBB Lama (Anti Blokir)
-                    if (safeUrl.includes("i.ibb.co") && !safeUrl.includes("i.ibb.co.com")) {
-                        safeUrl = safeUrl.replace("i.ibb.co", "i.ibb.co.com");
+
+                if (rawData.includes("||IMG||")) {
+                    const parts = rawData.split("||IMG||");
+                    displayMessage = parts[0].trim(); 
+                    let rawUrl = parts[1] ? parts[1].trim() : "";
+                    
+                    if (rawUrl.includes("i.ibb.co") && !rawUrl.includes("i.ibb.co.com")) {
+                        rawUrl = rawUrl.replace("i.ibb.co", "i.ibb.co.com");
                     }
-                    displayImage = `<img src="${safeUrl}" class="comment-image-result" onclick="window.open('${safeUrl}','_blank')" onerror="this.style.display='none'">`;
+                    
+                    if (rawUrl.startsWith("http")) {
+                        displayImage = `<img src="${rawUrl}" class="comment-image-result" onclick="window.open('${rawUrl}','_blank')" onerror="this.style.display='none'">`;
+                    }
+                } else {
+                    displayMessage = rawData;
                 }
-
-                // 3. Teks Komentar (Langsung pakai, tidak perlu split lagi)
-                const displayMessage = text; 
-
-                const isMyComment = (userAddress && author.toLowerCase() === userAddress.toLowerCase());
-                const dateStr = new Date(time * 1000).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'});
-                const nameElementId = `author-name-${roundId}-${cId}`;
-
-                // --- DATA UNTUK TOMBOL EDIT ---
-                // Untuk tombol edit, kita butuh menggabungkan Teks & Gambar lagi (secara manual)
-                // agar logika edit sebelumnya tetap jalan.
-                // Format Encode: "Teks||IMG||URL" (Hanya untuk passing ke tombol)
-                let combinedDataForEdit = displayMessage;
-                if(rawImgUrl) combinedDataForEdit += " ||IMG|| " + rawImgUrl;
                 
-                const safeEncodedData = encodeURIComponent(combinedDataForEdit);
+                const isMyComment = (userAddress && author.toLowerCase() === userAddress.toLowerCase());
+                const dateStr = new Date(time * 1000).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short', year:'4-digit'});
+                const nameElementId = `author-name-${roundId}-${cId}`;
+                const avatarImgId = `avatar-img-${roundId}-${cId}`; // ID untuk gambar avatar
 
+                const safeRawData = encodeURIComponent(rawData);
+
+                // Icon Edit
                 const editIconHtml = `
-                    <button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${cId}, '${safeEncodedData}')" title="Edit">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
+                    <button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${cId}, '${safeRawData}')" title="Edit">
+                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
                 `;
-
+                
+                // Icon Profil
                 const viewProfileHtml = `
                     <button class="btn-view-profile" onclick="openPlayerProfile('${author}')" title="View Profile">
                         <img src="user.png" style="width:16px; height:16px; opacity:0.8;">
@@ -3663,19 +3655,22 @@ if(!u[1]) {
 
                 item.innerHTML = `
                     <div class="comment-bubble" id="bubble-${roundId}-${cId}">
-                        
                         ${isMyComment ? editIconHtml : ''}
-
+                        
                         <div class="comment-author" id="${nameElementId}" 
                              onclick="openPlayerProfile('${author}')" 
                              style="display:flex; align-items:center; gap:8px; color:var(--accent); cursor:pointer; width:fit-content;">
-                            <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:#000;">
-                            <span>Loading...</span>
-                        </div>
-                        <div class="comment-text" id="text-${roundId}-${cId}"></div> 
+                            
+                            <img id="${avatarImgId}" src="" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:#000; object-fit:cover;">
+                            
+                            <span class="nick-text">...</span>
                         
-                        ${displayImage}
+                        </div>
+                        <br>
 
+                        <div class="comment-text" id="text-${roundId}-${cId}"></div> 
+                        ${displayImage}
+                        
                         <div class="comment-meta">
                             <span>${dateStr}</span>
                             ${isEdited ? '<span>(Edited)</span>' : ''}
@@ -3688,16 +3683,19 @@ if(!u[1]) {
                 item.querySelector(`#text-${roundId}-${cId}`).innerText = displayMessage;
                 listDiv.appendChild(item);
 
-                // Fetch Nickname Async
+                // --- FETCH DATA USER (ASYNC) ---
+                // Kita ambil data di background, lalu update elemen yang sudah ada
                 gameContract.users(author).then(u => {
                     const nick = u[0]; 
                     const customAvatar = u[10]; // Index 10 = Avatar URL
+                    
                     // Update Nama
                     const nameContainer = document.getElementById(nameElementId);
                     if(nameContainer) {
                         const nickSpan = nameContainer.querySelector('.nick-text');
                         if(nickSpan) nickSpan.innerText = nick || "Unknown";
                     }
+                    
                     // Update Avatar (Logika Anti Kedip)
                     const imgContainer = document.getElementById(avatarImgId);
                     if(imgContainer) {
@@ -3709,6 +3707,7 @@ if(!u[1]) {
                             imgContainer.src = getAvatar(author);
                         }
                     }
+
                 }).catch(() => {
                     // Jika error, fallback ke robot
                     const imgContainer = document.getElementById(avatarImgId);
