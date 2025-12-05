@@ -3595,50 +3595,47 @@ if(!u[1]) {
             for (let i = 0; i < count; i++) {
                 const c = await gameContract.roundComments(roundId, i);
                 
+                // --- STRUKTUR DATA V3 ---
                 const cId = c[0];
                 const author = c[1]; 
-                const text = c[2];      // Index 2: HANYA Teks (V3)
-                const rawImgUrl = c[3]; // Index 3: HANYA URL Gambar (V3)
-                const time = Number(c[4]); // Index geser jadi 4
-                const isEdited = c[5];     // Index geser jadi 5
-                
+                const text = c[2];      // Teks Murni
+                const rawImgUrl = c[3]; // URL Gambar Murni
+                const time = Number(c[4]);
+                const isEdited = c[5];
+
                 // 1. Avatar Robot
                 const avatarUrl = getAvatar(author);
 
-                // 2. Logika Gambar (V3 Native)
+                // 2. Logika Gambar (V3)
                 let displayImage = "";
                 
-                // Cek apakah ada URL gambar di Index 3?
                 if (rawImgUrl && rawImgUrl.startsWith("http")) {
                     let safeUrl = rawImgUrl;
-
-                    // --- PERBAIKAN: AUTO FIX LINK LAMA (Anti Blokir) ---
-                    // Ubah i.ibb.co menjadi i.ibb.co.com agar bisa dibuka
+                    // Auto Fix Link ImgBB Lama (Anti Blokir)
                     if (safeUrl.includes("i.ibb.co") && !safeUrl.includes("i.ibb.co.com")) {
                         safeUrl = safeUrl.replace("i.ibb.co", "i.ibb.co.com");
                     }
-                    // ---------------------------------------------------
-
-                    displayImage = `<img src="${safeUrl}" class="comment-image-result" onclick="window.open('${safeUrl}','_blank')">`;
+                    displayImage = `<img src="${safeUrl}" class="comment-image-result" onclick="window.open('${safeUrl}','_blank')" onerror="this.style.display='none'">`;
                 }
 
-                // 3. Teks Komentar
-                // Tidak perlu split "||IMG||" lagi, karena text sudah bersih di c[2]
-                let displayMessage = text;
-                
-                } else {
-                    displayMessage = rawData; 
-                }
-                // -----------------------------------
+                // 3. Teks Komentar (Langsung pakai, tidak perlu split lagi)
+                const displayMessage = text; 
 
                 const isMyComment = (userAddress && author.toLowerCase() === userAddress.toLowerCase());
                 const dateStr = new Date(time * 1000).toLocaleString([], {hour:'2-digit', minute:'2-digit', day:'numeric', month:'short'});
                 const nameElementId = `author-name-${roundId}-${cId}`;
 
-                const safeRawData = encodeURIComponent(rawData);
+                // --- DATA UNTUK TOMBOL EDIT ---
+                // Untuk tombol edit, kita butuh menggabungkan Teks & Gambar lagi (secara manual)
+                // agar logika edit sebelumnya tetap jalan.
+                // Format Encode: "Teks||IMG||URL" (Hanya untuk passing ke tombol)
+                let combinedDataForEdit = displayMessage;
+                if(rawImgUrl) combinedDataForEdit += " ||IMG|| " + rawImgUrl;
+                
+                const safeEncodedData = encodeURIComponent(combinedDataForEdit);
 
                 const editIconHtml = `
-                    <button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${cId}, '${safeRawData}')" title="Edit">
+                    <button class="btn-edit-icon" onclick="enableEditMode(${roundId}, ${cId}, '${safeEncodedData}')" title="Edit">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -3663,12 +3660,11 @@ if(!u[1]) {
                         <div class="comment-author" id="${nameElementId}" 
                              onclick="openPlayerProfile('${author}')" 
                              style="display:flex; align-items:center; gap:8px; color:var(--accent); cursor:pointer; width:fit-content;">
-                            
                             <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:#000;">
                             <span>Loading...</span>
-                        
                         </div>
                         <br>
+                        
                         <div class="comment-text" id="text-${roundId}-${cId}"></div> 
                         
                         ${displayImage}
@@ -3685,24 +3681,24 @@ if(!u[1]) {
                 item.querySelector(`#text-${roundId}-${cId}`).innerText = displayMessage;
                 listDiv.appendChild(item);
 
+                // Fetch Nickname Async
                 gameContract.users(author).then(u => {
-    const nick = u[0]; 
-    const el = document.getElementById(nameElementId);
-    if (el && nick) {
-        // Gunakan innerHTML agar Avatar + Nama baru dirender ulang bersamaan
-        el.innerHTML = `
-            <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:#000;">
-            <span>${nick}</span>
-        `;
-    }
-}).catch(() => {});
+                    const nick = u[0]; 
+                    const el = document.getElementById(nameElementId);
+                    if (el && nick) {
+                        el.innerHTML = `
+                            <img src="${avatarUrl}" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); background:#000;">
+                            <span>${nick}</span>
+                        `;
+                    }
+                }).catch(() => {});
             }
         } catch (e) {
             console.error(e);
             listDiv.innerHTML = '<div style="color:red; font-size:0.8em;">Failed to load.</div>';
         }
     }
-
+     
     async function postComment(roundId) {
         const input = document.getElementById(`input-comment-${roundId}`);
         const rawText = input.value.trim();
