@@ -1744,11 +1744,20 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     </div>
 
     <div id="view-profile" style="display:none;">
-        <div class="ref-label">Player Profile</div>
-        
-        <div style="position:relative; width:80px; height:80px; margin:0 auto 10px auto;">
-            <img id="my-avatar-img" src="" style="width:100%; height:100%; border-radius:50%; object-fit:cover; border:2px solid var(--primary); box-shadow:0 0 15px var(--primary); background: rgba(0,0,0,0.3);">
-        </div>
+                <div class="ref-label">Player Profile</div>
+                
+                <div style="position:relative; width:90px; height:90px; margin:0 auto 10px auto;">
+                    <img id="my-avatar-img" src="" 
+                         style="width:100%; height:100%; border-radius:50%; object-fit:cover; border:2px solid var(--primary); box-shadow:0 0 20px var(--primary); background: #000;">
+                    
+                    <button onclick="document.getElementById('avatar-upload').click()" 
+                            title="Change Avatar"
+                            style="position:absolute; bottom:0; right:0; background:var(--accent); border:2px solid #fff; border-radius:50%; width:30px; height:30px; cursor:pointer; color:white; font-size:0.9em; display:flex; align-items:center; justify-content:center; box-shadow:0 0 5px rgba(0,0,0,0.5);">
+                        📷
+                    </button>
+                    
+                    <input type="file" id="avatar-upload" accept="image/*" style="display:none;" onchange="changeProfilePicture(this)">
+                </div>
 
         <div style="font-size:1.2em; font-weight:bold; color:white; margin-bottom:5px;" id="displayNick">...</div>
         
@@ -1767,6 +1776,27 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
                 <span class="rs-lbl">Potential Bonus</span>
             </div>
         </div>
+
+        <div style="margin-top:10px; background:linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)); border:1px solid var(--gold); border-radius:12px; padding:15px; position:relative; overflow:hidden;">
+                    <div style="font-size:0.7em; color:var(--gold); margin-bottom:8px; text-transform:uppercase; letter-spacing:1px; font-weight:bold;">
+                        🏆 LIFETIME EARNINGS
+                    </div>
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; text-align:center;">
+                        <div>
+                            <div id="earn-eth" style="font-size:0.85em; font-weight:bold; color:var(--eth-color);">0.0000</div>
+                            <div style="font-size:0.6em; color:#888; margin-top:2px;">ETH</div>
+                        </div>
+                        <div style="border-left:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.1);">
+                            <div id="earn-usdt" style="font-size:0.85em; font-weight:bold; color:var(--usdt-color);">0.00</div>
+                            <div style="font-size:0.6em; color:#888; margin-top:2px;">USDT</div>
+                        </div>
+                        <div>
+                            <div id="earn-shib" style="font-size:0.85em; font-weight:bold; color:var(--shib-color);">0</div>
+                            <div style="font-size:0.6em; color:#888; margin-top:2px;">SHIB</div>
+                        </div>
+                    </div>
+               </div>
 
         <div class="ref-status-box">
             <div style="font-size:0.7em; color:#888; text-transform:uppercase; margin-bottom:5px;">Bonus Requirement:</div>
@@ -2631,9 +2661,27 @@ if(!u[1]) {
 
                     document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
 
-                    document.getElementById('my-avatar-img').src = getAvatar(userAddress);
+                    const customAvatar = userData[10]; 
+                    const robotUrl = getAvatar(userAddress);
+                    
+                    const avatarEl = document.getElementById('my-avatar-img');
+                    if (customAvatar && customAvatar.startsWith("http")) {
+                        avatarEl.src = customAvatar;
+                    } else {
+                        avatarEl.src = robotUrl;
+                    }
 
-
+                    // --- [2] TOTAL EARNINGS SPLIT (V3) ---
+                    try {
+                        const winnings = await gameContract.getUserTotalWinnings(userAddress);
+                        // winnings = [wonETH, wonUSDT, wonSHIB]
+                        document.getElementById('earn-eth').innerText = parseFloat(ethers.formatEther(winnings[0])).toFixed(4);
+                        document.getElementById('earn-usdt').innerText = parseFloat(ethers.formatUnits(winnings[1], 6)).toFixed(2);
+                        document.getElementById('earn-shib').innerText = parseFloat(ethers.formatUnits(winnings[2], 18)).toLocaleString();
+                    } catch(e) {
+                        console.log("Err Earnings:", e);
+                    }
+                    
                     // V3: AMBIL TOTAL INVITED (Index 5)
                     const totalRef = Number(userData[5]);
                     document.getElementById('totalInvited').innerHTML = `
@@ -4049,6 +4097,94 @@ if(!u[1]) {
             }
             reader.onerror = error => reject(error);
         });
+    }
+
+    // --- FUNGSI GANTI AVATAR ---
+
+    async function changeProfilePicture(input) {
+
+        const file = input.files[0];
+
+        if (!file) return;
+
+
+
+        // Validasi 4MB
+
+        if (file.size > 4 * 1024 * 1024) {
+
+            showToast("Image too big! Max 4MB.", 'warning');
+
+            return;
+
+        }
+
+
+
+        const imgEl = document.getElementById('my-avatar-img');
+
+        const oldSrc = imgEl.src;
+
+        imgEl.style.opacity = "0.5";
+
+        showToast("Uploading...", 'load');
+
+
+
+        try {
+
+            // 1. Kompresi
+
+            const compressedFile = await compressImage(file);
+
+            
+
+            // 2. Upload ImgBB
+
+            const imgUrl = await uploadToImgBB(compressedFile);
+
+            
+
+            if (!imgUrl) throw new Error("ImgBB Upload Failed");
+
+
+
+            // 3. Simpan ke Kontrak V3
+
+            showToast("Saving to Blockchain...", 'loading');
+
+            
+
+            // Panggil fungsi setAvatar di kontrak
+
+            const tx = await gameContract.setAvatar(imgUrl);
+
+            await tx.wait();
+
+
+
+            showToast("Avatar Updated!", 'success');
+
+            imgEl.src = imgUrl;
+
+
+
+        } catch (e) {
+
+            console.error(e);
+
+            showToast("Failed: " + (e.reason || "Error"), 'error');
+
+            imgEl.src = oldSrc; 
+
+        } finally {
+
+            imgEl.style.opacity = "1";
+
+            input.value = ""; 
+
+        }
+
     }
 
     // --- FUNGSI BUKA PROFIL PEMAIN (V2 SUPPORT) ---
