@@ -2021,6 +2021,7 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     let countdownInterval = null;
     let safetyTimer = null; // Timer pengaman anti-macet
     let toastTimeout;
+    let localAvatarCache = "";
     
     // --- TAMBAHKAN VARIABEL INI ---
     let myBetCounts = [0, 0, 0, 0, 0, 0];
@@ -2672,13 +2673,21 @@ if(!u[1]) {
                     document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
 
                     const customAvatar = userData[10]; 
-                    const robotUrl = getAvatar(userAddress);
+                    const imgEl = document.getElementById('my-avatar-img');
                     
-                    const avatarEl = document.getElementById('my-avatar-img');
-                    if (customAvatar && customAvatar.startsWith("http")) {
-                        avatarEl.src = customAvatar;
-                    } else {
-                        avatarEl.src = robotUrl;
+                    // Cek apakah kita baru saja ganti avatar? (Local Cache)
+                    if (localAvatarCache && localAvatarCache !== "") {
+                        // Pakai yang baru diupload (biar gak kedip ke lama)
+                        if(imgEl.src !== localAvatarCache) imgEl.src = localAvatarCache;
+                    } 
+                    // Jika tidak ada cache, cek data blockchain
+                    else if (customAvatar && customAvatar.startsWith("http")) {
+                        if(imgEl.src !== customAvatar) imgEl.src = customAvatar;
+                    } 
+                    // Fallback ke Robot
+                    else {
+                        const robotUrl = getAvatar(userAddress);
+                        if(imgEl.src !== robotUrl) imgEl.src = robotUrl;
                     }
 
                     // --- [2] TOTAL EARNINGS SPLIT (V3) ---
@@ -4110,7 +4119,6 @@ if(!u[1]) {
     }
 
     // --- FUNGSI GANTI AVATAR ---
-
     async function changeProfilePicture(input) {
 
         const file = input.files[0];
@@ -4118,8 +4126,6 @@ if(!u[1]) {
         if (!file) return;
 
 
-
-        // Validasi 4MB
 
         if (file.size > 4 * 1024 * 1024) {
 
@@ -4135,7 +4141,13 @@ if(!u[1]) {
 
         const oldSrc = imgEl.src;
 
+        
+
+        // Efek Visual Loading
+
         imgEl.style.opacity = "0.5";
+
+        imgEl.style.filter = "grayscale(100%)"; // Biar kelihatan lagi proses
 
         showToast("Uploading...", 'load');
 
@@ -4143,13 +4155,7 @@ if(!u[1]) {
 
         try {
 
-            // 1. Kompresi
-
             const compressedFile = await compressImage(file);
-
-            
-
-            // 2. Upload ImgBB
 
             const imgUrl = await uploadToImgBB(compressedFile);
 
@@ -4159,13 +4165,9 @@ if(!u[1]) {
 
 
 
-            // 3. Simpan ke Kontrak V3
-
             showToast("Saving to Blockchain...", 'loading');
 
             
-
-            // Panggil fungsi setAvatar di kontrak
 
             const tx = await gameContract.setAvatar(imgUrl);
 
@@ -4175,7 +4177,21 @@ if(!u[1]) {
 
             showToast("Avatar Updated!", 'success');
 
+            
+
+            // 1. UPDATE TAMPILAN LANGSUNG (Optimistic)
+
             imgEl.src = imgUrl;
+
+            
+
+            // 2. SIMPAN KE CACHE LOKAL
+
+            // Ini triknya: Kita simpan URL baru di variabel global
+
+            // Nanti di refreshGameData, kita cek variabel ini dulu
+
+            localAvatarCache = imgUrl;
 
 
 
@@ -4185,11 +4201,15 @@ if(!u[1]) {
 
             showToast("Failed: " + (e.reason || "Error"), 'error');
 
-            imgEl.src = oldSrc; 
+            imgEl.src = oldSrc; // Balikin ke lama jika gagal
 
         } finally {
 
+            // Reset Efek Visual
+
             imgEl.style.opacity = "1";
+
+            imgEl.style.filter = "none";
 
             input.value = ""; 
 
