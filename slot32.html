@@ -38,39 +38,81 @@
     }
 
     body {
-font-family: 'Ubuntu', sans-serif;
-background: var(--gradient-bg);
-color: var(--text);
-margin: 0;
-display: flex; flex-direction: column; align-items: center;
-min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
+        font-family: 'Ubuntu', sans-serif;
+        background: var(--gradient-bg);
+        color: var(--text);
+        margin: 0;
+        
+        /* --- UPDATE PC MODE: Centering Layout --- */
+        display: flex; 
+        flex-direction: column; 
+        align-items: center;
+        min-height: 100vh; 
+        padding-bottom: 50px; 
+        overflow-x: hidden;
+        width: 100%;
+        overflow-y: scroll; /* Agar layout tidak geser saat scrollbar muncul */
     }
 
+    /* SCROLLBAR BODY (Agar Ganteng di PC) */
+    body::-webkit-scrollbar { width: 10px; }
+    body::-webkit-scrollbar-track { background: #050508; }
+    body::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; border: 2px solid #050508; }
+    body::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
     .container {
-    width: 100%;
-    max-width: 1200px;    /* batas tampilan PC */
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 12px;
-    padding-right: 12px;
+        width: 100%;
+        max-width: 1200px;    /* batas tampilan PC */
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 12px;
+        padding-right: 12px;
     }
 
     @media (min-width: 1024px) {
-    .container {
-        max-width: 1400px;
-        padding-left: 20px;
-        padding-right: 20px;
+        .container {
+            max-width: 1400px;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
     }
+
+    /* --- LAYOUT CONTAINER (KUNCI TAMPILAN PC) --- */
+    .layout-container { 
+        width: 100%; 
+        max-width: 480px; /* Kunci agar seperti Aplikasi HP */
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        margin: 0 auto; /* Tengah layar */
+        position: relative;
+    }  
+
+    /* Tambahan Visual di PC agar terlihat seperti "Card/App" */
+    @media (min-width: 768px) {
+        .layout-container {
+            background: rgba(0,0,0,0.2); /* Sedikit gelap di belakang konten */
+            min-height: 100vh;
+            border-left: 1px solid rgba(255,255,255,0.05);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
     }
 
     header {
         width: 100%; padding: 15px 20px; display: flex; justify-content: space-between;
         align-items: center; 
-        background: rgba(11, 12, 21, 0.9); /* Transparan Gelap */
+        background: rgba(11, 12, 21, 0.95); /* Sedikit lebih pekat */
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         position: sticky; top: 0; z-index: 100; 
         backdrop-filter: blur(15px); 
         box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        max-width: 100%; /* Header tetap full width agar elegan */
+    }
+
+    /* Agar isi header max 1200px di tengah */
+    header > * { 
+        max-width: 1200px; 
     }
 
     .wallet-btn {
@@ -94,8 +136,7 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
         cursor: default; 
     }
 
-    .layout-container { width: 94%; max-width: 480px; display: flex; flex-direction: column; align-items: center; margin: 0 auto; }  
-
+    /* --- SLOT MACHINE (SAFETY CENTER) --- */
     .slot-machine {
         margin-top: 30px; 
         background: linear-gradient(180deg, var(--panel), #0f1016); 
@@ -105,7 +146,10 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(0,0,0,0.5);
         width: 100%; display: flex; flex-direction: column; align-items: center;
         position: relative;
+        /* Safety PC Mode: */
+        max-width: 480px; margin-left: auto; margin-right: auto;
     }
+    
     /* Efek garis neon di atas slot machine */
     .slot-machine::before {
         content: ''; position: absolute; top: -1px; left: 20%; right: 20%; height: 2px;
@@ -152,7 +196,13 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     }
     .status-text { font-size: 0.8em; color: var(--primary); font-weight: bold; text-align: center; text-shadow: 0 0 5px rgba(0, 210, 255, 0.3); }  
 
-    .betting-section { margin-top: 30px; width: 100%; display: flex; flex-direction: column; align-items: center; }  
+    /* --- BETTING SECTION (SAFETY CENTER) --- */
+    .betting-section { 
+        margin-top: 30px; width: 100%; 
+        display: flex; flex-direction: column; align-items: center; 
+        /* Safety PC Mode */
+        max-width: 480px; margin-left: auto; margin-right: auto;
+    }  
     .bet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; margin-top: 15px; }  
 
     .bet-card {
@@ -190,7 +240,12 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     .team-count { font-size: 9px; color: #888; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; margin-top: 2px; }  
     .team-count.filled { color: var(--success); border: 1px solid var(--success); background: rgba(5, 255, 161, 0.1); }  
 
-    .pool-dashboard { width: 100%; display: flex; justify-content: space-between; gap: 8px; margin-top: 20px; margin-bottom: 10px; }  
+    /* --- POOL DASHBOARD (SAFETY CENTER) --- */
+    .pool-dashboard { 
+        width: 100%; display: flex; justify-content: space-between; gap: 8px; margin-top: 20px; margin-bottom: 10px; 
+        /* Safety PC Mode */
+        max-width: 480px; margin-left: auto; margin-right: auto;
+    }  
     .pool-box { 
         flex: 1; background: #11121a; 
         border: 1px solid #333; 
@@ -250,33 +305,35 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     .dash-label { font-size: 0.65em; color: #888; display: block; text-transform: uppercase; }  
     /* --- WARNA SALDO DI MODAL WALLET --- */
 
-/* Saldo ETH (Mengambil warna dari --eth-color) */
-.dash-val.text-eth { 
-    color: var(--eth-color) !important; 
-    text-shadow: 0 0 5px rgba(98, 126, 234, 0.3); /* Tambah sedikit glow biar keren */
-}   
+    /* Saldo ETH */
+    .dash-val.text-eth { 
+        color: var(--eth-color) !important; 
+        text-shadow: 0 0 5px rgba(98, 126, 234, 0.3); 
+    }   
 
-/* Saldo USDT (Mengambil warna dari --usdt-color) */
-.dash-val.text-usdt { 
-    color: var(--usdt-color) !important; 
-    text-shadow: 0 0 5px rgba(38, 161, 123, 0.3);
-}  
+    /* Saldo USDT */
+    .dash-val.text-usdt { 
+        color: var(--usdt-color) !important; 
+        text-shadow: 0 0 5px rgba(38, 161, 123, 0.3);
+    }  
 
-/* Saldo SHIB (Mengambil warna dari --shib-color) */
-.dash-val.text-shib { 
-    color: var(--shib-color) !important; 
-    text-shadow: 0 0 5px rgba(255, 164, 9, 0.3);
-}  
+    /* Saldo SHIB */
+    .dash-val.text-shib { 
+        color: var(--shib-color) !important; 
+        text-shadow: 0 0 5px rgba(255, 164, 9, 0.3);
+    }  
     .btn-disconnect { background: rgba(255, 42, 109, 0.2); border: 1px solid var(--danger); width: 100%; padding: 10px; border-radius: 8px; color: var(--danger); font-weight: bold; cursor: pointer; transition: 0.2s; }
     .btn-disconnect:hover { background: var(--danger); color: white; }
 
-    /* --- REFERRAL CSS --- */  
+    /* --- REFERRAL CSS (SAFETY CENTER) --- */  
     .referral-panel { 
         margin-top: 25px; width: 100%; 
         background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); 
         padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); 
         text-align: center; display: none; 
         box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+        /* Safety PC Mode */
+        max-width: 480px; margin-left: auto; margin-right: auto;
     }  
     .ref-label { font-size: 0.7em; color: var(--primary); margin-bottom: 5px; letter-spacing: 1px; font-weight: bold; }  
     .ref-box { background: #080808; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; margin-top: 5px; font-size: 0.8em; color: #888; }  
@@ -285,9 +342,9 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     }  
     
     .btn-copy:hover { 
-    background: #00d2ff;
-    color: #000;
-    box-shadow: inset 0 0 0 2px #00a8cc, 0 0 15px #69ffc7; 
+        background: #00d2ff;
+        color: #000;
+        box-shadow: inset 0 0 0 2px #00a8cc, 0 0 15px #69ffc7; 
     }
     
     .ref-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; margin-bottom: 10px; }  
@@ -303,368 +360,136 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     .btn-withdraw-small:hover { background: var(--success); color: #000; }
 
     /* Base Toast Style */
-#toast {
-
-    /* --- Layout & Posisi --- */
-
-    visibility: hidden;
-
-    min-width: 220px; /* Dikecilkan dari 300px agar compact */
-
-    max-width: 85%;
-
-    position: fixed;
-
-    z-index: 99999;
-
-    
-
-    /* GANTI POSISI: Turun ke bawah Header */
-
-    top: 90px; /* Jarak aman dari atas agar tidak menutupi navbar */
-
-    right: 20px;
-
-    left: auto; 
-
-    
-
-    /* --- STYLE COMPACT (PREMIUM) --- */
-
-    background-color: rgba(51, 51, 51, 0.95);
-
-    backdrop-filter: blur(8px);
-
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2); /* Shadow sedikit diperhalus */
-
-    border-radius: 10px; /* Radius dikecilkan sedikit */
-
-    border: 1px solid rgba(255,255,255,0.15); /* Border lebih tipis */
-
-    
-
-    /* Typography & Spacing yang lebih Ramping */
-
-    color: #fff;
-
-    /* Padding diperkecil (Atas/Bawah 10px, Kanan 35px utk tombol close) */
-
-    padding: 10px 35px 10px 15px; 
-
-    
-
-    display: flex;
-
-    align-items: center;
-
-    font-family: 'Ubuntu', sans-serif;
-
-    font-weight: 500;
-
-    font-size: 11px; /* Font dikecilkan ke 13px */
-
-    letter-spacing: 0.3px;
-
-
-
-    /* --- ANIMASI KELUAR (EXIT) --- */
-
-    opacity: 0;
-
-    transform: translateX(20px) scale(0.9); 
-
-    transition: all 0.4s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.4s; 
-
-}
-
-
-
-/* --- STATE MUNCUL (ENTER) --- */
-
-#toast.show {
-
-    visibility: visible;
-
-    opacity: 1;
-
-    transform: translateX(0) scale(1);
-
-    transition: all 0.4s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0s;
-
-}
-    
-/* 1. Icon Utama */
-
-#toast .toast-icon {
-
-    width: 18px;  /* Dikecilkan dari 24px */
-
-    height: 18px; 
-
-    margin-right: 10px; 
-
-    object-fit: contain;
-
-}
-
-
-
-/* 2. Tombol Close (X) */
-
-#toast .toast-close {
-
-    position: absolute;
-
-    top: 10px;   /* Disesuaikan dengan padding baru */
-
-    right: 10px; /* Disesuaikan dengan padding baru */
-
-    width: 9px; /* Dikecilkan sedikit */
-
-    height: 9px;
-
-    cursor: pointer;
-
-    opacity: 0.6;
-
-    transition: 0.2s;
-
-}
-
-#toast .toast-close:hover { opacity: 1; transform: scale(1.1); }
-
-/* 1. INFO (Biru) */
-#toast.info {
-    background: #00356b;
-    color: #fff;
-    border-color: #0064cc;
-}
-
-/* 2. SUCCESS (Hijau) */
-#toast.success {
-    background:#004d07;
-    color: #fff;
-    border-color: #00b80f;
-}
-
-/* 3. ERROR (Merah) */
-#toast.error {
-    background: #6b0000;
-    color: #fff;
-    border-color: #b80000;
-}
-
-/* 4. WARNING (Kuning/Oranye) */
-#toast.warning {
-    background: #666200;
-    color: #fff;
-    border-color: #b3ab00;
-}
-
-/* 5. WOLF (Custom - Tema Gelap/Ungu Misterius) */
-#toast.wolf {
-    background: #7d4100; /* Dark Blue-Grey */
-    color: #fff;
-    border-color: #cc6a00; /* Ungu terang */
-}
-
-#toast.load {
-    background: #314d00;      /* Abu-abu terang bersih */
-    color: #fff;              /* Teks gelap */
-    border-color: #68a300;    /* Border abu-abu */
-}
-
-#toast.loading {
-    background: #345a00;      /* Abu-abu terang bersih */
-    color: #fff;              /* Teks gelap */
-    border-color: #5ea300;    /* Border abu-abu */
-}
-
-/* --- ANIMASI DARI ATAS --- */
-@keyframes slideDown {
-    from {top: -50px; opacity: 0;}
-    to {top: 30px; opacity: 1;}
-}
-
-@keyframes fadeOut {
-    from {top: 30px; opacity: 1;}
-    to {top: -50px; opacity: 0;}
-}
-    
-    /* --- WINNER GLAMOUR EXTREME --- */
-.winner-glamour { 
-    border-color: var(--gold) !important; 
-    position: relative;
-    
-    background: radial-gradient(circle, rgba(255,215,0,0.35) 0%, rgba(255,165,0,0.10) 70%) !important;
-
-    animation: glamourPulseExtreme 0.5s infinite alternate ease-in-out !important; 
-
-    box-shadow: 
-        0 0 25px rgba(255,215,0,0.6),
-        0 0 50px rgba(255,215,0,0.4),
-        0 0 80px rgba(255,215,0,0.2) !important;
-
-    transform-origin: center;
-    z-index: 20;
-}
-
-/* --- BADGE WINNER --- */
-.winner-glamour::before { 
-    content: "WINNER";
-
-    position: absolute; 
-    top: -18px;
-    left: 50%;
-    transform: translateX(-50%);
-
-    background: 
-        url("cup.png") no-repeat 8px center / 16px auto,
-        linear-gradient(45deg, #fff2a8, #ffca28, #ff9100);
-
-    padding: 5px 16px 5px 32px;
-    font-size: 0.9em;
-    font-weight: 900;
-    color: #000;
-
-    border-radius: 20px;
-    border: 2px solid #fff;
-
-    box-shadow: 
-        0 0 15px rgba(255,215,0,1),
-        0 0 30px rgba(255,185,0,0.9),
-        0 0 45px rgba(255,165,0,0.8);
-
-    animation: winnerBounceExtreme 0.7s infinite ease-in-out,
-               winnerGlow 1.2s infinite alternate ease-in-out;
-}
-
-/* --- ANIMASI --- */
-
-/* Border + scale pulsating gila */
-@keyframes glamourPulseExtreme {
-    0% {
-        transform: scale(1);
-        box-shadow: 0 0 20px rgba(255,215,0,0.5);
+    #toast {
+        /* --- Layout & Posisi --- */
+        visibility: hidden;
+        min-width: 220px; /* Dikecilkan dari 300px agar compact */
+        max-width: 85%;
+        position: fixed;
+        z-index: 99999;
+        
+        /* GANTI POSISI: Turun ke bawah Header */
+        top: 90px; 
+        right: 20px;
+        left: auto; 
+        
+        /* --- STYLE COMPACT (PREMIUM) --- */
+        background-color: rgba(51, 51, 51, 0.95);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+        border-radius: 10px; 
+        border: 1px solid rgba(255,255,255,0.15); 
+        
+        color: #fff;
+        padding: 10px 35px 10px 15px; 
+        
+        display: flex;
+        align-items: center;
+        font-family: 'Ubuntu', sans-serif;
+        font-weight: 500;
+        font-size: 11px; 
+        letter-spacing: 0.3px;
+
+        /* --- ANIMASI KELUAR (EXIT) --- */
+        opacity: 0;
+        transform: translateX(20px) scale(0.9); 
+        transition: all 0.4s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0.4s; 
     }
-    100% {
-        transform: scale(1.06);
-        box-shadow: 0 0 60px rgba(255,215,0,0.9);
+
+    /* --- STATE MUNCUL (ENTER) --- */
+    #toast.show {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(0) scale(1);
+        transition: all 0.4s cubic-bezier(0.2, 0, 0, 1), visibility 0s 0s;
     }
-}
+    
+    /* 1. Icon Utama */
+    #toast .toast-icon {
+        width: 18px;  
+        height: 18px; 
+        margin-right: 10px; 
+        object-fit: contain;
+    }
 
-/* Lompatan ekstrem untuk badge WINNER */
-@keyframes winnerBounceExtreme {
-    0% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-8px) scale(1.2); }
-    100% { transform: translateX(-50%) translateY(0); }
-}
-
-/* Glow warna naik turun */
-@keyframes winnerGlow {
-    0% { filter: drop-shadow(0 0 5px gold); }
-    100% { filter: drop-shadow(0 0 20px orange); }
-}
-    
-    /* --- HISTORY CARDS --- */
-    .history-section { margin-top: 30px; width: 100%; }  
-    .history-card { 
-        background: #1a1b26; 
-        padding: 15px; border-radius: 12px; margin-bottom: 15px; 
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2); position: relative; 
-        border: 1px solid var(--primary);
-    }  
-    .history-reels { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }  
-    .history-reel-img { width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }  
-    .history-outcome { font-weight: bold; color: var(--text); font-size: 0.9em; text-shadow: 0 0 5px rgba(255,255,255,0.1); }  
-    
-    .history-tabs { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }  
-    .tab-btn { 
-        flex: 1; padding: 10px; background: rgba(255,255,255,0.05); 
-        border: 1px solid transparent; color: #888; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.9em; transition: 0.3s; 
-    }  
-    .tab-btn:hover { background: rgba(255,255,255,0.1); color: white; }
-    .tab-btn.active { 
-        background: rgba(0, 210, 255, 0.1); 
-        color: var(--primary); 
-        border-color: var(--primary); 
-        box-shadow: 0 0 10px rgba(0, 210, 255, 0.1); 
-    }  
-    .btn-load-more { width: 100%; padding: 12px; background: transparent; border: 1px dashed #555; color: #888; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 0.8em; transition: 0.3s; }  
-    .btn-load-more:hover { border-color: var(--primary); color: var(--primary); }  
-    .hidden { display: none; }  
-    
-    .personal-bet-card { 
-        background: rgba(255,255,255,0.02); 
-        border-left: 3px solid #555; padding: 10px; margin-bottom: 10px; border-radius: 6px; 
-        display: flex; justify-content: space-between; align-items: center; 
+    /* 2. Tombol Close (X) */
+    #toast .toast-close {
+        position: absolute;
+        top: 10px;   
+        right: 10px; 
+        width: 9px; 
+        height: 9px;
+        cursor: pointer;
+        opacity: 0.6;
         transition: 0.2s;
-    } 
-    .personal-bet-card:hover { background: rgba(255,255,255,0.05); } 
-    .pb-info { font-size: 0.8em; }  
-    .pb-time { font-size: 0.7em; color: #666; }  
-    .pb-animal { font-weight: bold; color: var(--primary); }  
-    .badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; text-transform: uppercase; }  
-    .badge-win { background: rgba(5, 255, 161, 0.1); color: var(--success); border: 1px solid var(--success); }  
-    .badge-lose { background: rgba(255, 42, 109, 0.1); color: var(--danger); border: 1px solid var(--danger); }  
-
-    /* --- SOCIAL BAR --- */  
-    .social-bar {  
-        display: flex; justify-content: space-between; align-items: center;  
-        margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);  
-    }  
-    .star-group { display: flex; align-items: center; gap: 2px; }  
-    .star-btn { cursor: pointer; font-size: 1.3em; color: #444; transition: 0.2s; line-height: 1; }  
-    .star-btn:hover { transform: scale(1.2); }  
-    .star-btn.active { color: var(--gold); text-shadow: 0 0 10px rgba(255, 221, 89, 0.6); }  
-    .star-count { font-size: 0.7em; color: #888; margin-left: 6px; }  
-    .star-btn.hover-gold { color: var(--gold) !important; text-shadow: 0 0 10px rgba(255, 215, 0, 0.6); transform: scale(1.1); }  
-    .star-btn.dimmed { color: #333 !important; text-shadow: none !important; transform: scale(1); }  
-    
-    .like-wrapper { display: flex; align-items: center; gap: 10px; }  
-    
-    .btn-like-single {  
-        background: #111; border: 1px solid #333; color: #aaa; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 6px; transition: 0.3s;  
-    }  
-    .btn-like-single:hover { border-color: var(--success); color: white; background: rgba(5, 255, 161, 0.1); }  
-    .btn-like-single:active { transform: scale(0.95); }  
-
-    /* --- COMMENTS --- */
-    .btn-comment-toggle {  
-        background: #111; border: 1px solid #333; color: #aaa; border-radius: 6px; padding: 5px 12px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 6px; transition: 0.3s;  
-    }  
-    .btn-comment-toggle:hover { border-color: var(--primary); color: white; background: rgba(0, 210, 255, 0.1); }  
-    .btn-comment-toggle:active { transform: scale(0.95); }  
-    
-    .comments-container { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; }  
-    .comment-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; max-height: 300px; overflow-y: auto; }  
-    .comment-item { display: flex; gap: 8px; align-items: flex-start; }  
-    
-    .comment-bubble {  
-        background: #252836; padding: 10px 12px; padding-right: 30px; border-radius: 12px; flex: 1; position: relative; min-width: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }  
-    .btn-edit-icon { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #666; cursor: pointer; padding: 2px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }  
-    .btn-edit-icon:hover { color: var(--primary); transform: scale(1.1); }  
-    
-    .comment-author { font-weight: bold; color: var(--primary); font-size: 0.85em; cursor: pointer; }  
-    .comment-text { color: #ddd; margin-top: 4px; word-wrap: break-word; white-space: pre-wrap; font-size: 0.9em; line-height: 1.4; }  
-    .comment-meta { font-size: 0.7em; color: #555; margin-top: 6px; display: flex; gap: 10px; }  
-    .comment-actions { color: #777; cursor: pointer; text-decoration: underline; }  
-    .comment-actions:hover { color: white; }  
-
-    .comment-input-area { display: flex; gap: 8px; margin-top: 10px; align-items: flex-end; }  
-    .input-comment {  
-        flex: 1; background: #0f1016; border: 1px solid #333; color: white; padding: 10px; border-radius: 12px; font-size: 0.9em; font-family: inherit; resize: vertical; min-height: 40px; max-height: 200px; overflow: auto; transition: 0.3s;
-    }  
-    .input-comment:focus { border-color: var(--primary); box-shadow: 0 0 10px rgba(0, 210, 255, 0.1); outline: none; }  
-    
-    .btn-post-comment {  
-        background: var(--primary); color: #000; border: none; height: 40px; width: 40px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
     }
-    .btn-post-comment:hover { transform: scale(1.1); box-shadow: 0 0 15px var(--primary); color: white;}
 
-    /* --- HISTORY SECTION (CYBERPUNK STYLE) --- */
-    .history-section { margin-top: 30px; width: 100%; }  
+    #toast .toast-close:hover { opacity: 1; transform: scale(1.1); }
+
+    /* 1. INFO (Biru) */
+    #toast.info { background: #00356b; color: #fff; border-color: #0064cc; }
+    /* 2. SUCCESS (Hijau) */
+    #toast.success { background:#004d07; color: #fff; border-color: #00b80f; }
+    /* 3. ERROR (Merah) */
+    #toast.error { background: #6b0000; color: #fff; border-color: #b80000; }
+    /* 4. WARNING (Kuning/Oranye) */
+    #toast.warning { background: #666200; color: #fff; border-color: #b3ab00; }
+    /* 5. WOLF */
+    #toast.wolf { background: #7d4100; color: #fff; border-color: #cc6a00; }
+    /* 6. LOAD */
+    #toast.load { background: #314d00; color: #fff; border-color: #68a300; }
+    #toast.loading { background: #345a00; color: #fff; border-color: #5ea300; }
+
+    /* --- WINNER GLAMOUR EXTREME --- */
+    .winner-glamour { 
+        border-color: var(--gold) !important; 
+        position: relative;
+        background: radial-gradient(circle, rgba(255,215,0,0.35) 0%, rgba(255,165,0,0.10) 70%) !important;
+        animation: glamourPulseExtreme 0.5s infinite alternate ease-in-out !important; 
+        box-shadow: 0 0 25px rgba(255,215,0,0.6), 0 0 50px rgba(255,215,0,0.4), 0 0 80px rgba(255,215,0,0.2) !important;
+        transform-origin: center;
+        z-index: 20;
+    }
+
+    /* --- BADGE WINNER --- */
+    .winner-glamour::before { 
+        content: "WINNER";
+        position: absolute; 
+        top: -18px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: url("cup.png") no-repeat 8px center / 16px auto, linear-gradient(45deg, #fff2a8, #ffca28, #ff9100);
+        padding: 5px 16px 5px 32px;
+        font-size: 0.9em;
+        font-weight: 900;
+        color: #000;
+        border-radius: 20px;
+        border: 2px solid #fff;
+        box-shadow: 0 0 15px rgba(255,215,0,1), 0 0 30px rgba(255,185,0,0.9), 0 0 45px rgba(255,165,0,0.8);
+        animation: winnerBounceExtreme 0.7s infinite ease-in-out, winnerGlow 1.2s infinite alternate ease-in-out;
+    }
+
+    /* --- ANIMASI --- */
+    @keyframes glamourPulseExtreme {
+        0% { transform: scale(1); box-shadow: 0 0 20px rgba(255,215,0,0.5); }
+        100% { transform: scale(1.06); box-shadow: 0 0 60px rgba(255,215,0,0.9); }
+    }
+    @keyframes winnerBounceExtreme {
+        0% { transform: translateX(-50%) translateY(0); }
+        50% { transform: translateX(-50%) translateY(-8px) scale(1.2); }
+        100% { transform: translateX(-50%) translateY(0); }
+    }
+    @keyframes winnerGlow {
+        0% { filter: drop-shadow(0 0 5px gold); }
+        100% { filter: drop-shadow(0 0 20px orange); }
+    }
+    
+    /* --- HISTORY SECTION (SAFETY CENTER) --- */
+    .history-section { 
+        margin-top: 30px; width: 100%; 
+        /* Safety PC Mode */
+        max-width: 480px; margin-left: auto; margin-right: auto;
+    }  
     
     .history-card { 
         background: #161822; /* Panel gelap */
@@ -686,7 +511,6 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
         width: 40px; height: 40px; object-fit: contain; 
         filter: drop-shadow(0 0 2px rgba(255,255,255,0.2)); 
     }  
-    
     .history-outcome { 
         font-weight: 800; color: var(--text); 
         font-size: 0.95em; 
@@ -696,38 +520,22 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     
     .history-tabs { display: flex; gap: 10px; margin-bottom: 15px; width: 100%; }  
     .tab-btn { 
-        flex: 1; padding: 10px; 
-        background: rgba(255,255,255,0.03); 
-        border: 1px solid rgba(255,255,255,0.05); 
-        color: #888; border-radius: 8px; 
-        cursor: pointer; font-weight: bold; font-size: 0.85em; 
-        transition: all 0.3s; 
-        text-transform: uppercase;
+        flex: 1; padding: 10px; background: rgba(255,255,255,0.03); 
+        border: 1px solid rgba(255,255,255,0.05); color: #888; border-radius: 8px; 
+        cursor: pointer; font-weight: bold; font-size: 0.85em; transition: all 0.3s; text-transform: uppercase;
     }  
-    .tab-btn:hover { 
-        background: rgba(255,255,255,0.08); color: white; 
-    }
+    .tab-btn:hover { background: rgba(255,255,255,0.08); color: white; }
     .tab-btn.active { 
         background: rgba(0, 210, 255, 0.1); 
         color: var(--primary); 
         border-color: var(--primary); 
         box-shadow: 0 0 10px rgba(0, 210, 255, 0.1); 
     }  
-    
     .btn-load-more { 
-        width: 100%; padding: 12px; 
-        background: transparent; 
-        border: 1px dashed #444; 
-        color: #888; border-radius: 8px; 
-        margin-top: 10px; cursor: pointer; 
-        font-size: 0.8em; font-weight: bold; 
-        transition: 0.3s; 
+        width: 100%; padding: 12px; background: transparent; border: 1px dashed #444; color: #888; border-radius: 8px; margin-top: 10px; cursor: pointer; font-size: 0.8em; font-weight: bold; transition: 0.3s; 
     }  
     .btn-load-more:hover { 
-        border-color: var(--primary); 
-        color: var(--primary); 
-        background: rgba(0, 210, 255, 0.05);
-        box-shadow: 0 0 10px rgba(0, 210, 255, 0.1);
+        border-color: var(--primary); color: var(--primary); background: rgba(0, 210, 255, 0.05); box-shadow: 0 0 10px rgba(0, 210, 255, 0.1);
     }  
     .hidden { display: none; }  
     
@@ -738,207 +546,45 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
         display: flex; justify-content: space-between; align-items: center; 
         transition: 0.2s;
     } 
-    .personal-bet-card:hover { background: rgba(255,255,255,0.05); }
-
+    .personal-bet-card:hover { background: rgba(255,255,255,0.05); } 
     .pb-info { font-size: 0.8em; }  
     .pb-time { font-size: 0.7em; color: #666; margin-bottom: 2px; }  
     .pb-animal { font-weight: bold; color: var(--primary); text-shadow: 0 0 5px rgba(0, 210, 255, 0.3); }  
-    
     .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; text-transform: uppercase; }  
-    .badge-win { 
-        background: rgba(5, 255, 161, 0.1); 
-        color: var(--success); 
-        border: 1px solid var(--success); 
-        box-shadow: 0 0 5px rgba(5, 255, 161, 0.2);
-    }  
-    .badge-lose { 
-        background: rgba(255, 42, 109, 0.1); 
-        color: var(--danger); 
-        border: 1px solid var(--danger); 
-    }  
+    .badge-win { background: rgba(5, 255, 161, 0.1); color: var(--success); border: 1px solid var(--success); box-shadow: 0 0 5px rgba(5, 255, 161, 0.2); }  
+    .badge-lose { background: rgba(255, 42, 109, 0.1); color: var(--danger); border: 1px solid var(--danger); }  
 
-    /* --- SOCIAL & COMMENTS (GLOWING EFFECTS) --- */
+    /* --- SOCIAL & COMMENTS (SAFETY CENTER) --- */
     .social-bar {  
         display: flex;  
         justify-content: space-between;  
-        align-items: center;  
-        margin-top: 15px;  
-        padding-top: 12px;  
-        border-top: 1px solid rgba(255, 255, 255, 0.05);  
-    }  
-    
-    .star-group { display: flex; align-items: center; gap: 4px; }  
-    .star-btn { 
-        cursor: pointer; font-size: 1.4em; color: #444; 
-        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-        line-height: 1; 
-    }  
-    .star-btn:hover { transform: scale(1.3) rotate(10deg); }  
-    .star-btn.active { color: var(--gold); text-shadow: 0 0 10px rgba(255, 221, 89, 0.6); }  
-    
-    .star-btn.hover-gold { color: var(--gold) !important; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8); transform: scale(1.2); }  
-    .star-btn.dimmed { color: #333 !important; text-shadow: none !important; transform: scale(0.9); opacity: 0.5; }  
-    .star-count { font-size: 0.75em; color: #888; margin-left: 8px; font-weight: bold; }  
-
-    .like-wrapper { display: flex; align-items: center; gap: 10px; }  
-    
-    /* Tombol Like & Comment seragam */
-    .btn-like-single, .btn-comment-toggle {  
-        background: #11121a;  
-        border: 1px solid rgba(255,255,255,0.1);  
-        color: #aaa;  
-        border-radius: 8px;  
-        padding: 3px 8px;  
-        cursor: pointer;  
-        font-size: 0.85em;  
-        display: flex; align-items: center; gap: 3px;  
-        transition: all 0.3s ease;  
-    }  
-    .btn-like-single:hover { 
-        border-color: var(--success); color: #fff; 
-        background: rgba(5, 255, 161, 0.1); 
-        box-shadow: 0 0 10px rgba(5, 255, 161, 0.2);
-    }  
-    .btn-comment-toggle:hover { 
-        border-color: var(--primary); color: #fff; 
-        background: rgba(0, 210, 255, 0.1); 
-        box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
-    }
-    .btn-like-single:active, .btn-comment-toggle:active { transform: scale(0.95); }  
-
-    /* --- COMMENTS AREA --- */
-    .comments-container {  
-        display: none;   
-        margin-top: 15px;  
-        padding-top: 15px;  
-        border-top: 1px dashed rgba(255,255,255,0.1);  
-        background: rgba(0,0,0,0.25);  
-        padding: 15px;  
-        border-radius: 12px;  
-        animation: slideDown 0.3s ease-out;
-    }  
-    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-    .comment-list { 
-        display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; 
-        max-height: 300px; overflow-y: auto; padding-right: 5px;
-    }  
-    
-    .comment-item { display: flex; gap: 10px; align-items: flex-start; }  
-    
-    .comment-bubble {  
-        background: #1f222e;  
-        padding: 10px 14px;  
-        padding-right: 35px;   
-        border-radius: 12px; 
-        border-top-left-radius: 2px;
-        flex: 1; position: relative; min-width: 0; 
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        border: 1px solid rgba(255,255,255,0.05);
-    }  
-
-    .btn-edit-icon { 
-        position: absolute; top: 8px; right: 8px; background: none; border: none; color: #555; 
-        cursor: pointer; padding: 4px; border-radius: 4px; transition: 0.2s; display: flex; 
-    }  
-    .btn-edit-icon:hover { color: var(--primary); background: rgba(0, 210, 255, 0.1); }  
-    
-    .comment-author { font-weight: 700; color: var(--primary); font-size: 0.85em; cursor: pointer; text-shadow: 0 0 5px rgba(0, 210, 255, 0.2); }  
-    .comment-text { color: #e0e6ed; margin-top: 4px; word-wrap: break-word; white-space: pre-wrap; font-size: 0.9em; line-height: 1.5; }  
-    .comment-meta { font-size: 0.7em; color: #666; margin-top: 8px; display: flex; gap: 10px; align-items: center; }  
-    
-    .comment-input-area { display: flex; gap: 10px; margin-top: 10px; align-items: flex-end; background: #111; padding: 5px; border-radius: 15px; border: 1px solid #333; }  
-    
-    .input-comment {  
-        flex: 1; background: transparent; border: none; color: white; padding: 10px; border-radius: 12px; 
-        font-size: 0.9em; font-family: inherit; resize: vertical; min-height: 40px; max-height: 150px; overflow: auto; 
-    }  
-    .input-comment:focus { outline: none; }  
-    
-    .btn-post-comment {  
-        background: linear-gradient(135deg, var(--primary), var(--accent)); 
-        color: white; border: none; 
-        height: 36px; width: 36px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; 
-        transition: 0.3s; box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); margin-bottom: 2px; margin-right: 2px;
-    }
-    .btn-post-comment:hover { transform: scale(1.1) rotate(-10deg); box-shadow: 0 0 20px var(--primary); }
-
-    /* --- SCROLLBAR CUSTOM --- */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #0b0c15; }
-    ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-    
-    /* --- SOCIAL & COMMENTS STYLING (CYBERPUNK THEME) --- */
-
-    /* Container Utama Bar Sosial */
-    .social-bar {  
-        display: flex;  
-        justify-content: space-between; /* Kunci agar elemen menyebar rata */
         align-items: center;  
         margin-top: 10px;  
         padding-top: 8px;  
         border-top: 1px solid rgba(255,255,255,0.05);  
         width: 100%;
-    }
-    
-    /* Opsional: Agar Tombol Like dan Komen punya lebar sama 
-       supaya Bintang benar-benar persis di tengah layar */
-    .btn-like-single, .btn-comment-toggle {
-        min-width: 60px; /* Atur lebar minimal */
+        /* Safety PC Mode */
+        max-width: 480px; margin-left: auto; margin-right: auto;
     }  
 
-    /* Grup Bintang Rating */
-    .star-group { 
-        display: flex; 
-        align-items: center; 
-        gap: 4px; /* Jarak antar bintang */
-    }  
-    .star-btn {  
-        cursor: pointer;  
-        font-size: 1.4em;  
-        color: #444; /* Warna mati (abu gelap) */  
-        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Efek membal saat hover */
-        line-height: 1;  
-    }  
-    .star-btn:hover { 
-        transform: scale(1.3) rotate(15deg); /* Efek membesar & miring saat hover */
-    }  
+    .star-group { display: flex; align-items: center; gap: 4px; }  
+    .star-btn { cursor: pointer; font-size: 1.4em; color: #444; transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); line-height: 1; }  
+    .star-btn:hover { transform: scale(1.3) rotate(15deg); }  
+    .star-btn.active { color: var(--gold); text-shadow: 0 0 10px rgba(255, 221, 89, 0.8), 0 0 20px rgba(255, 221, 89, 0.4); }  
+    .star-btn.hover-gold { color: var(--gold) !important; text-shadow: 0 0 15px rgba(255, 215, 0, 0.8); transform: scale(1.2); }  
+    .star-btn.dimmed { color: #333 !important; text-shadow: none !important; transform: scale(0.9); opacity: 0.5; }  
+    .star-count { font-size: 0.75em; color: #aaa; margin-left: 8px; font-weight: bold; }  
     
-    /* Bintang Menyala (Aktif) */  
-    .star-btn.active { 
-        color: var(--gold); 
-        text-shadow: 0 0 10px rgba(255, 221, 89, 0.8), 0 0 20px rgba(255, 221, 89, 0.4); /* Glow emas */
-    }  
+    .like-wrapper { display: flex; align-items: center; gap: 10px; }  
     
-    /* Hover Effects (Preview & Dimmed) */
-    .star-btn.hover-gold {   
-        color: var(--gold) !important;   
-        text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);   
-        transform: scale(1.2);  
+    .btn-like-single, .btn-comment-toggle {  
+        background: #11121a; border: 1px solid rgba(255,255,255,0.1); color: #aaa; border-radius: 8px; padding: 3px 8px; cursor: pointer; font-size: 0.85em; display: flex; align-items: center; gap: 3px; transition: all 0.3s ease; min-width: 60px;
     }  
-    .star-btn.dimmed {  
-        color: #333 !important;  
-        text-shadow: none !important;  
-        transform: scale(0.9);  
-        opacity: 0.5;
-    }  
+    .btn-like-single:hover { border-color: var(--success); color: #fff; background: rgba(5, 255, 161, 0.1); box-shadow: 0 0 10px rgba(5, 255, 161, 0.2); }  
+    .btn-comment-toggle:hover { border-color: var(--primary); color: #fff; background: rgba(0, 210, 255, 0.1); box-shadow: 0 0 10px rgba(0, 210, 255, 0.2); }
+    .btn-like-single:active, .btn-comment-toggle:active { transform: scale(0.95); }  
 
-    .star-count {   
-        font-size: 0.75em;   
-        color: #aaa;   
-        margin-left: 8px;   
-        font-weight: bold;
-    }  
-
-    /* Wrapper Tombol Like & Comment */
-    .like-wrapper { 
-        display: flex; 
-        align-items: center; 
-        gap: 10px; /* Jarak antara tombol Like dan Komen */
-    }  
-  
-    /* Container Area Komentar */
+    /* --- COMMENTS AREA (SAFETY CENTER) --- */
     .comments-container {  
         display: none;   
         margin-top: 15px;  
@@ -947,570 +593,120 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
         background: rgba(0,0,0,0.25);  
         padding: 15px;  
         border-radius: 12px;
-        animation: slideDown 0.3s ease-out; /* Animasi muncul */
+        animation: slideDown 0.3s ease-out;
+        /* Safety PC Mode */
+        max-width: 480px; margin-left: auto; margin-right: auto;
     }  
     @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* List Komentar */
-    .comment-list {  
-        display: flex; 
-        flex-direction: column; 
-        gap: 12px; 
-        margin-bottom: 15px;  
-        max-height: 300px; 
-        overflow-y: auto;  
-        padding-right: 5px; /* Ruang untuk scrollbar */
-    }  
-    
-    /* Scrollbar Custom untuk List Komentar */
+    .comment-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; max-height: 300px; overflow-y: auto; padding-right: 5px; }  
     .comment-list::-webkit-scrollbar { width: 4px; }
     .comment-list::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
     .comment-list::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-
+    
     .comment-item { display: flex; gap: 10px; align-items: flex-start; }  
-  
-    /* Bubble Komentar */
+    
     .comment-bubble {  
-        background: #1f222e;  
-        padding: 10px 14px;  
-        padding-right: 35px; /* Ruang untuk icon edit */  
-        border-radius: 12px;  
-        border-top-left-radius: 2px; /* Aksen chat bubble */
-        flex: 1;  
-        position: relative;   
-        min-width: 0;  
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        border: 1px solid rgba(255,255,255,0.05);
+        background: #1f222e; padding: 10px 14px; padding-right: 35px; border-radius: 12px; border-top-left-radius: 2px; flex: 1; position: relative; min-width: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);
     }  
+    .btn-edit-icon { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #555; cursor: pointer; padding: 4px; border-radius: 4px; transition: 0.2s; display: flex; align-items: center; justify-content: center; }  
+    .btn-edit-icon:hover { color: var(--primary); background: rgba(0, 210, 255, 0.1); transform: scale(1.1); }  
+    
+    .comment-author { font-weight: 700; color: var(--primary); font-size: 0.85em; cursor: pointer; margin-bottom: 2px; transition: 0.2s; }  
+    .comment-author:hover { text-decoration: underline; opacity: 0.8; }  
+    .comment-text { color: #e0e0e0; margin-top: 4px; word-wrap: break-word; white-space: pre-wrap; font-size: 0.9em; line-height: 1.5; }  
+    .comment-meta { font-size: 0.7em; color: #666; margin-top: 8px; display: flex; gap: 10px; align-items: center; }  
 
-    /* Icon Edit (Pensil) */
-    .btn-edit-icon {  
-        position: absolute;  
-        top: 8px;  
-        right: 8px;  
-        background: none;  
-        border: none;  
-        color: #555;  
-        cursor: pointer;  
-        padding: 4px;  
-        border-radius: 4px;
-        transition: 0.2s;  
-        display: flex;  
-        align-items: center;  
-        justify-content: center;  
-    }  
-    .btn-edit-icon:hover {  
-        color: var(--primary);  
-        background: rgba(0, 210, 255, 0.1);
-        transform: scale(1.1);  
-    }  
-  
-    /* Nama User Komentar */
-    .comment-author { 
-        font-weight: 700; 
-        color: var(--primary); 
-        font-size: 0.85em; 
-        cursor: pointer; /* Kursor jari */
-        margin-bottom: 2px;
-        transition: 0.2s;
-    }
+    .comment-input-area { display: flex; gap: 10px; margin-top: 10px; align-items: flex-end; background: #111; padding: 5px; border-radius: 15px; border: 1px solid #333; }  
+    .input-comment { flex: 1; background: transparent; border: none; color: white; padding: 10px; font-size: 0.9em; font-family: inherit; resize: vertical; min-height: 40px; max-height: 150px; overflow: auto; }  
+    .input-comment:focus { outline: none; }  
     
-    /* Efek saat mouse diarahkan ke nama/avatar */
-    .comment-author:hover {
-        text-decoration: underline;
-        opacity: 0.8;
-    }  
-  
-    /* Isi Teks Komentar */
-    .comment-text {   
-        color: #e0e0e0;   
-        margin-top: 4px;   
-        word-wrap: break-word;   
-        white-space: pre-wrap;   
-        font-size: 0.9em;  
-        line-height: 1.5;  
-    }  
-  
-    /* Metadata (Waktu & Status Edit) */
-    .comment-meta { 
-        font-size: 0.7em; 
-        color: #666; 
-        margin-top: 8px; 
-        display: flex; 
-        gap: 10px; 
-        align-items: center;
-    }  
-    
-    /* Area Input Komentar */
-    .comment-input-area { 
-        display: flex; 
-        gap: 10px; 
-        margin-top: 10px; 
-        align-items: flex-end; 
-        background: #111; 
-        padding: 5px; 
-        border-radius: 15px; 
-        border: 1px solid #333;
-    }  
-  
-    /* Textarea Input */
-    .input-comment {  
-        flex: 1;   
-        background: transparent;   
-        border: none;   
-        color: white;  
-        padding: 10px;   
-        font-size: 0.9em;  
-        font-family: inherit;  
-        resize: vertical; 
-        min-height: 40px; 
-        max-height: 150px; 
-        overflow: auto;  
-    }  
-    .input-comment:focus { outline: none; } /* Hilangkan outline default */ 
-  
-    /* Tombol Kirim (Pesawat Kertas) */
     .btn-post-comment {  
-        background: linear-gradient(135deg, var(--primary), var(--accent)); 
-        color: #fff; 
-        border: none;  
-        height: 36px; width: 36px; 
-        border-radius: 50%;   
-        font-weight: bold; cursor: pointer; display: flex;   
-        align-items: center; justify-content: center;  
-        transition: 0.3s;
-        box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
-        margin-bottom: 2px;
-        margin-right: 2px;
+        background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; border: none; height: 36px; width: 36px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; box-shadow: 0 0 10px rgba(0, 210, 255, 0.3); margin-bottom: 2px; margin-right: 2px;
     }
-    .btn-post-comment:hover {
-        transform: scale(1.1) rotate(-10deg);
-        box-shadow: 0 0 20px var(--primary);
-        }
+    .btn-post-comment:hover { transform: scale(1.1) rotate(-10deg); box-shadow: 0 0 20px var(--primary); }
 
     h1, h2, h3 {
         background: linear-gradient(90deg, #03a9f4, #f441a5);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     .comment-image-result {
-        margin-top: 8px;
-        max-width: 100%;
-        max-height: 150px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.2);
-        cursor: pointer;
-        transition: 0.2s;
-        display: block; /* Biar turun ke bawah */
+        margin-top: 8px; max-width: 100%; max-height: 150px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.2s; display: block; 
     }
     .comment-image-result:hover { opacity: 0.8; }
 
-    /* --- TOMBOL PROFIL (POJOK KANAN BAWAH) --- */
     .btn-view-profile {
-        position: absolute; /* Wajib absolute */
-        bottom: 8px;        /* Jarak dari bawah */
-        right: 8px;         /* Jarak dari kanan */
-        
-        background: rgba(0,0,0,0.3);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 6px;
-        padding: 4px 6px;
-        cursor: pointer;
-        transition: 0.2s;
-        display: flex; align-items: center; justify-content: center;
-        z-index: 5; /* Agar tidak tertutup elemen lain */
+        position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 4px 6px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; z-index: 5; 
     }
+    .btn-view-profile:hover { background: var(--accent); border-color: var(--accent); transform: scale(1.1); box-shadow: 0 0 10px var(--accent); color: white; }
 
-    .btn-view-profile:hover {
-        background: var(--accent); /* Ungu Neon */
-        border-color: var(--accent);
-        transform: scale(1.1);
-        box-shadow: 0 0 10px var(--accent);
-        color: white;
-    }
-
-    /* ========================================= */
-    /* CSS PLAYER PROFILE (CARD STYLE)      */
-    /* ========================================= */
-
-    /* 1. Container Avatar (Lingkaran Luar dengan Glow) */
+    /* CSS PLAYER PROFILE (CARD STYLE) */
     .profile-avatar {
-        width: 90px; 
-        height: 90px;
-        margin: 0 auto 15px auto;
-        border-radius: 50%;
-        padding: 3px; /* Jarak antara border pelangi dan gambar */
-        
-        /* Efek Border Gradient Cyberpunk berputar */
-        background: linear-gradient(135deg, var(--primary), var(--accent)); 
-        
-        /* Efek Bersinar (Glow) */
-        box-shadow: 0 0 25px rgba(0, 210, 255, 0.4); 
-        position: relative;
+        width: 90px; height: 90px; margin: 0 auto 15px auto; border-radius: 50%; padding: 3px; background: linear-gradient(135deg, var(--primary), var(--accent)); box-shadow: 0 0 25px rgba(0, 210, 255, 0.4); position: relative;
     }
+    .profile-avatar img, #my-avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: #0b0c15; display: block; border: 3px solid #1a1b26; }
 
-    /* 2. Gambar Avatar (Robot/User) */
-    .profile-avatar img, #my-avatar-img {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-        background: #0b0c15; /* Background gelap di belakang robot transparan */
-        display: block;
-        border: 3px solid #1a1b26; /* Border dalam pemisah */
-    }
+    #pp-nickname { font-size: 1.6em; font-weight: 800; color: #fff; text-shadow: 0 0 15px var(--primary); margin-bottom: 8px; letter-spacing: 1px; text-transform: uppercase; }
+    #pp-address { font-family: 'Courier New', monospace; font-size: 0.75em; color: #aaa; background: rgba(0,0,0,0.4); padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); display: inline-block; letter-spacing: 0.5px; transition: 0.3s; }
+    #pp-address:hover { border-color: var(--primary); color: #fff; background: rgba(0, 210, 255, 0.1); }
 
-    /* 3. Teks Nickname Besar */
-    #pp-nickname {
-        font-size: 1.6em;
-        font-weight: 800;
-        color: #fff;
-        text-shadow: 0 0 15px var(--primary); /* Teks menyala biru */
-        margin-bottom: 8px;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-    }
+    .profile-stat-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 15px 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: 0.3s; }
+    .profile-stat-box:hover { background: rgba(255,255,255,0.06); border-color: var(--primary); transform: translateY(-2px); }
+    .stat-win-box { border-color: rgba(255, 215, 0, 0.3) !important; background: radial-gradient(circle, rgba(255, 215, 0, 0.05) 0%, transparent 90%); box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.05); }
 
-    /* 4. Alamat Wallet (Gaya Coding/Hacker) */
-    #pp-address {
-        font-family: 'Courier New', monospace; /* Font coding */
-        font-size: 0.75em;
-        color: #aaa;
-        background: rgba(0,0,0,0.4);
-        padding: 6px 12px;
-        border-radius: 20px;
-        border: 1px solid rgba(255,255,255,0.1);
-        display: inline-block;
-        letter-spacing: 0.5px;
-        transition: 0.3s;
-    }
-    #pp-address:hover {
-        border-color: var(--primary);
-        color: #fff;
-        background: rgba(0, 210, 255, 0.1);
-    }
+    .pp-history-item { padding: 10px; background: rgba(255,255,255,0.02); border-radius: 8px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; border-left: 2px solid #333; transition: 0.2s; font-size: 0.8em; }
+    .pp-history-item:hover { background: rgba(255,255,255,0.05); border-left-color: var(--primary); }
 
-    /* 5. Kotak Statistik (Wins & Bets) */
-    .profile-stat-box {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.05);
-        padding: 15px 10px;
-        border-radius: 12px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        transition: 0.3s;
-    }
-    .profile-stat-box:hover {
-        background: rgba(255,255,255,0.06);
-        border-color: var(--primary);
-        transform: translateY(-2px);
-    }
+    #pp-history-list::-webkit-scrollbar { width: 4px; }
+    #pp-history-list::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    #pp-history-list::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+    #pp-history-list::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-    /* Khusus Kotak WIN (Warna Emas) */
-    .stat-win-box {
-        border-color: rgba(255, 215, 0, 0.3) !important;
-        background: radial-gradient(circle, rgba(255, 215, 0, 0.05) 0%, transparent 90%);
-        box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.05);
-    }
+    /* CSS MODE EDIT */
+    .edit-image-container { background: rgba(0,0,0,0.3); border: 1px solid #333; padding: 8px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+    .edit-thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; border: 1px solid #555; margin-right: 10px; }
+    .btn-delete-img { background: rgba(220, 53, 69, 0.2); color: var(--danger); border: 1px solid var(--danger); width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: bold; font-size: 1.2em; transition: 0.2s; }
+    .btn-delete-img:hover { background: var(--danger); color: white; }
 
-    /* 6. Item List Riwayat (Recent Activity) */
-    /* Ini menggantikan style inline JS sebelumnya */
-    .pp-history-item {
-        padding: 10px;
-        background: rgba(255,255,255,0.02);
-        border-radius: 8px;
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
-        margin-bottom: 6px;
-        border-left: 2px solid #333;
-        transition: 0.2s;
-        font-size: 0.8em;
-    }
-    .pp-history-item:hover {
-        background: rgba(255,255,255,0.05);
-        border-left-color: var(--primary);
-    }
+    /* HERO SECTION STYLING */
+    .hero-section { text-align: center; padding: 40px 20px 20px 20px; position: relative; overflow: hidden; }
+    .hero-section::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; background: var(--accent); filter: blur(80px); opacity: 0.3; z-index: -1; }
 
-    /* 7. Scrollbar Custom di dalam Modal */
-    #pp-history-list::-webkit-scrollbar {
-        width: 4px;
-    }
-    #pp-history-list::-webkit-scrollbar-track {
-        background: rgba(0,0,0,0.1); 
-    }
-    #pp-history-list::-webkit-scrollbar-thumb {
-        background: #333; 
-        border-radius: 2px;
-    }
-    #pp-history-list::-webkit-scrollbar-thumb:hover {
-        background: var(--primary);
-    }
-
-    /* --- CSS UNTUK MODE EDIT --- */
-    
-    /* Container untuk indikator gambar lama & preview baru */
-    .edit-image-container {
-        background: rgba(0,0,0,0.3);
-        border: 1px solid #333;
-        padding: 8px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    /* Thumbnail gambar di mode edit */
-    .edit-thumb {
-        width: 50px; height: 50px;
-        object-fit: cover;
-        border-radius: 6px;
-        border: 1px solid #555;
-        margin-right: 10px;
-    }
-
-    /* Tombol X Merah (Hapus Gambar) */
-    .btn-delete-img {
-        background: rgba(220, 53, 69, 0.2); /* Merah transparan */
-        color: var(--danger);
-        border: 1px solid var(--danger);
-        width: 30px; height: 30px;
-        border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        cursor: pointer; font-weight: bold; font-size: 1.2em;
-        transition: 0.2s;
-    }
-    .btn-delete-img:hover {
-        background: var(--danger);
-        color: white;
-    }
-
-    /* --- HERO SECTION STYLING --- */
-    .hero-section {
-        text-align: center;
-        padding: 40px 20px 20px 20px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    /* Efek Cahaya di Belakang Judul */
-    .hero-section::before {
-        content: '';
-        position: absolute;
-        top: 50%; left: 50%;
-        transform: translate(-50%, -50%);
-        width: 100%;
-        background: var(--accent);
-        filter: blur(80px);
-        opacity: 0.3;
-        z-index: -1;
-    }
-
-    /* Badge Live Status */
-    .hero-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.7em;
-        font-weight: bold;
-        color: #aaa;
-        margin-bottom: 15px;
-        letter-spacing: 1px;
-    }
-
-    .live-dot {
-        width: 8px; height: 8px;
-        background-color: var(--success);
-        border-radius: 50%;
-        box-shadow: 0 0 10px var(--success);
-        animation: blink 1.5s infinite;
-    }
-
+    .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 5px 12px; border-radius: 20px; font-size: 0.7em; font-weight: bold; color: #aaa; margin-bottom: 15px; letter-spacing: 1px; }
+    .live-dot { width: 8px; height: 8px; background-color: var(--success); border-radius: 50%; box-shadow: 0 0 10px var(--success); animation: blink 1.5s infinite; }
     @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-    /* Judul Utama */
-    .hero-title {
-        font-size: 2.2em;
-        font-weight: 800;
-        margin: 0;
-        line-height: 1.1;
-        color: white;
-        letter-spacing: -1px;
-    }
-
-    /* Teks Gradasi (Ultimate) */
-    .hero-gradient {
-        background: linear-gradient(90deg, var(--primary), var(--accent));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        color: transparent;
-        filter: drop-shadow(0 0 15px rgba(208, 0, 255, 0.4));
-    }
-
-    /* Subtitle */
-    .hero-subtitle {
-        font-size: 0.8em;
-        color: #888;
-        margin-top: 10px;
-        line-height: 1.6;
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
-    }
-    
+    .hero-title { font-size: 2.2em; font-weight: 800; margin: 0; line-height: 1.1; color: white; letter-spacing: -1px; }
+    .hero-gradient { background: linear-gradient(90deg, var(--primary), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; color: transparent; filter: drop-shadow(0 0 15px rgba(208, 0, 255, 0.4)); }
+    .hero-subtitle { font-size: 0.8em; color: #888; margin-top: 10px; line-height: 1.6; max-width: 600px; margin-left: auto; margin-right: auto; }
     .hero-subtitle b { color: #ddd; }
 
-    footer {
-        text-align: center;
-        margin-top: 20px;
-        padding: 10px;
-        background: var(--gradient-bg); /* Warna gelap */
-        color: #ddd; /* Warna teks */
-        font-size: 12px;
-    }
+    footer { text-align: center; margin-top: 20px; padding: 10px; background: var(--gradient-bg); color: #ddd; font-size: 12px; }
+    .social-icons { margin-bottom: 10px; }
+    .social-icons a { background: rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 10px; display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 15px; margin: 0 5px; text-decoration: none; transition: transform 0.5s ease, text-shadow 0.5s ease, box-shadow 0.5s ease; box-shadow: 0 0 10px rgba(0, 0, 255, 0.6); backdrop-filter: blur(10px); }
+    .social-icons a:hover { color: #1a88ff; text-shadow: 0 0 10px #1a88ff, 0 0 20px #1a88ff, 0 0 30px #1a88ff; box-shadow: 0 0 20px rgba(0, 0, 255, 1), 0 0 30px rgba(0, 0, 255, 0.8); transform: rotate(360deg); }
 
-    .social-icons {
-        margin-bottom: 10px;
-    }
+    .draw-timer { font-family: 'Courier New', monospace; font-size: 1.5em; font-weight: bold; color: var(--primary); text-shadow: 0 0 10px var(--primary); margin: 10px 0; letter-spacing: 2px; background: rgba(0, 0, 0, 0.5); padding: 5px 20px; border-radius: 8px; border: 1px solid rgba(0, 210, 255, 0.3); display: inline-block; }
 
-    .social-icons a {
-    background: rgba(255, 255, 255, 0.2); /* Transparan seperti kaca */
-    border-radius: 10px; /* Agar sedikit membulat */
-    padding: 10px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: white; /* Warna ikon */
-    font-size: 15px;
-    margin: 0 5px;
-    text-decoration: none;
-    transition: transform 0.5s ease, text-shadow 0.5s ease, box-shadow 0.5s ease;
-    box-shadow: 0 0 10px rgba(0, 0, 255, 0.6); /* Cahaya biru */
-    backdrop-filter: blur(10px); /* Efek blur kaca */
-}
-
-/* Efek saat hover */
-.social-icons a:hover {
-    color: #1a88ff; /* Warna biru neon */
-    text-shadow: 0 0 10px #1a88ff, 0 0 20px #1a88ff, 0 0 30px #1a88ff; /* Glow lebih intens */
-    box-shadow: 0 0 20px rgba(0, 0, 255, 1), 0 0 30px rgba(0, 0, 255, 0.8); /* Shadow lebih terang */
-    transform: rotate(360deg); /* Efek berputar */
-}
-
-    /* --- CSS TIMER COUNTDOWN --- */
-    .draw-timer {
-        font-family: 'Courier New', monospace; /* Font gaya digital */
-        font-size: 1.5em;
-        font-weight: bold;
-        color: var(--primary); /* Warna Biru Neon */
-        text-shadow: 0 0 10px var(--primary);
-        margin: 10px 0;
-        letter-spacing: 2px;
-        background: rgba(0, 0, 0, 0.5);
-        padding: 5px 20px;
-        border-radius: 8px;
-        border: 1px solid rgba(0, 210, 255, 0.3);
-        display: inline-block;
-    }
-
-    /* --- REFERRAL LIST STYLE --- */
-    .ref-status-box {
-        background: rgba(255,255,255,0.05);
-        border: 1px solid #333;
-        border-radius: 8px;
-        padding: 10px;
-        margin-top: 10px;
-        font-size: 0.8em;
-        color: #ccc;
-        text-align: left;
-    }
-    
-    .ref-requirement {
-        display: flex; justify-content: space-between; margin-bottom: 5px;
-    }
+    .ref-status-box { background: rgba(255,255,255,0.05); border: 1px solid #333; border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 0.8em; color: #ccc; text-align: left; }
+    .ref-requirement { display: flex; justify-content: space-between; margin-bottom: 5px; }
     .req-ok { color: var(--success); }
     .req-no { color: var(--danger); }
 
-    .referral-list-container {
-        margin-top: 15px;
-        max-height: 150px;
-        overflow-y: auto;
-        background: #0b0c15;
-        border: 1px solid #333;
-        border-radius: 8px;
-        padding: 5px;
-    }
-    
-    .ref-item-row {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 8px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        font-size: 0.75em;
-    }
+    .referral-list-container { margin-top: 15px; max-height: 150px; overflow-y: auto; background: #0b0c15; border: 1px solid #333; border-radius: 8px; padding: 5px; }
+    .ref-item-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.75em; }
     .ref-item-row:last-child { border-bottom: none; }
     
-    /* Tombol Create Nickname yang diperbaiki */
-    .btn-create-nick {
-        width: 50%; 
-        background: linear-gradient(90deg, var(--primary), var(--accent));
-        border: none;
-        color: white;
-        padding: 10px;
-        border-radius: 20px;
-        font-weight: bold;
-        cursor: pointer;
-        margin-top: 10px;
-        box-shadow: 0 0 10px var(--primary);
-        transition: 0.3s;
-    }
+    .btn-create-nick { width: 50%; background: linear-gradient(90deg, var(--primary), var(--accent)); border: none; color: white; padding: 10px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 0 10px var(--primary); transition: 0.3s; }
     .btn-create-nick:hover { transform: scale(1.05); }
 
-    /* --- STATISTIK HERO (Earnings & Winners) --- */
-    .winning-box {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-        border: 1px solid var(--gold); /* Default warna Emas */
-        border-radius: 12px;
-        padding: 15px 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        position: relative;
-        overflow: hidden;
-        text-align: center;
-        transition: 0.3s;
-    }
-    
-    /* Efek Hover */
-    .winning-box:hover {
-        transform: translateY(-2px);
-        background: rgba(255, 255, 255, 0.05);
-    }
-
-    /* Efek Kilatan Cahaya (Shine) */
-    .winning-box::after {
-        content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-        animation: shine 3s infinite;
-    }
+    .winning-box { background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)); border: 1px solid var(--gold); border-radius: 12px; padding: 15px 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: relative; overflow: hidden; text-align: center; transition: 0.3s; }
+    .winning-box:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.05); }
+    .winning-box::after { content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent); animation: shine 3s infinite; }
     @keyframes shine { 100% { left: 200%; } }
-
-    /* Angka Statistik */
-    .winning-value {
-        font-family: 'Courier New', monospace;
-        font-weight: 900;
-        color: var(--gold);
-        text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-        letter-spacing: -0.5px;
-    }
-
-    
+    .winning-value { font-family: 'Courier New', monospace; font-weight: 900; color: var(--gold); text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); letter-spacing: -0.5px; }
 </style>
 </head>
 <body>
