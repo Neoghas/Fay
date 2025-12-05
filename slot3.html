@@ -3691,23 +3691,29 @@ if(!u[1]) {
                 // Fetch Nickname Async
                 gameContract.users(author).then(u => {
                     const nick = u[0]; 
-                    // Index 10 = Avatar Custom di Struct V3
-                    const customAvatar = u[10]; 
-                    const el = document.getElementById(nameElementId);
-                    if (el) {
-                        // Tentukan Avatar Akhir: Custom atau Robot?
-                        let finalAvatar = avatarUrl; // Default Robot
-                        if (customAvatar && customAvatar.startsWith("http")) {
-                            finalAvatar = customAvatar; // Pakai Custom jika ada
-                        }
-
-                        // Update HTML (Gambar + Nama)
-                        el.innerHTML = `
-                            <img src="${finalAvatar}" style="width:24px; height:24px; border-radius:50%; border:1px solid rgba(255,255,255,0.2); object-fit:cover; background:#000;">
-                            <span>${nick || "Unknown"}</span>
-                        `;
+                    const customAvatar = u[10]; // Index 10 = Avatar URL
+                    // Update Nama
+                    const nameContainer = document.getElementById(nameElementId);
+                    if(nameContainer) {
+                        const nickSpan = nameContainer.querySelector('.nick-text');
+                        if(nickSpan) nickSpan.innerText = nick || "Unknown";
                     }
-                }).catch(() => {});
+                    // Update Avatar (Logika Anti Kedip)
+                    const imgContainer = document.getElementById(avatarImgId);
+                    if(imgContainer) {
+                        if (customAvatar && customAvatar.startsWith("http")) {
+                            // Jika punya custom, pakai custom
+                            imgContainer.src = customAvatar;
+                        } else {
+                            // Jika tidak punya, baru panggil Robot
+                            imgContainer.src = getAvatar(author);
+                        }
+                    }
+                }).catch(() => {
+                    // Jika error, fallback ke robot
+                    const imgContainer = document.getElementById(avatarImgId);
+                    if(imgContainer) imgContainer.src = getAvatar(author);
+                });
             }
         } catch (e) {
             console.error(e);
@@ -4246,7 +4252,9 @@ if(!u[1]) {
         historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#aaa;">Fetching data...</div>';
         
         // Set Avatar Robot (Default)
-        document.getElementById('pp-avatar-img').src = getAvatar(targetAddress);
+        const imgEl = document.getElementById('pp-avatar-img');
+        imgEl.src = ""; // Kosongkan source
+        imgEl.style.backgroundColor = "#000";
 
         try {
             // 2. AMBIL DATA UTAMA (PARALEL)
