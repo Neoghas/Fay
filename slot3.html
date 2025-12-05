@@ -3703,43 +3703,49 @@ if(!u[1]) {
         }
     }
 
-
     async function postComment(roundId) {
         const input = document.getElementById(`input-comment-${roundId}`);
         const rawText = input.value.trim();
         const file = selectedFiles[roundId];
 
         if (!isConnected) { showToast("Please Connect wallet first!", 'wolf'); return; }
+        
+        // Cek: Harus ada teks ATAU file (salah satu boleh)
         if (!rawText && !file) return;
 
         const btn = document.querySelector(`#comments-section-${roundId} .btn-post-comment`);
         btn.disabled = true;
 
         try {
-            let finalContent = rawText; 
+            // Definisikan variable di luar IF supaya terbaca nanti
+            let finalImageUrl = ""; 
 
             // Jika ada gambar
             if (file) {
                 showToast("Uploading Picture...", 'load');
                 
-                // 1. KOMPRESI GAMBAR DULU
-                // File asli (misal 4MB) -> Jadi Blob kecil (misal 150KB)
+                // 1. KOMPRESI
                 const compressedFile = await compressImage(file);
                 
-                // 2. UPLOAD FILE YANG SUDAH DIKOMPRES
-                const imgUrl = await uploadToImgBB(compressedFile);
+                // 2. UPLOAD
+                // Simpan hasil ke variable luar (finalImageUrl)
+                finalImageUrl = await uploadToImgBB(compressedFile);
                 
-                if (imgUrl) {
-                    finalContent = rawText + IMG_SEPARATOR + imgUrl;
-                } else {
+                // Validasi jika upload gagal
+                if (!finalImageUrl) {
                     showToast("Image upload failed", 'error');
                     btn.disabled = false;
-                    return;
+                    return; // Stop di sini
                 }
             }
 
             showToast("Posting to blockchain...", 'loading');
-            const tx = await gameContract.addComment(roundId, rawText, imageUrl);
+            
+            // --- PERBAIKAN UTAMA DI SINI ---
+            // Kirim rawText (Pesan) dan finalImageUrl (Link Gambar) secara terpisah
+            // Jangan pakai 'imageUrl' yang tidak didefinisikan
+            const tx = await gameContract.addComment(roundId, rawText, finalImageUrl);
+            
             await tx.wait();
 
             showToast("Success!", 'success');
