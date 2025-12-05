@@ -4786,19 +4786,30 @@ if(!u[1]) {
             }, 7000);
         });
 
-        // 2. LISTENER KOMENTAR BARU (Real-time Comment)
+        // 2. LISTENER KOMENTAR BARU (FIXED: Sesuai Ronde)
         listenerContract.on("CommentAdded", (rId, cId, user) => {
-            // Cek apakah user sedang melihat ronde yang sama
-            gameContract.currentRoundId().then(currR => {
-                const viewingRound = Number(currR); // Atau logika ronde aktif
-                // Kita refresh komentar untuk ronde aktif
-                loadComments(viewingRound);
-            });
+            const targetRound = Number(rId); // ID Ronde tempat komentar terjadi
+            console.log(`💬 New Comment at Round #${targetRound}`);
+
+            // Cek: Apakah elemen komentar untuk ronde ini sedang ada di layar user?
+            const listEl = document.getElementById(`comments-list-${targetRound}`);
+            
+            // HANYA REFRESH JIKA USER SEDANG MELIHAT RONDE TERSEBUT
+            if (listEl) {
+                // Beri jeda 2 detik agar RPC Node sempat mencatat datanya
+                setTimeout(() => {
+                    loadComments(targetRound);
+                }, 2000);
+            }
         });
         
-        // 3. LISTENER EDIT KOMENTAR
+        // 3. LISTENER EDIT KOMENTAR (FIXED)
         listenerContract.on("CommentEdited", (rId, cId, user) => {
-             gameContract.currentRoundId().then(currR => { loadComments(Number(currR)); });
+             const targetRound = Number(rId);
+             const listEl = document.getElementById(`comments-list-${targetRound}`);
+             if (listEl) {
+                 setTimeout(() => { loadComments(targetRound); }, 2000);
+             }
         });
 
         // 4. LISTENER LIVE DRAW (Lengkap: Timer + Reset + Sync)
