@@ -1910,42 +1910,52 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
 
 <div id="playerProfileModal" class="modal-overlay">
     <div class="modal-content" style="border-color: var(--accent); box-shadow: 0 0 40px rgba(208, 0, 255, 0.2);">
-        
         <button class="close-modal" onclick="closeModal('playerProfileModal')">&times;</button>
         
-        <div style="margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
+        <div style="margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:15px;">
             <div style="font-size:0.7em; color:var(--primary); letter-spacing:2px; margin-bottom:10px; font-weight:bold;">PLAYER CARD</div>
             
-            <div class="profile-avatar" style="overflow:hidden; padding:0; border:2px solid #fff; width:70px; height:70px; margin:0 auto 10px auto; border-radius:50%; box-shadow: 0 0 20px rgba(0, 210, 255, 0.5);">
-                <img id="pp-avatar-img" src="" style="width:100%; height:100%; object-fit:cover; background:#1f222e;">
+            <div class="profile-avatar">
+                <img id="pp-avatar-img" src="" style="width:100%; height:100%; object-fit:cover;">
             </div>
             
-            <div id="pp-nickname" style="font-size:1.4em; font-weight:800; color:white; text-shadow:0 0 10px var(--primary);">Loading...</div>
-            <div id="pp-address" style="font-size:0.7em; color:#888; font-family:monospace; background:rgba(0,0,0,0.4); padding:4px 8px; border-radius:10px; display:inline-block; margin-top:5px;">0x...</div>
+            <div id="pp-nickname">Loading...</div>
+            <div id="pp-address">0x...</div>
             
             <div id="pp-upline-container" style="margin-top:8px; font-size:0.7em; color:#666; display:none;">
                 Invited by: <span id="pp-upline" style="color:var(--accent);">...</span>
             </div>
         </div>
 
-        <div class="dash-balance-grid" style="grid-template-columns: 1fr 1fr; gap:10px;">
-            <div class="profile-stat-box stat-win-box">
-                <span class="dash-label" style="color:var(--gold);">TOTAL WINS</span>
-                <span class="dash-val" id="pp-wins" style="color:var(--gold); font-size:1.4em;">0</span>
-            </div>
-            <div class="profile-stat-box" style="border-color:var(--success);">
-                <span class="dash-label" style="color:var(--success);">TOTAL INVITED</span>
-                <span class="dash-val" id="pp-invited" style="color:var(--success); font-size:1.4em;">0</span>
+        <div style="background:rgba(0,0,0,0.3); border-radius:8px; padding:10px; margin-bottom:10px; border:1px solid var(--gold);">
+            <div style="font-size:0.6em; color:#aaa; margin-bottom:5px;">TOTAL WINNINGS</div>
+            <div style="display:flex; justify-content:space-around; align-items:center;">
+                <div style="text-align:center;">
+                    <div id="pp-won-eth" style="font-size:0.9em; font-weight:bold; color:var(--eth-color);">0</div>
+                    <div style="font-size:0.6em; color:#666;">ETH</div>
+                </div>
+                <div style="text-align:center;">
+                    <div id="pp-won-usdt" style="font-size:0.9em; font-weight:bold; color:var(--usdt-color);">0</div>
+                    <div style="font-size:0.6em; color:#666;">USDT</div>
+                </div>
+                <div style="text-align:center;">
+                    <div id="pp-won-shib" style="font-size:0.9em; font-weight:bold; color:var(--shib-color);">0</div>
+                    <div style="font-size:0.6em; color:#666;">SHIB</div>
+                </div>
             </div>
         </div>
 
+        <div class="profile-stat-box" style="border-color:var(--success); margin-bottom:10px;">
+            <span class="dash-label" style="color:var(--success);">TOTAL INVITED</span>
+            <span class="dash-val" id="pp-invited" style="color:var(--success); font-size:1.4em;">0</span>
+        </div>
+
         <div class="withdraw-section" style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
-            <div class="withdraw-title">RECENT WINS (Latest)</div>
+            <div class="withdraw-title">RECENT WINS</div>
             <div id="pp-history-list" style="max-height:120px; overflow-y:auto; font-size:0.75em; text-align:left; color:#aaa; display:flex; flex-direction:column; gap:5px;">
                 Scanning...
             </div>
         </div>
-
     </div>
 </div>
 
@@ -4187,8 +4197,124 @@ if(!u[1]) {
 
     }
 
-    // --- FUNGSI BUKA PROFIL PEMAIN (V2 SUPPORT) ---
+     // --- FUNGSI BUKA PROFIL PEMAIN (UPDATE V3 FINAL) ---
     async function openPlayerProfile(targetAddress) {
+        // 1. UI Reset & Show Modal
+        document.getElementById('playerProfileModal').style.display = 'flex';
+        
+        // Reset Teks Loading
+        document.getElementById('pp-nickname').innerText = "Loading...";
+        document.getElementById('pp-address').innerText = targetAddress.substring(0,10) + "..." + targetAddress.substring(38);
+        document.getElementById('pp-invited').innerText = "..."; 
+        document.getElementById('pp-upline-container').style.display = 'none';
+
+        // Reset Angka Kemenangan
+        document.getElementById('pp-won-eth').innerText = "0";
+        document.getElementById('pp-won-usdt').innerText = "0";
+        document.getElementById('pp-won-shib').innerText = "0";
+
+        const historyDiv = document.getElementById('pp-history-list');
+        historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#aaa;">Fetching data...</div>';
+        
+        // Set Avatar Robot (Default)
+        document.getElementById('pp-avatar-img').src = getAvatar(targetAddress);
+
+        try {
+            // 2. AMBIL DATA UTAMA (PARALEL)
+            // Kita ambil data User Struct dan Total Winnings V3
+            const [userData, winnings] = await Promise.all([
+                gameContract.users(targetAddress),
+                gameContract.getUserTotalWinnings(targetAddress) // Fungsi V3
+            ]);
+
+            // Struct V3: [0]Nick, [1]Reg, [2]Ref, [3]Bet, [4]Bonus, [5]TotalRef, [6]Claimed, [7]WonETH, [8]WonUSDT, [9]WonSHIB, [10]Avatar
+            
+            // A. Set Nickname
+            const nick = userData[0];
+            document.getElementById('pp-nickname').innerText = (nick && nick !== "") ? nick : "Unknown Player";
+            
+            // B. Set Total Invited (Index 5)
+            document.getElementById('pp-invited').innerText = userData[5]; 
+
+            // C. Set Custom Avatar (Index 10)
+            const customAvatar = userData[10];
+            if (customAvatar && customAvatar.startsWith("http")) {
+                document.getElementById('pp-avatar-img').src = customAvatar;
+            }
+
+            // D. Set Total Winnings (Split Currency)
+            // winnings[0]=ETH, winnings[1]=USDT, winnings[2]=SHIB
+            document.getElementById('pp-won-eth').innerText = parseFloat(ethers.formatEther(winnings[0])).toFixed(4);
+            document.getElementById('pp-won-usdt').innerText = parseFloat(ethers.formatUnits(winnings[1], 6)).toFixed(2);
+            document.getElementById('pp-won-shib').innerText = parseFloat(ethers.formatUnits(winnings[2], 18)).toLocaleString();
+
+            // 3. TAMPILKAN UPLINE (Index 2)
+            const upline = userData[2];
+            if (upline && upline !== "0x0000000000000000000000000000000000000000") {
+                document.getElementById('pp-upline-container').style.display = 'block';
+                // Ambil nama upline
+                gameContract.users(upline).then(u => {
+                     const uName = u[0];
+                     document.getElementById('pp-upline').innerText = (uName && uName !== "") ? uName : (upline.substring(0,6)+"...");
+                }).catch(() => {
+                     document.getElementById('pp-upline').innerText = "Unknown";
+                });
+            } else {
+                // Jika Root User
+                 document.getElementById('pp-upline-container').style.display = 'block';
+                 document.getElementById('pp-upline').innerHTML = `<span style="color:var(--gold);">Faylotto (Root)</span>`;
+            }
+
+            // 4. RIWAYAT KEMENANGAN (SCAN EVENT)
+            try {
+                const filterWin = gameContract.filters.WinDistributed(targetAddress);
+                
+                // Scan ringan (20.000 blok terakhir)
+                const currentBlock = await provider.getBlockNumber();
+                const fromBlock = Math.max(0, currentBlock - 20000); 
+                
+                const logs = await gameContract.queryFilter(filterWin, fromBlock, "latest");
+
+                historyDiv.innerHTML = '';
+                
+                if (logs.length === 0) {
+                    historyDiv.innerHTML = '<div style="text-align:center; padding:10px; color:#666;">No recent wins.</div>';
+                } else {
+                    const recent = logs.reverse().slice(0, 5); // 5 Terakhir
+                    
+                    for (let log of recent) {
+                        const amount = log.args[1];
+                        const curr = Number(log.args[2]);
+                        
+                        let winStr = "";
+                        if(curr === 0) winStr = parseFloat(ethers.formatEther(amount)).toFixed(4) + " ETH";
+                        else if(curr === 1) winStr = parseFloat(ethers.formatUnits(amount, 6)).toFixed(2) + " USDT";
+                        else winStr = parseFloat(ethers.formatUnits(amount, 18)).toLocaleString() + " SHIB";
+
+                        const row = document.createElement('div');
+                        row.style.cssText = "display:flex; justify-content:space-between; padding:8px 5px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.8em;";
+                        
+                        row.innerHTML = `
+                            <span style="color:var(--success); font-weight:bold;">WON ${winStr}</span>
+                            <span style="color:#666;">Block #${log.blockNumber}</span>
+                        `;
+                        historyDiv.appendChild(row);
+                    }
+                }
+            } catch (errScan) {
+                console.warn("History scan error:", errScan);
+                historyDiv.innerHTML = '<div style="text-align:center; color:#666;">History hidden (RPC Limit).</div>';
+            }
+
+        } catch (e) {
+            console.error("Profile Load Error:", e);
+            document.getElementById('pp-nickname').innerText = "Error Loading";
+            historyDiv.innerHTML = '<div style="text-align:center; color:var(--danger);">Failed to load profile.</div>';
+        }
+    }
+
+    // --- FUNGSI BUKA PROFIL PEMAIN (V2 SUPPORT) ---
+    async function openPlayerOrofile(targetAddress) {
         // 1. UI Reset & Show Modal
         document.getElementById('playerProfileModal').style.display = 'flex';
         document.getElementById('pp-nickname').innerText = "Loading...";
