@@ -1510,7 +1510,8 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
         letter-spacing: -0.5px;
     }
 
-    
+    @keyframes pulseGold { 0% { opacity: 0.8; } 50% { opacity: 1; text-shadow: 0 0 20px var(--gold); } 100% { opacity: 0.8; } }
+    #jackpot-banner { animation: pulseGold 3s infinite; }
 </style>
 </head>
 <body>
@@ -1668,6 +1669,26 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
 
     </div>
 
+        </div>
+
+        <div id="jackpot-banner" style="display:none; margin-top:20px; background:linear-gradient(90deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05)); border:1px solid var(--gold); border-radius:12px; padding:15px; text-align:center; position:relative; overflow:hidden;">
+            <div style="font-size:0.8em; color:var(--gold); font-weight:900; letter-spacing:2px; margin-bottom:10px; text-shadow:0 0 10px var(--gold);">
+                🔥 ROLLOVER JACKPOT ACTIVE 🔥
+            </div>
+            <div style="display:flex; justify-content:space-around; align-items:center;">
+                <div style="text-align:center;">
+                    <div id="jp-eth" style="font-size:0.9em; font-weight:bold; color:var(--eth-color);">0.0000</div>
+                    <div style="font-size:0.6em; color:#888;">ETH</div>
+                </div>
+                <div style="text-align:center; border-left:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.1); padding:0 15px;">
+                    <div id="jp-usdt" style="font-size:0.9em; font-weight:bold; color:var(--usdt-color);">0.00</div>
+                    <div style="font-size:0.6em; color:#888;">USDT</div>
+                </div>
+                <div style="text-align:center;">
+                    <div id="jp-shib" style="font-size:0.9em; font-weight:bold; color:var(--shib-color);">0</div>
+                    <div style="font-size:0.6em; color:#888;">SHIB</div>
+                </div>
+            </div>
         </div>
 
 
@@ -2941,14 +2962,73 @@ if(!u[1]) {
                     }
 
                 } catch(e) {
-                    console.warn("Gagal load last result:", e);
+                    console.warn("Failed load last result:", e);
                     resEl.innerText = "-"; 
                 }
             } else {
                 resEl.innerText = "New Game";
                 resEl.style.color = "#888";
             }
-            
+
+            let counts = [0, 0, 0, 0, 0, 0]; 
+
+            let pools = { eth: 0, usdt: 0, shib: 0 }; 
+
+            myBetCounts = [0, 0, 0, 0, 0, 0]; 
+
+            let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
+
+
+
+            // --- 1. AMBIL JACKPOT (ROLLOVER) DARI KONTRAK V3 ---
+
+            try {
+
+                // Returns: [jackpotETH, jackpotUSDT, jackpotSHIB]
+
+                const jackpots = await gameContract.getCurrentJackpot();
+
+                
+
+                const jpETH = parseFloat(ethers.formatEther(jackpots[0]));
+
+                const jpUSDT = parseFloat(ethers.formatUnits(jackpots[1], 6));
+
+                const jpSHIB = parseFloat(ethers.formatUnits(jackpots[2], 18));
+
+
+
+                // Masukkan ke Pool Utama (Supaya estimasi pool terlihat besar)
+
+                pools.eth += jpETH;
+
+                pools.usdt += jpUSDT;
+
+                pools.shib += jpSHIB;
+
+
+
+                // Tampilkan Banner Jackpot jika ada isinya
+
+                const jpBanner = document.getElementById('jackpot-banner');
+
+                if (jpETH > 0 || jpUSDT > 0 || jpSHIB > 0) {
+
+                    jpBanner.style.display = 'block';
+
+                    document.getElementById('jp-eth').innerText = jpETH.toFixed(4);
+
+                    document.getElementById('jp-usdt').innerText = jpUSDT.toFixed(2);
+
+                    document.getElementById('jp-shib').innerText = jpSHIB.toLocaleString();
+
+                } else {
+
+                    jpBanner.style.display = 'none';
+
+                }
+
+            } catch(e) { console.log("Jackpot fetch err (Old Contract?)"); }
             // -----------------------------
 
             let bets = [];
@@ -3022,11 +3102,8 @@ if(!u[1]) {
                 // Global Pool
 
                 if (curr === 0) pools.eth += amt;
-
                 else if (curr === 1) pools.usdt += amt;
-
                 else pools.shib += amt;
-
 
 
                 // Total Count
