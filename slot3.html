@@ -2806,12 +2806,19 @@ if(!u[1]) {
 
                     // Saldo Bonus (Free Bet)
                     const bonus = await gameContract.freeShibCredits(userAddress);
+
                     const btnFree = document.getElementById('btnFreeBet');
+
                     if (btnFree) {
+
                         const userBonusEl = document.getElementById('userBonusBalance');
+
                         if(userBonusEl) userBonusEl.innerText = Number(ethers.formatEther(bonus)).toLocaleString();
+
                         btnFree.disabled = bonus < ethers.parseEther("110000");
+
                         btnFree.style.background = (bonus >= ethers.parseEther("110000")) ? "var(--success)" : "#333";
+
                     }
 
                     // Update Hero Stats (Earnings & Global Wins)
@@ -2913,6 +2920,12 @@ if(!u[1]) {
 
             if(ticketEl) ticketEl.innerText = totalTicketsLive;
 
+            // 3. RESET VARIABEL (PENTING!)
+            let counts = [0, 0, 0, 0, 0, 0]; 
+            let pools = { eth: 0, usdt: 0, shib: 0 }; 
+            myBetCounts = [0, 0, 0, 0, 0, 0]; 
+            let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
+
             // 4. LOOP ANALISA BET
             bets.forEach(b => {
                 let curr = Number(b[2]); // 0=ETH, 1=USDT, 2=SHIB
@@ -2924,9 +2937,9 @@ if(!u[1]) {
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
                 // Global Pool
-                if (curr === 0) pools.eth ++ amt;
-                else if (curr === 1) pools.usdt ++ amt;
-                else pools.shib ++ amt;
+                if (curr === 0) pools.eth += amt;
+                else if (curr === 1) pools.usdt += amt;
+                else pools.shib += amt;
 
                 // Total Count
                 counts[animalIdx]++;
@@ -2937,9 +2950,12 @@ if(!u[1]) {
                 }
 
                 // E/U/S Count
-                if (curr === 0) animalCurrCounts[animalIdx].eth+=;
-                else if (curr === 1) animalCurrCounts[animalIdx].usdt+=;
-                else animalCurrCounts[animalIdx].shib+=;
+                if (curr === 0) animalCurrCounts[animalIdx].eth++;
+
+                else if (curr === 1) animalCurrCounts[animalIdx].usdt++;
+
+                else animalCurrCounts[animalIdx].shib++;
+
             });
 
             // 5. RENDER TAMPILAN
@@ -2955,14 +2971,20 @@ if(!u[1]) {
 
                 // Update E/U/S
                 document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
+
                 document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
+
                 document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
+
             }
 
             // 6. Update Status Tombol Draw
             let active = counts.filter(c => c > 0).length;
+
             const btnDraw = document.getElementById('drawBtn');
+
             const drawStatus = document.getElementById('drawStatus');
+
             if (active >= 5) {
 
                 btnDraw.disabled = false;
@@ -2988,7 +3010,7 @@ if(!u[1]) {
         } catch (e) {
             console.error("Refresh Error:", e);
         }
-    }
+            }
         
     function updateHistorySection(roundId) {
         historyCursor = roundId - 1; 
