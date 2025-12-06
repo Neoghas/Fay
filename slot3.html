@@ -1597,7 +1597,25 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
 
         </div>
 
-
+        <div id="jackpot-banner" style="display:none; margin-top:20px; background:linear-gradient(90deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05)); border:1px solid var(--gold); border-radius:12px; padding:15px; text-align:center; position:relative; overflow:hidden;">
+    <div style="font-size:0.8em; color:var(--gold); font-weight:900; letter-spacing:2px; margin-bottom:10px; text-shadow:0 0 10px var(--gold);">
+        🔥 ROLLOVER JACKPOT ACTIVE 🔥
+    </div>
+    <div style="display:flex; justify-content:space-around; align-items:center;">
+        <div style="text-align:center;">
+            <div id="jp-eth" style="font-size:0.9em; font-weight:bold; color:var(--eth-color);">0.0000</div>
+            <div style="font-size:0.6em; color:#888;">ETH</div>
+        </div>
+        <div style="text-align:center; border-left:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.1); padding:0 15px;">
+            <div id="jp-usdt" style="font-size:0.9em; font-weight:bold; color:var(--usdt-color);">0.00</div>
+            <div style="font-size:0.6em; color:#888;">USDT</div>
+        </div>
+        <div style="text-align:center;">
+            <div id="jp-shib" style="font-size:0.9em; font-weight:bold; color:var(--shib-color);">0</div>
+            <div style="font-size:0.6em; color:#888;">SHIB</div>
+        </div>
+    </div>
+        </div>
 
         <center><div style="width:100%; margin-top:20px; font-size:0.7em; color:#00d2ff; text-align:left;">ESTIMATED TOTAL POOLS (ROUND)</div></center>
 
@@ -1670,28 +1688,6 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     </div>
 
         </div>
-
-        <div id="jackpot-banner" style="display:none; margin-top:20px; background:linear-gradient(90deg, rgba(255,215,0,0.1), rgba(255,215,0,0.05)); border:1px solid var(--gold); border-radius:12px; padding:15px; text-align:center; position:relative; overflow:hidden;">
-            <div style="font-size:0.8em; color:var(--gold); font-weight:900; letter-spacing:2px; margin-bottom:10px; text-shadow:0 0 10px var(--gold);">
-                🔥 ROLLOVER JACKPOT ACTIVE 🔥
-            </div>
-            <div style="display:flex; justify-content:space-around; align-items:center;">
-                <div style="text-align:center;">
-                    <div id="jp-eth" style="font-size:0.9em; font-weight:bold; color:var(--eth-color);">0.0000</div>
-                    <div style="font-size:0.6em; color:#888;">ETH</div>
-                </div>
-                <div style="text-align:center; border-left:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.1); padding:0 15px;">
-                    <div id="jp-usdt" style="font-size:0.9em; font-weight:bold; color:var(--usdt-color);">0.00</div>
-                    <div style="font-size:0.6em; color:#888;">USDT</div>
-                </div>
-                <div style="text-align:center;">
-                    <div id="jp-shib" style="font-size:0.9em; font-weight:bold; color:var(--shib-color);">0</div>
-                    <div style="font-size:0.6em; color:#888;">SHIB</div>
-                </div>
-            </div>
-        </div>
-
-
 
         <div class="dash-balance-grid" style="margin-top:10px; width:100%; max-width:480px; margin:10px auto; gap:10px;">
 
@@ -4479,22 +4475,13 @@ if(!u[1]) {
 
     }
 
-    // --- REFRESH KHUSUS BETTING (DENGAN JACKPOT ROLLOVER) ---
+    // --- REFRESH KHUSUS BETTING & JACKPOT (FINAL V3) ---
     async function refreshBetData() {
         try {
             const currR = Number(await gameContract.currentRoundId());
             
-            // 1. UPDATE STATISTIK HEADER (Last Result, Total Rounds, Hero Stats)
+            // 1. Update Statistik Header (Last Result, Total Rounds)
             try {
-                // Update Statistik Hero
-                try {
-                    const globalCountRaw = await gameContract.getGlobalWinCount();
-                    document.getElementById('heroGlobalCount').innerText = globalCountRaw;
-                    const myWinCount = await gameContract.getUserWinCount(userAddress);
-                    document.getElementById('heroTotalWon').innerText = myWinCount;
-                } catch(e) {}
-
-                // Update Last Result & Round ID
                 document.getElementById('statRoundId').innerText = `#${currR}`;
                 document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1);
                 
@@ -4510,24 +4497,30 @@ if(!u[1]) {
                         resEl.style.color = "var(--accent)";
                     } else { resEl.innerText = "Waiting..."; }
                 } else { resEl.innerText = "New Game"; }
+                
+                // Update Hero Stats juga disini biar realtime
+                try {
+                    const globalCountRaw = await gameContract.getGlobalWinCount();
+                    document.getElementById('heroGlobalCount').innerText = globalCountRaw;
+                    const myWinCount = await gameContract.getUserWinCount(userAddress);
+                    document.getElementById('heroTotalWon').innerText = myWinCount;
+                } catch(e){}
+
             } catch(e) {}
 
             // 2. PERSIAPAN VARIABEL
             let counts = [0, 0, 0, 0, 0, 0]; 
-            
-            // Inisialisasi Pool (Awalnya 0)
             let pools = { eth: 0, usdt: 0, shib: 0 }; 
-            
             myBetCounts = [0, 0, 0, 0, 0, 0]; 
             let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
 
-            // --- [BARU] AMBIL SALDO JACKPOT (ROLLOVER) ---
-            // Kita isi variabel 'pools' dengan saldo sisa dari ronde lalu
+            // --- [INTI SOLUSI: AMBIL JACKPOT DARI KONTRAK V3] ---
             try {
+                // Panggil fungsi V3: getCurrentJackpot (Returns: [eth, usdt, shib])
                 const jackpots = await gameContract.getCurrentJackpot();
                 
                 const jpETH = parseFloat(ethers.formatEther(jackpots[0]));
-                const jpUSDT = parseFloat(ethers.formatUnits(jackpots[1], 6));
+                const jpUSDT = parseFloat(ethers.formatUnits(jackpots[1], 6)); // USDT 6 Desimal
                 const jpSHIB = parseFloat(ethers.formatUnits(jackpots[2], 18));
 
                 // Masukkan ke Pool Utama
@@ -4535,22 +4528,22 @@ if(!u[1]) {
                 pools.usdt += jpUSDT;
                 pools.shib += jpSHIB;
 
-                // Update Banner Jackpot (Jika ada)
+                // LOGIKA TAMPILKAN BANNER
                 const jpBanner = document.getElementById('jackpot-banner');
                 if (jpBanner) {
                     if (jpETH > 0 || jpUSDT > 0 || jpSHIB > 0) {
-                        jpBanner.style.display = 'block';
+                        jpBanner.style.display = 'block'; // MUNCULKAN BANNER
                         if(document.getElementById('jp-eth')) document.getElementById('jp-eth').innerText = jpETH.toFixed(4);
                         if(document.getElementById('jp-usdt')) document.getElementById('jp-usdt').innerText = jpUSDT.toFixed(2);
                         if(document.getElementById('jp-shib')) document.getElementById('jp-shib').innerText = jpSHIB.toLocaleString();
                     } else {
-                        jpBanner.style.display = 'none';
+                        jpBanner.style.display = 'none'; // SEMBUNYIKAN JIKA KOSONG
                     }
                 }
             } catch(e) {
-                // console.warn("Jackpot fetch skipped (Old Contract?)");
+                // console.warn("Jackpot fetch failed (Mungkin kontrak lama?):", e);
             }
-            // ---------------------------------------------
+            // ----------------------------------------------------
 
             // 3. AMBIL DATA TIKET BARU
             let bets = [];
@@ -4570,12 +4563,10 @@ if(!u[1]) {
             bets.forEach(b => {
                 let curr = Number(b[2]); 
                 let animalIdx = Number(b[4]);
-                
-                // Perbaikan Desimal USDT (Wajib 6)
                 let decimal = (curr === 1) ? 6 : 18; 
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
-                // Tambahkan (+=) ke Pool yang sudah berisi Jackpot
+                // Tambahkan ke Pool (Pakai +=)
                 if (curr === 0) pools.eth += amt;
                 else if (curr === 1) pools.usdt += amt;
                 else pools.shib += amt;
@@ -4598,22 +4589,18 @@ if(!u[1]) {
 
             for (let i = 0; i < 6; i++) {
                 document.getElementById(`count-${i}`).innerText = counts[i];
-                
                 let c = document.getElementById(`card-${i}`);
                 c.classList.remove('my-bet', 'open');
-                if (myBetCounts[i] > 0) c.classList.add('my-bet'); 
-                else c.classList.add('open');
-
+                if (myBetCounts[i] > 0) c.classList.add('my-bet'); else c.classList.add('open');
                 document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
                 document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
                 document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
             }
 
-            // 6. Update Tombol Draw
+            // 6. UPDATE TOMBOL DRAW
             let active = counts.filter(c => c > 0).length;
             const btnDraw = document.getElementById('drawBtn');
             const drawStatus = document.getElementById('drawStatus');
-
             if (active >= 5) {
                 btnDraw.disabled = false;
                 btnDraw.classList.add('ready');
