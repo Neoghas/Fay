@@ -2654,44 +2654,23 @@ if(!u[1]) {
             listDiv.innerHTML = '<div style="text-align:center; color:var(--danger); padding:10px;">Network Busy. Try again later.</div>';
         }
     }
-    
+
     async function refreshGameData() {
-
         try {
-
             // 1. UPDATE DATA USER (LOGIKA V2)
-
-            if (isConnected) {
-
-                document.getElementById('referralPanel').style.display = 'block'; 
-
-
+            if (isConnected) {            document.getElementById('referralPanel').style.display = 'block'; 
 
                 // Ambil data Struct (Array)
-
                 const userData = await gameContract.users(userAddress);
 
-                
-
                 // [0]: Nick, [1]: Reg, [2]: Ref, [3]: Bet, [4]: BonusCount, [5]: TotalRef
-
                 const isReg = userData[1]; 
 
-
-
                 if (isReg) {
-
                     document.getElementById('view-profile').style.display = 'block';
-
-                    document.getElementById('view-register').style.display = 'none';
-
-
-
-                    // --- ISI DATA ---
-
-                    document.getElementById('displayNick').innerText = userData[0];
-
-                    document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
+                document.getElementById('view-register').style.display = 'none';
+                    // --- ISI DATA ---               document.getElementById('displayNick').innerText = userData[0];
+               document.getElementById('displayRefLink').innerText = window.location.origin + window.location.pathname + "?ref=" + userData[0];
 
                     const customAvatar = userData[10]; 
                     const imgEl = document.getElementById('my-avatar-img');
@@ -2739,8 +2718,7 @@ if(!u[1]) {
                     if (pendingCount > 0) {
                          bonusDisplay = REF_REWARD_AMOUNT; 
                     }
-
-                    document.getElementById('pendingBonus').innerHTML = `
+                document.getElementById('pendingBonus').innerHTML = `
                         <div style="display:flex; align-items:center; justify-content:center; gap:5px;">
                             <img src="shib.png" style="width:16px; height:16px;">
                             ${bonusDisplay.toLocaleString()}
@@ -2817,72 +2795,34 @@ if(!u[1]) {
                         }
                     }
 
-
                 } else {
-
                     document.getElementById('view-profile').style.display = 'none';
-
-                    document.getElementById('view-register').style.display = 'block';
-
+                 document.getElementById('view-register').style.display = 'block';
                     if(detectedReferrer) document.getElementById('panelRefInfo').innerText = "Invited by: " + detectedReferrer;
 
-                }
-
-                
+                }    
 
                 // Update Saldo
                 try {
 
-
-
                     // Saldo Bonus (Free Bet)
-
-
-
                     const bonus = await gameContract.freeShibCredits(userAddress);
-
-
 
                     const btnFree = document.getElementById('btnFreeBet');
 
-
-
                     if (btnFree) {
-
-
 
                         const userBonusEl = document.getElementById('userBonusBalance');
 
-
-
                         if(userBonusEl) userBonusEl.innerText = Number(ethers.formatEther(bonus)).toLocaleString();
-
-
-
-                        
-
-
 
                         btnFree.disabled = bonus < ethers.parseEther("110000");
 
-
-
                         btnFree.style.background = (bonus >= ethers.parseEther("110000")) ? "var(--success)" : "#333";
-
-
 
                     }
 
-
-
-                    
-
-
-
                     // Update Hero Stats (Earnings & Global Wins)
-
-
-
                     const heroStats = document.getElementById('hero-stats-container');
                     if(heroStats) heroStats.style.display = 'block';
                     
@@ -2905,152 +2845,169 @@ if(!u[1]) {
                         document.getElementById('heroTotalWon').innerText = "0";
                         document.getElementById('heroGlobalCount').innerText = "0";
                     }
-
-
-
-
-
-
                 } catch(e){}
-
-
-
             }
-
-
 
             // 2. FETCH DATA RONDE & ANALISIS STATISTIK (V2)
             const currR = Number(await gameContract.currentRoundId());
             
             // --- UPDATE STATISTIK BARU ---
-            try {
-                document.getElementById('statRoundId').innerText = `#${currR}`;
-                document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1);
-                const resEl = document.getElementById('statLastResult');
-                if (currR > 1) {
-                    const lastRoundId = BigInt(currR) - 1n;
+            document.getElementById('statRoundId').innerText = `#${currR}`;
+            document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1); 
+            
+            // Ambil Hasil Ronde Terakhir
+            // --- LOGIKA LAST RESULT (FIXED ZONK) ---
+            const resEl = document.getElementById('statLastResult');
+            
+            if (currR > 1) {
+                try {
+                    // Ambil ID Ronde sebelumnya
+                    const lastRoundId = currR - 1; 
+
+                    // Panggil Kontrak
                     const lastRes = await gameContract.getRoundResult(lastRoundId);
-                    if (lastRes && lastRes[0].length === 3) {
-                        const n1 = IMAGE_NAMES[Number(lastRes[0][0])] ? IMAGE_NAMES[Number(lastRes[0][0])].toUpperCase() : "?";
-                        const n2 = IMAGE_NAMES[Number(lastRes[0][1])] ? IMAGE_NAMES[Number(lastRes[0][1])].toUpperCase() : "?";
-                        const n3 = IMAGE_NAMES[Number(lastRes[0][2])] ? IMAGE_NAMES[Number(lastRes[0][2])].toUpperCase() : "?";
-                        resEl.innerText = `${n1} - ${n2} - ${n3}`;
-                        resEl.style.color = "var(--accent)";
-                    } else { resEl.innerText = "Waiting..."; }
-                } else { resEl.innerText = "New Game"; }
-            } catch(e) {}
-        }
-        
-            // 2. PERSIAPAN VARIABEL (DEKLARASI SEKALI SAJA DI SINI)
+                    
+                    // Validasi Data
+                    if (lastRes && lastRes[0] && lastRes[0].length === 3) {
+                        
+                        // Decode Nama Hewan (Sekarang Zonk index 6 sudah aman)
+                        const i1 = Number(lastRes[0][0]);
+                        const i2 = Number(lastRes[0][1]);
+                        const i3 = Number(lastRes[0][2]);
+
+                        const name1 = IMAGE_NAMES[i1] ? IMAGE_NAMES[i1].toUpperCase() : "UNKNOWN";
+                        const name2 = IMAGE_NAMES[i2] ? IMAGE_NAMES[i2].toUpperCase() : "UNKNOWN";
+                        const name3 = IMAGE_NAMES[i3] ? IMAGE_NAMES[i3].toUpperCase() : "UNKNOWN";
+
+                        resEl.innerText = `${name1} - ${name2} - ${name3}`;
+                        resEl.style.color = "var(--primary)";
+                        
+                    } else {
+                        resEl.innerText = "Waiting...";
+                    }
+
+                } catch(e) {
+                    console.warn("Gagal load last result:", e);
+                    resEl.innerText = "-"; 
+                }
+            } else {
+                resEl.innerText = "New Game";
+                resEl.style.color = "#888";
+            }
+            
+            // -----------------------------
+
+            let bets = [];
+            let idx = 0;
+            let totalTicketsLive = 0; 
+
+            // Loop manual mengambil data tiket dari blockchain
+
+            while (true) {
+
+                try {
+
+                    const bet = await gameContract.roundBets(currR, idx);
+
+                    bets.push(bet);
+                    idx++;
+                    totalTicketsLive++; // Tambah counter tiket
+                } catch { break; }
+            }        
+
+            // Update Tampilan Total Tiket
+
+            const ticketEl = document.getElementById('statTotalTickets');
+
+            if(ticketEl) ticketEl.innerText = totalTicketsLive;
+
+            // 3. RESET VARIABEL (PENTING!)
             let counts = [0, 0, 0, 0, 0, 0]; 
             let pools = { eth: 0, usdt: 0, shib: 0 }; 
             myBetCounts = [0, 0, 0, 0, 0, 0]; 
             let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
 
-            // 3. AMBIL JACKPOT (ROLLOVER) DULU
-            try {
-                const jackpots = await gameContract.getCurrentJackpot();
-                const jpETH = parseFloat(ethers.formatEther(jackpots[0]));
-                const jpUSDT = parseFloat(ethers.formatUnits(jackpots[1], 6));
-                const jpSHIB = parseFloat(ethers.formatUnits(jackpots[2], 18));
-
-                // Tambahkan Jackpot ke Pool Awal
-                pools.eth += jpETH;
-                pools.usdt += jpUSDT;
-                pools.shib += jpSHIB;
-
-                // Banner Jackpot
-                const jpBanner = document.getElementById('jackpot-banner');
-                if (jpBanner) {
-                    if (jpETH > 0 || jpUSDT > 0 || jpSHIB > 0) {
-                        jpBanner.style.display = 'block';
-                        document.getElementById('jp-eth').innerText = jpETH.toFixed(4);
-                        document.getElementById('jp-usdt').innerText = jpUSDT.toFixed(2);
-                        document.getElementById('jp-shib').innerText = jpSHIB.toLocaleString();
-                    } else {
-                        jpBanner.style.display = 'none';
-                    }
-                }
-            } catch(e) {}
-
-            // 4. AMBIL SEMUA TIKET (Looping)
-            let bets = [];
-            let idx = 0;
-            let totalTicketsLive = 0; 
-            while (true) {
-                try {
-                    const bet = await gameContract.roundBets(currR, idx);
-                    bets.push(bet);
-                    idx++;
-                    totalTicketsLive++;
-                } catch { break; }
-            }
-
-            document.getElementById('statTotalTickets').innerText = totalTicketsLive;
-
-            // 5. HITUNG TIKET (Looping Array)
-            // JANGAN RESET POOL DI SINI!
+            // 4. LOOP ANALISA BET
             bets.forEach(b => {
-                let curr = Number(b[2]); 
+                let curr = Number(b[2]); // 0=ETH, 1=USDT, 2=SHIB
                 let animalIdx = Number(b[4]);
-                let decimal = (curr === 1) ? 6 : 18; 
+
+                // --- PERBAIKAN PENTING: FORMAT DESIMAL USDT ---
+                // Jika USDT (1) pakai 6 desimal, lainnya 18
+                let decimal = (curr === 1) ? 18 : 18; 
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
-                // Tambahkan Tiket ke Pool (Pakai += agar Jackpot TIDAK HILANG)
+                // Global Pool
                 if (curr === 0) pools.eth += amt;
                 else if (curr === 1) pools.usdt += amt;
                 else pools.shib += amt;
 
-                // Hitung Lainnya
+                // Total Count
                 counts[animalIdx]++;
+
+                // My Bet Count
                 if (isConnected && b[0].toLowerCase() === userAddress.toLowerCase()) {
                     myBetCounts[animalIdx]++;
                 }
 
+                // E/U/S Count
                 if (curr === 0) animalCurrCounts[animalIdx].eth++;
+
                 else if (curr === 1) animalCurrCounts[animalIdx].usdt++;
+
                 else animalCurrCounts[animalIdx].shib++;
+
             });
 
-            // 6. RENDER TAMPILAN AKHIR
-            document.getElementById('poolTotalETH').innerText = pools.eth.toFixed(4);
-            document.getElementById('poolTotalUSDT').innerText = pools.usdt.toFixed(2);
-            document.getElementById('poolTotalSHIB').innerText = pools.shib.toLocaleString();
-
+            // 5. RENDER TAMPILAN
+            roundPools = pools;
+            updatePoolDisplay();
             for (let i = 0; i < 6; i++) {
                 document.getElementById(`count-${i}`).innerText = counts[i];
+
                 let c = document.getElementById(`card-${i}`);
                 c.classList.remove('my-bet', 'open');
-                if (myBetCounts[i] > 0) c.classList.add('my-bet'); else c.classList.add('open');
+                if (myBetCounts[i] > 0) c.classList.add('my-bet'); 
+                else c.classList.add('open');
+
+                // Update E/U/S
                 document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
+
                 document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
+
                 document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
+
             }
 
-            // Update Tombol Draw (Visual Admin)
+            // 6. Update Status Tombol Draw
             let active = counts.filter(c => c > 0).length;
+
             const btnDraw = document.getElementById('drawBtn');
+
             const drawStatus = document.getElementById('drawStatus');
+
             if (active >= 5) {
+
                 btnDraw.disabled = false;
                 btnDraw.classList.add('ready');
                 drawStatus.innerText = "READY TO DRAW!";
                 drawStatus.style.color = "var(--success)";
+
             } else {
+
                 btnDraw.disabled = true;
                 btnDraw.classList.remove('ready');
-                drawStatus.innerText = `Need ${5 - active} more teams active`;
+                drawStatus.innerText = `Need ${5 - active} more Players active`;
                 drawStatus.style.color = "var(--danger)";
             }
 
-        } catch (e) { console.error("Refresh Bet Error:", e); }
-    }
             // 7. Update History
             updateHistorySection(currR);
+
             if (document.getElementById('tabPersonal') && !document.getElementById('tabPersonal').classList.contains('hidden')) {
+
                 updatePersonalHistory();
             }
-     
         } catch (e) {
             console.error("Refresh Error:", e);
         }
@@ -4522,15 +4479,14 @@ if(!u[1]) {
 
     }
 
-    // --- REFRESH KHUSUS BETTING (RINGAN & CEPAT) ---
-    // Dipanggil oleh Interval 5 detik & Event NewBet
+    // --- REFRESH KHUSUS BETTING (DENGAN JACKPOT ROLLOVER) ---
     async function refreshBetData() {
         try {
             const currR = Number(await gameContract.currentRoundId());
             
-            // A. Update Statistik Hero & Last Result
+            // 1. UPDATE STATISTIK HEADER (Last Result, Total Rounds, Hero Stats)
             try {
-                // Total Winners & My Wins
+                // Update Statistik Hero
                 try {
                     const globalCountRaw = await gameContract.getGlobalWinCount();
                     document.getElementById('heroGlobalCount').innerText = globalCountRaw;
@@ -4538,28 +4494,65 @@ if(!u[1]) {
                     document.getElementById('heroTotalWon').innerText = myWinCount;
                 } catch(e) {}
 
-                // Last Result
+                // Update Last Result & Round ID
+                document.getElementById('statRoundId').innerText = `#${currR}`;
+                document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1);
+                
+                const resEl = document.getElementById('statLastResult');
                 if (currR > 1) {
                     const lastRoundId = BigInt(currR) - 1n;
                     const lastRes = await gameContract.getRoundResult(lastRoundId);
-                    if (lastRes && lastRes[0] && lastRes[0].length === 3) {
-                        const r1 = IMAGE_NAMES[Number(lastRes[0][0])];
-                        const r2 = IMAGE_NAMES[Number(lastRes[0][1])];
-                        const r3 = IMAGE_NAMES[Number(lastRes[0][2])];
-                        if(r1 && r2 && r3) {
-                             document.getElementById('statLastResult').innerText = `${r1.toUpperCase()} - ${r2.toUpperCase()} - ${r3.toUpperCase()}`;
-                             document.getElementById('statLastResult').style.color = "var(--accent)";
-                        }
-                    }
-                } else {
-                    document.getElementById('statLastResult').innerText = "New Game";
-                }
-                
-                document.getElementById('statRoundId').innerText = `#${currR}`;
-                document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1);
+                    if (lastRes && lastRes[0].length === 3) {
+                        const n1 = IMAGE_NAMES[Number(lastRes[0][0])] ? IMAGE_NAMES[Number(lastRes[0][0])].toUpperCase() : "?";
+                        const n2 = IMAGE_NAMES[Number(lastRes[0][1])] ? IMAGE_NAMES[Number(lastRes[0][1])].toUpperCase() : "?";
+                        const n3 = IMAGE_NAMES[Number(lastRes[0][2])] ? IMAGE_NAMES[Number(lastRes[0][2])].toUpperCase() : "?";
+                        resEl.innerText = `${n1} - ${n2} - ${n3}`;
+                        resEl.style.color = "var(--accent)";
+                    } else { resEl.innerText = "Waiting..."; }
+                } else { resEl.innerText = "New Game"; }
             } catch(e) {}
 
-            // B. Ambil Data Tiket
+            // 2. PERSIAPAN VARIABEL
+            let counts = [0, 0, 0, 0, 0, 0]; 
+            
+            // Inisialisasi Pool (Awalnya 0)
+            let pools = { eth: 0, usdt: 0, shib: 0 }; 
+            
+            myBetCounts = [0, 0, 0, 0, 0, 0]; 
+            let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
+
+            // --- [BARU] AMBIL SALDO JACKPOT (ROLLOVER) ---
+            // Kita isi variabel 'pools' dengan saldo sisa dari ronde lalu
+            try {
+                const jackpots = await gameContract.getCurrentJackpot();
+                
+                const jpETH = parseFloat(ethers.formatEther(jackpots[0]));
+                const jpUSDT = parseFloat(ethers.formatUnits(jackpots[1], 6));
+                const jpSHIB = parseFloat(ethers.formatUnits(jackpots[2], 18));
+
+                // Masukkan ke Pool Utama
+                pools.eth += jpETH;
+                pools.usdt += jpUSDT;
+                pools.shib += jpSHIB;
+
+                // Update Banner Jackpot (Jika ada)
+                const jpBanner = document.getElementById('jackpot-banner');
+                if (jpBanner) {
+                    if (jpETH > 0 || jpUSDT > 0 || jpSHIB > 0) {
+                        jpBanner.style.display = 'block';
+                        if(document.getElementById('jp-eth')) document.getElementById('jp-eth').innerText = jpETH.toFixed(4);
+                        if(document.getElementById('jp-usdt')) document.getElementById('jp-usdt').innerText = jpUSDT.toFixed(2);
+                        if(document.getElementById('jp-shib')) document.getElementById('jp-shib').innerText = jpSHIB.toLocaleString();
+                    } else {
+                        jpBanner.style.display = 'none';
+                    }
+                }
+            } catch(e) {
+                // console.warn("Jackpot fetch skipped (Old Contract?)");
+            }
+            // ---------------------------------------------
+
+            // 3. AMBIL DATA TIKET BARU
             let bets = [];
             let idx = 0;
             let totalTicketsLive = 0; 
@@ -4573,18 +4566,16 @@ if(!u[1]) {
             }
             document.getElementById('statTotalTickets').innerText = totalTicketsLive;
 
-            // C. Hitung Ulang Pool & E/U/S
-            let counts = [0, 0, 0, 0, 0, 0]; 
-            let pools = { eth: 0, usdt: 0, shib: 0 }; 
-            myBetCounts = [0, 0, 0, 0, 0, 0]; 
-            let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
-
+            // 4. HITUNG TIKET & GABUNGKAN KE POOL
             bets.forEach(b => {
                 let curr = Number(b[2]); 
                 let animalIdx = Number(b[4]);
-                let decimal = (curr === 1) ? 18 : 18; 
+                
+                // Perbaikan Desimal USDT (Wajib 6)
+                let decimal = (curr === 1) ? 6 : 18; 
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
+                // Tambahkan (+=) ke Pool yang sudah berisi Jackpot
                 if (curr === 0) pools.eth += amt;
                 else if (curr === 1) pools.usdt += amt;
                 else pools.shib += amt;
@@ -4600,7 +4591,7 @@ if(!u[1]) {
                 else animalCurrCounts[animalIdx].shib++;
             });
 
-            // D. Render Tampilan
+            // 5. RENDER TAMPILAN AKHIR
             document.getElementById('poolTotalETH').innerText = pools.eth.toFixed(4);
             document.getElementById('poolTotalUSDT').innerText = pools.usdt.toFixed(2);
             document.getElementById('poolTotalSHIB').innerText = pools.shib.toLocaleString();
@@ -4618,7 +4609,7 @@ if(!u[1]) {
                 document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
             }
 
-            // E. Update Status Tombol Draw
+            // 6. Update Tombol Draw
             let active = counts.filter(c => c > 0).length;
             const btnDraw = document.getElementById('drawBtn');
             const drawStatus = document.getElementById('drawStatus');
@@ -4631,7 +4622,7 @@ if(!u[1]) {
             } else {
                 btnDraw.disabled = true;
                 btnDraw.classList.remove('ready');
-                drawStatus.innerText = `Need ${5 - active} more Players active`;
+                drawStatus.innerText = `Need ${5 - active} more teams active`;
                 drawStatus.style.color = "var(--danger)";
             }
             
