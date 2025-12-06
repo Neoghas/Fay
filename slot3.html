@@ -1512,6 +1512,66 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
 
     @keyframes pulseGold { 0% { opacity: 0.8; } 50% { opacity: 1; text-shadow: 0 0 20px var(--gold); } 100% { opacity: 0.8; } }
     #jackpot-banner { animation: pulseGold 3s infinite; }
+
+    /* --- CSS PAGINATION & LEADERBOARD --- */
+    
+    /* Container Tombol */
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+        margin-top: 15px;
+        flex-wrap: wrap;
+    }
+
+    /* Gaya Tombol Halaman */
+    .page-btn {
+        background: #111;
+        border: 1px solid #333;
+        color: #888;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8em;
+        transition: 0.2s;
+        min-width: 35px;
+        font-family: 'Courier New', monospace;
+        font-weight: bold;
+    }
+
+    .page-btn:hover:not(:disabled) {
+        background: rgba(0, 210, 255, 0.1);
+        border-color: var(--primary);
+        color: white;
+    }
+
+    /* Tombol Aktif */
+    .page-btn.active {
+        background: var(--primary);
+        color: #000;
+        border-color: var(--primary);
+        box-shadow: 0 0 10px var(--primary);
+    }
+
+    /* Tombol Mati (Disabled) */
+    .page-btn:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+    }
+
+    /* Gaya Ranking 1, 2, 3 */
+    .rank-1 { color: #FFD700; text-shadow: 0 0 10px #FFD700; font-size:1.4em; } /* Emas */
+    .rank-2 { color: #C0C0C0; font-weight:bold; font-size:1.2em; } /* Perak */
+    .rank-3 { color: #CD7F32; font-weight:bold; font-size:1.1em; } /* Perunggu */
+    
+    /* Baris Tabel */
+    .lb-row { border-bottom: 1px solid rgba(255,255,255,0.05); transition:0.2s; }
+    .lb-row:hover { background: rgba(255,255,255,0.05); }
+    .lb-row td { padding: 12px 10px; vertical-align: middle; }
+
+    /* Highlight Punya Sendiri */
+    .lb-me { background: rgba(0, 210, 255, 0.15) !important; border-left: 3px solid var(--primary); }
 </style>
 </head>
 <body>
@@ -1874,6 +1934,32 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     </div>
 </div>
 
+<div class="leaderboard-section" style="width:100%; max-width:480px; margin:30px auto;">
+    
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
+        <button class="tab-btn active" onclick="switchLeaderboard('ref')" id="btn-tab-ref" style="flex:1;">🏆 TOP REFERRERS</button>
+        <button class="tab-btn" onclick="switchLeaderboard('win')" id="btn-tab-win" style="flex:1;">💰 TOP WINNERS</button>
+    </div>
+
+    <div class="winning-box" style="padding:0; overflow:hidden; border-color:var(--primary); min-height:300px;">
+        <table style="width:100%; border-collapse:collapse; font-size:0.8em;">
+            <thead>
+                <tr style="background:rgba(255,255,255,0.05); color:#888; font-size:0.7em;">
+                    <th style="padding:10px; width:40px; text-align:center;">#</th>
+                    <th style="padding:10px; text-align:left;">PLAYER</th>
+                    <th style="padding:10px; text-align:right;" id="th-score">INVITES</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+                <tr><td colspan="3" style="padding:20px; text-align:center; color:#555;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div id="lb-pagination" class="pagination-container"></div>
+
+</div>
+
 <div id="paymentModal" class="modal-overlay">
     <div class="modal-content">
         <button class="close-modal" onclick="closeModal('paymentModal')">&times;</button>
@@ -2023,6 +2109,7 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     const MIN_SPIN_TIME = 35000;
     const IMGBB_API_KEY = "8903b3e0ea80be404bd2e568cd15521f"; // API Key Anda
     const IMG_SEPARATOR = " ||IMG|| "; // Kode rahasia pemisah Text dan Gambar
+    const LB_PER_PAGE = 10;
     let spinStartTime = 0; let spinIntervals = [];
     let isSpinning = false;
     let provider, signer, userAddress;
@@ -2042,6 +2129,9 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
     let safetyTimer = null; // Timer pengaman anti-macet
     let toastTimeout;
     let localAvatarCache = "";
+    let currentLbTab = 'ref'; // 'ref' atau 'win'
+    let currentLbData = [];   // Data mentah dari kontrak
+    let currentLbPage = 1;
     
     // --- TAMBAHKAN VARIABEL INI ---
     let myBetCounts = [0, 0, 0, 0, 0, 0];
@@ -2086,7 +2176,8 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
         }
 
         // Panggil refresh data awal
-        refreshGameData(); 
+        refreshGameData();
+        loadLeaderboardData();
     };
 
     function handleWalletClick() { isConnected ? openWalletDashboard() : connectWallet(); }
@@ -4660,6 +4751,308 @@ if(!u[1]) {
         } else {
             return `${dayName} ${day} ${month} ${year}, ${hour}.${minute}`;
         }
+    }
+
+    function switchLeaderboard(type) {
+
+        currentLbTab = type;
+
+        currentLbPage = 1; // Reset ke halaman 1
+
+        
+
+        // Update UI Tab
+
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        document.getElementById(type === 'ref' ? 'btn-tab-ref' : 'btn-tab-win').classList.add('active');
+
+        document.getElementById('th-score').innerText = type === 'ref' ? 'INVITES' : 'WINS';
+
+        
+
+        loadLeaderboardData();
+
+    }
+
+
+
+    // 2. Fungsi Load Data dari Blockchain
+
+    async function loadLeaderboardData() {
+
+        const tbody = document.getElementById('leaderboard-body');
+
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">Fetching Data...</td></tr>';
+
+        document.getElementById('lb-pagination').innerHTML = '';
+
+
+
+        try {
+
+            let data = [];
+
+            // Panggil Fungsi Kontrak V3 (Returns Array of Struct)
+
+            if (currentLbTab === 'ref') {
+
+                data = await gameContract.getLeaderboardReferral();
+
+            } else {
+
+                data = await gameContract.getLeaderboardWinners();
+
+            }
+
+
+
+            // Filter data kosong (Skor > 0)
+
+            // Struct item: [0]Addr, [1]Score, [2]Nick, [3]Avatar
+
+            const validData = data.filter(d => d[1] > 0n);
+
+            
+
+            if (validData.length === 0) {
+
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#666; padding:20px;">No data yet.</td></tr>';
+
+                return;
+
+            }
+
+
+
+            // Sortir dari Besar ke Kecil
+
+            validData.sort((a, b) => Number(b[1]) - Number(a[1]));
+
+            
+
+            // Simpan ke variabel global & Render Halaman 1
+
+            currentLbData = validData;
+
+            renderLeaderboardPage(1);
+
+
+
+        } catch (e) {
+
+            console.error("LB Error:", e);
+
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--danger); padding:20px;">Failed to load.</td></tr>';
+
+        }
+
+    }
+
+
+
+    // 3. Fungsi Render Halaman Tertentu
+
+    function renderLeaderboardPage(page) {
+
+        currentLbPage = page;
+
+        const tbody = document.getElementById('leaderboard-body');
+
+        tbody.innerHTML = '';
+
+
+
+        const start = (page - 1) * LB_PER_PAGE;
+
+        const end = start + LB_PER_PAGE;
+
+        
+
+        // Ambil potongan data untuk halaman ini
+
+        const pageData = currentLbData.slice(start, end);
+
+
+
+        pageData.forEach((item, idx) => {
+
+            const rank = start + idx + 1; // Ranking Global (1, 11, 21...)
+
+            const addr = item[0];
+
+            const scoreRaw = item[1];
+
+            const nick = item[2] || "Unknown";
+
+            const avatar = item[3];
+
+
+
+            // Format Skor
+
+            let scoreDisplay = "";
+
+            if (currentLbTab === 'ref') {
+
+                scoreDisplay = scoreRaw.toString(); // Jumlah Orang
+
+            } else {
+
+                scoreDisplay = scoreRaw.toString() + " Wins"; // Jumlah Menang
+
+            }
+
+
+
+            // Style Ranking 1-3
+
+            let rankHtml = `#${rank}`;
+
+            let rankClass = "";
+
+            if(rank===1) { rankHtml="🥇"; rankClass="rank-1"; }
+
+            if(rank===2) { rankHtml="🥈"; rankClass="rank-2"; }
+
+            if(rank===3) { rankHtml="🥉"; rankClass="rank-3"; }
+
+
+
+            // Avatar Logic
+
+            let avatarHtml = "";
+
+            if(avatar && avatar.startsWith("http")) {
+
+                avatarHtml = `<img src="${avatar}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #555;">`;
+
+            } else {
+
+                avatarHtml = `<img src="${getAvatar(addr)}" style="width:28px; height:28px; border-radius:50%; border:1px solid #555;">`;
+
+            }
+
+
+
+            // Highlight Diri Sendiri
+
+            const isMe = (typeof userAddress !== 'undefined' && userAddress && addr.toLowerCase() === userAddress.toLowerCase());
+
+            const rowClass = isMe ? "lb-row lb-me" : "lb-row";
+
+            const nameColor = isMe ? "var(--primary)" : "white";
+
+
+
+            const row = `
+
+                <tr class="${rowClass}">
+
+                    <td style="text-align:center;"><span class="${rankClass}">${rankHtml}</span></td>
+
+                    <td style="text-align:left;">
+
+                        <div style="display:flex; align-items:center; gap:10px;">
+
+                            ${avatarHtml}
+
+                            <div>
+
+                                <div style="font-weight:bold; color:${nameColor}; font-size:0.9em;">${nick}</div>
+
+                                <div style="font-size:0.7em; color:#666; font-family:monospace;">${addr.substring(0,6)}...</div>
+
+                            </div>
+
+                        </div>
+
+                    </td>
+
+                    <td style="text-align:right; font-weight:bold; color:var(--gold);">${scoreDisplay}</td>
+
+                </tr>
+
+            `;
+
+            tbody.insertAdjacentHTML('beforeend', row);
+
+        });
+
+
+
+        // Update Tombol Navigasi
+
+        renderPaginationControls();
+
+    }
+
+
+
+    // 4. Fungsi Render Tombol Navigasi (1, 2, 3...)
+
+    function renderPaginationControls() {
+
+        const div = document.getElementById('lb-pagination');
+
+        const totalPages = Math.ceil(currentLbData.length / LB_PER_PAGE);
+
+        
+
+        if (totalPages <= 1) { div.innerHTML = ''; return; }
+
+
+
+        let html = '';
+
+        
+
+        // Tombol First & Prev
+
+        html += `<button class="page-btn" onclick="renderLeaderboardPage(1)" ${currentLbPage === 1 ? 'disabled' : ''}>« First</button>`;
+
+        html += `<button class="page-btn" onclick="renderLeaderboardPage(${currentLbPage - 1})" ${currentLbPage === 1 ? 'disabled' : ''}>‹ Prev</button>`;
+
+
+
+        // Tombol Angka (Max 3 angka ditampilkan)
+
+        let startP = Math.max(1, currentLbPage - 1);
+
+        let endP = Math.min(totalPages, currentLbPage + 1);
+
+        
+
+        // Adjust posisi jika di awal/akhir
+
+        if(currentLbPage === 1) endP = Math.min(totalPages, 3);
+
+        if(currentLbPage === totalPages) startP = Math.max(1, totalPages - 2);
+
+
+
+        for (let i = startP; i <= endP; i++) {
+
+            if(i > 0) {
+
+                html += `<button class="page-btn ${i === currentLbPage ? 'active' : ''}" onclick="renderLeaderboardPage(${i})">${i}</button>`;
+
+            }
+
+        }
+
+
+
+        // Tombol Next & Last
+
+        html += `<button class="page-btn" onclick="renderLeaderboardPage(${currentLbPage + 1})" ${currentLbPage === totalPages ? 'disabled' : ''}>Next ›</button>`;
+
+        html += `<button class="page-btn" onclick="renderLeaderboardPage(${totalPages})" ${currentLbPage === totalPages ? 'disabled' : ''}>Last »</button>`;
+
+
+
+        div.innerHTML = html;
+
     }
 
     function setupEventListeners() {
