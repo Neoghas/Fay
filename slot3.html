@@ -2849,6 +2849,76 @@ if(!u[1]) {
 
             // 2. FETCH DATA RONDE & ANALISIS STATISTIK (V2)
             const currR = Number(await gameContract.currentRoundId());
+
+            // 2. PERSIAPAN VARIABEL
+
+            let counts = [0, 0, 0, 0, 0, 0]; 
+
+            let pools = { eth: 0, usdt: 0, shib: 0 }; 
+
+            myBetCounts = [0, 0, 0, 0, 0, 0]; 
+
+            let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
+
+
+
+            // --- 3. AMBIL JACKPOT (MODAL AWAL) ---
+
+            try {
+
+                // Panggil fungsi V3: getCurrentJackpot
+
+                const jackpots = await gameContract.getCurrentJackpot();
+
+                
+
+                // Konversi BigInt ke Angka
+
+                const jpETH = parseFloat(ethers.formatEther(jackpots[0]));
+
+                const jpUSDT = parseFloat(ethers.formatUnits(jackpots[1], 18));
+
+                const jpSHIB = parseFloat(ethers.formatUnits(jackpots[2], 18));
+
+
+
+                // Tambahkan Jackpot ke Pool Awal
+
+                pools.eth += jpETH;
+
+                pools.usdt += jpUSDT;
+
+                pools.shib += jpSHIB;
+
+
+
+                // LOGIKA TAMPILKAN BANNER
+
+                const jpBanner = document.getElementById('jackpot-banner');
+
+                if (jpBanner) {
+
+                    if (jpETH > 0 || jpUSDT > 0 || jpSHIB > 0) {
+
+                        jpBanner.style.display = 'block';
+
+                        if(document.getElementById('jp-eth')) document.getElementById('jp-eth').innerText = jpETH.toFixed(4);
+
+                        if(document.getElementById('jp-usdt')) document.getElementById('jp-usdt').innerText = jpUSDT.toFixed(2);
+
+                        if(document.getElementById('jp-shib')) document.getElementById('jp-shib').innerText = jpSHIB.toLocaleString();
+
+                    } else {
+
+                        jpBanner.style.display = 'none';
+
+                    }
+
+                }
+
+            } catch(e) { /* error */ }
+
+            
             
             // --- UPDATE STATISTIK BARU ---
             document.getElementById('statRoundId').innerText = `#${currR}`;
