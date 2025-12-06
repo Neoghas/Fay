@@ -2842,12 +2842,7 @@ if(!u[1]) {
 
             // 2. FETCH DATA RONDE & ANALISIS STATISTIK (V2)
             const currR = Number(await gameContract.currentRoundId());
-
-            let counts = [0, 0, 0, 0, 0, 0]; 
-            let pools = { eth: 0, usdt: 0, shib: 0 }; 
-            myBetCounts = [0, 0, 0, 0, 0, 0]; // Reset Global Var
-            let animalCurrCounts = Array(6).fill(null).map(() => ({ eth:
-
+            
             // --- UPDATE STATISTIK BARU ---
             document.getElementById('statRoundId').innerText = `#${currR}`;
             document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1); 
@@ -2892,39 +2887,6 @@ if(!u[1]) {
                 resEl.style.color = "#888";
             }
             
-           try {
-            // --- 3. AMBIL JACKPOT (ROLLOVER) DULU & INISIALISASI POOL ---
-                // ABI sudah benar, kita panggil fungsi kontrak
-                const jackpots = await gameContract.getCurrentJackpot(); 
-                
-                // --- KOREKSI KONVERSI DATA ---
-                // Gunakan Number() untuk konversi yang lebih aman dari BigInt ke Float
-                const jpETH = Number(ethers.formatEther(jackpots[0]));
-                const jpUSDT = Number(ethers.formatUnits(jackpots[1], 18)); // USDT: 6 desimal
-                const jpSHIB = Number(ethers.formatUnits(jackpots[2], 18)); // SHIB: 18 desimal
-
-                // Tambahkan Jackpot ke Pool Awal
-                pools.eth += jpETH;
-                pools.usdt += jpUSDT;
-                pools.shib += jpSHIB;
-
-                // LOGIKA TAMPILKAN BANNER
-                const jpBanner = document.getElementById('jackpot-banner');
-                if (jpBanner) {
-                    if (jpETH > 0 || jpUSDT > 0 || jpSHIB > 0) {
-                        jpBanner.style.display = 'block';
-                        if(document.getElementById('jp-eth')) document.getElementById('jp-eth').innerText = jpETH.toFixed(4);
-                        if(document.getElementById('jp-usdt')) document.getElementById('jp-usdt').innerText = jpUSDT.toFixed(2);
-                        if(document.getElementById('jp-shib')) document.getElementById('jp-shib').innerText = jpSHIB.toLocaleString();
-                    } else {
-                        jpBanner.style.display = 'none';
-                    }
-                }
-            } catch(e) { 
-                console.error("Jackpot Fetch Error:", e);
-                // Biarkan banner tersembunyi jika fetch gagal
-        }
-            
             // -----------------------------
 
             let bets = [];
@@ -2962,9 +2924,9 @@ if(!u[1]) {
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
                 // Global Pool
-                if (curr === 0) pools.eth += amt;
-                else if (curr === 1) pools.usdt += amt;
-                else pools.shib += amt;
+                if (curr === 0) pools.eth ++ amt;
+                else if (curr === 1) pools.usdt ++ amt;
+                else pools.shib ++ amt;
 
                 // Total Count
                 counts[animalIdx]++;
@@ -2979,10 +2941,6 @@ if(!u[1]) {
                 else if (curr === 1) animalCurrCounts[animalIdx].usdt+=;
                 else animalCurrCounts[animalIdx].shib+=;
             });
-
-            document.getElementById('poolTotalETH').innerText = pools.eth.toFixed(4);
-            document.getElementById('poolTotalUSDT').innerText = pools.usdt.toFixed(2);
-            document.getElementById('poolTotalSHIB').innerText = pools.shib.toLocaleString();
 
             // 5. RENDER TAMPILAN
             roundPools = pools;
