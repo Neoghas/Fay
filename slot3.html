@@ -1572,6 +1572,90 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
 
     /* Highlight Punya Sendiri */
     .lb-me { background: rgba(0, 210, 255, 0.15) !important; border-left: 3px solid var(--primary); }
+
+    /* --- CHAIN SELECTOR STYLING --- */
+    
+    /* Container Utama (Relative agar menu muncul pas di bawahnya) */
+    .chain-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    /* Tombol Pemicu */
+    .btn-chain-select {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #eee;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: bold;
+        font-size: 0.85em;
+        transition: 0.3s;
+    }
+    .btn-chain-select:hover {
+        border-color: var(--primary);
+        background: rgba(0, 210, 255, 0.1);
+        box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+    }
+
+    /* Isi Menu Dropdown (Tersembunyi Awalnya) */
+    .chain-options {
+        display: none; /* Hidden by default */
+        position: absolute;
+        top: 110%; /* Muncul tepat di bawah tombol */
+        right: 0;  /* Rata kanan */
+        background: #1a1b26;
+        min-width: 180px;
+        border: 1px solid var(--primary);
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        z-index: 200; 
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .chain-options.show { display: flex; animation: fadeInDown 0.2s ease; }
+    @keyframes fadeInDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Item Link Chain */
+    .chain-item {
+        display: flex;
+        align-items: center;
+        padding: 10px 15px;
+        color: #ccc;
+        text-decoration: none;
+        font-size: 0.9em;
+        transition: 0.2s;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .chain-item:hover {
+        background: rgba(0, 210, 255, 0.1);
+        color: white;
+        padding-left: 20px;
+    }
+
+    /* Icon Gambar Chain */
+    .chain-icon {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+        object-fit: contain;
+    }
+    
+    /* MOBILE RESPONSIVENESS */
+    @media (max-width: 480px) {
+        .hide-on-mobile { display: none !important; }
+        .btn-chain-select { 
+            padding: 8px !important; 
+            width: 40px; height: 40px; 
+            justify-content: center;
+        }
+        .arrow-down { display: none !important; }
+        }
 </style>
 </head>
 <body>
@@ -1588,9 +1672,61 @@ min-height: 100vh; padding-bottom: 50px; overflow-x: hidden;
             Faylotto
         </span>
     </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+
+        
+
+        <div class="chain-dropdown" id="chainDropdown">
+
+            <button class="btn-chain-select" onclick="toggleChainMenu()">
+
+                <img src="chain.png" style="width:20px; height:20px;"> <span class="hide-on-mobile" style="margin-left:6px;">Select Chain</span>
+
+                <i class="fa-solid fa-chevron-down arrow-down" style="margin-left:4px;"></i>
+
+            </button>
+
+            
+
+            <div class="chain-options" id="chainOptions">
+
+                <a href="/base-deployment" class="chain-item">
+
+                    <img src="base.png" class="chain-icon"> Base
+
+                </a>
+
+                <a href="/arbitrum-deployment" class="chain-item">
+
+                    <img src="arbitrum.png" class="chain-icon"> Arbitrum
+
+                </a>
+
+                <a href="/avax-deployment" class="chain-item">
+
+                    <img src="avax.png" class="chain-icon"> Avalanche
+
+                </a>
+
+                <a href="/bsc-deployment" class="chain-item">
+
+                    <img src="bnb.png" class="chain-icon"> Binance Smart Chain
+
+                </a>
+
+                <a href="/polygon-deployment" class="chain-item">
+
+                    <img src="polygon.png" class="chain-icon"> EVM/Polygon
+
+                </a>
+
+                </div>
+
+        </div>
     <button id="connectBtn" class="wallet-btn" onclick="handleWalletClick()" style="display: flex; align-items: center; gap: 8px;">
     <img src="con.svg" style="width: 20px; height: 20px;">
     <span>Connect</span></button>
+    </div>
 </header>
 <div class="container">
 
@@ -5053,6 +5189,24 @@ if(!u[1]) {
 
         div.innerHTML = html;
 
+    }
+
+    // --- LOGIC CHAIN SELECTOR ---
+    function toggleChainMenu() {
+        const menu = document.getElementById("chainOptions");
+        menu.classList.toggle("show");
+    }
+
+    // Fitur Tambahan: Klik di luar menu untuk menutup
+    window.onclick = function(event) {
+        if (!event.target.closest('.chain-dropdown')) {
+            const dropdowns = document.getElementsByClassName("chain-options");
+            for (let i = 0; i < dropdowns.length; i++) {
+                if (dropdowns[i].classList.contains('show')) {
+                    dropdowns[i].classList.remove('show');
+                }
+            }
+        }
     }
 
     function setupEventListeners() {
