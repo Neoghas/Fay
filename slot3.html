@@ -2891,16 +2891,16 @@ if(!u[1]) {
                 resEl.innerText = "New Game";
                 resEl.style.color = "#888";
             }
-
+            
+           try {
             // --- 3. AMBIL JACKPOT (ROLLOVER) DULU & INISIALISASI POOL ---
-            try {
                 // ABI sudah benar, kita panggil fungsi kontrak
                 const jackpots = await gameContract.getCurrentJackpot(); 
                 
                 // --- KOREKSI KONVERSI DATA ---
                 // Gunakan Number() untuk konversi yang lebih aman dari BigInt ke Float
                 const jpETH = Number(ethers.formatEther(jackpots[0]));
-                const jpUSDT = Number(ethers.formatUnits(jackpots[1], 6)); // USDT: 6 desimal
+                const jpUSDT = Number(ethers.formatUnits(jackpots[1], 18)); // USDT: 6 desimal
                 const jpSHIB = Number(ethers.formatUnits(jackpots[2], 18)); // SHIB: 18 desimal
 
                 // Tambahkan Jackpot ke Pool Awal
@@ -2923,7 +2923,7 @@ if(!u[1]) {
             } catch(e) { 
                 console.error("Jackpot Fetch Error:", e);
                 // Biarkan banner tersembunyi jika fetch gagal
-            }
+        }
             
             // -----------------------------
 
