@@ -4480,7 +4480,7 @@ if(!u[1]) {
         try {
             const currR = Number(await gameContract.currentRoundId());
             
-            // 1. Update Statistik Header (Last Result, Total Rounds)
+            // 1. Update Statistik Hero & Last Result (BLOK INI AMAN)
             try {
                 document.getElementById('statRoundId').innerText = `#${currR}`;
                 document.getElementById('statTotalRounds').innerText = Math.max(0, currR - 1);
@@ -4498,54 +4498,50 @@ if(!u[1]) {
                     } else { resEl.innerText = "Waiting..."; }
                 } else { resEl.innerText = "New Game"; }
                 
-                // Update Hero Stats juga disini biar realtime
+                // Update Hero Stats
                 try {
                     const globalCountRaw = await gameContract.getGlobalWinCount();
                     document.getElementById('heroGlobalCount').innerText = globalCountRaw;
                     const myWinCount = await gameContract.getUserWinCount(userAddress);
                     document.getElementById('heroTotalWon').innerText = myWinCount;
-                } catch(e){}
+                } catch(e) {}
 
             } catch(e) {}
 
-            // 2. PERSIAPAN VARIABEL
+            // 2. PERSIAPAN VARIABEL HITUNGAN (DEKLARASI CUKUP SEKALI DI SINI)
             let counts = [0, 0, 0, 0, 0, 0]; 
             let pools = { eth: 0, usdt: 0, shib: 0 }; 
             myBetCounts = [0, 0, 0, 0, 0, 0]; 
             let animalCurrCounts = Array(6).fill(null).map(() => ({ eth: 0, usdt: 0, shib: 0 }));
 
-            // --- [INTI SOLUSI: AMBIL JACKPOT DARI KONTRAK V3] ---
+            // 3. AMBIL JACKPOT (ROLLOVER) DULU & INISIALISASI POOL
             try {
-                // Panggil fungsi V3: getCurrentJackpot (Returns: [eth, usdt, shib])
                 const jackpots = await gameContract.getCurrentJackpot();
                 
                 const jpETH = parseFloat(ethers.formatEther(jackpots[0]));
-                const jpUSDT = parseFloat(ethers.formatUnits(jackpots[1], 6)); // USDT 6 Desimal
+                const jpUSDT = parseFloat(ethers.formatUnits(jackpots[1], 6));
                 const jpSHIB = parseFloat(ethers.formatUnits(jackpots[2], 18));
 
-                // Masukkan ke Pool Utama
+                // Tambahkan Jackpot ke Pool Awal (pools.eth += jpETH)
                 pools.eth += jpETH;
                 pools.usdt += jpUSDT;
                 pools.shib += jpSHIB;
 
-                // LOGIKA TAMPILKAN BANNER
+                // Tampilkan Banner Jackpot
                 const jpBanner = document.getElementById('jackpot-banner');
                 if (jpBanner) {
                     if (jpETH > 0 || jpUSDT > 0 || jpSHIB > 0) {
-                        jpBanner.style.display = 'block'; // MUNCULKAN BANNER
+                        jpBanner.style.display = 'block';
                         if(document.getElementById('jp-eth')) document.getElementById('jp-eth').innerText = jpETH.toFixed(4);
                         if(document.getElementById('jp-usdt')) document.getElementById('jp-usdt').innerText = jpUSDT.toFixed(2);
                         if(document.getElementById('jp-shib')) document.getElementById('jp-shib').innerText = jpSHIB.toLocaleString();
                     } else {
-                        jpBanner.style.display = 'none'; // SEMBUNYIKAN JIKA KOSONG
+                        jpBanner.style.display = 'none';
                     }
                 }
-            } catch(e) {
-                // console.warn("Jackpot fetch failed (Mungkin kontrak lama?):", e);
-            }
-            // ----------------------------------------------------
+            } catch(e) {}
 
-            // 3. AMBIL DATA TIKET BARU
+            // 4. AMBIL SEMUA TIKET BARU
             let bets = [];
             let idx = 0;
             let totalTicketsLive = 0; 
@@ -4559,14 +4555,16 @@ if(!u[1]) {
             }
             document.getElementById('statTotalTickets').innerText = totalTicketsLive;
 
-            // 4. HITUNG TIKET & GABUNGKAN KE POOL
+            // 5. HITUNG TIKET & GABUNGKAN KE POOL
             bets.forEach(b => {
                 let curr = Number(b[2]); 
                 let animalIdx = Number(b[4]);
+                
+                // --- PERBAIKAN FATAL: USDT WAJIB 6 DESIMAL ---
                 let decimal = (curr === 1) ? 6 : 18; 
                 let amt = parseFloat(ethers.formatUnits(b[1], decimal));
 
-                // Tambahkan ke Pool (Pakai +=)
+                // Tambahkan Tiket ke Pool (Pakai += agar Jackpot TIDAK HILANG)
                 if (curr === 0) pools.eth += amt;
                 else if (curr === 1) pools.usdt += amt;
                 else pools.shib += amt;
@@ -4582,22 +4580,24 @@ if(!u[1]) {
                 else animalCurrCounts[animalIdx].shib++;
             });
 
-            // 5. RENDER TAMPILAN AKHIR
+            // 6. RENDER TAMPILAN AKHIR
             document.getElementById('poolTotalETH').innerText = pools.eth.toFixed(4);
             document.getElementById('poolTotalUSDT').innerText = pools.usdt.toFixed(2);
             document.getElementById('poolTotalSHIB').innerText = pools.shib.toLocaleString();
 
             for (let i = 0; i < 6; i++) {
                 document.getElementById(`count-${i}`).innerText = counts[i];
+                
                 let c = document.getElementById(`card-${i}`);
                 c.classList.remove('my-bet', 'open');
                 if (myBetCounts[i] > 0) c.classList.add('my-bet'); else c.classList.add('open');
+                
                 document.getElementById(`c-eth-${i}`).innerText = animalCurrCounts[i].eth;
                 document.getElementById(`c-usdt-${i}`).innerText = animalCurrCounts[i].usdt;
                 document.getElementById(`c-shib-${i}`).innerText = animalCurrCounts[i].shib;
             }
 
-            // 6. UPDATE TOMBOL DRAW
+            // 7. Update Tombol Draw
             let active = counts.filter(c => c > 0).length;
             const btnDraw = document.getElementById('drawBtn');
             const drawStatus = document.getElementById('drawStatus');
