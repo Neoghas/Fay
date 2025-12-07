@@ -3,35 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faylotto - Nickname Market V4.2</title>
+    <title>Faylotto - Nickname Market</title>
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
     <style>
-        :root { --primary: #00d2ff; --accent: #ff007a; --bg: #0f1016; --card: #1a1b26; --gold: #ffd700; --success: #00ff9d; }
-        body { background-color: var(--bg); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        :root {
+            --primary: #00d2ff;
+            --accent: #ff007a;
+            --bg: #0f1016;
+            --card: #1a1b26;
+            --gold: #ffd700;
+            --success: #00ff9d;
+        }
+        body {
+            background-color: var(--bg);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 20px;
+        }
         
-        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #333; margin-bottom: 20px; }
-        .btn-back { background: #333; color: white; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; text-decoration: none; font-weight: bold; }
-        .btn-connect { background: var(--primary); color: #000; border: none; padding: 8px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        /* HEADER */
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding-bottom: 20px; border-bottom: 1px solid #333; margin-bottom: 20px;
+        }
+        .btn-back {
+            background: #333; color: white; border: none; padding: 8px 15px; 
+            border-radius: 8px; cursor: pointer; text-decoration: none; font-weight: bold;
+        }
+        .btn-connect {
+            background: var(--primary); color: #000; border: none; padding: 8px 15px;
+            border-radius: 8px; cursor: pointer; font-weight: bold;
+        }
 
+        /* TABS */
         .market-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { flex: 1; padding: 12px; background: #222; border: 1px solid #444; color: #888; cursor: pointer; border-radius: 8px; font-weight: bold; }
-        .tab-btn.active { background: linear-gradient(45deg, var(--primary), #0088aa); color: white; border-color: var(--primary); }
+        .tab-btn {
+            flex: 1; padding: 12px; background: #222; border: 1px solid #444;
+            color: #888; cursor: pointer; border-radius: 8px; font-weight: bold;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .tab-btn.active {
+            background: linear-gradient(45deg, var(--primary), #0088aa);
+            color: white; border-color: var(--primary);
+        }
 
-        .market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
-        .nick-card { background: var(--card); border: 1px solid #333; padding: 15px; border-radius: 12px; transition: 0.3s; }
-        .nick-title { font-size: 1.4em; font-weight: 900; color: var(--gold); margin-bottom: 5px; word-break: break-all; }
+        /* GRID LAYOUT */
+        .market-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;
+        }
+
+        /* CARD STYLE */
+        .nick-card {
+            background: var(--card); border: 1px solid #333; padding: 15px;
+            border-radius: 12px; position: relative; overflow: hidden;
+            transition: 0.3s;
+        }
+        .nick-card:hover { transform: translateY(-3px); border-color: var(--gold); }
         
-        .btn-action { width: 100%; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .nick-title { font-size: 1.4em; font-weight: 900; color: var(--gold); margin-bottom: 5px; }
+        .nick-price { color: var(--success); font-size: 1.1em; font-weight: bold; margin-bottom: 15px; }
+        
+        .btn-action {
+            width: 100%; padding: 10px; border: none; border-radius: 8px;
+            font-weight: bold; cursor: pointer; margin-top: 5px;
+        }
         .btn-buy { background: var(--success); color: black; }
-        .btn-sell { background: var(--accent); color: white; width:auto; padding: 8px 15px; }
+        .btn-sell { background: var(--accent); color: white; }
+        .btn-use { background: var(--primary); color: black; }
         .btn-cancel { background: #555; color: white; }
-        .sell-input { width: 100%; padding: 8px; background: #111; border: 1px solid #444; color: white; border-radius: 5px; box-sizing: border-box; margin-bottom:5px; }
+
+        /* INPUT SELL */
+        .sell-input {
+            width: 100%; padding: 8px; margin-bottom: 8px;
+            background: #111; border: 1px solid #444; color: white; border-radius: 5px;
+        }
     </style>
 </head>
 <body>
 
     <header>
         <a href="index.html" class="btn-back">⬅ Back to Game</a>
+        <div style="font-size:1.2em; font-weight:bold; color:var(--gold);">💎 NICKNAME MARKET</div>
         <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </header>
 
@@ -42,212 +94,475 @@
 
     <div id="view-buy" class="market-view">
         <div id="market-list" class="market-grid">
-            <div style="grid-column:1/-1; text-align:center; color:#666;">Loading market...</div>
+            <div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">
+                Scanning Blockchain for Listings... <br> (This may take a few seconds)
+            </div>
         </div>
     </div>
 
     <div id="view-inventory" class="market-view" style="display:none;">
-        <div style="background:rgba(0,210,255,0.1); border:1px solid var(--primary); padding:15px; border-radius:10px; margin-bottom:20px;">
-            <div style="font-size:0.8em; color:#aaa;">CURRENT ACTIVE NICKNAME</div>
-            <div id="active-nick-display" style="font-size:1.5em; font-weight:bold; color:white;">-</div>
+        
+        <div style="background:rgba(0, 210, 255, 0.1); border:1px solid var(--primary); padding:15px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="font-size:0.8em; color:#aaa;">CURRENT ACTIVE NICKNAME</div>
+                <div id="active-nick-display" style="font-size:1.5em; font-weight:bold; color:white;">-</div>
+            </div>
+            <div style="color:var(--success); font-weight:bold;">✅ IN USE</div>
         </div>
+
+        <h3 style="color:#aaa; border-bottom:1px solid #333; padding-bottom:10px;">Collection & Sell</h3>
         <div id="inventory-list" class="market-grid">
             <div style="grid-column:1/-1; text-align:center; color:#666;">Loading inventory...</div>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        const CORE_ADDRESS = "0x47aDDDEFFBc48f1E1C21d8429622A717DBD75749";     // Core Contract
-        const MARKET_ADDRESS = "0x9aF429F3E26d5f8951f53F812382b216c6224587";   // Market Contract
-        const BASE_SEPOLIA_CHAIN_ID = '0x14a34'; 
+        // --- 1. CONFIGURATION (PASTE ALAMAT KONTRAK V4 DISINI) ---
+        const CONTRACT_ADDRESS = "0x8F1Dc1362fa27115094471DC71a00752D6fF8F07"; 
+        
+        // PASTE ABI V4 DISINI (Yang panjang tadi)
+        const GAME_ABI = [{"inputs":[{"internalType":"address","name":"_usdtToken","type":"address"},{"internalType":"address","name":"_shibToken","type":"address"},{"internalType":"address","name":"_priceFeedETH","type":"address"},{"internalType":"address","name":"_priceFeedUSDT","type":"address"},{"internalType":"address","name":"_priceFeedSHIB","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"indexed":false,"internalType":"string","name":"outcome","type":"string"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"}],"name":"BattleResult","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BonusClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"token","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"EmergencyWithdraw","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"oldCollector","type":"address"},{"indexed":false,"internalType":"address","name":"newCollector","type":"address"}],"name":"FeeCollectorUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint8","name":"animalChoice","type":"uint8"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NewBet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameDelisted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameListed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"oldPrice","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"newPrice","type":"uint256"}],"name":"NicknamePriceUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"buyer","type":"address"},{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameSold","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"RatingSubmitted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"reactionType","type":"uint8"}],"name":"ReactionUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"referrer","type":"address"},{"indexed":false,"internalType":"uint256","name":"newCount","type":"uint256"}],"name":"ReferralCountIncreased","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"invitee","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralLinked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"UserRegistered","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"curr","type":"uint8"},{"indexed":false,"internalType":"bool","name":"isRealTransfer","type":"bool"}],"name":"WinDistributed","type":"event"},{"inputs":[],"name":"COST_ETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"COST_SHIB_FREE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"COST_SHIB_MAIN","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"COST_USDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"FEE_PLATFORM_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"FEE_REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"FEE_TOTAL_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_REFERRALS_REQUIRED","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_TEAMS_ACTIVE","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BONUS_AMOUNT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"","type":"uint8"}],"name":"activeTeamCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"string","name":"_text","type":"string"},{"internalType":"string","name":"_imageCid","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"}],"name":"betETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"bool","name":"_isFreeBet","type":"bool"}],"name":"betToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"buyNickname","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"cancelSale","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralBonus","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"commentCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"dislikeCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint256","name":"_cId","type":"uint256"},{"internalType":"string","name":"_newText","type":"string"},{"internalType":"string","name":"_newImage","type":"string"}],"name":"editComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"emergencyWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_token","type":"address"}],"name":"emergencyWithdrawToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"executeDraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeShibCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getActiveTeamCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getBonusBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getCurrentJackpot","outputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getGlobalWinCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getLeaderboardReferral","outputs":[{"components":[{"internalType":"address","name":"userAddr","type":"address"},{"internalType":"uint256","name":"score","type":"uint256"},{"internalType":"string","name":"nickname","type":"string"},{"internalType":"string","name":"avatarUrl","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSlotBattleUltimate.LeaderboardData[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getLeaderboardWinners","outputs":[{"components":[{"internalType":"address","name":"userAddr","type":"address"},{"internalType":"uint256","name":"score","type":"uint256"},{"internalType":"string","name":"nickname","type":"string"},{"internalType":"string","name":"avatarUrl","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSlotBattleUltimate.LeaderboardData[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"}],"name":"getRoundResult","outputs":[{"components":[{"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"internalType":"string","name":"outcome","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"address","name":"winner","type":"address"}],"internalType":"struct FaylottoSlotBattleUltimate.RoundResultData","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getUserTotalWinnings","outputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getUserWinCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"globalWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"","type":"uint8"}],"name":"jackpots","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"myNicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickMarketplace","outputs":[{"internalType":"bool","name":"isForSale","type":"bool"},{"internalType":"uint256","name":"price","type":"uint256"},{"internalType":"address","name":"seller","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nicknameToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nickname","type":"string"},{"internalType":"string","name":"_referrerNick","type":"string"}],"name":"register","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundBets","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"enum FaylottoSlotBattleUltimate.BetType","name":"bType","type":"uint8"},{"internalType":"uint8","name":"animalChoice","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundComments","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"author","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"string","name":"imageCid","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isEdited","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundHistory","outputs":[{"internalType":"string","name":"outcome","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"address","name":"winner","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint256","name":"_price","type":"uint256"}],"name":"sellNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_url","type":"string"}],"name":"setAvatar","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint8","name":"_reaction","type":"uint8"}],"name":"setReaction","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"shibToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint8","name":"_stars","type":"uint8"}],"name":"submitRating","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_newNick","type":"string"}],"name":"switchNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"topReferrers","outputs":[{"internalType":"address","name":"userAddr","type":"address"},{"internalType":"uint256","name":"score","type":"uint256"},{"internalType":"string","name":"nickname","type":"string"},{"internalType":"string","name":"avatarUrl","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"topWinners","outputs":[{"internalType":"address","name":"userAddr","type":"address"},{"internalType":"uint256","name":"score","type":"uint256"},{"internalType":"string","name":"nickname","type":"string"},{"internalType":"string","name":"avatarUrl","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"totalRatingCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"totalRatingScore","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"usdtToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"","type":"uint8"}],"name":"userCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"userRatings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"userReactions","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"userWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"string","name":"nickname","type":"string"},{"internalType":"bool","name":"isRegistered","type":"bool"},{"internalType":"address","name":"referrer","type":"address"},{"internalType":"bool","name":"hasBet","type":"bool"},{"internalType":"uint256","name":"pendingRefBonusCount","type":"uint256"},{"internalType":"uint256","name":"totalReferrals","type":"uint256"},{"internalType":"bool","name":"bonusClaimed","type":"bool"},{"internalType":"uint256","name":"wonETH","type":"uint256"},{"internalType":"uint256","name":"wonUSDT","type":"uint256"},{"internalType":"uint256","name":"wonSHIB","type":"uint256"},{"internalType":"string","name":"avatarUrl","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdrawCredit","outputs":[],"stateMutability":"nonpayable","type":"function"}];
+            // ... Masukkan ABI V4 Lengkap Disini ...
+            // Pastikan ada fungsi: buyNickname, sellNickname, switchNickname, myNicknames, dll.
+            // Untuk mempersingkat contoh, saya asumsikan Anda menempel ABI V4 di sini.
+        ];
 
-        // ABI FINAL (Core & Market V4.2)
-        const CORE_ABI = [{"inputs":[{"internalType":"address","name":"_usdtToken","type":"address"},{"internalType":"address","name":"_shibToken","type":"address"},{"internalType":"address","name":"_priceFeedETH","type":"address"},{"internalType":"address","name":"_priceFeedUSDT","type":"address"},{"internalType":"address","name":"_priceFeedSHIB","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"indexed":false,"internalType":"string","name":"outcome","type":"string"},{"indexed":false,"internalType":"uint256","name":"roundId","type":"uint256"}],"name":"BattleResult","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BonusClaimed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"token","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"EmergencyWithdraw","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"address","name":"oldCollector","type":"address"},{"indexed":false,"internalType":"address","name":"newCollector","type":"address"}],"name":"FeeCollectorUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"player","type":"address"},{"indexed":false,"internalType":"uint8","name":"animalChoice","type":"uint8"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NewBet","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"RatingSubmitted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"roundId","type":"uint256"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"reactionType","type":"uint8"}],"name":"ReactionUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"referrer","type":"address"},{"indexed":false,"internalType":"uint256","name":"newCount","type":"uint256"}],"name":"ReferralCountIncreased","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"invitee","type":"address"},{"indexed":true,"internalType":"address","name":"referrer","type":"address"}],"name":"ReferralLinked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"}],"name":"UserRegistered","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"winner","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"curr","type":"uint8"},{"indexed":false,"internalType":"bool","name":"isRealTransfer","type":"bool"}],"name":"WinDistributed","type":"event"},{"inputs":[],"name":"COST_ETH","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"COST_SHIB_FREE","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"COST_SHIB_MAIN","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"COST_USDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"FEE_PLATFORM_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"FEE_REF_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"FEE_TOTAL_BP","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_REFERRALS_REQUIRED","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_TEAMS_ACTIVE","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"REF_BONUS_AMOUNT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint8","name":"","type":"uint8"}],"name":"activeTeamCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"string","name":"_text","type":"string"},{"internalType":"string","name":"_imageCid","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"}],"name":"betETH","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint8","name":"_animal","type":"uint8"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"bool","name":"_isFreeBet","type":"bool"}],"name":"betToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"claimReferralBonus","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"commentCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"currentRoundId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"dislikeCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint256","name":"_cId","type":"uint256"},{"internalType":"string","name":"_newText","type":"string"},{"internalType":"string","name":"_newImage","type":"string"}],"name":"editComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"emergencyWithdrawETH","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_token","type":"address"}],"name":"emergencyWithdrawToken","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"executeDraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"address","name":"_seller","type":"address"},{"internalType":"address","name":"_buyer","type":"address"}],"name":"executeMarketTrade","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"freeShibCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getActiveTeamCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"getBonusBalance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getCurrentJackpot","outputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getGlobalWinCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getLeaderboardReferral","outputs":[{"components":[{"internalType":"address","name":"userAddr","type":"address"},{"internalType":"uint256","name":"score","type":"uint256"},{"internalType":"string","name":"nickname","type":"string"},{"internalType":"string","name":"avatarUrl","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSlotBattleUltimate.LeaderboardData[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getLeaderboardWinners","outputs":[{"components":[{"internalType":"address","name":"userAddr","type":"address"},{"internalType":"uint256","name":"score","type":"uint256"},{"internalType":"string","name":"nickname","type":"string"},{"internalType":"string","name":"avatarUrl","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSlotBattleUltimate.LeaderboardData[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getReferralCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"}],"name":"getRoundResult","outputs":[{"components":[{"internalType":"uint8[3]","name":"reels","type":"uint8[3]"},{"internalType":"string","name":"outcome","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"address","name":"winner","type":"address"}],"internalType":"struct FaylottoSlotBattleUltimate.RoundResultData","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getUserTotalWinnings","outputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"}],"name":"getUserWinCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"globalWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"address","name":"_user","type":"address"}],"name":"isNicknameOwner","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"","type":"uint8"}],"name":"jackpots","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"likeCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"myNicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nicknameToAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nickname","type":"string"},{"internalType":"string","name":"_referrerNick","type":"string"}],"name":"register","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundBets","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"enum FaylottoSlotBattleUltimate.BetType","name":"bType","type":"uint8"},{"internalType":"uint8","name":"animalChoice","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundComments","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"author","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"string","name":"imageCid","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isEdited","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"roundHistory","outputs":[{"internalType":"string","name":"outcome","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"address","name":"winner","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_url","type":"string"}],"name":"setAvatar","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint8","name":"_reaction","type":"uint8"}],"name":"setReaction","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_market","type":"address"}],"name":"setslotNicknameMarketAddress","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"shibToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"slotNicknameMarketAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_roundId","type":"uint256"},{"internalType":"uint8","name":"_stars","type":"uint8"}],"name":"submitRating","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"topReferrers","outputs":[{"internalType":"address","name":"userAddr","type":"address"},{"internalType":"uint256","name":"score","type":"uint256"},{"internalType":"string","name":"nickname","type":"string"},{"internalType":"string","name":"avatarUrl","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"topWinners","outputs":[{"internalType":"address","name":"userAddr","type":"address"},{"internalType":"uint256","name":"score","type":"uint256"},{"internalType":"string","name":"nickname","type":"string"},{"internalType":"string","name":"avatarUrl","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"totalRatingCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"totalRatingScore","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"usdtToken","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"","type":"uint8"}],"name":"userCredits","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"userProfiles","outputs":[{"internalType":"string","name":"nickname","type":"string"},{"internalType":"bool","name":"isRegistered","type":"bool"},{"internalType":"address","name":"referrer","type":"address"},{"internalType":"bool","name":"hasBet","type":"bool"},{"internalType":"uint256","name":"pendingRefBonusCount","type":"uint256"},{"internalType":"uint256","name":"totalReferrals","type":"uint256"},{"internalType":"bool","name":"bonusClaimed","type":"bool"},{"internalType":"uint256","name":"wonETH","type":"uint256"},{"internalType":"uint256","name":"wonUSDT","type":"uint256"},{"internalType":"uint256","name":"wonSHIB","type":"uint256"},{"internalType":"string","name":"avatarUrl","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"userRatings","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"userReactions","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"userWinHistory","outputs":[{"internalType":"address","name":"player","type":"address"},{"internalType":"uint256","name":"winAmount","type":"uint256"},{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"currency","type":"uint8"},{"internalType":"uint256","name":"roundId","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"string","name":"outcomeType","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"string","name":"nickname","type":"string"},{"internalType":"bool","name":"isRegistered","type":"bool"},{"internalType":"address","name":"referrer","type":"address"},{"internalType":"bool","name":"hasBet","type":"bool"},{"internalType":"uint256","name":"pendingRefBonusCount","type":"uint256"},{"internalType":"uint256","name":"totalReferrals","type":"uint256"},{"internalType":"bool","name":"bonusClaimed","type":"bool"},{"internalType":"uint256","name":"wonETH","type":"uint256"},{"internalType":"uint256","name":"wonUSDT","type":"uint256"},{"internalType":"uint256","name":"wonSHIB","type":"uint256"},{"internalType":"string","name":"avatarUrl","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"enum FaylottoSlotBattleUltimate.Currency","name":"_curr","type":"uint8"},{"internalType":"uint256","name":"_amount","type":"uint256"}],"name":"withdrawCredit","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-
-        const MARKET_ABI = [{"inputs":[{"internalType":"address","name":"_coreAddress","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":true,"internalType":"address","name":"bidder","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BidAccepted","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":true,"internalType":"address","name":"bidder","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BidCancelled","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":true,"internalType":"address","name":"bidder","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BidPlaced","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameDelisted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameListed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"buyer","type":"address"},{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameSold","type":"event"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint256","name":"_bidIndex","type":"uint256"}],"name":"acceptBid","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"activeMarketNames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"buyNickname","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint256","name":"_bidIndex","type":"uint256"}],"name":"cancelBid","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"cancelSale","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"coreContract","outputs":[{"internalType":"contract IFaylottoSlotBattleUltimate","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"getAllActiveListings","outputs":[{"components":[{"internalType":"string","name":"nickname","type":"string"},{"internalType":"uint256","name":"price","type":"uint256"},{"internalType":"address","name":"seller","type":"address"}],"internalType":"struct FaylottoSlotNicknameMarket.MarketItem[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"getBidsForNickname","outputs":[{"components":[{"internalType":"address","name":"bidder","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct FaylottoSlotNicknameMarket.Bid[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickMarketplace","outputs":[{"internalType":"bool","name":"isForSale","type":"bool"},{"internalType":"uint256","name":"price","type":"uint256"},{"internalType":"address","name":"seller","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"nicknameBids","outputs":[{"internalType":"address","name":"bidder","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"placeBid","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint256","name":"_price","type":"uint256"}],"name":"sellNickname","outputs":[],"stateMutability":"nonpayable","type":"function"}];
-
-        let provider, signer;
-        let coreContract, marketContract;
+        let provider, signer, gameContract;
         let userAddress = null;
 
-        // --- CONNECT WALLET ---
-        async function connectWallet() {
-            if (!window.ethereum) return alert("Install Metamask!");
-            try {
-                // Switch Chain
-                try { await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }] }); }
-                catch(e) { if(e.code===4902) try { await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{ chainId: BASE_SEPOLIA_CHAIN_ID, rpcUrls: ['https://sepolia.base.org'], chainName: 'Base Sepolia', nativeCurrency: {name:'ETH', decimals:18, symbol:'ETH'} }] }); } catch(ee){} }
+        // --- 2. CORE FUNCTIONS ---
 
+        // --- 1. CONFIGURATION ---
+    const CONTRACT_ADDRESS = "0xALAMAT_KONTRAK_V4_ANDA_DISINI"; 
+
+    // Konfigurasi Base Sepolia
+    const BASE_SEPOLIA_CHAIN_ID = '0x14a34'; // 84532 dalam Hex
+    const BASE_SEPOLIA_CONFIG = {
+        chainId: BASE_SEPOLIA_CHAIN_ID,
+        chainName: 'Base Sepolia Testnet',
+        nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+        rpcUrls: ['https://sepolia.base.org'],
+        blockExplorerUrls: ['https://sepolia.basescan.org']
+    };
+
+    // PASTE ABI V4 DISINI
+    const GAME_ABI = [ /* ... ABI KONTRAK V4 ... */ ];
+
+    let provider, signer, gameContract;
+    let userAddress = null;
+
+    // --- 2. CORE FUNCTIONS (UPDATED) ---
+
+    async function connectWallet() {
+        if (window.ethereum) {
+            try {
+                // A. PAKSA GANTI JARINGAN KE BASE SEPOLIA (Sama seperti sebelumnya)
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }],
+                    });
+                } catch (switchError) {
+                    if (switchError.code === 4902) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [BASE_SEPOLIA_CONFIG],
+                            });
+                        } catch (addError) { return; }
+                    } else { return; }
+                }
+
+                // B. SETUP PROVIDER
                 provider = new ethers.BrowserProvider(window.ethereum);
                 signer = await provider.getSigner();
                 userAddress = await signer.getAddress();
-
-                // INIT CONTRACTS
-                coreContract = new ethers.Contract(CORE_ADDRESS, CORE_ABI, signer);
-                marketContract = new ethers.Contract(MARKET_ADDRESS, MARKET_ABI, signer);
-
-                document.getElementById('connectBtn').innerText = userAddress.substring(0,6) + "...";
                 
-                loadMarketListings();
-                loadMyInventory();
+                // C. LOGIKA CACHE SIGNATURE (1 BULAN)
+                const STORAGE_KEY = `faylotto_session_${userAddress}`; // Kunci unik per wallet
+                const cachedSession = localStorage.getItem(STORAGE_KEY);
+                let isSessionValid = false;
 
-            } catch (err) { console.error(err); alert("Connection Error"); }
+                // 1. Cek apakah ada data tersimpan?
+                if (cachedSession) {
+                    const data = JSON.parse(cachedSession);
+                    const now = Date.now();
+                    
+                    // 2. Cek apakah masih berlaku (belum expired)?
+                    if (now < data.expiry) {
+                        console.log("✅ Auto-Login: Signature valid dari Local Storage.");
+                        isSessionValid = true;
+                    } else {
+                        console.log("⚠️ Sesi habis, meminta tanda tangan ulang...");
+                        localStorage.removeItem(STORAGE_KEY); // Hapus yang lama
+                    }
+                }
+
+                // 3. Jika Tidak Valid / Belum Ada, Minta Tanda Tangan Baru
+                if (!isSessionValid) {
+                    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    const localTime = new Date().toLocaleString();
+                    const uniqueCode = Date.now();
+                    
+                    const message = `Welcome To Faylotto Market\n\nUser: ${userAddress}\nZone: ${timeZone} (${localTime})\nCode: ${uniqueCode}`;
+                    
+                    try {
+                        const signature = await signer.signMessage(message);
+                        
+                        // 4. SIMPAN KE LOCAL STORAGE (Durasi 30 Hari)
+                        const EXPIRY_DAYS = 30;
+                        const expiryTime = Date.now() + (EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+                        
+                        const sessionData = {
+                            signature: signature,
+                            expiry: expiryTime,
+                            loginTime: Date.now()
+                        };
+                        
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionData));
+                        console.log("✅ Login Baru: Signature disimpan selama 30 hari.");
+
+                    } catch (signErr) {
+                        alert("Login Gagal: Anda harus menandatangani pesan untuk masuk.");
+                        userAddress = null;
+                        signer = null;
+                        return;
+                    }
+                }
+
+                // D. LOAD KONTRAK & DATA (Jalan jika sesi valid atau baru saja sign)
+                gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, signer);
+                
+                document.getElementById('connectBtn').innerText = userAddress.substring(0,6) + "..." + userAddress.slice(-4);
+                document.getElementById('connectBtn').style.background = "var(--success)";
+                document.getElementById('connectBtn').style.color = "black";
+                
+                // Load Data Market
+                loadMyInventory();
+                loadMarketListings();
+
+            } catch (err) {
+                console.error("Connection Error:", err);
+                alert("Terjadi kesalahan koneksi.");
+            }
+        } else {
+            alert("Please install Metamask!");
         }
+    }
 
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.market-view').forEach(v => v.style.display = 'none');
+            
             document.getElementById(`tab-${tab}`).classList.add('active');
             document.getElementById(`view-${tab}`).style.display = 'block';
-            if(tab==='inventory') loadMyInventory();
-            if(tab==='buy') loadMarketListings();
+
+            if(tab === 'inventory') loadMyInventory();
+            if(tab === 'buy') loadMarketListings();
         }
 
-        // --- LOAD GLOBAL MARKET (NO MORE RPC ERROR) ---
+        // --- 3. LOAD MARKET (SCAN EVENTS) ---
         async function loadMarketListings() {
-            if (!marketContract) return;
+            if(!gameContract) return;
             const container = document.getElementById('market-list');
-            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Fetching live market...</div>';
+            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain for active listings...<br><span style="font-size:0.8em;">(Reading last 90,000 blocks)</span></div>';
             
             try {
-                // Panggil getAllActiveListings (Jauh lebih cepat & aman daripada scan blok)
-                const listings = await marketContract.getAllActiveListings();
-                container.innerHTML = "";
+                // 1. TENTUKAN RANGE BLOK (Agar tidak error "Exceeds 100k")
+                const currentBlock = await provider.getBlockNumber();
+                
+                // Ambil 90.000 blok ke belakang (Aman di bawah limit 100k)
+                // Base Sepolia memproduksi blok tiap 2 detik, jadi ini mencakup history sekitar 2-3 hari terakhir.
+                let startBlock = currentBlock - 90000; 
+                if (startBlock < 0) startBlock = 0;
 
-                if (listings.length === 0) {
-                     container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555;">Market is empty.</div>`;
+                console.log(`Scanning from block ${startBlock} to ${currentBlock}`);
+
+                // 2. Ambil Event 'NicknameListed'
+                const filter = gameContract.filters.NicknameListed();
+                const logs = await gameContract.queryFilter(filter, startBlock, "latest"); 
+
+                // 3. Siapkan Wadah Data Unik 
+                const uniqueListings = new Map();
+
+                // Loop dari TERBARU ke TERLAMA (Reverse)
+                for (const log of logs.reverse()) {
+                    const seller = log.args[0];
+                    const nick = log.args[1];
+                    const price = log.args[2];
+                    
+                    if (!uniqueListings.has(nick)) {
+                        uniqueListings.set(nick, { seller, price }); 
+                    }
+                }
+
+                container.innerHTML = ""; 
+                let activeCount = 0;
+
+                if (uniqueListings.size === 0) {
+                     container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty (in last 2 days). Be the first to sell!</div>`;
                      return;
                 }
 
-                listings.forEach((item) => {
-                    const nick = item.nickname;
-                    const priceEth = ethers.formatEther(item.price);
-                    const seller = item.seller;
-                    const isMyListing = (userAddress && seller.toLowerCase() === userAddress.toLowerCase());
-
-                    let action = isMyListing 
-                        ? `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Cancel Sale</button>`
-                        : `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW (${priceEth} ETH)</button>`;
-
-                    const div = document.createElement('div');
-                    div.className = 'nick-card';
-                    div.innerHTML = `<div class="nick-title">${nick}</div><div style="color:var(--gold); font-weight:bold;">${priceEth} ETH</div><div style="font-size:0.8em; color:#888;">Seller: ${seller.substring(0,6)}...</div>${action}`;
-                    container.appendChild(div);
-                });
-            } catch (e) { console.error("Market Load Error:", e); container.innerHTML = "Error loading market."; }
-        }
-
-        // --- LOAD INVENTORY (SAFE MODE) ---
-        async function loadMyInventory() {
-            if (!coreContract) return;
-            const container = document.getElementById('inventory-list');
-            container.innerHTML = 'Loading...';
-
-            try {
-                const userData = await coreContract.users(userAddress);
-                const activeNick = userData[0]; 
-                document.getElementById('active-nick-display').innerText = activeNick;
-
-                // Loop Inventory (Robust)
-                let myNicks = [];
-                let idx = 0;
-                while (idx < 50) { // Limit 50 to prevent hang
-                    try {
-                        const n = await coreContract.myNicknames(userAddress, idx);
-                        if (!n) break;
-                        myNicks.push(n);
-                        idx++;
-                    } catch { break; }
-                }
-
-                container.innerHTML = "";
-                if (myNicks.length === 0) { container.innerHTML = "No nicknames found."; return; }
-
-                for (const nick of myNicks) {
-                    const isActive = (nick === activeNick);
+                // 4. Validasi Status Terkini (Cek Mapping Kontrak)
+                for (let [nick, data] of uniqueListings) {
                     const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+                    const saleData = await gameContract.nickMarketplace(nickHash);
                     
-                    // Cek Status Jual
-                    let isForSale = false;
-                    let priceEth = "0";
-                    try {
-                        const saleData = await marketContract.nickMarketplace(nickHash);
-                        isForSale = saleData[0];
-                        priceEth = ethers.formatEther(saleData[1]);
-                    } catch(e) {}
+                    const isForSale = saleData[0];
+                    const currentPriceBig = saleData[1];
+                    const currentSeller = saleData[2];
 
-                    // Cek Apakah Nickname Rusak (Broken Database Check)
-                    let isCorrupted = false;
-                    try {
-                        const owner = await coreContract.nickOwner(nickHash);
-                        if (owner === "0x0000000000000000000000000000000000000000") isCorrupted = true;
-                    } catch(e) {}
+                    // HANYA TAMPILKAN JIKA MASIH DIJUAL
+                    if (isForSale) {
+                        activeCount++;
+                        const priceEth = ethers.formatEther(currentPriceBig);
 
-                    const div = document.createElement('div');
-                    div.className = 'nick-card';
+                        const card = document.createElement('div');
+                        card.className = 'nick-card';
+                        
+                        const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
 
-                    let actionHtml = '';
-                    
-                    if (isCorrupted) {
-                        actionHtml = `<div style="color:red; font-size:0.8em; padding:10px; border:1px dashed red;">⚠️ DATABASE ERROR<br>Nickname ini rusak (0x000).<br>Tidak bisa dijual.</div>`;
-                    } else if (isForSale) {
-                        actionHtml = `<div style="color:var(--gold);">Listed: ${priceEth} ETH</div><button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Cancel Sale</button>`;
-                    } else {
-                        actionHtml = `
-                            ${!isActive ? `<button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:10px;">Switch Active</button>` : ''}
-                            <div style="display:flex; gap:5px;">
-                                <input type="number" id="sell-price-${nick}" class="sell-input" placeholder="ETH" style="margin:0;">
-                                <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="margin:0; width:auto;">SELL</button>
-                            </div>`;
+                        let btnAction = '';
+                        if (isMyListing) {
+                            btnAction = `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Your Listing (Cancel)</button>`;
+                        } else {
+                            btnAction = `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`;
+                        }
+
+                        card.innerHTML = `
+                            <div class="nick-title">${nick}</div>
+                            <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Seller: ${currentSeller.substring(0,6)}...</div>
+                            <div class="nick-price">${priceEth} ETH</div>
+                            ${btnAction}
+                        `;
+                        container.appendChild(card);
                     }
-
-                    div.innerHTML = `<div class="nick-title" style="color:${isActive ? 'var(--success)' : 'white'}">${nick}</div>${actionHtml}`;
-                    container.appendChild(div);
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        // --- TRANSACTIONS (DEBUG MODE) ---
-        async function sellNickname(nick) {
-            const inputId = `sell-price-${nick}`;
-            const inputEl = document.getElementById(inputId);
-            if (!inputEl) return alert("Error HTML ID");
-            const price = inputEl.value;
-            
-            if (!price || parseFloat(price) <= 0) return alert("Masukkan harga valid");
-            
-            console.log(`Menjual ${nick} seharga ${price} ETH`);
-
-            try {
-                // 1. Cek Ulang Kepemilikan (Pre-Check)
-                const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-                const realOwner = await coreContract.nickOwner(nickHash);
-                
-                if (realOwner.toLowerCase() !== userAddress.toLowerCase()) {
-                    alert(`GAGAL: Nickname "${nick}" rusak (Owner 0x000).\nSilakan DAFTAR nickname BARU untuk testing.`);
-                    return;
                 }
 
-                // 2. Kirim Transaksi
-                const priceWei = ethers.parseEther(price);
-                const tx = await marketContract.sellNickname(nick, priceWei);
-                alert("Transaksi Terkirim! Menunggu konfirmasi...");
-                await tx.wait();
-                alert("Sukses!");
-                loadMyInventory();
-                loadMarketListings();
+                if (activeCount === 0) {
+                    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">No active listings found.</div>`;
+                }
 
             } catch (e) {
-                console.error(e);
-                alert("Gagal: " + (e.reason || e.message));
+                console.error("Market Load Error:", e);
+                container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">
+                    Failed to load market data.<br>
+                    <small>${e.message}</small>
+                </div>`;
             }
         }
 
-        async function buyNickname(n, p) { try { await (await marketContract.buyNickname(n, {value:ethers.parseEther(p)})).wait(); loadMarketListings(); } catch(e){alert(e.reason||e.message)} }
-        async function cancelSale(n) { try { await (await marketContract.cancelSale(n)).wait(); loadMyInventory(); } catch(e){alert(e.reason||e.message)} }
-        async function switchNick(n) { try { await (await coreContract.switchNickname(n)).wait(); loadMyInventory(); } catch(e){alert(e.reason||e.message)} }
+        // --- 4. LOAD INVENTORY (FIXED) ---
+async function loadMyInventory() {
+    if(!gameContract) return;
+    const container = document.getElementById('inventory-list');
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading your collection...</div>';
+    
+    try {
+        // 1. Cek Nickname yang Sedang Aktif
+        const userData = await gameContract.users(userAddress);
+        const activeNick = userData[0]; 
+        document.getElementById('active-nick-display').innerText = activeNick;
 
+        // 2. Ambil Semua Nickname Milik User
+        let myNicks = [];
+        let index = 0;
+        while(true) {
+            try {
+                const nick = await gameContract.myNicknames(userAddress, index);
+                myNicks.push(nick);
+                index++;
+            } catch (e) { break; }
+        }
+
+        container.innerHTML = ""; 
+
+        if (myNicks.length === 0) {
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
+            return;
+        }
+
+        // 3. Render Setiap Nickname
+        await Promise.all(myNicks.map(async (nick) => {
+            const isActive = (nick === activeNick);
+            
+            // Cek Status Jual
+            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+            const saleData = await gameContract.nickMarketplace(nickHash);
+            const isForSale = saleData[0]; 
+            const priceBig = saleData[1];  
+
+            const div = document.createElement('div');
+            div.className = 'nick-card';
+            
+            let statusLabel = '';
+            let actionHtml = '';
+
+            // Label Status (Active / Idle)
+            if (isActive) {
+                statusLabel = `<div style="color:var(--success); font-weight:bold; font-size:0.8em; margin-bottom:10px;">✅ CURRENTLY ACTIVE</div>`;
+            } else {
+                statusLabel = `<div style="color:#666; font-size:0.8em; margin-bottom:10px;">💤 In Inventory</div>`;
+            }
+
+            // LOGIKA TOMBOL AKSI
+            if (isForSale) {
+                // KONDISI 1: SEDANG DIJUAL (Tampilkan tombol Cancel)
+                const priceEth = ethers.formatEther(priceBig);
+                actionHtml = `
+                    <div style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); padding:8px; border-radius:5px; margin-bottom:10px;">
+                        Listed for: <b style="color:var(--gold);">${priceEth} ETH</b>
+                    </div>
+                    <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">
+                        ❌ Cancel Sale
+                    </button>
+                `;
+            } 
+            else {
+                // KONDISI 2: TIDAK DIJUAL (Tampilkan tombol Switch & Sell)
+                
+                // Tombol Switch hanya muncul kalau TIDAK aktif
+                let switchBtn = '';
+                if (!isActive) {
+                    switchBtn = `
+                        <button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:15px;">
+                            🔄 Switch to this
+                        </button>
+                    `;
+                }
+
+                // Tombol Sell selalu muncul
+                let sellForm = `
+                    <div style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
+                        <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
+                        <div style="display:flex; gap:5px;">
+                            
+                            <input type="number" id="price-${nick}" class="sell-input" placeholder="Price (ETH)" style="margin-bottom:0;">
+                            
+                            <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:auto; padding:0 15px; margin-top:0;">
+                                SELL
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                actionHtml = switchBtn + sellForm;
+            }
+
+            div.innerHTML = `
+                <div class="nick-title" style="color:white; word-break:break-all;">${nick}</div>
+                ${statusLabel}
+                ${actionHtml}
+            `;
+            container.appendChild(div);
+        }));
+
+    } catch (e) {
+        console.error("Inventory Error:", e);
+        container.innerHTML = `<div style="color:red;">Error loading inventory.</div>`;
+    }
+}
+
+        // --- 5. TRANSAKSI (BUY, SELL, SWITCH) ---
+
+        async function buyNickname(nick, priceEth) {
+            try {
+                const tx = await gameContract.buyNickname(nick, {
+                    value: ethers.parseEther(priceEth)
+                });
+                alert("Buying... Please wait.");
+                await tx.wait();
+                alert("Success! You now own: " + nick);
+                loadMarketListings();
+                loadMyInventory();
+            } catch(e) { alert("Error: " + e.message); }
+        }
+
+        async function sellNickname(nick) {
+    // 1. Debugging Awal (Cek apakah tombol merespon)
+    console.log("Tombol Sell ditekan untuk:", nick);
+
+    // 2. Cek Koneksi Kontrak
+    if (!gameContract) {
+        alert("Koneksi ke Smart Contract terputus. Silakan refresh halaman.");
+        return;
+    }
+
+    // 3. Ambil Elemen Input dengan Aman
+    const inputId = `price-${nick}`;
+    const inputEl = document.getElementById(inputId);
+
+    // Jika elemen tidak ditemukan, hentikan proses (Jangan crash)
+    if (!inputEl) {
+        alert(`Error Sistem: Input harga dengan ID '${inputId}' tidak ditemukan di HTML.`);
+        return;
+    }
+
+    const priceInput = inputEl.value;
+
+    // 4. Validasi Input
+    if (!priceInput || parseFloat(priceInput) <= 0) {
+        alert("Harap masukkan harga jual yang valid (Wajib lebih dari 0 ETH)!");
+        return;
+    }
+
+    try {
+        // 5. Konversi Harga & Eksekusi
+        // Pastikan dikonversi ke string dulu agar parseEther aman
+        const priceWei = ethers.parseEther(priceInput.toString());
+        
+        console.log(`Mengirim Transaksi: Sell ${nick} seharga ${priceInput} ETH`);
+        
+        // Panggil Kontrak
+        const tx = await gameContract.sellNickname(nick, priceWei);
+        
+        alert("Transaksi dikirim! Silakan cek MetaMask Anda...");
+        
+        await tx.wait();
+        
+        alert("Berhasil! Nickname sudah terdaftar di pasar.");
+        
+        // Refresh Halaman
+        if(typeof loadMyInventory === 'function') loadMyInventory();
+
+    } catch (e) {
+        console.error("Error Sell:", e);
+        
+        // Parsing pesan error agar mudah dibaca user
+        let msg = e.reason || e.message || "Unknown Error";
+        if (msg.includes("user rejected")) {
+            msg = "Anda membatalkan transaksi di MetaMask.";
+        } else if (msg.includes("Not yours")) {
+            msg = "Nickname ini bukan milik Anda!";
+        }
+        
+        alert("GAGAL: " + msg);
+    }
+        }
+
+        async function cancelSale(nick) {
+            try {
+                const tx = await gameContract.cancelSale(nick);
+                alert("Cancelling...");
+                await tx.wait();
+                alert("Sale Cancelled!");
+                loadMarketListings();
+            } catch(e) { alert("Error: " + e.message); }
+        }
+
+        async function switchNick(nick) {
+            try {
+                const tx = await gameContract.switchNickname(nick);
+                alert("Switching...");
+                await tx.wait();
+                alert("Profile Updated!");
+                loadMyInventory();
+            } catch(e) { alert("Error: " + e.message); }
+        }
+        
+        // Auto connect jika sudah pernah connect di halaman utama (opsional)
+        // window.onload = connectWallet; 
     </script>
 </body>
 </html>
