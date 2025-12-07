@@ -249,62 +249,92 @@
         async function loadMarketListings() {
             if(!gameContract) return;
             const container = document.getElementById('market-list');
+            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain for active listings...<br><span style="font-size:0.8em;">(This process reads historical logs)</span></div>';
             
             try {
-                // KARENA V4 TIDAK PUNYA ARRAY 'ALL SALES', KITA SCAN EVENT 'NicknameListed'
-                // Ini teknik standar di frontend untuk marketplace sederhana tanpa backend.
-                
-                // 1. Ambil event Listed dari blok awal sampai sekarang
+                // 1. Ambil Event 'NicknameListed' (Sejarah Listing)
+                // Filter: listing yang terjadi dari blok awal sampai sekarang
                 const filter = gameContract.filters.NicknameListed();
-                const logs = await gameContract.queryFilter(filter, 0, "latest"); // Optimasi: Ganti 0 dengan blok deploy
+                
+                // TIPS: Untuk testnet, "fromBlock: 0" mungkin lambat. 
+                // Jika lambat, ganti 0 dengan nomor blok deploy kontrak Anda (misal 18000000).
+                const logs = await gameContract.queryFilter(filter, 0, "latest"); 
 
-                // 2. Filter item yang valid (Cek ke kontrak apakah statusnya masih For Sale)
-                container.innerHTML = "";
+                // 2. Siapkan Wadah Data Unik (Gunakan Map untuk mencegah duplikat nickname)
+                // Karena satu nickname bisa dilist berkali-kali (list -> cancel -> list lagi)
+                const uniqueListings = new Map();
+
+                // Loop dari TERBARU ke TERLAMA (Reverse)
+                for (const log of logs.reverse()) {
+                    const seller = log.args[0];
+                    const nick = log.args[1];
+                    const price = log.args[2];
+                    
+                    // Jika nickname ini belum dicek, masukkan ke antrian cek
+                    if (!uniqueListings.has(nick)) {
+                        uniqueListings.set(nick, { seller, price }); 
+                    }
+                }
+
+                container.innerHTML = ""; // Bersihkan loading
                 let activeCount = 0;
 
-                // Kita balik urutan agar yang terbaru di atas (reverse)
-                for (const log of logs.reverse()) {
-                    const nick = log.args[1]; // arg ke-1 adalah nickname string
-                    const seller = log.args[0];
-                    
-                    // Cek Live Data dari Mapping
-                    // (Karena bisa saja sudah laku/dibatalkan tapi event log lama masih ada)
-                    // Hash nickname untuk lookup mapping
+                if (uniqueListings.size === 0) {
+                     container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty. Be the first to sell!</div>`;
+                     return;
+                }
+
+                // 3. Validasi Status Terkini (Cek Mapping Kontrak)
+                // Kita harus cek apakah barangnya MASIH ada di marketplace?
+                // (Bisa jadi sudah laku/cancel setelah event listing terjadi)
+                
+                for (let [nick, data] of uniqueListings) {
                     const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
                     const saleData = await gameContract.nickMarketplace(nickHash);
                     
                     // Struct: [isForSale, price, seller]
                     const isForSale = saleData[0];
-                    const priceBig = saleData[1];
+                    const currentPriceBig = saleData[1];
                     const currentSeller = saleData[2];
 
+                    // HANYA TAMPILKAN JIKA MASIH DIJUAL (isForSale == true)
                     if (isForSale) {
                         activeCount++;
-                        const priceEth = ethers.formatEther(priceBig);
-                        
+                        const priceEth = ethers.formatEther(currentPriceBig);
+
                         const card = document.createElement('div');
                         card.className = 'nick-card';
+                        
+                        // Cek apakah ini jualan saya sendiri?
+                        const isMyListing = (currentSeller.toLowerCase() === userAddress.toLowerCase());
+
+                        let btnAction = '';
+                        if (isMyListing) {
+                            btnAction = `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Your Listing (Cancel)</button>`;
+                        } else {
+                            btnAction = `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`;
+                        }
+
                         card.innerHTML = `
                             <div class="nick-title">${nick}</div>
                             <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Seller: ${currentSeller.substring(0,6)}...</div>
                             <div class="nick-price">${priceEth} ETH</div>
-                            
-                            ${currentSeller.toLowerCase() === userAddress.toLowerCase() 
-                                ? `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Cancel Sale</button>` 
-                                : `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`
-                            }
+                            ${btnAction}
                         `;
                         container.appendChild(card);
                     }
                 }
 
                 if (activeCount === 0) {
-                    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty. Be the first to list!</div>`;
+                    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">No active listings found.</div>`;
                 }
 
             } catch (e) {
                 console.error("Market Load Error:", e);
-                container.innerHTML = `<div style="color:red; text-align:center;">Failed to load market data (RPC Error).</div>`;
+                container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">
+                    Failed to load market data (RPC Error).<br>
+                    <small>${e.message}</small>
+                </div>`;
             }
         }
 
