@@ -407,16 +407,17 @@
                 }
 
                 let sellForm = `
-                    <div style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
-                        <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
-                        <div style="display:flex; gap:5px;">
-                            <input type="number" id="price-${nick}" class="sell-input" placeholder="Price (ETH)" style="margin-bottom:0;">
-                            <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:auto; padding:0 15px; margin-top:0;">
-                                SELL
-                            </button>
-                        </div>
-                    </div>
-                `;
+    <div style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
+        <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Jual Nickname Ini:</div>
+        <div style="display:flex; gap:5px;">
+            <input type="number" id="price-${nick}" class="sell-input" placeholder="Harga (ETH)" step="0.0001" min="0">
+            
+            <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:auto; padding:0 15px; margin-top:0;">
+                SELL
+            </button>
+        </div>
+    </div>
+`;
                 
                 actionHtml = switchBtn + bidInfoHtml + sellForm;
             }
@@ -452,66 +453,85 @@
         }
 
         async function sellNickname(nick) {
-    // 1. Debugging Awal (Cek apakah tombol merespon)
-    console.log("Tombol Sell ditekan untuk:", nick);
-
-    // 2. Cek Koneksi Kontrak
-    if (!gameContract) {
-        alert("Koneksi ke Smart Contract terputus. Silakan refresh halaman.");
+    // 1. SECURITY CHECK: Pastikan Kontrak Market Siap
+    if (!marketContract || !signer) {
+        alert("⚠️ Wallet Terputus. Silakan refresh halaman.");
         return;
     }
 
-    // 3. Ambil Elemen Input dengan Aman
+    // 2. DOM RETRIEVAL: Ambil elemen input dengan aman
     const inputId = `price-${nick}`;
     const inputEl = document.getElementById(inputId);
-
-    // Jika elemen tidak ditemukan, hentikan proses (Jangan crash)
+    
     if (!inputEl) {
-        alert(`Error Sistem: Input harga dengan ID '${inputId}' tidak ditemukan di HTML.`);
+        console.error(`Dev Error: Input ID ${inputId} not found.`);
         return;
     }
 
-    const priceInput = inputEl.value;
+    const priceVal = inputEl.value;
 
-    // 4. Validasi Input
-    if (!priceInput || parseFloat(priceInput) <= 0) {
-        alert("Harap masukkan harga jual yang valid (Wajib lebih dari 0 ETH)!");
+    // 3. INPUT VALIDATION: Standar Validasi Keuangan
+    if (!priceVal || priceVal === "") {
+        alert("⚠️ Harap masukkan harga penjualan.");
+        inputEl.focus();
+        return;
+    }
+    
+    if (parseFloat(priceVal) <= 0) {
+        alert("⚠️ Harga harus lebih besar dari 0 ETH.");
         return;
     }
 
     try {
-        // 5. Konversi Harga & Eksekusi
-        // Pastikan dikonversi ke string dulu agar parseEther aman
-        const priceWei = ethers.parseEther(priceInput.toString());
-        
-        console.log(`Mengirim Transaksi: Sell ${nick} seharga ${priceInput} ETH`);
-        
-        // Panggil Kontrak
-        const tx = await gameContract.sellNickname(nick, priceWei);
-        
-        alert("Transaksi dikirim! Silakan cek MetaMask Anda...");
-        
+        // 4. DATA PREPARATION: Konversi ETH ke Wei
+        // Menggunakan ethers.parseEther adalah cara paling akurat menangani desimal crypto
+        const priceWei = ethers.parseEther(priceVal.toString());
+
+        // UX: Beri tahu user proses dimulai
+        // (Di app pro, kita pakai Toast/Spinner. Untuk ini kita pakai console/alert dulu)
+        const btn = document.activeElement; 
+        if(btn) { btn.innerText = "Signing..."; btn.disabled = true; } // Disable tombol agar tidak klik 2x
+
+        console.log(`🚀 Initiating Sell: ${nick} for ${priceVal} ETH`);
+
+        // 5. CONTRACT CALL: Panggil Kontrak Market (Bukan Core!)
+        // sellNickname(string memory _nick, uint256 _price)
+        const tx = await marketContract.sellNickname(nick, priceWei);
+
+        // UX: Beri tahu user transaksi sudah masuk mempool
+        alert(`⏳ Transaksi Terkirim! Menunggu konfirmasi Blockchain...\nHash: ${tx.hash.substring(0,10)}...`);
+
+        // 6. CONFIRMATION: Tunggu Block Mined
         await tx.wait();
+
+        // 7. SUCCESS STATE: Refresh UI
+        alert(`✅ SUKSES! Nickname "${nick}" sekarang terdaftar di Global Market.`);
         
-        alert("Berhasil! Nickname sudah terdaftar di pasar.");
-        
-        // Refresh Halaman
-        if(typeof loadMyInventory === 'function') loadMyInventory();
+        // Refresh kedua tab agar data sinkron
+        loadMyInventory(); 
+        loadMarketListings();
 
     } catch (e) {
-        console.error("Error Sell:", e);
+        // 8. ERROR HANDLING: Bedakan error user vs error sistem
+        console.error("Sell Error:", e);
         
-        // Parsing pesan error agar mudah dibaca user
+        // Reset tombol
+        const btn = document.activeElement; 
+        if(btn) { btn.innerText = "SELL"; btn.disabled = false; }
+
+        // Parsing pesan error agar mudah dibaca
         let msg = e.reason || e.message || "Unknown Error";
-        if (msg.includes("user rejected")) {
-            msg = "Anda membatalkan transaksi di MetaMask.";
-        } else if (msg.includes("Not yours")) {
-            msg = "Nickname ini bukan milik Anda!";
-        }
         
-        alert("GAGAL: " + msg);
-    }
+        if (msg.includes("user rejected") || e.code === 4001) {
+            // Jangan alert error jika user cuma cancel di metamask (mengganggu UX)
+            console.warn("User cancelled transaction");
+        } else if (msg.includes("Not yours")) {
+            alert("⛔ Gagal: Nickname ini bukan milik Anda (Cek Core Contract).");
+        } else {
+            alert("❌ Transaksi Gagal: " + msg);
         }
+    }
+}
 
         async function cancelSale(nick) {
             try {
