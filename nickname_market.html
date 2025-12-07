@@ -82,7 +82,7 @@
 <body>
 
     <header>
-        <a href="index" class="btn-back">Back to Game</a>
+        <a href="index" class="btn-back">Back to Gam</a>
         <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </header>
 
@@ -484,71 +484,104 @@ async function loadMyInventory() {
             } catch(e) { alert("Error: " + e.message); }
         }
 
-        async function sellNickname(nick) {
-    console.log(`[DEBUG] Tombol Sell ditekan untuk: ${nick}`);
+       async function sellNickname(nick) {
+    console.log(`[DEBUG] Memulai proses jual untuk: "${nick}"`);
 
-    // 1. Cek Koneksi Kontrak Market
-    if (!marketContract) {
-        alert("⚠️ Error: Koneksi Market terputus. Silakan refresh halaman.");
-        return;
+    // 1. BERSIHKAN STRING (PENTING!)
+    // Menghapus spasi di depan/belakang yang sering tidak terlihat
+    const cleanNick = nick.trim();
+    
+    if (cleanNick !== nick) {
+        console.warn(`⚠️ Peringatan: Nama asli "${nick}" mengandung spasi. Dikoreksi menjadi "${cleanNick}"`);
     }
 
-    // 2. Ambil Nilai dari Input HTML (ID harus cocok dengan yang di atas)
-    const inputId = `sell-price-${nick}`; 
-    const inputElement = document.getElementById(inputId);
-
-    if (!inputElement) {
-        alert(`❌ Error Sistem: Tidak bisa menemukan kotak input dengan ID '${inputId}'`);
+    // 2. Cek Koneksi
+    if (!marketContract || !coreContract) {
+        alert("⚠️ Koneksi kontrak terputus. Refresh halaman.");
         return;
     }
-
-    const priceVal = inputElement.value;
-    console.log(`[DEBUG] Harga yang diinput: ${priceVal}`);
 
     // 3. Validasi Harga
-    if (!priceVal || priceVal === "") {
-        alert("⚠️ Masukkan harga terlebih dahulu!");
+    const inputId = `sell-price-${nick}`; 
+    const inputElement = document.getElementById(inputId);
+    if (!inputElement) {
+        alert(`❌ Error HTML: Input ID '${inputId}' tidak ditemukan.`);
         return;
     }
     
-    // 4. Proses Transaksi
+    const priceVal = inputElement.value;
+    if (!priceVal || parseFloat(priceVal) <= 0) {
+        alert("⚠️ Masukkan harga jual (> 0 ETH)!");
+        return;
+    }
+
+    // 4. DETEKTIF KEPEMILIKAN (Pre-Flight Check)
+    // Kita tanya langsung ke "Kantor Pusat" (Core Contract) siapa pemilik nama ini sebenarnya
     try {
-        // Konversi ETH ke Wei
+        console.log(`🕵️‍♂️ Mengecek kepemilikan "${cleanNick}" di Blockchain...`);
+        
+        // Hash nama sesuai standar Solidity
+        const nickHash = ethers.keccak256(ethers.toUtf8Bytes(cleanNick));
+        
+        // Panggil mapping public nickOwner di Core
+        const realOwner = await coreContract.nickOwner(nickHash);
+        
+        console.log(`   - Saya (Wallet): ${userAddress}`);
+        console.log(`   - Pemilik Asli (Contract): ${realOwner}`);
+
+        // ANALISIS HASIL
+        if (realOwner.toLowerCase() !== userAddress.toLowerCase()) {
+            if (realOwner === "0x0000000000000000000000000000000000000000") {
+                alert(`⛔ GAGAL FATAL: Database Core rusak.\n\nNama "${cleanNick}" ada di inventory Anda, tapi di sertifikat kepemilikan (nickOwner) tercatat KOSONG (0x000).\n\nSolusi: Anda harus Register ulang nama ini.`);
+            } else {
+                alert(`⛔ GAGAL: Nama ini milik orang lain!\n\nPemilik tercatat: ${realOwner}\nWallet Anda: ${userAddress}\n\nMohon ganti akun wallet.`);
+            }
+            return; // Stop proses, jangan lanjut transaksi
+        }
+        
+        console.log("✅ Kepemilikan Terverifikasi. Lanjut transaksi...");
+
+    } catch (e) {
+        console.error("Gagal cek owner:", e);
+        // Kita lanjut saja siapa tahu cuma error jaringan sesaat
+    }
+
+    // 5. EKSEKUSI TRANSAKSI
+    try {
         const priceWei = ethers.parseEther(priceVal.toString());
+        
+        // Ubah tombol jadi loading
+        const btn = document.activeElement;
+        if(btn) { btn.innerText = "⏳ Signing..."; btn.disabled = true; }
 
-        // UX: Ubah teks tombol biar user tahu sedang proses
-        // (Opsional, tapi bagus untuk UX)
+        // Panggil Market Contract dengan nama yang sudah dibersihkan
+        const tx = await marketContract.sellNickname(cleanNick, priceWei);
         
-        console.log("🚀 Memanggil MetaMask...");
+        alert(`🚀 Transaksi Terkirim!\nHash: ${tx.hash.substring(0,10)}...`);
         
-        // PANGGIL KONTRAK MARKET
-        const tx = await marketContract.sellNickname(nick, priceWei);
+        await tx.wait(); // Tunggu mining
         
-        alert("✅ Transaksi Terkirim! Menunggu konfirmasi blockchain...");
-        console.log("Tx Hash:", tx.hash);
-
-        await tx.wait(); // Tunggu sampai selesai mining
-
-        alert(`🎉 SUKSES! Nickname "${nick}" sekarang dijual seharga ${priceVal} ETH.`);
+        alert("🎉 BERHASIL! Nickname sudah masuk pasar.");
         
-        // Refresh Halaman
+        // Refresh
+        if(btn) { btn.innerText = "SELL"; btn.disabled = false; }
         loadMyInventory();
         loadMarketListings();
 
     } catch (err) {
         console.error("Sell Error:", err);
+        const btn = document.activeElement;
+        if(btn) { btn.innerText = "SELL"; btn.disabled = false; }
 
-        // Pesan Error yang Manusiawi
-        if (err.code === "ACTION_REJECTED" || err.code === 4001) {
-            alert("Anda membatalkan transaksi di MetaMask.");
-        } else if (err.message.includes("Not yours")) {
-            alert("⛔ Gagal: Nickname ini bukan milik Anda (Cek Core Contract).");
+        let msg = err.reason || err.message || "Unknown";
+        if (msg.includes("user rejected")) {
+            console.warn("User cancel.");
         } else {
-            alert("❌ Gagal: " + (err.reason || err.message));
+            alert("❌ Transaksi Gagal: " + msg);
         }
     }
-        }
-
+       }
+        
         async function cancelSale(nick) {
             try {
                 const tx = await gameContract.cancelSale(nick);
