@@ -312,21 +312,25 @@
             }
         }
 
-        // --- 4. LOAD INVENTORY (FIXED: BISA JUAL NICKNAME AKTIF) ---
+        // --- 4. LOAD INVENTORY (FIXED & DUAL CONTRACT) ---
 async function loadMyInventory() {
-    // 1. Cek Koneksi Kontrak
-    if (!coreContract || !marketContract) return;
+    // 1. Pastikan kedua kontrak sudah terkoneksi
+    if (!coreContract || !marketContract) {
+        console.warn("Menunggu koneksi wallet...");
+        return;
+    }
 
     const container = document.getElementById('inventory-list');
-    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading collection...</div>';
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading your collection...</div>';
 
     try {
-        // 2. Ambil Data User & Nickname Aktif
+        // A. AMBIL DATA DARI CORE (User & Inventory)
+        // Gunakan coreContract karena data user ada di sana
         const userData = await coreContract.users(userAddress);
         const activeNick = userData[0];
         document.getElementById('active-nick-display').innerText = activeNick;
 
-        // 3. Ambil Semua Nickname (Looping Array)
+        // Loop ambil nickname (Pakai coreContract)
         let myNicks = [];
         let idx = 0;
         while (true) {
@@ -334,49 +338,52 @@ async function loadMyInventory() {
                 const n = await coreContract.myNicknames(userAddress, idx);
                 myNicks.push(n);
                 idx++;
-            } catch { break; } // Stop jika array habis
+            } catch { break; } // Berhenti jika habis
         }
 
         container.innerHTML = "";
         if (myNicks.length === 0) {
-            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames.</div>`;
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
             return;
         }
 
-        // 4. Render Setiap Kartu
+        // B. RENDER & CEK STATUS KE MARKET
         for (const nick of myNicks) {
             const isActive = (nick === activeNick);
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
 
-            // Cek Status Jual di Market
-            const saleData = await marketContract.nickMarketplace(nickHash);
-            const isForSale = saleData[0]; // bool isForSale
-            const priceEth = isForSale ? ethers.formatEther(saleData[1]) : "0";
+            // PENTING: Cek status jual ke MARKET CONTRACT (Bukan Core!)
+            // Core tidak punya mapping 'nickMarketplace', jadi kalau pakai coreContract pasti error di sini.
+            let isForSale = false;
+            let priceEth = "0";
+            
+            try {
+                const saleData = await marketContract.nickMarketplace(nickHash);
+                isForSale = saleData[0]; // bool
+                priceEth = ethers.formatEther(saleData[1]); // uint price
+            } catch (err) {
+                console.error("Gagal baca data market:", err);
+            }
 
-            // Cek Tawaran Masuk (Optional: Ambil 1 bid teratas)
+            // Cek Tawaran (Optional)
             let bidHtml = "";
             try {
                 const bid = await marketContract.nicknameBids(nickHash, 0);
-                if (bid[1] > 0) {
-                    bidHtml = `<div style="font-size:0.8em; color:var(--primary); margin-top:5px;">⚡ Offer: ${ethers.formatEther(bid[1])} ETH</div>`;
-                }
+                if (bid[1] > 0) bidHtml = `<div style="font-size:0.8em; color:var(--primary); margin-top:5px;">⚡ Offer: ${ethers.formatEther(bid[1])} ETH</div>`;
             } catch (e) {}
 
+            // C. HTML BUILDER
             const div = document.createElement('div');
             div.className = 'nick-card';
 
-            // --- BAGIAN UI UTAMA ---
-            
-            // A. Label Status
             let statusLabel = isActive 
                 ? `<div style="color:var(--success); font-weight:bold; font-size:0.8em; margin-bottom:10px;">✅ CURRENTLY ACTIVE</div>` 
                 : `<div style="color:#666; font-size:0.8em; margin-bottom:10px;">💤 In Inventory</div>`;
 
-            // B. Logika Tombol Aksi
             let actionHtml = '';
 
             if (isForSale) {
-                // KONDISI 1: SUDAH DIJUAL -> Tampilkan Tombol Cancel
+                // KONDISI 1: SUDAH DIJUAL -> Tombol Cancel
                 actionHtml = `
                     <div style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); padding:8px; border-radius:5px; margin-bottom:10px;">
                         Listed: <b style="color:var(--gold);">${priceEth} ETH</b>
@@ -384,12 +391,12 @@ async function loadMyInventory() {
                     <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">❌ Cancel Sale</button>
                 `;
             } else {
-                // KONDISI 2: BELUM DIJUAL -> Tampilkan Form Jual (DAN Switch jika tidak aktif)
+                // KONDISI 2: BELUM DIJUAL -> Form Jual (SELALU MUNCUL)
                 
                 // Tombol Switch (Hanya jika TIDAK aktif)
                 let switchBtn = isActive ? '' : `<button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:10px;">🔄 Switch Active</button>`;
                 
-                // Form Jual (SELALU MUNCUL, meskipun nickname aktif)
+                // Form Jual
                 let sellForm = `
                     <div style="border-top:1px solid #333; padding-top:10px; margin-top:5px;">
                         <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
@@ -403,7 +410,6 @@ async function loadMyInventory() {
                 actionHtml = switchBtn + sellForm;
             }
 
-            // Gabungkan HTML
             div.innerHTML = `
                 <div class="nick-title" style="color:${isActive ? 'var(--success)' : 'white'}">${nick}</div>
                 ${statusLabel}
@@ -414,11 +420,11 @@ async function loadMyInventory() {
         }
 
     } catch (e) {
-        console.error(e);
-        container.innerHTML = `<div style="color:red; text-align:center;">Error loading inventory.</div>`;
+        console.error("Critical Error:", e);
+        container.innerHTML = `<div style="color:red; text-align:center;">Error: ${e.message}</div>`;
     }
 }
-
+        
         // --- 5. TRANSAKSI (BUY, SELL, SWITCH) ---
 
         async function buyNickname(nick, priceEth) {
