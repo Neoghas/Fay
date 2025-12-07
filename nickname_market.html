@@ -141,29 +141,21 @@
     async function connectWallet() {
         if (window.ethereum) {
             try {
-                // A. PAKSA GANTI JARINGAN KE BASE SEPOLIA
+                // A. PAKSA GANTI JARINGAN KE BASE SEPOLIA (Sama seperti sebelumnya)
                 try {
                     await window.ethereum.request({
                         method: 'wallet_switchEthereumChain',
                         params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }],
                     });
                 } catch (switchError) {
-                    // Jika jaringan belum ada (Error 4902), Tambahkan Otomatis
                     if (switchError.code === 4902) {
                         try {
                             await window.ethereum.request({
                                 method: 'wallet_addEthereumChain',
                                 params: [BASE_SEPOLIA_CONFIG],
                             });
-                        } catch (addError) {
-                            alert("Gagal menambahkan network Base Sepolia.");
-                            return;
-                        }
-                    } else {
-                        console.error(switchError);
-                        alert("Gagal mengganti network. Pastikan pakai Base Sepolia.");
-                        return;
-                    }
+                        } catch (addError) { return; }
+                    } else { return; }
                 }
 
                 // B. SETUP PROVIDER
@@ -171,37 +163,68 @@
                 signer = await provider.getSigner();
                 userAddress = await signer.getAddress();
                 
-                // C. WAJIB SIGNATURE (TANDA TANGAN)
-                // Format: Welcome To Faylotto Market (alamat)(zona waktu)(kode unik)
-                const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-                const localTime = new Date().toLocaleString();
-                const uniqueCode = Date.now(); // Timestamp sebagai kode unik
-                
-                const message = `Welcome To Faylotto Market\n\nUser: ${userAddress}\nZone: ${timeZone} (${localTime})\nCode: ${uniqueCode}`;
-                
-                try {
-                    // Minta user tanda tangan
-                    const signature = await signer.signMessage(message);
-                    console.log("Signature Valid:", signature);
-                    
-                    // JIKA SUKSES SIGN, LANJUT LOAD DATA
-                    gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, signer);
-                    
-                    document.getElementById('connectBtn').innerText = userAddress.substring(0,6) + "..." + userAddress.slice(-4);
-                    document.getElementById('connectBtn').style.background = "var(--success)";
-                    document.getElementById('connectBtn').style.color = "black";
-                    
-                    // Load Data Market
-                    loadMyInventory();
-                    loadMarketListings();
+                // C. LOGIKA CACHE SIGNATURE (1 BULAN)
+                const STORAGE_KEY = `faylotto_session_${userAddress}`; // Kunci unik per wallet
+                const cachedSession = localStorage.getItem(STORAGE_KEY);
+                let isSessionValid = false;
 
-                } catch (signErr) {
-                    alert("Login Gagal: Anda menolak tanda tangan signature.");
-                    // Reset koneksi jika menolak sign
-                    userAddress = null;
-                    signer = null;
-                    return;
+                // 1. Cek apakah ada data tersimpan?
+                if (cachedSession) {
+                    const data = JSON.parse(cachedSession);
+                    const now = Date.now();
+                    
+                    // 2. Cek apakah masih berlaku (belum expired)?
+                    if (now < data.expiry) {
+                        console.log("✅ Auto-Login: Signature valid dari Local Storage.");
+                        isSessionValid = true;
+                    } else {
+                        console.log("⚠️ Sesi habis, meminta tanda tangan ulang...");
+                        localStorage.removeItem(STORAGE_KEY); // Hapus yang lama
+                    }
                 }
+
+                // 3. Jika Tidak Valid / Belum Ada, Minta Tanda Tangan Baru
+                if (!isSessionValid) {
+                    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                    const localTime = new Date().toLocaleString();
+                    const uniqueCode = Date.now();
+                    
+                    const message = `Welcome To Faylotto Market\n\nUser: ${userAddress}\nZone: ${timeZone} (${localTime})\nCode: ${uniqueCode}`;
+                    
+                    try {
+                        const signature = await signer.signMessage(message);
+                        
+                        // 4. SIMPAN KE LOCAL STORAGE (Durasi 30 Hari)
+                        const EXPIRY_DAYS = 30;
+                        const expiryTime = Date.now() + (EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+                        
+                        const sessionData = {
+                            signature: signature,
+                            expiry: expiryTime,
+                            loginTime: Date.now()
+                        };
+                        
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(sessionData));
+                        console.log("✅ Login Baru: Signature disimpan selama 30 hari.");
+
+                    } catch (signErr) {
+                        alert("Login Gagal: Anda harus menandatangani pesan untuk masuk.");
+                        userAddress = null;
+                        signer = null;
+                        return;
+                    }
+                }
+
+                // D. LOAD KONTRAK & DATA (Jalan jika sesi valid atau baru saja sign)
+                gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, signer);
+                
+                document.getElementById('connectBtn').innerText = userAddress.substring(0,6) + "..." + userAddress.slice(-4);
+                document.getElementById('connectBtn').style.background = "var(--success)";
+                document.getElementById('connectBtn').style.color = "black";
+                
+                // Load Data Market
+                loadMyInventory();
+                loadMarketListings();
 
             } catch (err) {
                 console.error("Connection Error:", err);
@@ -210,7 +233,7 @@
         } else {
             alert("Please install Metamask!");
         }
-      }
+    }
 
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
