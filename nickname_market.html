@@ -82,7 +82,7 @@
 <body>
 
     <header>
-        <a href="index" class="btn-back">⬅ Back to Game</a>
+        <a href="index" class="btn-back">Back to Game</a>
         <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </header>
 
@@ -312,11 +312,11 @@
             }
         }
 
-        // --- 4. LOAD INVENTORY (FIXED & DUAL CONTRACT) ---
+        // --- 4. LOAD INVENTORY (FIXED & ROBUST) ---
 async function loadMyInventory() {
-    // 1. Pastikan kedua kontrak sudah terkoneksi
+    // 1. Cek Koneksi
     if (!coreContract || !marketContract) {
-        console.warn("Menunggu koneksi wallet...");
+        console.warn("Wallet belum terkoneksi sepenuhnya...");
         return;
     }
 
@@ -324,55 +324,93 @@ async function loadMyInventory() {
     container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading your collection...</div>';
 
     try {
-        // A. AMBIL DATA DARI CORE (User & Inventory)
-        // Gunakan coreContract karena data user ada di sana
+        // A. AMBIL DATA USER DARI CORE
+        // userAddress harus dipastikan ada
+        if (!userAddress) {
+            try {
+                const signer = await provider.getSigner();
+                userAddress = await signer.getAddress();
+            } catch(e) {
+                container.innerHTML = "Wallet disconnected."; 
+                return;
+            }
+        }
+
         const userData = await coreContract.users(userAddress);
         const activeNick = userData[0];
-        document.getElementById('active-nick-display').innerText = activeNick;
+        
+        // Update Tampilan Nickname Aktif di Kotak Atas
+        const activeDisplay = document.getElementById('active-nick-display');
+        if(activeDisplay) activeDisplay.innerText = activeNick || "Unknown";
 
-        // Loop ambil nickname (Pakai coreContract)
+        // B. AMBIL LIST NICKNAME (METODE YANG LEBIH AMAN)
+        // Kita pakai loop yang tidak mudah crash
         let myNicks = [];
         let idx = 0;
+        let errors = 0; // Counter error beruntun
+
         while (true) {
             try {
-                const n = await coreContract.myNicknames(userAddress, idx);
-                myNicks.push(n);
+                // Panggil array public: myNicknames(address, index)
+                const nick = await coreContract.myNicknames(userAddress, idx);
+                
+                // Validasi: Kalau kosong string, skip/stop
+                if (!nick || nick === "") break; 
+                
+                myNicks.push(nick);
                 idx++;
-            } catch { break; } // Berhenti jika habis
+            } catch (e) {
+                // Jika error, biasanya berarti index sudah habis (Out of bounds)
+                // Kita break loop
+                break;
+            }
+            
+            // Safety break: Jangan sampai looping selamanya jika ada bug kontrak
+            if (idx > 50) break; 
         }
 
         container.innerHTML = "";
+        
+        // JIKA LIST KOSONG TAPI USER PUNYA ACTIVE NICKNAME
+        // (Ini kasus aneh, tapi kita handle manual agar user tetap bisa lihat nickname aktifnya di list)
+        if (myNicks.length === 0 && activeNick && activeNick !== "Unknown") {
+             // Masukkan nickname aktif ke list secara manual sebagai fallback
+             myNicks.push(activeNick);
+        }
+
         if (myNicks.length === 0) {
             container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
             return;
         }
 
-        // B. RENDER & CEK STATUS KE MARKET
+        // C. RENDER KARTU (Satu per satu)
         for (const nick of myNicks) {
+            // Cek apakah ini nickname aktif
             const isActive = (nick === activeNick);
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
 
-            // PENTING: Cek status jual ke MARKET CONTRACT (Bukan Core!)
-            // Core tidak punya mapping 'nickMarketplace', jadi kalau pakai coreContract pasti error di sini.
+            // Cek status JUAL di Market
             let isForSale = false;
             let priceEth = "0";
-            
+
             try {
                 const saleData = await marketContract.nickMarketplace(nickHash);
-                isForSale = saleData[0]; // bool
-                priceEth = ethers.formatEther(saleData[1]); // uint price
+                isForSale = saleData[0]; // index 0 = bool isForSale
+                priceEth = ethers.formatEther(saleData[1]); // index 1 = price
             } catch (err) {
-                console.error("Gagal baca data market:", err);
+                console.log(`Info: ${nick} not found in market data (New nickname?)`);
             }
 
-            // Cek Tawaran (Optional)
+            // Cek BID (Tawaran) - Optional
             let bidHtml = "";
             try {
                 const bid = await marketContract.nicknameBids(nickHash, 0);
-                if (bid[1] > 0) bidHtml = `<div style="font-size:0.8em; color:var(--primary); margin-top:5px;">⚡ Offer: ${ethers.formatEther(bid[1])} ETH</div>`;
+                if (bid[1] > 0n) {
+                     bidHtml = `<div style="font-size:0.8em; color:var(--primary); margin-top:5px; border-top:1px dashed #333; padding-top:5px;">⚡ Offer: ${ethers.formatEther(bid[1])} ETH</div>`;
+                }
             } catch (e) {}
 
-            // C. HTML BUILDER
+            // BUILD HTML
             const div = document.createElement('div');
             div.className = 'nick-card';
 
@@ -383,7 +421,7 @@ async function loadMyInventory() {
             let actionHtml = '';
 
             if (isForSale) {
-                // KONDISI 1: SUDAH DIJUAL -> Tombol Cancel
+                // TAMPILAN SEDANG DIJUAL
                 actionHtml = `
                     <div style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); padding:8px; border-radius:5px; margin-bottom:10px;">
                         Listed: <b style="color:var(--gold);">${priceEth} ETH</b>
@@ -391,17 +429,18 @@ async function loadMyInventory() {
                     <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">❌ Cancel Sale</button>
                 `;
             } else {
-                // KONDISI 2: BELUM DIJUAL -> Form Jual (SELALU MUNCUL)
+                // TAMPILAN TIDAK DIJUAL (Bisa Jual & Switch)
                 
-                // Tombol Switch (Hanya jika TIDAK aktif)
+                // Tombol Switch (hanya muncul jika tidak aktif)
                 let switchBtn = isActive ? '' : `<button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:10px;">🔄 Switch Active</button>`;
                 
-                // Form Jual
+                // FORM JUAL (Selalu Muncul)
+                // Perhatikan ID input: id="sell-price-${nick}"
                 let sellForm = `
                     <div style="border-top:1px solid #333; padding-top:10px; margin-top:5px;">
                         <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
                         <div style="display:flex; gap:5px;">
-                            <input type="number" id="sell-price-${nick}" class="sell-input" placeholder="ETH" style="margin:0;">
+                            <input type="number" id="sell-price-${nick}" class="sell-input" placeholder="ETH" step="0.001" style="margin:0;">
                             <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="margin:0; width:auto; padding:0 15px;">SELL</button>
                         </div>
                     </div>
@@ -420,8 +459,13 @@ async function loadMyInventory() {
         }
 
     } catch (e) {
-        console.error("Critical Error:", e);
-        container.innerHTML = `<div style="color:red; text-align:center;">Error: ${e.message}</div>`;
+        console.error("Critical Error Load Inventory:", e);
+        container.innerHTML = `<div style="color:red; text-align:center; padding:20px;">
+            Error loading data.<br>
+            <small>${e.message}</small>
+            <br>
+            <button onclick="loadMyInventory()" style="margin-top:10px; background:#333; color:white; border:none; padding:5px 10px; cursor:pointer;">Retry</button>
+        </div>`;
     }
 }
         
