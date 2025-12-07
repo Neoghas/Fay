@@ -434,17 +434,65 @@
         }
 
         async function sellNickname(nick) {
-            const priceInput = document.getElementById(`price-${nick}`).value;
-            if(!priceInput || priceInput <= 0) { alert("Invalid price"); return; }
-            
-            try {
-                const priceWei = ethers.parseEther(priceInput);
-                const tx = await gameContract.sellNickname(nick, priceWei);
-                alert("Listing for sale...");
-                await tx.wait();
-                alert("Listed!");
-                loadMyInventory(); // Refresh agar tombol berubah jadi cancel (opsional logicnya)
-            } catch(e) { alert("Error: " + e.message); }
+    // 1. Debugging Awal (Cek apakah tombol merespon)
+    console.log("Tombol Sell ditekan untuk:", nick);
+
+    // 2. Cek Koneksi Kontrak
+    if (!gameContract) {
+        alert("Koneksi ke Smart Contract terputus. Silakan refresh halaman.");
+        return;
+    }
+
+    // 3. Ambil Elemen Input dengan Aman
+    const inputId = `price-${nick}`;
+    const inputEl = document.getElementById(inputId);
+
+    // Jika elemen tidak ditemukan, hentikan proses (Jangan crash)
+    if (!inputEl) {
+        alert(`Error Sistem: Input harga dengan ID '${inputId}' tidak ditemukan di HTML.`);
+        return;
+    }
+
+    const priceInput = inputEl.value;
+
+    // 4. Validasi Input
+    if (!priceInput || parseFloat(priceInput) <= 0) {
+        alert("Harap masukkan harga jual yang valid (Wajib lebih dari 0 ETH)!");
+        return;
+    }
+
+    try {
+        // 5. Konversi Harga & Eksekusi
+        // Pastikan dikonversi ke string dulu agar parseEther aman
+        const priceWei = ethers.parseEther(priceInput.toString());
+        
+        console.log(`Mengirim Transaksi: Sell ${nick} seharga ${priceInput} ETH`);
+        
+        // Panggil Kontrak
+        const tx = await gameContract.sellNickname(nick, priceWei);
+        
+        alert("Transaksi dikirim! Silakan cek MetaMask Anda...");
+        
+        await tx.wait();
+        
+        alert("Berhasil! Nickname sudah terdaftar di pasar.");
+        
+        // Refresh Halaman
+        if(typeof loadMyInventory === 'function') loadMyInventory();
+
+    } catch (e) {
+        console.error("Error Sell:", e);
+        
+        // Parsing pesan error agar mudah dibaca user
+        let msg = e.reason || e.message || "Unknown Error";
+        if (msg.includes("user rejected")) {
+            msg = "Anda membatalkan transaksi di MetaMask.";
+        } else if (msg.includes("Not yours")) {
+            msg = "Nickname ini bukan milik Anda!";
+        }
+        
+        alert("GAGAL: " + msg);
+    }
         }
 
         async function cancelSale(nick) {
