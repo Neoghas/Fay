@@ -82,7 +82,7 @@
 <body>
 
     <header>
-        <a href="index" class="btn-back">Back to Game</a>
+        <a href="index" class="btn-back">Back to Gam</a>
         <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </header>
 
@@ -434,13 +434,13 @@ async function loadMyInventory() {
                 // Tombol Switch (hanya muncul jika tidak aktif)
                 let switchBtn = isActive ? '' : `<button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:10px;">🔄 Switch Active</button>`;
                 
-                // FORM JUAL (Selalu Muncul)
-                // Perhatikan ID input: id="sell-price-${nick}"
+                // Form Jual (FIXED ID)
                 let sellForm = `
                     <div style="border-top:1px solid #333; padding-top:10px; margin-top:5px;">
                         <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
                         <div style="display:flex; gap:5px;">
-                            <input type="number" id="sell-price-${nick}" class="sell-input" placeholder="ETH" step="0.001" style="margin:0;">
+                            <input type="number" id="sell-price-${nick}" class="sell-input" placeholder="Price (ETH)" step="0.0001" style="margin:0;">
+                            
                             <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="margin:0; width:auto; padding:0 15px;">SELL</button>
                         </div>
                     </div>
@@ -485,85 +485,69 @@ async function loadMyInventory() {
         }
 
         async function sellNickname(nick) {
-    // 1. SECURITY CHECK: Pastikan Kontrak Market Siap
-    if (!marketContract || !signer) {
-        alert("⚠️ Wallet Terputus. Silakan refresh halaman.");
+    console.log(`[DEBUG] Tombol Sell ditekan untuk: ${nick}`);
+
+    // 1. Cek Koneksi Kontrak Market
+    if (!marketContract) {
+        alert("⚠️ Error: Koneksi Market terputus. Silakan refresh halaman.");
         return;
     }
 
-    // 2. DOM RETRIEVAL: Ambil elemen input dengan aman
-    const inputId = `price-${nick}`;
-    const inputEl = document.getElementById(inputId);
-    
-    if (!inputEl) {
-        console.error(`Dev Error: Input ID ${inputId} not found.`);
+    // 2. Ambil Nilai dari Input HTML (ID harus cocok dengan yang di atas)
+    const inputId = `sell-price-${nick}`; 
+    const inputElement = document.getElementById(inputId);
+
+    if (!inputElement) {
+        alert(`❌ Error Sistem: Tidak bisa menemukan kotak input dengan ID '${inputId}'`);
         return;
     }
 
-    const priceVal = inputEl.value;
+    const priceVal = inputElement.value;
+    console.log(`[DEBUG] Harga yang diinput: ${priceVal}`);
 
-    // 3. INPUT VALIDATION: Standar Validasi Keuangan
+    // 3. Validasi Harga
     if (!priceVal || priceVal === "") {
-        alert("⚠️ Harap masukkan harga penjualan.");
-        inputEl.focus();
+        alert("⚠️ Masukkan harga terlebih dahulu!");
         return;
     }
     
-    if (parseFloat(priceVal) <= 0) {
-        alert("⚠️ Harga harus lebih besar dari 0 ETH.");
-        return;
-    }
-
+    // 4. Proses Transaksi
     try {
-        // 4. DATA PREPARATION: Konversi ETH ke Wei
-        // Menggunakan ethers.parseEther adalah cara paling akurat menangani desimal crypto
+        // Konversi ETH ke Wei
         const priceWei = ethers.parseEther(priceVal.toString());
 
-        // UX: Beri tahu user proses dimulai
-        // (Di app pro, kita pakai Toast/Spinner. Untuk ini kita pakai console/alert dulu)
-        const btn = document.activeElement; 
-        if(btn) { btn.innerText = "Signing..."; btn.disabled = true; } // Disable tombol agar tidak klik 2x
-
-        console.log(`🚀 Initiating Sell: ${nick} for ${priceVal} ETH`);
-
-        // 5. CONTRACT CALL: Panggil Kontrak Market (Bukan Core!)
-        // sellNickname(string memory _nick, uint256 _price)
-        const tx = await marketContract.sellNickname(nick, priceWei);
-
-        // UX: Beri tahu user transaksi sudah masuk mempool
-        alert(`⏳ Transaksi Terkirim! Menunggu konfirmasi Blockchain...\nHash: ${tx.hash.substring(0,10)}...`);
-
-        // 6. CONFIRMATION: Tunggu Block Mined
-        await tx.wait();
-
-        // 7. SUCCESS STATE: Refresh UI
-        alert(`✅ SUKSES! Nickname "${nick}" sekarang terdaftar di Global Market.`);
+        // UX: Ubah teks tombol biar user tahu sedang proses
+        // (Opsional, tapi bagus untuk UX)
         
-        // Refresh kedua tab agar data sinkron
-        loadMyInventory(); 
+        console.log("🚀 Memanggil MetaMask...");
+        
+        // PANGGIL KONTRAK MARKET
+        const tx = await marketContract.sellNickname(nick, priceWei);
+        
+        alert("✅ Transaksi Terkirim! Menunggu konfirmasi blockchain...");
+        console.log("Tx Hash:", tx.hash);
+
+        await tx.wait(); // Tunggu sampai selesai mining
+
+        alert(`🎉 SUKSES! Nickname "${nick}" sekarang dijual seharga ${priceVal} ETH.`);
+        
+        // Refresh Halaman
+        loadMyInventory();
         loadMarketListings();
 
-    } catch (e) {
-        // 8. ERROR HANDLING: Bedakan error user vs error sistem
-        console.error("Sell Error:", e);
-        
-        // Reset tombol
-        const btn = document.activeElement; 
-        if(btn) { btn.innerText = "SELL"; btn.disabled = false; }
+    } catch (err) {
+        console.error("Sell Error:", err);
 
-        // Parsing pesan error agar mudah dibaca
-        let msg = e.reason || e.message || "Unknown Error";
-        
-        if (msg.includes("user rejected") || e.code === 4001) {
-            // Jangan alert error jika user cuma cancel di metamask (mengganggu UX)
-            console.warn("User cancelled transaction");
-        } else if (msg.includes("Not yours")) {
+        // Pesan Error yang Manusiawi
+        if (err.code === "ACTION_REJECTED" || err.code === 4001) {
+            alert("Anda membatalkan transaksi di MetaMask.");
+        } else if (err.message.includes("Not yours")) {
             alert("⛔ Gagal: Nickname ini bukan milik Anda (Cek Core Contract).");
         } else {
-            alert("❌ Transaksi Gagal: " + msg);
+            alert("❌ Gagal: " + (err.reason || err.message));
         }
     }
-}
+        }
 
         async function cancelSale(nick) {
             try {
