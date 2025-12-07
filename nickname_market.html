@@ -313,26 +313,32 @@
         }
 
         // --- 4. LOAD INVENTORY (FIXED) ---
-async function loadMyInventory() {
-    if(!gameContract) return;
+       async function loadMyInventory() {
+    // 1. CEK KEDUA KONTRAK
+    if (!coreContract || !marketContract) {
+        console.warn("Contracts not initialized yet.");
+        return;
+    }
+
     const container = document.getElementById('inventory-list');
     container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading your collection...</div>';
     
     try {
-        // 1. Cek Nickname yang Sedang Aktif
-        const userData = await gameContract.users(userAddress);
+        // 2. AMBIL DATA DARI CORE (Active Nickname)
+        const userData = await coreContract.users(userAddress); // Gunakan coreContract
         const activeNick = userData[0]; 
         document.getElementById('active-nick-display').innerText = activeNick;
 
-        // 2. Ambil Semua Nickname Milik User
+        // 3. AMBIL LIST NICKNAME DARI CORE
         let myNicks = [];
         let index = 0;
         while(true) {
             try {
-                const nick = await gameContract.myNicknames(userAddress, index);
+                // Gunakan coreContract untuk inventory
+                const nick = await coreContract.myNicknames(userAddress, index);
                 myNicks.push(nick);
                 index++;
-            } catch (e) { break; }
+            } catch (e) { break; } // Stop loop jika array habis
         }
 
         container.innerHTML = ""; 
@@ -342,15 +348,25 @@ async function loadMyInventory() {
             return;
         }
 
-        // 3. Render Setiap Nickname
+        // 4. RENDER LOOP (Cek Status ke MARKET)
         await Promise.all(myNicks.map(async (nick) => {
             const isActive = (nick === activeNick);
-            
-            // Cek Status Jual
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-            const saleData = await gameContract.nickMarketplace(nickHash);
+            
+            // CEK STATUS JUAL DARI MARKET CONTRACT
+            const saleData = await marketContract.nickMarketplace(nickHash); // Gunakan marketContract
             const isForSale = saleData[0]; 
             const priceBig = saleData[1];  
+
+            // CEK BIDDING (OPSIONAL: Cek apakah ada penawar)
+            let bidInfoHtml = '';
+            try {
+                // Ambil 1 bid teratas untuk preview
+                const bids = await marketContract.nicknameBids(nickHash, 0);
+                if(bids[0] !== "0x0000000000000000000000000000000000000000") {
+                   bidInfoHtml = `<div style="font-size:0.75em; color:var(--primary); margin-top:5px;">⚡ Active Offers Available!</div>`;
+                }
+            } catch(e) {}
 
             const div = document.createElement('div');
             div.className = 'nick-card';
@@ -358,30 +374,29 @@ async function loadMyInventory() {
             let statusLabel = '';
             let actionHtml = '';
 
-            // Label Status (Active / Idle)
+            // Label Status
             if (isActive) {
                 statusLabel = `<div style="color:var(--success); font-weight:bold; font-size:0.8em; margin-bottom:10px;">✅ CURRENTLY ACTIVE</div>`;
             } else {
                 statusLabel = `<div style="color:#666; font-size:0.8em; margin-bottom:10px;">💤 In Inventory</div>`;
             }
 
-            // LOGIKA TOMBOL AKSI
+            // LOGIKA TOMBOL
             if (isForSale) {
-                // KONDISI 1: SEDANG DIJUAL (Tampilkan tombol Cancel)
+                // JIKA DIJUAL -> Tombol Cancel
                 const priceEth = ethers.formatEther(priceBig);
                 actionHtml = `
                     <div style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); padding:8px; border-radius:5px; margin-bottom:10px;">
                         Listed for: <b style="color:var(--gold);">${priceEth} ETH</b>
                     </div>
+                    ${bidInfoHtml}
                     <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">
                         ❌ Cancel Sale
                     </button>
                 `;
             } 
             else {
-                // KONDISI 2: TIDAK DIJUAL (Tampilkan tombol Switch & Sell)
-                
-                // Tombol Switch hanya muncul kalau TIDAK aktif
+                // JIKA TIDAK DIJUAL -> Tombol Switch & Sell
                 let switchBtn = '';
                 if (!isActive) {
                     switchBtn = `
@@ -391,14 +406,11 @@ async function loadMyInventory() {
                     `;
                 }
 
-                // Tombol Sell selalu muncul
                 let sellForm = `
                     <div style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
                         <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
                         <div style="display:flex; gap:5px;">
-                            
                             <input type="number" id="price-${nick}" class="sell-input" placeholder="Price (ETH)" style="margin-bottom:0;">
-                            
                             <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:auto; padding:0 15px; margin-top:0;">
                                 SELL
                             </button>
@@ -406,7 +418,7 @@ async function loadMyInventory() {
                     </div>
                 `;
                 
-                actionHtml = switchBtn + sellForm;
+                actionHtml = switchBtn + bidInfoHtml + sellForm;
             }
 
             div.innerHTML = `
@@ -419,9 +431,10 @@ async function loadMyInventory() {
 
     } catch (e) {
         console.error("Inventory Error:", e);
-        container.innerHTML = `<div style="color:red;">Error loading inventory.</div>`;
+        container.innerHTML = `<div style="color:red; text-align:center;">Error loading inventory.<br><small>${e.message}</small></div>`;
     }
-}
+       }
+            
 
         // --- 5. TRANSAKSI (BUY, SELL, SWITCH) ---
 
