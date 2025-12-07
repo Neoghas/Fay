@@ -309,116 +309,116 @@
             }
         }
 
-        // --- 4. LOAD INVENTORY ---
-        async function loadMyInventory() {
-            if(!gameContract) return;
-            const container = document.getElementById('inventory-list');
-            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading your collection...</div>';
-            
+        // --- 4. LOAD INVENTORY (FIXED) ---
+async function loadMyInventory() {
+    if(!gameContract) return;
+    const container = document.getElementById('inventory-list');
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading your collection...</div>';
+    
+    try {
+        // 1. Cek Nickname yang Sedang Aktif
+        const userData = await gameContract.users(userAddress);
+        const activeNick = userData[0]; 
+        document.getElementById('active-nick-display').innerText = activeNick;
+
+        // 2. Ambil Semua Nickname Milik User
+        let myNicks = [];
+        let index = 0;
+        while(true) {
             try {
-                // 1. Cek Nickname yang Sedang Aktif
-                const userData = await gameContract.users(userAddress);
-                const activeNick = userData[0]; 
-                document.getElementById('active-nick-display').innerText = activeNick;
+                const nick = await gameContract.myNicknames(userAddress, index);
+                myNicks.push(nick);
+                index++;
+            } catch (e) { break; }
+        }
 
-                // 2. Ambil Semua Nickname Milik User
-                let myNicks = [];
-                let index = 0;
-                while(true) {
-                    try {
-                        const nick = await gameContract.myNicknames(userAddress, index);
-                        myNicks.push(nick);
-                        index++;
-                    } catch (e) { break; }
-                }
+        container.innerHTML = ""; 
 
-                container.innerHTML = ""; 
+        if (myNicks.length === 0) {
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
+            return;
+        }
 
-                if (myNicks.length === 0) {
-                    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
-                    return;
-                }
+        // 3. Render Setiap Nickname
+        await Promise.all(myNicks.map(async (nick) => {
+            const isActive = (nick === activeNick);
+            
+            // Cek Status Jual
+            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+            const saleData = await gameContract.nickMarketplace(nickHash);
+            const isForSale = saleData[0]; 
+            const priceBig = saleData[1];  
 
-                // 3. Render Setiap Nickname
-                await Promise.all(myNicks.map(async (nick) => {
-                    const isActive = (nick === activeNick);
-                    
-                    // Cek Status Jual
-                    const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-                    const saleData = await gameContract.nickMarketplace(nickHash);
-                    const isForSale = saleData[0]; 
-                    const priceBig = saleData[1];  
+            const div = document.createElement('div');
+            div.className = 'nick-card';
+            
+            let statusLabel = '';
+            let actionHtml = '';
 
-                    const div = document.createElement('div');
-                    div.className = 'nick-card';
-                    
-                    let statusLabel = '';
-                    let actionHtml = '';
-
-                    // Label Status (Active / Idle)
-                    if (isActive) {
-                        statusLabel = `<div style="color:var(--success); font-weight:bold; font-size:0.8em; margin-bottom:10px;">✅ CURRENTLY ACTIVE</div>`;
-                    } else {
-                        statusLabel = `<div style="color:#666; font-size:0.8em; margin-bottom:10px;">💤 In Inventory</div>`;
-                    }
-
-                    // LOGIKA TOMBOL AKSI
-                    if (isForSale) {
-                        // KONDISI 1: SEDANG DIJUAL (Tampilkan tombol Cancel)
-                        const priceEth = ethers.formatEther(priceBig);
-                        actionHtml = `
-                            <div style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); padding:8px; border-radius:5px; margin-bottom:10px;">
-                                Listed for: <b style="color:var(--gold);">${priceEth} ETH</b>
-                            </div>
-                            <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">
-                                ❌ Cancel Sale
-                            </button>
-                        `;
-                    } 
-                    else {
-                        // KONDISI 2: TIDAK DIJUAL (Tampilkan tombol Switch & Sell)
-                        
-                        // Tombol Switch hanya muncul kalau TIDAK aktif
-                        let switchBtn = '';
-                        if (!isActive) {
-                            switchBtn = `
-                                <button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:15px;">
-                                    🔄 Switch to this
-                                </button>
-                            `;
-                        }
-
-                        // Tombol Sell selalu muncul (sekarang bisa jual nickname aktif)
-                        let sellForm = `
-                            <div style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
-                                <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
-                                <div style="display:flex; gap:5px;">
-                                    
-                                    <input type="number" id="price-${nick}" class="sell-input" placeholder="Price (ETH)" style="margin-bottom:0;">
-                                    
-                                    <button class="btn-action btn-sell" onclick="sellNick('${nick}')" style="width:auto; padding:0 15px; margin-top:0;">
-                                        SELL
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                        
-                        actionHtml = switchBtn + sellForm;
-                    }
-
-                    div.innerHTML = `
-                        <div class="nick-title" style="color:white; word-break:break-all;">${nick}</div>
-                        ${statusLabel}
-                        ${actionHtml}
-                    `;
-                    container.appendChild(div);
-                }));
-
-            } catch (e) {
-                console.error("Inventory Error:", e);
-                container.innerHTML = `<div style="color:red;">Error loading inventory.</div>`;
+            // Label Status (Active / Idle)
+            if (isActive) {
+                statusLabel = `<div style="color:var(--success); font-weight:bold; font-size:0.8em; margin-bottom:10px;">✅ CURRENTLY ACTIVE</div>`;
+            } else {
+                statusLabel = `<div style="color:#666; font-size:0.8em; margin-bottom:10px;">💤 In Inventory</div>`;
             }
+
+            // LOGIKA TOMBOL AKSI
+            if (isForSale) {
+                // KONDISI 1: SEDANG DIJUAL (Tampilkan tombol Cancel)
+                const priceEth = ethers.formatEther(priceBig);
+                actionHtml = `
+                    <div style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); padding:8px; border-radius:5px; margin-bottom:10px;">
+                        Listed for: <b style="color:var(--gold);">${priceEth} ETH</b>
+                    </div>
+                    <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">
+                        ❌ Cancel Sale
+                    </button>
+                `;
+            } 
+            else {
+                // KONDISI 2: TIDAK DIJUAL (Tampilkan tombol Switch & Sell)
+                
+                // Tombol Switch hanya muncul kalau TIDAK aktif
+                let switchBtn = '';
+                if (!isActive) {
+                    switchBtn = `
+                        <button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:15px;">
+                            🔄 Switch to this
+                        </button>
+                    `;
                 }
+
+                // Tombol Sell selalu muncul
+                let sellForm = `
+                    <div style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
+                        <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
+                        <div style="display:flex; gap:5px;">
+                            
+                            <input type="number" id="price-${nick}" class="sell-input" placeholder="Price (ETH)" style="margin-bottom:0;">
+                            
+                            <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:auto; padding:0 15px; margin-top:0;">
+                                SELL
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                actionHtml = switchBtn + sellForm;
+            }
+
+            div.innerHTML = `
+                <div class="nick-title" style="color:white; word-break:break-all;">${nick}</div>
+                ${statusLabel}
+                ${actionHtml}
+            `;
+            container.appendChild(div);
+        }));
+
+    } catch (e) {
+        console.error("Inventory Error:", e);
+        container.innerHTML = `<div style="color:red;">Error loading inventory.</div>`;
+    }
+}
 
         // --- 5. TRANSAKSI (BUY, SELL, SWITCH) ---
 
