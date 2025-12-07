@@ -313,78 +313,110 @@
         async function loadMyInventory() {
             if(!gameContract) return;
             const container = document.getElementById('inventory-list');
+            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading your collection...</div>';
             
             try {
-                // A. Cek Nickname Aktif
+                // 1. Cek Nickname yang Sedang Aktif
                 const userData = await gameContract.users(userAddress);
-                const activeNick = userData[0]; // [0] = nickname
+                const activeNick = userData[0]; 
                 document.getElementById('active-nick-display').innerText = activeNick;
 
-                // B. Ambil List Nickname yang dimiliki (Perlu helper / loop manual)
-                // Karena Solidity V4 'myNicknames' adalah array, kita harus cek panjangnya dulu, lalu loop.
-                // TAPI: Ethers.js tidak bisa mengambil seluruh array string sekaligus dengan mudah.
-                // KITA AKAN SCAN EVENT 'NicknameSold' atau 'UserRegistered' untuk user ini? 
-                // TIDAK, lebih baik loop index jika kontrak mengizinkan, atau fallback ke UI simple.
-                
-                // SOLUSI: Karena di kontrak V4 public mapping(address => string[]) public myNicknames;
-                // Kita tidak bisa mengambil LENGTH array mapping public standard secara langsung di Ethers v6 tanpa fungsi helper.
-                // WORKAROUND: Kita coba ambil index 0 sampai error (Brute Force index).
-                
-                container.innerHTML = "";
-                let index = 0;
+                // 2. Ambil Semua Nickname Milik User
                 let myNicks = [];
-
+                let index = 0;
                 while(true) {
                     try {
                         const nick = await gameContract.myNicknames(userAddress, index);
                         myNicks.push(nick);
                         index++;
-                    } catch (e) {
-                        break; // Stop jika error (artinya array habis)
-                    }
+                    } catch (e) { break; }
                 }
 
+                container.innerHTML = ""; 
+
                 if (myNicks.length === 0) {
-                    container.innerHTML = `<div style="text-align:center; color:#555;">You don't own any nicknames yet.</div>`;
+                    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
                     return;
                 }
 
-                // Render List
-                myNicks.forEach(nick => {
-                    // Cek apakah sedang dijual?
-                    // (Logic tambahan: Cek mapping nickMarketplace untuk nick ini, kalau dijual kasih tombol Cancel)
-                    
+                // 3. Render Setiap Nickname
+                await Promise.all(myNicks.map(async (nick) => {
                     const isActive = (nick === activeNick);
                     
+                    // Cek Status Jual
+                    const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+                    const saleData = await gameContract.nickMarketplace(nickHash);
+                    const isForSale = saleData[0]; 
+                    const priceBig = saleData[1];  
+
                     const div = document.createElement('div');
                     div.className = 'nick-card';
                     
-                    let actionButtons = '';
-                    
+                    let statusLabel = '';
+                    let actionHtml = '';
+
+                    // Label Status (Active / Idle)
                     if (isActive) {
-                        actionButtons = `<div style="color:var(--success); font-weight:bold; padding:10px;">Currently Active</div>`;
+                        statusLabel = `<div style="color:var(--success); font-weight:bold; font-size:0.8em; margin-bottom:10px;">✅ CURRENTLY ACTIVE</div>`;
                     } else {
-                        actionButtons = `
-                            <button class="btn-action btn-use" onclick="switchNick('${nick}')">Switch to this</button>
-                            <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
-                                <input type="number" id="price-${nick}" class="sell-input" placeholder="Price in ETH">
-                                <button class="btn-action btn-sell" onclick="sellNick('${nick}')">Sell Nickname</button>
+                        statusLabel = `<div style="color:#666; font-size:0.8em; margin-bottom:10px;">💤 In Inventory</div>`;
+                    }
+
+                    // LOGIKA TOMBOL AKSI
+                    if (isForSale) {
+                        // KONDISI 1: SEDANG DIJUAL (Tampilkan tombol Cancel)
+                        const priceEth = ethers.formatEther(priceBig);
+                        actionHtml = `
+                            <div style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); padding:8px; border-radius:5px; margin-bottom:10px;">
+                                Listed for: <b style="color:var(--gold);">${priceEth} ETH</b>
+                            </div>
+                            <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">
+                                ❌ Cancel Sale
+                            </button>
+                        `;
+                    } 
+                    else {
+                        // KONDISI 2: TIDAK DIJUAL (Tampilkan tombol Switch & Sell)
+                        
+                        // Tombol Switch hanya muncul kalau TIDAK aktif
+                        let switchBtn = '';
+                        if (!isActive) {
+                            switchBtn = `
+                                <button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:15px;">
+                                    🔄 Switch to this
+                                </button>
+                            `;
+                        }
+
+                        // Tombol Sell selalu muncul (sekarang bisa jual nickname aktif)
+                        let sellForm = `
+                            <div style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
+                                <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
+                                <div style="display:flex; gap:5px;">
+                                    <input type="number" id="price-${nick}" class="sell-input" placeholder="Price (ETH)" style="margin-bottom:0;">
+                                    <button class="btn-action btn-sell" onclick="sellNick('${nick}')" style="width:auto; padding:0 15px; margin-top:0;">
+                                        SELL
+                                    </button>
+                                </div>
                             </div>
                         `;
+                        
+                        actionHtml = switchBtn + sellForm;
                     }
 
                     div.innerHTML = `
-                        <div class="nick-title" style="color:white;">${nick}</div>
-                        ${actionButtons}
+                        <div class="nick-title" style="color:white; word-break:break-all;">${nick}</div>
+                        ${statusLabel}
+                        ${actionHtml}
                     `;
                     container.appendChild(div);
-                });
+                }));
 
             } catch (e) {
-                console.error(e);
-                container.innerHTML = "Error loading inventory.";
+                console.error("Inventory Error:", e);
+                container.innerHTML = `<div style="color:red;">Error loading inventory.</div>`;
             }
-        }
+                }
 
         // --- 5. TRANSAKSI (BUY, SELL, SWITCH) ---
 
