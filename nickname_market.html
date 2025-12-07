@@ -43,20 +43,82 @@
             gap: 10px; /* Jarak antar kartu lebih rapat di HP */
         }
 
-        /* CARD STYLE */
-        .nick-card {
-            background: var(--card); 
-            border: 1px solid #333; 
-            padding: 10px; /* Padding diperkecil sedikit biar muat */
-            border-radius: 12px; 
-            position: relative; 
-            overflow: hidden;
-            transition: 0.3s;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .nick-card:hover { transform: translateY(-3px); border-color: var(--gold); }
+        /* --- PREMIUM CARD STYLES --- */
+.nick-card {
+    background: linear-gradient(145deg, #1a1b26, #111); /* Gradasi background halus */
+    border: 1px solid #333;
+    padding: 15px;
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+.nick-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    border-color: var(--gold);
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.15); /* Glow Emas tipis */
+}
+
+/* Header: Avatar & Seller */
+.card-header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 8px;
+}
+
+.seller-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    object-fit: cover;
+    background: #000;
+}
+
+.seller-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.seller-label { font-size: 0.65em; color: #666; text-transform: uppercase; }
+.seller-address { font-size: 0.85em; color: #aaa; font-family: monospace; }
+
+/* Body: Premium Nickname */
+.nick-title-premium {
+    font-size: 1.6em;
+    font-weight: 900;
+    margin-bottom: 5px;
+    text-align: center;
+    /* Efek Emas Mengkilap */
+    background: linear-gradient(to bottom, #fff 0%, #ffd700 50%, #b8860b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 0px rgba(0,0,0,0.5));
+    letter-spacing: 1px;
+}
+
+/* Info Bar: Time & Price */
+.info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.3);
+    padding: 8px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 0.8em;
+}
+
+.time-info { color: #888; display: flex; align-items: center; gap: 4px; }
+.price-tag { color: var(--success); font-weight: bold; font-size: 1.1em; }
         
         /* Typography Adjustment untuk Mobile */
         .nick-title { 
@@ -364,116 +426,118 @@
 
         // --- 3. LOAD MARKET (SCAN EVENTS) ---
         async function loadMarketListings() {
-            if(!gameContract) return;
-            const container = document.getElementById('market-list');
-            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain for active listings...<br><span style="font-size:0.8em;">(This process reads historical logs)</span></div>';
+    if(!gameContract) return;
+    const container = document.getElementById('market-list');
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
+    
+    try {
+        // 1. Ambil Log Listing
+        const filter = gameContract.filters.NicknameListed();
+        const logs = await gameContract.queryFilter(filter, DEPLOY_BLOCK, "latest");
+
+        const uniqueListings = new Map();
+
+        // Loop Log (Reverse)
+        for (const log of logs.reverse()) {
+            const seller = log.args[0];
+            const nick = log.args[1];
+            const price = log.args[2];
+            const timestamp = log.args[3]; // AMBIL TIMESTAMP DARI EVENT
             
-            try {
-                // 1. Ambil Event 'NicknameListed' (Sejarah Listing)
-                // Filter: listing yang terjadi dari blok awal sampai sekarang
-                const filter = gameContract.filters.NicknameListed();
-                
-                // TIPS: Untuk testnet, "fromBlock: 0" mungkin lambat. 
-                // Jika lambat, ganti 0 dengan nomor blok deploy kontrak Anda (misal 18000000).
-                const logs = await gameContract.queryFilter(filter, DEPLOY_BLOCK, "latest");
-                // 2. Siapkan Wadah Data Unik (Gunakan Map untuk mencegah duplikat nickname)
-                // Karena satu nickname bisa dilist berkali-kali (list -> cancel -> list lagi)
-                const uniqueListings = new Map();
-
-                // Loop dari TERBARU ke TERLAMA (Reverse)
-                for (const log of logs.reverse()) {
-                    const seller = log.args[0];
-                    const nick = log.args[1];
-                    const price = log.args[2];
-                    
-                    // Jika nickname ini belum dicek, masukkan ke antrian cek
-                    if (!uniqueListings.has(nick)) {
-                        uniqueListings.set(nick, { seller, price }); 
-                    }
-                }
-
-                container.innerHTML = ""; // Bersihkan loading
-                let activeCount = 0;
-
-                if (uniqueListings.size === 0) {
-                     container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty. Be the first to sell!</div>`;
-                     return;
-                }
-
-                // 3. Validasi Status Terkini (Cek Mapping Kontrak)
-                // Kita harus cek apakah barangnya MASIH ada di marketplace?
-                // (Bisa jadi sudah laku/cancel setelah event listing terjadi)
-                
-                for (let [nick, data] of uniqueListings) {
-                    const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-                    const saleData = await gameContract.nickMarketplace(nickHash);
-                    
-                    // Struct: [isForSale, price, seller]
-                    const isForSale = saleData[0];
-                    const currentPriceBig = saleData[1];
-                    const currentSeller = saleData[2];
-
-                    // HANYA TAMPILKAN JIKA MASIH DIJUAL (isForSale == true)
-                    if (isForSale) {
-                        activeCount++;
-                        const priceEth = ethers.formatEther(currentPriceBig);
-
-                        const card = document.createElement('div');
-
-                        card.className = 'nick-card';
-
-                        
-
-                        // Cek apakah ini jualan saya sendiri?
-
-                        const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
-
-
-
-                        let btnAction = '';
-
-                        if (isMyListing) {
-
-                            btnAction = `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Cancel</button>`;
-
-                        } else {
-
-                            btnAction = `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY</button>`;
-
-                        }
-
-
-
-                        // UPDATE HTML KARTU (Menggunakan class nick-seller)
-
-                        card.innerHTML = `
-
-                            <div class="nick-title">${nick}</div>
-
-                            <div class="nick-seller">Seller: ${currentSeller}</div>
-
-                            <div class="nick-price">${priceEth} ETH</div>
-
-                            ${btnAction}
-
-                        `;
-
-                        container.appendChild(card);
-                    }
-                }
-
-                if (activeCount === 0) {
-                    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">No active listings found.</div>`;
-                }
-
-            } catch (e) {
-                console.error("Market Load Error:", e);
-                container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">
-                    Failed to load market data (RPC Error).<br>
-                    <small>${e.message}</small>
-                </div>`;
+            if (!uniqueListings.has(nick)) {
+                uniqueListings.set(nick, { seller, price, timestamp }); 
             }
         }
+
+        container.innerHTML = ""; 
+        let activeCount = 0;
+
+        for (let [nick, data] of uniqueListings) {
+            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+            const saleData = await gameContract.nickMarketplace(nickHash);
+            
+            const isForSale = saleData[0];
+            const currentPriceBig = saleData[1];
+            const currentSeller = saleData[2];
+
+            if (isForSale) {
+                activeCount++;
+                const priceEth = ethers.formatEther(currentPriceBig);
+
+                // --- FITUR BARU: AMBIL AVATAR PENJUAL ---
+                let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png"; // Default Placeholder (Effigy)
+                try {
+                    const sellerProfile = await gameContract.users(currentSeller);
+                    if(sellerProfile.avatarUrl && sellerProfile.avatarUrl.length > 5) {
+                        avatarUrl = sellerProfile.avatarUrl;
+                    }
+                } catch(err) { console.log("No avatar set"); }
+
+                // --- FITUR BARU: FORMAT WAKTU ---
+                // Konversi Timestamp block (detik) ke format tanggal
+                const listDate = new Date(Number(data.timestamp) * 1000);
+                const dateString = listDate.toLocaleDateString() + " " + listDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                const card = document.createElement('div');
+                card.className = 'nick-card';
+                
+                const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
+                const shortSeller = currentSeller.substring(0,6) + "..." + currentSeller.substring(38);
+
+                let btnAction = isMyListing 
+                    ? `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Cancel Sale</button>` 
+                    : `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`;
+
+                // --- HTML BARU ---
+                card.innerHTML = `
+                    <div class="card-header-row">
+                        <img src="${avatarUrl}" class="seller-avatar" alt="avt" onerror="this.src='https://effigy.im/a/${currentSeller}.png'">
+                        <div class="seller-info">
+                            <span class="seller-label">Seller</span>
+                            <span class="seller-address">${shortSeller}</span>
+                        </div>
+                    </div>
+
+                    <div class="nick-title-premium">${nick}</div>
+
+                    <div class="info-bar">
+                        <div class="time-info" title="Listed at: ${dateString}">
+                            🕐 <span style="font-size:0.9em">${timeSince(listDate)} ago</span>
+                        </div>
+                        <div class="price-tag">${priceEth} ETH</div>
+                    </div>
+
+                    ${btnAction}
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        if (activeCount === 0) {
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty.</div>`;
+        }
+
+    } catch (e) {
+        console.error("Market Load Error:", e);
+        container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error loading market data.</div>`;
+    }
+}
+
+// Helper Function: "2 hours ago", "5 mins ago"
+function timeSince(date) {
+    var seconds = Math.floor((new Date() - date) / 1000);
+    var interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + "y";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + "mo";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + "d";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + "h";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + "m";
+    return Math.floor(seconds) + "s";
+}
 
         // --- 4. LOAD INVENTORY (FIXED) ---
 async function loadMyInventory() {
