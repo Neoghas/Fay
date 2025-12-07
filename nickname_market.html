@@ -35,38 +35,78 @@
             border-radius: 8px; cursor: pointer; font-weight: bold;
         }
 
-        /* TABS */
-        .market-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn {
-            flex: 1; padding: 12px; background: #222; border: 1px solid #444;
-            color: #888; cursor: pointer; border-radius: 8px; font-weight: bold;
-            text-transform: uppercase; letter-spacing: 1px;
-        }
-        .tab-btn.active {
-            background: linear-gradient(45deg, var(--primary), #0088aa);
-            color: white; border-color: var(--primary);
-        }
-
-        /* GRID LAYOUT */
+        /* --- GRID LAYOUT (REVISI) --- */
         .market-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;
+            display: grid;
+            /* MOBILE DEFAULT: 2 Kolom (1fr 1fr) */
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 10px; /* Jarak antar kartu lebih rapat di HP */
         }
 
         /* CARD STYLE */
         .nick-card {
-            background: var(--card); border: 1px solid #333; padding: 15px;
-            border-radius: 12px; position: relative; overflow: hidden;
+            background: var(--card); 
+            border: 1px solid #333; 
+            padding: 10px; /* Padding diperkecil sedikit biar muat */
+            border-radius: 12px; 
+            position: relative; 
+            overflow: hidden;
             transition: 0.3s;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
         .nick-card:hover { transform: translateY(-3px); border-color: var(--gold); }
         
-        .nick-title { font-size: 1.4em; font-weight: 900; color: var(--gold); margin-bottom: 5px; }
-        .nick-price { color: var(--success); font-size: 1.1em; font-weight: bold; margin-bottom: 15px; }
-        
-        .btn-action {
-            width: 100%; padding: 10px; border: none; border-radius: 8px;
-            font-weight: bold; cursor: pointer; margin-top: 5px;
+        /* Typography Adjustment untuk Mobile */
+        .nick-title { 
+            font-size: 1.1em; /* Font judul diperkecil sedikit */
+            font-weight: 900; 
+            color: var(--gold); 
+            margin-bottom: 5px;
+            white-space: nowrap; /* Mencegah judul turun baris */
+            overflow: hidden;
+            text-overflow: ellipsis; /* Titik-titik jika kepanjangan */
         }
+        
+        .nick-seller {
+            font-size: 0.75em; 
+            color: #888; 
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; /* Biar address panjang jadi 0x123... */
+        }
+
+        .nick-price { 
+            color: var(--success); 
+            font-size: 1em; 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+        }
+        
+        /* Tombol Action */
+        .btn-action {
+            width: 100%; padding: 8px; border: none; border-radius: 6px;
+            font-weight: bold; cursor: pointer; margin-top: auto; font-size: 0.8em;
+        }
+        .btn-buy { background: var(--success); color: black; }
+        .btn-sell { background: var(--accent); color: white; }
+        .btn-use { background: var(--primary); color: black; }
+        .btn-cancel { background: #555; color: white; }
+
+        /* --- TAMPILAN PC (LAYAR LEBAR) --- */
+        @media (min-width: 992px) {
+            .market-grid {
+                /* PC MODE: 4 Kolom */
+                grid-template-columns: repeat(4, 1fr); 
+                gap: 15px;
+            }
+            .nick-card { padding: 15px; }
+            .nick-title { font-size: 1.4em; }
+            .btn-action { font-size: 1em; padding: 10px; }
+        }
+        
         .btn-buy { background: var(--success); color: black; }
         .btn-sell { background: var(--accent); color: white; }
         .btn-use { background: var(--primary); color: black; }
@@ -77,6 +117,18 @@
             width: 100%; padding: 8px; margin-bottom: 8px;
             background: #111; border: 1px solid #444; color: white; border-radius: 5px;
         }
+
+        /* Pastikan CSS ini ada di dalam <style> */
+.history-section { margin-top: 20px; }
+.table-responsive { overflow-x: auto; }
+.market-table { width: 100%; border-collapse: collapse; background: #15161c; border-radius: 8px; margin-top: 10px; }
+.market-table th, .market-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #2a2b36; }
+.market-table th { background-color: #222; color: #888; text-transform: uppercase; font-size: 0.85em; }
+.badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
+.badge-sell { background: rgba(0, 210, 255, 0.1); color: var(--primary); border: 1px solid var(--primary); }
+.badge-buy { background: rgba(255, 77, 77, 0.1); color: #ff4d4d; border: 1px solid #ff4d4d; }
+.status-sale { color: var(--primary); font-weight: bold; }
+.status-taken { color: #ff4d4d; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -100,19 +152,41 @@
     </div>
 
     <div id="view-inventory" class="market-view" style="display:none;">
-        
-        <div style="background:rgba(0, 210, 255, 0.1); border:1px solid var(--primary); padding:15px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <div style="font-size:0.8em; color:#aaa;">CURRENT ACTIVE NICKNAME</div>
-                <div id="active-nick-display" style="font-size:1.5em; font-weight:bold; color:white;">-</div>
-            </div>
-            <div style="color:var(--success); font-weight:bold;">✅ IN USE</div>
+    
+    <div style="background:rgba(0, 210, 255, 0.1); border:1px solid var(--primary); padding:15px; border-radius:10px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <div style="font-size:0.8em; color:#aaa;">CURRENT ACTIVE NICKNAME</div>
+            <div id="active-nick-display" style="font-size:1.5em; font-weight:bold; color:white;">-</div>
         </div>
+        <div style="color:var(--success); font-weight:bold;">✅ IN USE</div>
+    </div>
 
-        <h3 style="color:#aaa; border-bottom:1px solid #333; padding-bottom:10px;">Collection & Sell</h3>
-        <div id="inventory-list" class="market-grid">
-            <div style="grid-column:1/-1; text-align:center; color:#666;">Loading inventory...</div>
+    <h3 style="color:#aaa; border-bottom:1px solid #333; padding-bottom:10px;">Collection & Sell</h3>
+    <div id="inventory-list" class="market-grid">
+        <div style="grid-column:1/-1; text-align:center; color:#666;">Loading inventory...</div>
+    </div>
+
+    <div class="history-section">
+        <h3 style="color:var(--gold); border-bottom:1px solid #333; padding-bottom:10px; margin-top:30px;">
+            📜 Market Status & History
+        </h3>
+        <div class="table-responsive">
+            <table class="market-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Nickname</th>
+                        <th>Price</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="history-body">
+                    <tr><td colspan="4" style="text-align:center;">Waiting for wallet connection...</td></tr>
+                </tbody>
+            </table>
         </div>
+    </div>
+
     </div>
 
     <script>
@@ -304,24 +378,45 @@
                         const priceEth = ethers.formatEther(currentPriceBig);
 
                         const card = document.createElement('div');
+
                         card.className = 'nick-card';
+
                         
+
                         // Cek apakah ini jualan saya sendiri?
-                        const isMyListing = (currentSeller.toLowerCase() === userAddress.toLowerCase());
+
+                        const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
+
+
 
                         let btnAction = '';
+
                         if (isMyListing) {
-                            btnAction = `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Your Listing (Cancel)</button>`;
+
+                            btnAction = `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Cancel</button>`;
+
                         } else {
-                            btnAction = `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`;
+
+                            btnAction = `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY</button>`;
+
                         }
 
+
+
+                        // UPDATE HTML KARTU (Menggunakan class nick-seller)
+
                         card.innerHTML = `
+
                             <div class="nick-title">${nick}</div>
-                            <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Seller: ${currentSeller.substring(0,6)}...</div>
+
+                            <div class="nick-seller">Seller: ${currentSeller}</div>
+
                             <div class="nick-price">${priceEth} ETH</div>
+
                             ${btnAction}
+
                         `;
+
                         container.appendChild(card);
                     }
                 }
@@ -449,6 +544,284 @@ async function loadMyInventory() {
         container.innerHTML = `<div style="color:red;">Error loading inventory.</div>`;
     }
 }
+
+        async function loadMarketListings() {
+
+    if(!gameContract) return;
+
+    const container = document.getElementById('market-list');
+
+    const tableBody = document.getElementById('history-body');
+
+    
+
+    // Tampilkan Loading
+
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
+
+    tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Syncing history...</td></tr>';
+
+    
+
+    try {
+
+        // --- A. AMBIL DATA DARI BLOCKCHAIN ---
+
+        
+
+        // 1. Ambil Event Listing (Jualan)
+
+        const filterListed = gameContract.filters.NicknameListed();
+
+        const logsListed = await gameContract.queryFilter(filterListed, DEPLOY_BLOCK, "latest");
+
+
+
+        // 2. Ambil Event Sold (Laku)
+
+        const filterSold = gameContract.filters.NicknameSold();
+
+        const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
+
+
+
+        // --- B. PROSES DATA GRID (KARTU BARANG) ---
+
+        
+
+        const uniqueListings = new Map();
+
+
+
+        // Loop Listing (Reverse biar terbaru dulu)
+
+        for (const log of logsListed.reverse()) {
+
+            const nick = log.args[1];
+
+            if (!uniqueListings.has(nick)) {
+
+                uniqueListings.set(nick, { 
+
+                    seller: log.args[0], 
+
+                    price: log.args[2],
+
+                    block: log.blockNumber 
+
+                }); 
+
+            }
+
+        }
+
+
+
+        container.innerHTML = ""; 
+
+        let activeItems = []; // Simpan item aktif untuk tabel nanti
+
+        let activeCount = 0;
+
+
+
+        // Cek Status Realtime ke Smart Contract
+
+        for (let [nick, data] of uniqueListings) {
+
+            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+
+            // Panggil mapping nickMarketplace dari kontrak
+
+            const saleData = await gameContract.nickMarketplace(nickHash);
+
+            
+
+            const isForSale = saleData[0];
+
+            const currentPriceBig = saleData[1];
+
+            const currentSeller = saleData[2];
+
+
+
+            if (isForSale) {
+
+                activeCount++;
+
+                const priceEth = ethers.formatEther(currentPriceBig);
+
+
+
+                // 1. Render Kartu Grid (Seperti Biasa)
+
+                const card = document.createElement('div');
+
+                card.className = 'nick-card';
+
+                const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
+
+
+
+                let btnAction = isMyListing 
+
+                    ? `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Your Listing (Cancel)</button>`
+
+                    : `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`;
+
+
+
+                card.innerHTML = `
+
+                    <div class="nick-title">${nick}</div>
+
+                    <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Seller: ${currentSeller.substring(0,6)}...</div>
+
+                    <div class="nick-price">${priceEth} ETH</div>
+
+                    ${btnAction}
+
+                `;
+
+                container.appendChild(card);
+
+
+
+                // 2. Simpan ke array untuk Tabel (Status: On Sale)
+
+                activeItems.push({
+
+                    type: 'Sell',
+
+                    nick: nick,
+
+                    price: priceEth,
+
+                    status: 'On Sale 🛒',
+
+                    cssClass: 'status-sale',
+
+                    badgeClass: 'badge-sell',
+
+                    block: data.block // Pakai blok listing
+
+                });
+
+            }
+
+        }
+
+
+
+        if (activeCount === 0) {
+
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty.</div>`;
+
+        }
+
+
+
+        // --- C. PROSES DATA TABEL (GABUNGAN AKTIF + SOLD) ---
+
+        
+
+        let historyData = [...activeItems]; // Masukkan yang aktif dulu
+
+
+
+        // Masukkan yang sudah SOLD (Laku)
+
+        for (const log of logsSold) {
+
+            const nick = log.args[2]; // arg ke-3 di event NicknameSold adalah nickname string
+
+            const price = ethers.formatEther(log.args[3]);
+
+            
+
+            historyData.push({
+
+                type: 'Buy', // Karena ini transaksi pembelian
+
+                nick: nick,
+
+                price: price,
+
+                status: 'Soldout ✅',
+
+                cssClass: 'status-taken', // atau status-sold
+
+                badgeClass: 'badge-buy',
+
+                block: log.blockNumber
+
+            });
+
+        }
+
+
+
+        // Urutkan berdasarkan Block Number (Terbaru di atas)
+
+        historyData.sort((a, b) => b.block - a.block);
+
+
+
+        // Render ke Tabel HTML
+
+        tableBody.innerHTML = "";
+
+        
+
+        if (historyData.length === 0) {
+
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No history yet.</td></tr>';
+
+        } else {
+
+            historyData.forEach(item => {
+
+                const row = `
+
+                    <tr>
+
+                        <td><span class="badge ${item.badgeClass}">${item.type}</span></td>
+
+                        <td style="font-weight:bold; color:white;">${item.nick}</td>
+
+                        <td>${item.price} ETH</td>
+
+                        <td class="${item.cssClass}">${item.status}</td>
+
+                    </tr>
+
+                `;
+
+                tableBody.innerHTML += row;
+
+            });
+
+        }
+
+
+
+    } catch (e) {
+
+        console.error("Load Error:", e);
+
+        let msg = e.message;
+
+        if(msg.includes("max block range")) msg = "Please update DEPLOY_BLOCK variable!";
+
+        
+
+        container.innerHTML = `<div style="color:red; text-align:center;">Error: ${msg}</div>`;
+
+        tableBody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Error loading history</td></tr>`;
+
+    }
+
+        }
         
         // --- 5. TRANSAKSI (BUY, SELL, SWITCH) ---
 
