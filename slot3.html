@@ -3484,43 +3484,103 @@ if(!u[1]) {
     }
 
     async function executeDraw() {
+        // 1. CEK SYARAT MINIMAL (PRE-CHECK)
         try {
-            showToast("Initiating Draw...", 'load');
+            // Kita hitung cepat jumlah tim aktif dari variabel global 'counts'
+            // (Asumsi variable counts tersedia dari refreshBetData)
+            if (typeof counts !== 'undefined') {
+                const activeTeams = counts.filter(c => c > 0).length;
+                if (activeTeams < 5) {
+                    showToast(`STOP: Not enough 5 Active Teams! (Currently: ${activeTeams})`, 'error');
+                    return;
+                }
+            }
+        } catch(e) { console.log("Skip pre-check..."); }
+
+        // 2. MULAI PROSES
+        try {
+            showToast("Calculating Smart Gas...", 'load');
+
+            // --- SMART GAS ESTIMATION LOGIC ---
+            let finalGasLimit = 3000000n; // Default aman jika semua gagal
+
+            try {
+                // A. Tanya Node/Blockchain (Estimasi Akurat)
+                const estimatedGas = await gameContract.executeDraw.estimateGas();
+                
+                // B. Tambahkan Buffer 30% (Safety Margin)
+                // Rumus: Estimasi * 130 / 100
+                finalGasLimit = (estimatedGas * 130n) / 100n;
+                
+                console.log(`Smart Gas: Est=${estimatedGas}, Final=${finalGasLimit}`);
+
+            } catch (gasErr) {
+                console.warn("⚠️ Auto-Estimate Failed (May Revert). Switch to Manual Calculation.");
+                
+                // C. Fallback: Hitung Manual Berdasarkan Beban Tiket
+                // Ambil jumlah tiket dari tampilan statistik
+                const ticketText = document.getElementById('statTotalTickets').innerText;
+                const totalTickets = parseInt(ticketText) || 0;
+                
+                // Rumus Manual:
+                // Base Cost (Init) = 500,000
+                // Cost Per Tiket   = 60,000 (Asumsi Loop berat)
+                const baseCost = 500000n;
+                const perTicketCost = 60000n;
+                
+                finalGasLimit = baseCost + (BigInt(totalTickets) * perTicketCost);
+                
+                // Batas Bawah Aman (Jangan kurang dari 1 Juta jika fallback)
+                if (finalGasLimit < 1000000n) finalGasLimit = 1000000n;
+                
+                console.log(`🧮 Manual Gas: Tickets=${totalTickets}, Final=${finalGasLimit}`);
+            }
+
+            // 3. EKSEKUSI TRANSAKSI DENGAN GAS PINTAR
+            showToast("Please Confirm Transaction...", 'wolf');
             
-            // 1. Kirim Transaksi
-            const tx = await gameContract.executeDraw();
+            const tx = await gameContract.executeDraw({
+                gasLimit: finalGasLimit 
+            });
             
-            // 2. Mulai Visual
+            // 4. VISUALISASI DRAW (Sambil menunggu mining)
             spinStartTime = Date.now(); 
             startSpinAnimation();
-            startCountdown(35000); 
+            startCountdown(35000); // 50 Detik visual timer
             
-            showToast("Broadcasting... (Wait 35s)", 'loading');
+            showToast("Broadcasting... Please Wait", 'loading');
 
             if (safetyTimer) clearTimeout(safetyTimer);
-            
-            // 2. Set Timer Darurat (Misal 45 Detik)
-            // Jika lewat 45 detik belum ada kabar, panggil Smart Stop
             safetyTimer = setTimeout(() => {
-                smartEmergencyStop(); 
+                showToast("Network busy, keep waiting...", 'wolf');
             }, 40000);
             
-            await tx.wait(); 
+            // 5. TUNGGU HASIL
+            const receipt = await tx.wait(); 
             
+            if (safetyTimer) clearTimeout(safetyTimer);
+            console.log("✅ Draw Success:", receipt);
+
         } catch (err) { 
-            console.error(err); 
+            console.error("DRAW ERROR:", err); 
             
-            // Matikan semua jika error (Reject wallet dll)
+            // Reset Visual
             if (safetyTimer) clearTimeout(safetyTimer);
             spinIntervals.forEach(clearInterval);
             isSpinning = false;
-            
             if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
             document.getElementById('drawTimer').style.display = 'none';
             
-            showToast("Draw Failed: " + (err.reason || err.message), 'error'); 
+            // Pesan Error User Friendly
+            let msg = err.reason || err.message || "Unknown Error";
+            
+            if (msg.includes("Min 5")) msg = "Requirements: Minimum 5 Active Players!";
+            else if (msg.includes("user rejected")) msg = "Transaction Canceled.";
+            else if (msg.includes("insufficient funds")) msg = "ETH Balance Not Enough for Gas Fee.";
+            
+            showToast("Draw Failed: " + msg, 'error'); 
         }
-    }
+     }
 
     async function withdraw(curr) {
         try {
