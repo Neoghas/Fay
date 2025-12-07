@@ -83,7 +83,6 @@
 
     <header>
         <a href="index.html" class="btn-back">⬅ Back to Game</a>
-        <div style="font-size:1.2em; font-weight:bold; color:var(--gold);">💎 NICKNAME MARKET</div>
         <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </header>
 
@@ -250,7 +249,7 @@
         }
     }
 
-        function switchTab(tab) {
+    function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.market-view').forEach(v => v.style.display = 'none');
             
@@ -265,204 +264,141 @@
         async function loadMarketListings() {
             if(!gameContract) return;
             const container = document.getElementById('market-list');
-            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain for active listings...<br><span style="font-size:0.8em;">(Reading last 90,000 blocks)</span></div>';
             
             try {
-                // 1. TENTUKAN RANGE BLOK (Agar tidak error "Exceeds 100k")
-                const currentBlock = await provider.getBlockNumber();
+                // KARENA V4 TIDAK PUNYA ARRAY 'ALL SALES', KITA SCAN EVENT 'NicknameListed'
+                // Ini teknik standar di frontend untuk marketplace sederhana tanpa backend.
                 
-                // Ambil 90.000 blok ke belakang (Aman di bawah limit 100k)
-                // Base Sepolia memproduksi blok tiap 2 detik, jadi ini mencakup history sekitar 2-3 hari terakhir.
-                let startBlock = currentBlock - 90000; 
-                if (startBlock < 0) startBlock = 0;
-
-                console.log(`Scanning from block ${startBlock} to ${currentBlock}`);
-
-                // 2. Ambil Event 'NicknameListed'
+                // 1. Ambil event Listed dari blok awal sampai sekarang
                 const filter = gameContract.filters.NicknameListed();
-                const logs = await gameContract.queryFilter(filter, startBlock, "latest"); 
+                const logs = await gameContract.queryFilter(filter, 0, "latest"); // Optimasi: Ganti 0 dengan blok deploy
 
-                // 3. Siapkan Wadah Data Unik 
-                const uniqueListings = new Map();
-
-                // Loop dari TERBARU ke TERLAMA (Reverse)
-                for (const log of logs.reverse()) {
-                    const seller = log.args[0];
-                    const nick = log.args[1];
-                    const price = log.args[2];
-                    
-                    if (!uniqueListings.has(nick)) {
-                        uniqueListings.set(nick, { seller, price }); 
-                    }
-                }
-
-                container.innerHTML = ""; 
+                // 2. Filter item yang valid (Cek ke kontrak apakah statusnya masih For Sale)
+                container.innerHTML = "";
                 let activeCount = 0;
 
-                if (uniqueListings.size === 0) {
-                     container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty (in last 2 days). Be the first to sell!</div>`;
-                     return;
-                }
-
-                // 4. Validasi Status Terkini (Cek Mapping Kontrak)
-                for (let [nick, data] of uniqueListings) {
+                // Kita balik urutan agar yang terbaru di atas (reverse)
+                for (const log of logs.reverse()) {
+                    const nick = log.args[1]; // arg ke-1 adalah nickname string
+                    const seller = log.args[0];
+                    
+                    // Cek Live Data dari Mapping
+                    // (Karena bisa saja sudah laku/dibatalkan tapi event log lama masih ada)
+                    // Hash nickname untuk lookup mapping
                     const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
                     const saleData = await gameContract.nickMarketplace(nickHash);
                     
+                    // Struct: [isForSale, price, seller]
                     const isForSale = saleData[0];
-                    const currentPriceBig = saleData[1];
+                    const priceBig = saleData[1];
                     const currentSeller = saleData[2];
 
-                    // HANYA TAMPILKAN JIKA MASIH DIJUAL
                     if (isForSale) {
                         activeCount++;
-                        const priceEth = ethers.formatEther(currentPriceBig);
-
+                        const priceEth = ethers.formatEther(priceBig);
+                        
                         const card = document.createElement('div');
                         card.className = 'nick-card';
-                        
-                        const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
-
-                        let btnAction = '';
-                        if (isMyListing) {
-                            btnAction = `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Your Listing (Cancel)</button>`;
-                        } else {
-                            btnAction = `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`;
-                        }
-
                         card.innerHTML = `
                             <div class="nick-title">${nick}</div>
                             <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Seller: ${currentSeller.substring(0,6)}...</div>
                             <div class="nick-price">${priceEth} ETH</div>
-                            ${btnAction}
+                            
+                            ${currentSeller.toLowerCase() === userAddress.toLowerCase() 
+                                ? `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Cancel Sale</button>` 
+                                : `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`
+                            }
                         `;
                         container.appendChild(card);
                     }
                 }
 
                 if (activeCount === 0) {
-                    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">No active listings found.</div>`;
+                    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty. Be the first to list!</div>`;
                 }
 
             } catch (e) {
                 console.error("Market Load Error:", e);
-                container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">
-                    Failed to load market data.<br>
-                    <small>${e.message}</small>
-                </div>`;
+                container.innerHTML = `<div style="color:red; text-align:center;">Failed to load market data (RPC Error).</div>`;
             }
         }
 
-        // --- 4. LOAD INVENTORY (FIXED) ---
-async function loadMyInventory() {
-    if(!gameContract) return;
-    const container = document.getElementById('inventory-list');
-    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading your collection...</div>';
-    
-    try {
-        // 1. Cek Nickname yang Sedang Aktif
-        const userData = await gameContract.users(userAddress);
-        const activeNick = userData[0]; 
-        document.getElementById('active-nick-display').innerText = activeNick;
-
-        // 2. Ambil Semua Nickname Milik User
-        let myNicks = [];
-        let index = 0;
-        while(true) {
+        // --- 4. LOAD INVENTORY ---
+        async function loadMyInventory() {
+            if(!gameContract) return;
+            const container = document.getElementById('inventory-list');
+            
             try {
-                const nick = await gameContract.myNicknames(userAddress, index);
-                myNicks.push(nick);
-                index++;
-            } catch (e) { break; }
-        }
+                // A. Cek Nickname Aktif
+                const userData = await gameContract.users(userAddress);
+                const activeNick = userData[0]; // [0] = nickname
+                document.getElementById('active-nick-display').innerText = activeNick;
 
-        container.innerHTML = ""; 
-
-        if (myNicks.length === 0) {
-            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
-            return;
-        }
-
-        // 3. Render Setiap Nickname
-        await Promise.all(myNicks.map(async (nick) => {
-            const isActive = (nick === activeNick);
-            
-            // Cek Status Jual
-            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-            const saleData = await gameContract.nickMarketplace(nickHash);
-            const isForSale = saleData[0]; 
-            const priceBig = saleData[1];  
-
-            const div = document.createElement('div');
-            div.className = 'nick-card';
-            
-            let statusLabel = '';
-            let actionHtml = '';
-
-            // Label Status (Active / Idle)
-            if (isActive) {
-                statusLabel = `<div style="color:var(--success); font-weight:bold; font-size:0.8em; margin-bottom:10px;">✅ CURRENTLY ACTIVE</div>`;
-            } else {
-                statusLabel = `<div style="color:#666; font-size:0.8em; margin-bottom:10px;">💤 In Inventory</div>`;
-            }
-
-            // LOGIKA TOMBOL AKSI
-            if (isForSale) {
-                // KONDISI 1: SEDANG DIJUAL (Tampilkan tombol Cancel)
-                const priceEth = ethers.formatEther(priceBig);
-                actionHtml = `
-                    <div style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); padding:8px; border-radius:5px; margin-bottom:10px;">
-                        Listed for: <b style="color:var(--gold);">${priceEth} ETH</b>
-                    </div>
-                    <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">
-                        ❌ Cancel Sale
-                    </button>
-                `;
-            } 
-            else {
-                // KONDISI 2: TIDAK DIJUAL (Tampilkan tombol Switch & Sell)
+                // B. Ambil List Nickname yang dimiliki (Perlu helper / loop manual)
+                // Karena Solidity V4 'myNicknames' adalah array, kita harus cek panjangnya dulu, lalu loop.
+                // TAPI: Ethers.js tidak bisa mengambil seluruh array string sekaligus dengan mudah.
+                // KITA AKAN SCAN EVENT 'NicknameSold' atau 'UserRegistered' untuk user ini? 
+                // TIDAK, lebih baik loop index jika kontrak mengizinkan, atau fallback ke UI simple.
                 
-                // Tombol Switch hanya muncul kalau TIDAK aktif
-                let switchBtn = '';
-                if (!isActive) {
-                    switchBtn = `
-                        <button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:15px;">
-                            🔄 Switch to this
-                        </button>
-                    `;
+                // SOLUSI: Karena di kontrak V4 public mapping(address => string[]) public myNicknames;
+                // Kita tidak bisa mengambil LENGTH array mapping public standard secara langsung di Ethers v6 tanpa fungsi helper.
+                // WORKAROUND: Kita coba ambil index 0 sampai error (Brute Force index).
+                
+                container.innerHTML = "";
+                let index = 0;
+                let myNicks = [];
+
+                while(true) {
+                    try {
+                        const nick = await gameContract.myNicknames(userAddress, index);
+                        myNicks.push(nick);
+                        index++;
+                    } catch (e) {
+                        break; // Stop jika error (artinya array habis)
+                    }
                 }
 
-                // Tombol Sell selalu muncul
-                let sellForm = `
-                    <div style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
-                        <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
-                        <div style="display:flex; gap:5px;">
-                            
-                            <input type="number" id="price-${nick}" class="sell-input" placeholder="Price (ETH)" style="margin-bottom:0;">
-                            
-                            <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:auto; padding:0 15px; margin-top:0;">
-                                SELL
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                actionHtml = switchBtn + sellForm;
+                if (myNicks.length === 0) {
+                    container.innerHTML = `<div style="text-align:center; color:#555;">You don't own any nicknames yet.</div>`;
+                    return;
+                }
+
+                // Render List
+                myNicks.forEach(nick => {
+                    // Cek apakah sedang dijual?
+                    // (Logic tambahan: Cek mapping nickMarketplace untuk nick ini, kalau dijual kasih tombol Cancel)
+                    
+                    const isActive = (nick === activeNick);
+                    
+                    const div = document.createElement('div');
+                    div.className = 'nick-card';
+                    
+                    let actionButtons = '';
+                    
+                    if (isActive) {
+                        actionButtons = `<div style="color:var(--success); font-weight:bold; padding:10px;">Currently Active</div>`;
+                    } else {
+                        actionButtons = `
+                            <button class="btn-action btn-use" onclick="switchNick('${nick}')">Switch to this</button>
+                            <div style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
+                                <input type="number" id="price-${nick}" class="sell-input" placeholder="Price in ETH">
+                                <button class="btn-action btn-sell" onclick="sellNick('${nick}')">Sell Nickname</button>
+                            </div>
+                        `;
+                    }
+
+                    div.innerHTML = `
+                        <div class="nick-title" style="color:white;">${nick}</div>
+                        ${actionButtons}
+                    `;
+                    container.appendChild(div);
+                });
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = "Error loading inventory.";
             }
-
-            div.innerHTML = `
-                <div class="nick-title" style="color:white; word-break:break-all;">${nick}</div>
-                ${statusLabel}
-                ${actionHtml}
-            `;
-            container.appendChild(div);
-        }));
-
-    } catch (e) {
-        console.error("Inventory Error:", e);
-        container.innerHTML = `<div style="color:red;">Error loading inventory.</div>`;
-    }
-}
+        }
 
         // --- 5. TRANSAKSI (BUY, SELL, SWITCH) ---
 
@@ -480,65 +416,17 @@ async function loadMyInventory() {
         }
 
         async function sellNickname(nick) {
-    // 1. Debugging Awal (Cek apakah tombol merespon)
-    console.log("Tombol Sell ditekan untuk:", nick);
-
-    // 2. Cek Koneksi Kontrak
-    if (!gameContract) {
-        alert("Koneksi ke Smart Contract terputus. Silakan refresh halaman.");
-        return;
-    }
-
-    // 3. Ambil Elemen Input dengan Aman
-    const inputId = `price-${nick}`;
-    const inputEl = document.getElementById(inputId);
-
-    // Jika elemen tidak ditemukan, hentikan proses (Jangan crash)
-    if (!inputEl) {
-        alert(`Error Sistem: Input harga dengan ID '${inputId}' tidak ditemukan di HTML.`);
-        return;
-    }
-
-    const priceInput = inputEl.value;
-
-    // 4. Validasi Input
-    if (!priceInput || parseFloat(priceInput) <= 0) {
-        alert("Harap masukkan harga jual yang valid (Wajib lebih dari 0 ETH)!");
-        return;
-    }
-
-    try {
-        // 5. Konversi Harga & Eksekusi
-        // Pastikan dikonversi ke string dulu agar parseEther aman
-        const priceWei = ethers.parseEther(priceInput.toString());
-        
-        console.log(`Mengirim Transaksi: Sell ${nick} seharga ${priceInput} ETH`);
-        
-        // Panggil Kontrak
-        const tx = await gameContract.sellNickname(nick, priceWei);
-        
-        alert("Transaksi dikirim! Silakan cek MetaMask Anda...");
-        
-        await tx.wait();
-        
-        alert("Berhasil! Nickname sudah terdaftar di pasar.");
-        
-        // Refresh Halaman
-        if(typeof loadMyInventory === 'function') loadMyInventory();
-
-    } catch (e) {
-        console.error("Error Sell:", e);
-        
-        // Parsing pesan error agar mudah dibaca user
-        let msg = e.reason || e.message || "Unknown Error";
-        if (msg.includes("user rejected")) {
-            msg = "Anda membatalkan transaksi di MetaMask.";
-        } else if (msg.includes("Not yours")) {
-            msg = "Nickname ini bukan milik Anda!";
-        }
-        
-        alert("GAGAL: " + msg);
-    }
+            const priceInput = document.getElementById(`price-${nick}`).value;
+            if(!priceInput || priceInput <= 0) { alert("Invalid price"); return; }
+            
+            try {
+                const priceWei = ethers.parseEther(priceInput);
+                const tx = await gameContract.sellNickname(nick, priceWei);
+                alert("Listing for sale...");
+                await tx.wait();
+                alert("Listed!");
+                loadMyInventory(); // Refresh agar tombol berubah jadi cancel (opsional logicnya)
+            } catch(e) { alert("Error: " + e.message); }
         }
 
         async function cancelSale(nick) {
