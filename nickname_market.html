@@ -186,20 +186,26 @@
 .badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; }
 /* --- 1. SETUP WARNA (Sell = Hijau, Buy = Biru) --- */
 
-/* Badge Type: SELL (Hijau) */
-.badge-sell {
-    background: rgba(0, 255, 157, 0.1); /* Hijau Transparan */
-    color: #00ff9d;                     /* Teks Hijau Neon */
-    border: 1px solid #00ff9d;          /* Garis Hijau */
+/* 1. Badge SELL - ON SALE (Hijau) */
+.badge-sell-active {
+    background: rgba(0, 255, 157, 0.1); 
+    color: #00ff9d;                     
+    border: 1px solid #00ff9d;          
 }
 
-/* Badge Type: BUY (Biru) */
+/* 2. Badge SELL - SOLDOUT (Merah) - INI YANG BARU */
+.badge-sell-sold {
+    background: rgba(255, 77, 77, 0.1); 
+    color: #ff4d4d;                     
+    border: 1px solid #ff4d4d;          
+}
+
+/* 3. Badge BUY (Biru) */
 .badge-buy {
-    background: rgba(0, 210, 255, 0.1); /* Biru Transparan */
-    color: #00d2ff;                     /* Teks Biru Neon */
-    border: 1px solid #00d2ff;          /* Garis Biru */
+    background: rgba(0, 210, 255, 0.1); 
+    color: #00d2ff;                     
+    border: 1px solid #00d2ff;          
 }
-
 
 /* --- 2. SETUP STATUS TEKS --- */
 
@@ -725,31 +731,118 @@ async function loadMyInventory() {
         // B. PROSES DATA LISTING (Event NicknameListed)
         // V4 Args: [0]seller, [1]nick, [2]price, [3]timestamp
         // Kita pakai Promise.all untuk cek status aktifnya
+        await Promise.all(logsSold.map(async (log) => {
+
+            const buyer = log.args[0].toLowerCase();
+
+            const seller = log.args[1].toLowerCase();
+
+            const nick = log.args[2];
+
+            const price = ethers.formatEther(log.args[3]);
+
+            const timestamp = Number(log.args[4]); 
+
+
+
+            if (buyer === userAddress.toLowerCase()) {
+
+                // SAYA BELI -> Warna Biru
+
+                myHistory.push({
+
+                    type: 'Buy',
+
+                    nick: nick,
+
+                    price: price,
+
+                    status: 'Taken ✅',
+
+                    cssClass: 'status-success', // Teks Biru
+
+                    badgeType: 'badge-buy',     // [3] KOTAK BIRU
+
+                    timestamp: timestamp
+
+                });
+
+            } 
+
+            else if (seller === userAddress.toLowerCase()) {
+
+                // BARANG SAYA LAKU -> Warna Merah
+
+                myHistory.push({
+
+                    type: 'Sell',
+
+                    nick: nick,
+
+                    price: price,
+
+                    status: 'SOLDOUT ✅',
+
+                    cssClass: 'status-sold',      // Teks Merah
+
+                    badgeType: 'badge-sell-sold', // [2] KOTAK MERAH (BARU)
+
+                    timestamp: timestamp
+
+                });
+
+            }
+
+        }));
+
+
+
+        // B. PROSES DATA LISTING (Logs Listed)
+
         await Promise.all(logsList.map(async (log) => {
+
             const seller = log.args[0].toLowerCase();
+
             
-            // Hanya jika SAYA yang melisting
+
             if (seller === userAddress.toLowerCase()) {
+
                 const nick = log.args[1];
-                
-                // Cek ke Smart Contract: Apakah barang ini MASIH dijual?
-                // (Supaya kalau sudah laku/cancel, tidak muncul dobel status "On Sale")
+
                 const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+
                 const saleData = await gameContract.nickMarketplace(nickHash);
-                const isStillForSale = saleData[0]; // index 0 = bool isForSale
+
+                const isStillForSale = saleData[0];
+
+
 
                 if (isStillForSale) {
+
+                    // MASIH DIJUAL -> Warna Hijau
+
                     myHistory.push({
+
                         type: 'Sell',
+
                         nick: nick,
+
                         price: ethers.formatEther(log.args[2]),
+
                         status: 'On Sale 🛒',
-                        cssClass: 'status-sale',
-                        badgeType: 'badge-sell',
-                        timestamp: Number(log.args[3]) // V4 Punya timestamp di event
+
+                        cssClass: 'status-sale',        // Teks Hijau
+
+                        badgeType: 'badge-sell-active', // [1] KOTAK HIJAU
+
+                        timestamp: Number(log.args[3]) 
+
                     });
+
                 }
+
             }
+
         }));
 
         // Sorting Waktu (Terbaru di atas)
