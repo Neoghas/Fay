@@ -26,10 +26,6 @@
             display: flex; justify-content: space-between; align-items: center;
             padding-bottom: 20px; border-bottom: 1px solid #333; margin-bottom: 20px;
         }
-        .btn-back {
-            background: #333; color: white; border: none; padding: 8px 15px; 
-            border-radius: 8px; cursor: pointer; text-decoration: none; font-weight: bold;
-        }
         .btn-connect {
             background: var(--primary); color: #000; border: none; padding: 8px 15px;
             border-radius: 8px; cursor: pointer; font-weight: bold;
@@ -255,7 +251,7 @@
 <body>
 
     <header>
-        <a href="index.html" class="btn-back">Back to Game</a>
+        <a href="index">Back to Game</a>
         <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </header>
 
@@ -557,37 +553,38 @@ function timeSince(date) {
     return Math.floor(seconds) + "s";
 }
 
-        // --- 4. LOAD INVENTORY (FIXED) ---
-        async function loadMyInventory() {
+        // --- SCRIPT KHUSUS KONTRAK V4 (YANG SUDAH DEPLOY) ---
+
+async function loadMyInventory() {
     if(!gameContract || !userAddress) return;
     
     const container = document.getElementById('inventory-list');
     const tableBody = document.getElementById('history-body');
     
-    // Reset Tampilan
-    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Syncing Collection...</div>';
+    // Tampilan Loading
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Syncing V4 Data...</div>';
     tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading history...</td></tr>';
 
     try {
-        // ==========================================
-        // BAGIAN 1: GRID KOLEKSI (ITEM MILIK SAYA)
-        // ==========================================
+        // ============================================================
+        // BAGIAN 1: GRID KOLEKSI (HANYA ITEM MILIK SAYA)
+        // ============================================================
         
-        // Ambil Nickname yang sedang dipakai
+        // 1. Ambil Nickname Aktif
         const userData = await gameContract.users(userAddress);
         const activeNick = userData[0]; 
         document.getElementById('active-nick-display').innerText = activeNick;
 
-        // Ambil SEMUA nickname yang dimiliki wallet ini
+        // 2. Ambil Array Nickname Milik User
+        // Di V4, kita pakai loop myNicknames(address, index)
         let myNicks = [];
         let index = 0;
         while(true) {
             try {
-                // Fungsi ini GARANSI hanya mengembalikan item milik User
                 const nick = await gameContract.myNicknames(userAddress, index);
                 myNicks.push(nick);
                 index++;
-            } catch (e) { break; }
+            } catch (e) { break; } // Berhenti jika index habis
         }
 
         container.innerHTML = ""; 
@@ -598,20 +595,16 @@ function timeSince(date) {
             for (let nick of myNicks) {
                 const isActive = (nick === activeNick);
                 const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+                
+                // PANGGIL DATA MARKET (V4 STRUCT)
+                // Struct V4 hanya punya 3 data: [isForSale, price, seller]
                 const saleData = await gameContract.nickMarketplace(nickHash);
                 
                 const isForSale = saleData[0]; 
                 const priceBig = saleData[1];  
-                const rarityCode = saleData[4]; // V6 Struct
-                const ownerCount = saleData[5]; // V6 Struct
+                // Note: Rarity & OwnerCount TIDAK ADA di V4, jadi kita hapus kodenya biar gak error.
 
-                // Badge Rarity
-                let rarityHtml = '<div class="badge-rarity rarity-0">COMMON</div>';
-                if(rarityCode == 3) rarityHtml = `<div class="badge-rarity rarity-3">MYTHICAL 💎</div>`;
-                else if(rarityCode == 2) rarityHtml = `<div class="badge-rarity rarity-2">LEGENDARY</div>`;
-                else if(rarityCode == 1) rarityHtml = `<div class="badge-rarity rarity-1">RARE</div>`;
-
-                // Render Kartu
+                // Render Kartu (Tanpa Badge Rarity/Hand)
                 const div = document.createElement('div');
                 div.className = 'nick-card';
                 
@@ -637,10 +630,9 @@ function timeSince(date) {
                 }
 
                 div.innerHTML = `
-                    ${rarityHtml}
-                    <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
-                    <div style="text-align:center; margin-bottom:10px;">
-                        <span class="owner-badge">🔄 Hand #${ownerCount || 1}</span>
+                    <div class="nick-title-premium" style="margin-top:15px;">${nick}</div>
+                    <div style="text-align:center; margin-bottom:10px; font-size:0.8em; color:#888;">
+                        (Standard Item)
                     </div>
                     ${actionHtml}
                 `;
@@ -648,31 +640,31 @@ function timeSince(date) {
             }
         }
 
-        // ==========================================
-        // BAGIAN 2: TABEL HISTORY (LOGIKA DIPERKETAT)
-        // ==========================================
+        // ============================================================
+        // BAGIAN 2: TABEL HISTORY (LOGIKA BENAR UNTUK V4)
+        // ============================================================
         
         const filterList = gameContract.filters.NicknameListed();
         const filterSold = gameContract.filters.NicknameSold();
         
-        // Ambil Data Blockchain
+        // PENTING: Gunakan DEPLOY_BLOCK agar tidak kena RPC Error 100.000 block
+        // Pastikan variabel const DEPLOY_BLOCK = 18xxxxxx; ada di bagian atas script Anda
         const logsList = await gameContract.queryFilter(filterList, DEPLOY_BLOCK, "latest");
         const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
 
         let myHistory = [];
-        const soldItemsSet = new Set(); // Untuk melacak item yang sudah laku
 
-        // A. PROSES DATA TERJUAL (Prioritas Tinggi)
-        await Promise.all(logsSold.map(async (log) => {
-            // Argumen Event: [0]=Buyer, [1]=Seller, [2]=Nick, [3]=Price
+        // A. PROSES DATA TERJUAL & DIBELI (Event NicknameSold)
+        // V4 Args: [0]buyer, [1]seller, [2]nick, [3]price, [4]timestamp
+        logsSold.forEach(log => {
             const buyer = log.args[0].toLowerCase();
             const seller = log.args[1].toLowerCase();
             const nick = log.args[2];
             const price = ethers.formatEther(log.args[3]);
-            const block = await log.getBlock();
+            const timestamp = Number(log.args[4]); // V4 Punya timestamp di event
 
-            // KASUS 1: SAYA MEMBELI (BUY)
             if (buyer === userAddress.toLowerCase()) {
+                // SAYA BELI (Masuk Koleksi)
                 myHistory.push({
                     type: 'Buy',
                     nick: nick,
@@ -680,52 +672,48 @@ function timeSince(date) {
                     status: 'Taken ✅',
                     cssClass: 'status-success',
                     badgeType: 'badge-buy',
-                    timestamp: block.timestamp
+                    timestamp: timestamp
                 });
             } 
-            // KASUS 2: BARANG SAYA LAKU (SELL - SOLD)
             else if (seller === userAddress.toLowerCase()) {
+                // BARANG SAYA LAKU
                 myHistory.push({
                     type: 'Sell',
                     nick: nick,
                     price: price,
                     status: 'SOLDOUT ✅',
-                    cssClass: 'status-sold', // Merah
+                    cssClass: 'status-sold',
                     badgeType: 'badge-sell',
-                    timestamp: block.timestamp
+                    timestamp: timestamp
                 });
-                // Tandai bahwa listing ini sudah laku (biar tidak duplikat status On Sale)
-                soldItemsSet.add(nick + seller); 
             }
-        }));
+        });
 
-        // B. PROSES DATA LISTING (Cek apakah masih aktif)
+        // B. PROSES DATA LISTING (Event NicknameListed)
+        // V4 Args: [0]seller, [1]nick, [2]price, [3]timestamp
+        // Kita pakai Promise.all untuk cek status aktifnya
         await Promise.all(logsList.map(async (log) => {
-            // Argumen: [0]=Seller, [1]=Nick
             const seller = log.args[0].toLowerCase();
-            const nick = log.args[1];
-
+            
             // Hanya jika SAYA yang melisting
             if (seller === userAddress.toLowerCase()) {
-                // Cek apakah listing ini sudah berujung SOLD?
-                // Jika sudah sold, jangan tampilkan "On Sale" lagi di history agar rapi
-                // (Kecuali Anda ingin mencatat sejarah listingnya juga)
+                const nick = log.args[1];
                 
-                // Cek status real-time di kontrak (Apakah masih dijual?)
+                // Cek ke Smart Contract: Apakah barang ini MASIH dijual?
+                // (Supaya kalau sudah laku/cancel, tidak muncul dobel status "On Sale")
                 const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
                 const saleData = await gameContract.nickMarketplace(nickHash);
-                const isStillForSale = saleData[0];
+                const isStillForSale = saleData[0]; // index 0 = bool isForSale
 
                 if (isStillForSale) {
-                    const block = await log.getBlock();
                     myHistory.push({
                         type: 'Sell',
                         nick: nick,
                         price: ethers.formatEther(log.args[2]),
                         status: 'On Sale 🛒',
-                        cssClass: 'status-sale', // Biru
+                        cssClass: 'status-sale',
                         badgeType: 'badge-sell',
-                        timestamp: block.timestamp
+                        timestamp: Number(log.args[3]) // V4 Punya timestamp di event
                     });
                 }
             }
@@ -758,10 +746,14 @@ function timeSince(date) {
 
     } catch (e) {
         console.error("Inventory Load Error:", e);
-        tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history.</td></tr>`;
-    }
+        // Menangani Error RPC Max Range
+        let msg = "Error loading history.";
+        if(e.message && e.message.includes("max block range")) {
+            msg = "RPC Error: Change DEPLOY_BLOCK variable!";
         }
-        
+        tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">${msg}</td></tr>`;
+    }
+}
 
         async function loadMarketListings() {
 
