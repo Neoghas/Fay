@@ -290,7 +290,7 @@
 <body>
 
     <header>
-        <a href="index">Back to Game</a>
+        <a href="index">Back to Gam</a>
         <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </header>
 
@@ -599,13 +599,12 @@ function timeSince(date) {
     const container = document.getElementById('inventory-list');
     const tableBody = document.getElementById('history-body');
     
-    // Reset Tampilan
-    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Syncing Data...</div>';
-    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading history...</td></tr>';
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Updating Collection...</div>';
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Scanning history...</td></tr>';
 
     try {
         // ==========================================
-        // BAGIAN 1: GRID KOLEKSI (ITEM MILIK SAYA)
+        // BAGIAN 1: GRID KARTU (ITEM YANG SAYA MILIKI)
         // ==========================================
         const userData = await gameContract.users(userAddress);
         const activeNick = userData[0]; 
@@ -613,7 +612,7 @@ function timeSince(date) {
 
         let myNicks = [];
         let index = 0;
-        // Loop ini aman karena memanggil index array langsung dari kontrak
+        // Ambil data real-time dari kontrak (Pasti milik user)
         while(true) {
             try {
                 const nick = await gameContract.myNicknames(userAddress, index);
@@ -630,20 +629,23 @@ function timeSince(date) {
             for (let nick of myNicks) {
                 const isActive = (nick === activeNick);
                 const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+                // Cek status JUAL di Smart Contract
                 const saleData = await gameContract.nickMarketplace(nickHash);
                 
-                const isForSale = saleData[0]; 
+                const isForSale = saleData[0]; // true = tombol cancel, false = tombol sell
                 const priceBig = saleData[1];  
 
-                // Render Kartu (V4 Standard)
+                // Render Kartu
                 const div = document.createElement('div');
                 div.className = 'nick-card';
                 
                 let actionHtml = '';
+                
+                // LOGIKA TOMBOL (Ini yang menentukan tampilan Cancel/Sell)
                 if (isForSale) {
                     const priceEth = ethers.formatEther(priceBig);
                     actionHtml = `
-                        <div style="font-size:0.8em; color:var(--gold); text-align:center; margin-bottom:5px;">Listed: ${priceEth} ETH</div>
+                        <div style="font-size:0.8em; color:var(--gold); text-align:center; margin-bottom:5px;">Currently Listed: ${priceEth} ETH</div>
                         <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">❌ Cancel Sale</button>
                     `;
                 } else {
@@ -661,10 +663,7 @@ function timeSince(date) {
                 }
 
                 div.innerHTML = `
-                    <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
-                    <div style="text-align:center; margin-bottom:10px;">
-                        <span class="owner-badge">Item</span>
-                    </div>
+                    <div class="nick-title-premium" style="margin-top:15px;">${nick}</div>
                     ${actionHtml}
                 `;
                 container.appendChild(div);
@@ -672,36 +671,37 @@ function timeSince(date) {
         }
 
         // ==========================================
-        // BAGIAN 2: TABEL HISTORY (FIX DUPLIKAT)
+        // BAGIAN 2: TABEL HISTORY (LOGIKA DIPERBAIKI)
         // ==========================================
         
         const filterList = gameContract.filters.NicknameListed();
         const filterSold = gameContract.filters.NicknameSold();
         
-        // Ambil Data
+        // Ambil Data dari Block Awal (DEPLOY_BLOCK)
         const logsList = await gameContract.queryFilter(filterList, DEPLOY_BLOCK, "latest");
         const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
 
         let myHistory = [];
-        const processedIDs = new Set(); // 🔥 ALAT PENCEGAH DUPLIKAT 🔥
+        const processedIDs = new Set(); // Anti-Duplikat
 
-        // A. PROSES DATA TERJUAL & BELI
+        // A. PROSES DATA TERJUAL & TERBELI (Logs Sold)
         await Promise.all(logsSold.map(async (log) => {
-            // Buat ID Unik: Hash Transaksi + Index Log
             const uniqueID = `${log.transactionHash}_${log.index}`;
-            
-            // JIKA ID SUDAH ADA, LEWATI (JANGAN DIMASUKKAN LAGI)
-            if (processedIDs.has(uniqueID)) return; 
-            processedIDs.add(uniqueID); // Catat ID ini
+            if (processedIDs.has(uniqueID)) return;
+            processedIDs.add(uniqueID);
 
+            // Parsing Data Event Sold: [buyer, seller, nick, price, timestamp]
             const buyer = log.args[0].toLowerCase();
             const seller = log.args[1].toLowerCase();
             const nick = log.args[2];
             const price = ethers.formatEther(log.args[3]);
-            const timestamp = Number(log.args[4]); // V4
+            const timestamp = Number(log.args[4]);
 
+            // LOGIKA PEMISAHAN BUYER DAN SELLER
+            // Gunakan else if agar tidak ganda jika user beli dari diri sendiri (testnet)
+            
             if (buyer === userAddress.toLowerCase()) {
-                // SAYA BELI -> Warna Biru
+                // SAYA SEBAGAI PEMBELI -> 'Taken' (Biru)
                 myHistory.push({
                     type: 'Buy',
                     nick: nick,
@@ -713,7 +713,7 @@ function timeSince(date) {
                 });
             } 
             else if (seller === userAddress.toLowerCase()) {
-                // SAYA JUAL (LAKU) -> Warna Merah
+                // SAYA SEBAGAI PENJUAL -> 'Soldout' (Merah)
                 myHistory.push({
                     type: 'Sell',
                     nick: nick,
@@ -726,112 +726,60 @@ function timeSince(date) {
             }
         }));
 
-        // B. PROSES DATA LISTING (ON SALE)
-        const latestListingsMap = new Map();
-
-
-
-        for (const log of logsList) {
-
+        // B. PROSES DATA LISTING (Logs Listed)
+        // Hanya tampilkan jika statusnya MASIH ON SALE di Smart Contract
+        await Promise.all(logsList.map(async (log) => {
+            const uniqueID = `${log.transactionHash}_${log.index}`;
+            if (processedIDs.has(uniqueID)) return;
+            
             const seller = log.args[0].toLowerCase();
 
-            // Hanya proses jika saya penjualnya
-
+            // Hanya jika SAYA yang melisting
             if (seller === userAddress.toLowerCase()) {
-
                 const nick = log.args[1];
-
-                // Simpan ke Map. Karena log urut dari lama ke baru, 
-
-                // data lama otomatis tertimpa data baru.
-
-                // Hasilnya: Map hanya berisi "Jejak Terakhir" setiap nickname.
-
-                latestListingsMap.set(nick, log);
-
-            }
-
-        }
-
-
-
-        // 2. Proses Validasi (Cek ke Smart Contract)
-
-        // Kita hanya memproses data yang sudah disaring di Map
-
-        await Promise.all(Array.from(latestListingsMap.values()).map(async (log) => {
-
-            const uniqueID = `${log.transactionHash}_${log.index}`;
-
-            
-
-            // Cek ID Unik (Safety)
-
-            if (processedIDs.has(uniqueID)) return;
-
-
-
-            const nick = log.args[1];
-
-            
-
-            // Cek Status Realtime: Apakah MASIH dijual sekarang?
-
-            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-
-            const saleData = await gameContract.nickMarketplace(nickHash);
-
-            const isStillForSale = saleData[0];
-
-
-
-            if (isStillForSale) {
-
-                processedIDs.add(uniqueID); // Catat ID
-
                 
+                // CEK SMART CONTRACT: Apakah barang ini MASIH aktif dijual?
+                // Jika sudah sold atau dicancel, isForSale akan false.
+                const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+                const saleData = await gameContract.nickMarketplace(nickHash);
+                const isStillForSale = saleData[0];
 
-                myHistory.push({
-
-                    type: 'Sell',
-
-                    nick: nick,
-
-                    price: ethers.formatEther(log.args[2]),
-
-                    status: 'On Sale 🛒',
-
-                    cssClass: 'status-sale', 
-
-                    badgeType: 'badge-sell-active', 
-
-                    timestamp: Number(log.args[3]) 
-
-                });
-
+                if (isStillForSale) {
+                    processedIDs.add(uniqueID); // Catat ID
+                    
+                    myHistory.push({
+                        type: 'Sell',
+                        nick: nick,
+                        price: ethers.formatEther(log.args[2]),
+                        status: 'On Sale 🛒',
+                        cssClass: 'status-sale', 
+                        badgeType: 'badge-sell-active', // Hijau
+                        timestamp: Number(log.args[3]) 
+                    });
+                }
             }
-
         }));
 
-        // Sorting
+        // Sorting (Terbaru di atas)
         myHistory.sort((a, b) => b.timestamp - a.timestamp);
 
-        // Render
+        // Render Tabel
         tableBody.innerHTML = "";
         if (myHistory.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No transaction history yet.</td></tr>';
         } else {
             myHistory.forEach(item => {
                 const dateObj = new Date(item.timestamp * 1000);
-                const fullDate = dateObj.toLocaleDateString('id-ID') + " " + dateObj.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                // Format Tanggal Pendek (Tgl/Bln Jam:Menit)
+                const dateStr = dateObj.toLocaleDateString('id-ID', {day:'numeric', month:'short'});
+                const timeStr = dateObj.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
 
                 const row = `
                     <tr>
                         <td><span class="badge ${item.badgeType}">${item.type}</span></td>
                         <td style="font-weight:bold; color:white;">${item.nick}</td>
-                        <td>${item.price} ETH</td>
-                        <td class="${item.cssClass}">${item.status}</td>
-                        <td style="color:#888; font-size:0.9em;">${fullDate}</td>
+                        <td>${item.price}</td> <td class="${item.cssClass}">${item.status}</td>
+                        <td style="color:#888; font-size:0.85em;">${dateStr} ${timeStr}</td>
                     </tr>
                 `;
                 tableBody.innerHTML += row;
@@ -839,10 +787,10 @@ function timeSince(date) {
         }
 
     } catch (e) {
-        console.error("History Error:", e);
+        console.error("Error History:", e);
         tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history.</td></tr>`;
     }
-        }
+                }
 
         async function loadMarketListings() {
 
@@ -1198,13 +1146,27 @@ function timeSince(date) {
         }
 
         async function cancelSale(nick) {
-            try {
-                const tx = await gameContract.cancelSale(nick);
-                alert("Cancelling...");
-                await tx.wait();
-                alert("Sale Cancelled!");
-                loadMarketListings();
-            } catch(e) { alert("Error: " + e.message); }
+    if(!gameContract) return;
+    try {
+        const tx = await gameContract.cancelSale(nick);
+        
+        // Ubah tombol jadi Loading
+        const btn = document.activeElement;
+        if(btn) btn.innerText = "Processing...";
+        
+        // TUNGGU SAMPAI TRANSAKSI SUKSES DI BLOCKCHAIN
+        await tx.wait(); 
+        
+        alert("✅ Sale Cancelled Successfully!");
+        
+        // Refresh Halaman Otomatis untuk memperbarui status kartu
+        loadMyInventory(); 
+        loadMarketListing();
+        
+    } catch(e) { 
+        console.error(e);
+        alert("❌ Error: " + (e.reason || e.message)); 
+    }
         }
 
         async function switchNick(nick) {
