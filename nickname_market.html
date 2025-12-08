@@ -361,6 +361,34 @@
     transform: scale(1.2) rotate(90deg); /* Animasi Putar Mekanis */
 }
 
+        /* GAYA ICON GAMBAR (PNG) */
+.search-icon-img {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+    opacity: 0.8;
+}
+
+.search-clear-img {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    margin-left: 10px;
+    
+    /* Animasi (Sama seperti sebelumnya) */
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.5) rotate(-90deg);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* State Visible */
+.search-clear-img.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1) rotate(0deg);
+}
+
         /* --- NOTIFIKASI HASIL PENCARIAN KOSONG --- */
 .no-results-box {
     grid-column: 1 / -1; /* Wajib: Agar pesan mengisi lebar penuh grid */
@@ -381,10 +409,19 @@
 }
 
 .no-results-icon {
-    font-size: 3em;
+    /* Hapus font-size lama */
     margin-bottom: 15px;
-    display: block;
-    filter: grayscale(100%) opacity(0.5);
+    display: flex;           /* Gunakan flex biar ketengah */
+    justify-content: center; /* Gunakan flex biar ketengah */
+}
+
+/* Tambahkan style khusus untuk gambarnya */
+.no-results-icon img {
+    width: 80px;    /* Atur ukuran gambar (sesuaikan selera) */
+    height: auto;
+    /* Efek Futuristik: */
+    filter: grayscale(80%) opacity(0.6) drop-shadow(0 0 10px rgba(0, 210, 255, 0.3));
+    transition: all 0.3s ease;
 }
 
 .no-results-text {
@@ -397,6 +434,11 @@
     font-size: 0.85em;
     color: #555;
     margin-top: 5px;
+}
+
+.no-results-box:hover .no-results-icon img {
+    filter: grayscale(0%) opacity(1) drop-shadow(0 0 15px rgba(0, 210, 255, 0.6));
+    transform: scale(1.05);
 }
         
     </style>
@@ -415,17 +457,16 @@
 
     <div class="search-container">
     <div class="search-wrapper">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Search nickname... (e.g. King, 888)" onkeyup="filterMarket()" oninput="toggleClear()">
-        
-        <span id="clearBtn" class="search-clear" onclick="clearSearch()">✕</span>
-    </div>
+    <img src="search.png" class="search-icon-img">
+    <input type="text" id="searchInput" placeholder="Search nickname..." onkeyup="filterMarket()" oninput="toggleClear()">      
+    <img src="x.svg" id="clearBtn" class="search-clear-img" onclick="clearSearch()">
+        </div>
     </div>
 
     <div id="view-buy" class="market-view">
         <div id="market-list" class="market-grid">
             <div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">
-                Scanning Blockchain for Listings... <br> (This may take a few seconds)
+                Scanning Listings... <br> (This may take a few seconds)
             </div>
         </div>
     </div>
@@ -1400,17 +1441,13 @@ function filterMarket() {
     // 2. LOGIKA MENAMPILKAN "NO RESULTS"
     
     // Cek apakah elemen pesan error sudah ada?
-    let noResMsg = document.getElementById('no-results-msg');
-    
-    // JIKA TIDAK ADA HASIL (foundCount 0) DAN KOLOM TIDAK KOSONG
-    if (foundCount === 0 && filter.length > 0) {
-        if (!noResMsg) {
-            // Buat elemen baru jika belum ada
-            noResMsg = document.createElement('div');
+    noResMsg = document.createElement('div');
             noResMsg.id = 'no-results-msg';
             noResMsg.className = 'no-results-box';
             noResMsg.innerHTML = `
-                <div class="no-results-icon">📡</div>
+                <div class="no-results-icon">
+                    <img src="radar.svg">
+                </div>
                 <div class="no-results-text">No Nickname Found</div>
                 <div class="no-results-sub">Try searching for "${input.value}" with different keywords</div>
             `;
