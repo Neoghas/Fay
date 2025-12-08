@@ -292,19 +292,19 @@
             📜 Market Status & History
         </h3>
         <div class="table-responsive">
-            <table class="market-table">
-                <thead>
-                    <tr>
-                        <th>Type</th>
-                        <th>Nickname</th>
-                        <th>Price</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody id="history-body">
-                    <tr><td colspan="4" style="text-align:center;">Waiting for wallet connection...</td></tr>
-                </tbody>
-            </table>
+    <table class="market-table">
+        <thead>
+            <tr>
+                <th>Type</th>
+                <th>Nickname</th>
+                <th>Price</th>
+                <th>Status</th>
+                <th>Date</th> </tr>
+        </thead>
+        <tbody id="history-body">
+            <tr><td colspan="5" style="text-align:center;">Loading history...</td></tr>
+        </tbody>
+    </table>
         </div>
     </div>
 
@@ -558,18 +558,22 @@ function timeSince(date) {
 }
 
         // --- 4. LOAD INVENTORY (FIXED) ---
-async function loadMyInventory() {
-    if(!gameContract) return;
-    const container = document.getElementById('inventory-list');
-    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666;">Loading your collection...</div>';
+        async function loadMyInventory() {
+    if(!gameContract || !userAddress) return;
     
+    const container = document.getElementById('inventory-list');
+    const tableBody = document.getElementById('history-body');
+    
+    // Loading State
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Verifying ownership...</div>';
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Syncing blockchain history...</td></tr>';
+
     try {
-        // 1. Cek Nickname yang Sedang Aktif
+        // --- BAGIAN A: GRID KARTU (SAMA SEPERTI SEBELUMNYA) ---
         const userData = await gameContract.users(userAddress);
         const activeNick = userData[0]; 
         document.getElementById('active-nick-display').innerText = activeNick;
 
-        // 2. Ambil Semua Nickname Milik User
         let myNicks = [];
         let index = 0;
         while(true) {
@@ -581,92 +585,159 @@ async function loadMyInventory() {
         }
 
         container.innerHTML = ""; 
-
         if (myNicks.length === 0) {
             container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
-            return;
-        }
-
-        // 3. Render Setiap Nickname
-        await Promise.all(myNicks.map(async (nick) => {
-            const isActive = (nick === activeNick);
-            
-            // Cek Status Jual
-            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-            const saleData = await gameContract.nickMarketplace(nickHash);
-            const isForSale = saleData[0]; 
-            const priceBig = saleData[1];  
-
-            const div = document.createElement('div');
-            div.className = 'nick-card';
-            
-            let statusLabel = '';
-            let actionHtml = '';
-
-            // Label Status (Active / Idle)
-            if (isActive) {
-                statusLabel = `<div style="color:var(--success); font-weight:bold; font-size:0.8em; margin-bottom:10px;">✅ CURRENTLY ACTIVE</div>`;
-            } else {
-                statusLabel = `<div style="color:#666; font-size:0.8em; margin-bottom:10px;">💤 In Inventory</div>`;
-            }
-
-            // LOGIKA TOMBOL AKSI
-            if (isForSale) {
-                // KONDISI 1: SEDANG DIJUAL (Tampilkan tombol Cancel)
-                const priceEth = ethers.formatEther(priceBig);
-                actionHtml = `
-                    <div style="background:rgba(255,215,0,0.1); border:1px solid var(--gold); padding:8px; border-radius:5px; margin-bottom:10px;">
-                        Listed for: <b style="color:var(--gold);">${priceEth} ETH</b>
-                    </div>
-                    <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">
-                        ❌ Cancel Sale
-                    </button>
-                `;
-            } 
-            else {
-                // KONDISI 2: TIDAK DIJUAL (Tampilkan tombol Switch & Sell)
+        } else {
+            for (let nick of myNicks) {
+                const isActive = (nick === activeNick);
+                const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+                const saleData = await gameContract.nickMarketplace(nickHash);
                 
-                // Tombol Switch hanya muncul kalau TIDAK aktif
-                let switchBtn = '';
-                if (!isActive) {
-                    switchBtn = `
-                        <button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:15px;">
-                            🔄 Switch to this
-                        </button>
+                const isForSale = saleData[0]; 
+                const priceBig = saleData[1];  
+                const rarityCode = saleData[4];
+                const ownerCount = saleData[5];
+
+                let rarityHtml = '';
+                if(rarityCode == 3) rarityHtml = `<div class="badge-rarity rarity-3">MYTHICAL 💎</div>`;
+                else if(rarityCode == 2) rarityHtml = `<div class="badge-rarity rarity-2">LEGENDARY</div>`;
+                else if(rarityCode == 1) rarityHtml = `<div class="badge-rarity rarity-1">RARE</div>`;
+                else rarityHtml = `<div class="badge-rarity rarity-0">COMMON</div>`;
+
+                const div = document.createElement('div');
+                div.className = 'nick-card';
+                
+                let actionHtml = '';
+                if (isForSale) {
+                    const priceEth = ethers.formatEther(priceBig);
+                    actionHtml = `
+                        <div style="font-size:0.8em; color:var(--gold); text-align:center; margin-bottom:5px;">Listed: ${priceEth} ETH</div>
+                        <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">❌ Cancel Sale</button>
+                    `;
+                } else {
+                    let switchBtn = isActive 
+                        ? `<div style="text-align:center; color:var(--success); font-weight:bold; padding:8px;">✅ ACTIVE</div>`
+                        : `<button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:5px;">🔄 USE</button>`;
+
+                    actionHtml = `
+                        ${switchBtn}
+                        <div style="display:flex; gap:5px; margin-top:5px;">
+                            <input type="number" id="price-${nick}" class="sell-input" placeholder="ETH" style="margin-bottom:0; width:60%;">
+                            <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:40%; margin-top:0;">SELL</button>
+                        </div>
                     `;
                 }
 
-                // Tombol Sell selalu muncul
-                let sellForm = `
-                    <div style="border-top:1px solid #333; padding-top:10px; margin-top:10px;">
-                        <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Sell this nickname:</div>
-                        <div style="display:flex; gap:5px;">
-                            
-                            <input type="number" id="price-${nick}" class="sell-input" placeholder="Price (ETH)" style="margin-bottom:0;">
-                            
-                            <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:auto; padding:0 15px; margin-top:0;">
-                                SELL
-                            </button>
-                        </div>
+                div.innerHTML = `
+                    ${rarityHtml}
+                    <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
+                    <div style="text-align:center; margin-bottom:10px;">
+                        <span class="owner-badge">🔄 Hand #${ownerCount}</span>
                     </div>
+                    ${actionHtml}
                 `;
-                
-                actionHtml = switchBtn + sellForm;
+                container.appendChild(div);
             }
+        }
 
-            div.innerHTML = `
-                <div class="nick-title" style="color:white; word-break:break-all;">${nick}</div>
-                ${statusLabel}
-                ${actionHtml}
-            `;
-            container.appendChild(div);
+        // --- BAGIAN B: TABEL HISTORY PRIBADI (LOGIKA BARU) ---
+        
+        const filterList = gameContract.filters.NicknameListed();
+        const filterSold = gameContract.filters.NicknameSold();
+        
+        // Ambil Log
+        const logsList = await gameContract.queryFilter(filterList, DEPLOY_BLOCK, "latest");
+        const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
+
+        let myHistory = [];
+
+        // 1. PROSES DATA LISTING (Jika Saya Seller -> Status: On Sale)
+        // Kita pakai Promise.all agar pengambilan timestamp block lebih cepat (paralel)
+        await Promise.all(logsList.map(async (log) => {
+            if (log.args[0].toLowerCase() === userAddress.toLowerCase()) {
+                const block = await log.getBlock(); // Ambil waktu blok
+                myHistory.push({
+                    type: 'Sell',
+                    nick: log.args[1],
+                    price: ethers.formatEther(log.args[2]),
+                    status: 'On Sale 🛒',
+                    cssClass: 'status-sale',  // Warna Biru
+                    badgeType: 'badge-sell',
+                    timestamp: block.timestamp
+                });
+            }
         }));
 
+        // 2. PROSES DATA SOLD (Transaksi Terjadi)
+        await Promise.all(logsSold.map(async (log) => {
+            const buyer = log.args[0].toLowerCase();
+            const seller = log.args[1].toLowerCase();
+            const block = await log.getBlock(); // Ambil waktu blok
+
+            if (buyer === userAddress.toLowerCase()) {
+                // KASUS 1: SAYA BELI (Mode Buy)
+                myHistory.push({
+                    type: 'Buy',
+                    nick: log.args[2],
+                    price: ethers.formatEther(log.args[3]),
+                    status: 'Taken ✅',
+                    cssClass: 'status-success', // Warna Hijau
+                    badgeType: 'badge-buy',
+                    timestamp: block.timestamp
+                });
+            } 
+            else if (seller === userAddress.toLowerCase()) {
+                // KASUS 2: BARANG SAYA LAKU (Mode Sell)
+                myHistory.push({
+                    type: 'Sell',
+                    nick: log.args[2],
+                    price: ethers.formatEther(log.args[3]),
+                    status: 'SOLDOUT ✅',
+                    cssClass: 'status-sold', // Warna Merah (atau Emas)
+                    badgeType: 'badge-sell',
+                    timestamp: block.timestamp
+                });
+            }
+        }));
+
+        // 3. SORTING: Urutkan dari Waktu Paling Baru ke Lama
+        myHistory.sort((a, b) => b.timestamp - a.timestamp);
+
+        // 4. RENDER KE HTML
+        tableBody.innerHTML = "";
+        
+        if (myHistory.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No transaction history yet.</td></tr>';
+        } else {
+            myHistory.forEach(item => {
+                // Konversi Timestamp ke Format Lokal (WIB/dll)
+                const dateObj = new Date(item.timestamp * 1000);
+                const dateStr = dateObj.toLocaleDateString('id-ID', {
+                    day: 'numeric', month: 'short', year: 'numeric'
+                });
+                const timeStr = dateObj.toLocaleTimeString('id-ID', {
+                    hour: '2-digit', minute: '2-digit'
+                });
+                const fullDate = `${dateStr} ${timeStr}`;
+
+                const row = `
+                    <tr>
+                        <td><span class="badge ${item.badgeType}">${item.type}</span></td>
+                        <td style="font-weight:bold; color:white;">${item.nick}</td>
+                        <td>${item.price} ETH</td>
+                        <td class="${item.cssClass}">${item.status}</td>
+                        <td style="color:#888; font-size:0.9em;">${fullDate}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        }
+
     } catch (e) {
-        console.error("Inventory Error:", e);
-        container.innerHTML = `<div style="color:red;">Error loading inventory.</div>`;
+        console.error("Inventory History Error:", e);
+        tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history.</td></tr>`;
     }
-}
+        }
 
         async function loadMarketListings() {
 
