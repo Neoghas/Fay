@@ -360,6 +360,44 @@
     text-shadow: 0 0 10px rgba(255, 0, 85, 0.6); /* Efek Glow */
     transform: scale(1.2) rotate(90deg); /* Animasi Putar Mekanis */
 }
+
+        /* --- NOTIFIKASI HASIL PENCARIAN KOSONG --- */
+.no-results-box {
+    grid-column: 1 / -1; /* Wajib: Agar pesan mengisi lebar penuh grid */
+    text-align: center;
+    padding: 50px 20px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin-top: 20px;
+    
+    /* Animasi Muncul */
+    opacity: 0;
+    animation: fadeIn 0.5s forwards;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+}
+
+.no-results-icon {
+    font-size: 3em;
+    margin-bottom: 15px;
+    display: block;
+    filter: grayscale(100%) opacity(0.5);
+}
+
+.no-results-text {
+    font-size: 1.1em;
+    color: #888;
+    font-weight: bold;
+}
+
+.no-results-sub {
+    font-size: 0.85em;
+    color: #555;
+    margin-top: 5px;
+}
         
     </style>
 </head>
@@ -1323,57 +1361,76 @@ function timeSince(date) {
             } catch(e) { alert("Error: " + e.message); }
         }
 
-        // --- FITUR SMART SEARCH (GOOGLE STYLE) ---
+        // --- SMART SEARCH V3 (WITH NO RESULTS NOTIFICATION) ---
 function filterMarket() {
-    // 1. Ambil teks yang diketik user (ubah ke huruf kecil biar tidak sensitif kapital)
     const input = document.getElementById('searchInput');
     const filter = input.value.toLowerCase();
     
-    // 2. Tentukan kita sedang di tab mana? (Global atau Inventory)
-    // Kita cari container yang sedang aktif (tidak display: none)
+    // Tentukan Container Aktif
     const viewBuy = document.getElementById('view-buy');
-    const viewInv = document.getElementById('view-inventory');
-    
     let targetContainer;
+    
     if (viewBuy.style.display !== 'none') {
         targetContainer = document.getElementById('market-list');
     } else {
         targetContainer = document.getElementById('inventory-list');
     }
 
-    // 3. Ambil semua kartu nickname di dalam container aktif
     const cards = targetContainer.getElementsByClassName('nick-card');
-
-    // 4. Loop cek satu per satu
     let foundCount = 0;
     
+    // 1. Loop & Filter Kartu
     for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
-        
-        // Cari elemen judul nickname di dalam kartu
         const titleEl = card.querySelector('.nick-title, .nick-title-premium');
         
         if (titleEl) {
             const txtValue = titleEl.textContent || titleEl.innerText;
-            
-            // LOGIKA PENCARIAN ALA GOOGLE (Match Partial)
-            // Jika user ketik "bin", maka "Binance" dan "Robinhood" akan muncul.
             if (txtValue.toLowerCase().indexOf(filter) > -1) {
                 card.style.display = ""; // Tampilkan
+                card.style.borderColor = (filter.length > 0) ? "var(--primary)" : ""; // Highlight jika ada search
                 foundCount++;
-                
-                // Efek Visual: Sedikit highlight kartu yang cocok (Opsional)
-                card.style.borderColor = "var(--primary)";
             } else {
                 card.style.display = "none"; // Sembunyikan
-                card.style.borderColor = "#333"; // Reset border
+                card.style.borderColor = "";
             }
         }
     }
+
+    // 2. LOGIKA MENAMPILKAN "NO RESULTS"
     
-    // Opsional: Tampilkan pesan jika tidak ada hasil
-    // (Bisa dikembangkan nanti)
-    console.log(`Found ${foundCount} items matching "${filter}"`);
+    // Cek apakah elemen pesan error sudah ada?
+    let noResMsg = document.getElementById('no-results-msg');
+    
+    // JIKA TIDAK ADA HASIL (foundCount 0) DAN KOLOM TIDAK KOSONG
+    if (foundCount === 0 && filter.length > 0) {
+        if (!noResMsg) {
+            // Buat elemen baru jika belum ada
+            noResMsg = document.createElement('div');
+            noResMsg.id = 'no-results-msg';
+            noResMsg.className = 'no-results-box';
+            noResMsg.innerHTML = `
+                <div class="no-results-icon">📡</div>
+                <div class="no-results-text">No Nickname Found</div>
+                <div class="no-results-sub">Try searching for "${input.value}" with different keywords</div>
+            `;
+            targetContainer.appendChild(noResMsg);
+        } else {
+            // Update teks pencarian di pesan (opsional, biar interaktif)
+            noResMsg.querySelector('.no-results-sub').innerText = `Try searching for "${input.value}" with different keywords`;
+            noResMsg.style.display = "block"; // Pastikan terlihat
+            // Pindahkan ke container yang aktif (kalau user pindah tab)
+            if(noResMsg.parentNode !== targetContainer) {
+                targetContainer.appendChild(noResMsg);
+            }
+        }
+    } 
+    // JIKA ADA HASIL, SEMBUNYIKAN PESAN ERROR
+    else {
+        if (noResMsg) {
+            noResMsg.style.display = "none";
+        }
+    }
 }
 
         // --- FITUR CLEAR SEARCH (ADD-ON) ---
