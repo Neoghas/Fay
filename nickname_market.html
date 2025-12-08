@@ -284,19 +284,104 @@
                 gap: 4px;
             }
         }
+
+        /* --- PREMIUM SEARCH BAR --- */
+.search-container {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(25, 26, 35, 0.8); /* Gelap Transparan */
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 12px 15px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.search-wrapper:focus-within {
+    border-color: var(--primary); /* Glow Biru saat aktif */
+    box-shadow: 0 0 15px rgba(0, 210, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.search-icon {
+    font-size: 1.2em;
+    margin-right: 10px;
+    filter: grayscale(100%);
+    opacity: 0.7;
+}
+
+#searchInput {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1em;
+    font-weight: 500;
+    outline: none;
+}
+
+#searchInput::placeholder {
+    color: #555;
+    font-style: italic;
+}
+
+        /* --- TOMBOL CLEAR FUTURISTIK --- */
+.search-clear {
+    font-size: 1.2em;
+    color: #555;
+    cursor: pointer;
+    
+    /* Keadaan Awal: Tersembunyi & Kecil */
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.5) rotate(-90deg);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Efek membal (Bouncy) */
+    
+    margin-left: 10px;
+    padding: 5px;
+}
+
+/* Keadaan Aktif: Muncul */
+.search-clear.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1) rotate(0deg); /* Normal */
+    color: #888;
+}
+
+/* Keadaan Hover: Berputar & Menyala Merah */
+.search-clear.visible:hover {
+    color: #ff0055; /* Merah Neon */
+    text-shadow: 0 0 10px rgba(255, 0, 85, 0.6); /* Efek Glow */
+    transform: scale(1.2) rotate(90deg); /* Animasi Putar Mekanis */
+}
         
     </style>
 </head>
 <body>
 
     <header>
-        <a href="index">Back to Gam</a>
+        <a href="index">Back to Game</a>
         <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </header>
 
     <div class="market-tabs">
         <button class="tab-btn active" onclick="switchTab('buy')" id="tab-buy">🛒 Global Market</button>
         <button class="tab-btn" onclick="switchTab('inventory')" id="tab-inventory">🎒 My Inventory</button>
+    </div>
+
+    <div class="search-container">
+    <div class="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search nickname... (e.g. King, 888)" onkeyup="filterMarket()" oninput="toggleClear()">
+        
+        <span id="clearBtn" class="search-clear" onclick="clearSearch()">✕</span>
+    </div>
     </div>
 
     <div id="view-buy" class="market-view">
@@ -1237,9 +1322,93 @@ function timeSince(date) {
                 loadMyInventory();
             } catch(e) { alert("Error: " + e.message); }
         }
+
+        // --- FITUR SMART SEARCH (GOOGLE STYLE) ---
+function filterMarket() {
+    // 1. Ambil teks yang diketik user (ubah ke huruf kecil biar tidak sensitif kapital)
+    const input = document.getElementById('searchInput');
+    const filter = input.value.toLowerCase();
+    
+    // 2. Tentukan kita sedang di tab mana? (Global atau Inventory)
+    // Kita cari container yang sedang aktif (tidak display: none)
+    const viewBuy = document.getElementById('view-buy');
+    const viewInv = document.getElementById('view-inventory');
+    
+    let targetContainer;
+    if (viewBuy.style.display !== 'none') {
+        targetContainer = document.getElementById('market-list');
+    } else {
+        targetContainer = document.getElementById('inventory-list');
+    }
+
+    // 3. Ambil semua kartu nickname di dalam container aktif
+    const cards = targetContainer.getElementsByClassName('nick-card');
+
+    // 4. Loop cek satu per satu
+    let foundCount = 0;
+    
+    for (let i = 0; i < cards.length; i++) {
+        const card = cards[i];
+        
+        // Cari elemen judul nickname di dalam kartu
+        const titleEl = card.querySelector('.nick-title, .nick-title-premium');
+        
+        if (titleEl) {
+            const txtValue = titleEl.textContent || titleEl.innerText;
+            
+            // LOGIKA PENCARIAN ALA GOOGLE (Match Partial)
+            // Jika user ketik "bin", maka "Binance" dan "Robinhood" akan muncul.
+            if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                card.style.display = ""; // Tampilkan
+                foundCount++;
+                
+                // Efek Visual: Sedikit highlight kartu yang cocok (Opsional)
+                card.style.borderColor = "var(--primary)";
+            } else {
+                card.style.display = "none"; // Sembunyikan
+                card.style.borderColor = "#333"; // Reset border
+            }
+        }
+    }
+    
+    // Opsional: Tampilkan pesan jika tidak ada hasil
+    // (Bisa dikembangkan nanti)
+    console.log(`Found ${foundCount} items matching "${filter}"`);
+}
+
+        // --- FITUR CLEAR SEARCH (ADD-ON) ---
+
+// 1. Fungsi Mengatur Visibilitas Tombol (Dipanggil saat mengetik)
+function toggleClear() {
+    const input = document.getElementById('searchInput');
+    const btn = document.getElementById('clearBtn');
+    
+    if (input.value.length > 0) {
+        btn.classList.add('visible'); // Munculkan tombol
+    } else {
+        btn.classList.remove('visible'); // Sembunyikan tombol
+    }
+}
+
+// 2. Fungsi Eksekusi Hapus (Dipanggil saat klik X)
+function clearSearch() {
+    const input = document.getElementById('searchInput');
+    
+    // a. Hapus Teks
+    input.value = '';
+    
+    // b. Sembunyikan Tombol X lagi
+    toggleClear();
+    
+    // c. Reset Tampilan Market (Panggil Filter ulang dengan teks kosong)
+    filterMarket();
+    
+    // d. UX Premium: Kembalikan kursor ke input agar user bisa langsung ketik lagi
+    input.focus();
+}
         
         // Auto connect jika sudah pernah connect di halaman utama (opsional)
-        // window.onload = connectWallet; 
+        window.onload = connectWallet; 
     </script>
 </body>
 </html>
