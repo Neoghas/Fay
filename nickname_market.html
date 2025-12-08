@@ -1402,25 +1402,30 @@ function timeSince(date) {
             } catch(e) { alert("Error: " + e.message); }
         }
 
-        // --- SMART SEARCH V3 (WITH NO RESULTS NOTIFICATION) ---
+        // --- SMART SEARCH V4 (FIXED IMAGE & LOGIC) ---
 function filterMarket() {
+    // 1. Definisi Variabel
     const input = document.getElementById('searchInput');
     const filter = input.value.toLowerCase();
     
-    // Tentukan Container Aktif
+    // 2. Tentukan Tab Mana yang Aktif
     const viewBuy = document.getElementById('view-buy');
     let targetContainer;
     
-    if (viewBuy.style.display !== 'none') {
+    // Cek apakah tab Buy sedang tampil?
+    if (viewBuy && viewBuy.style.display !== 'none') {
         targetContainer = document.getElementById('market-list');
     } else {
         targetContainer = document.getElementById('inventory-list');
     }
 
+    // Safety check: Jika container belum siap, stop biar gak error
+    if (!targetContainer) return;
+
+    // 3. Loop Filter Kartu
     const cards = targetContainer.getElementsByClassName('nick-card');
     let foundCount = 0;
     
-    // 1. Loop & Filter Kartu
     for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
         const titleEl = card.querySelector('.nick-title, .nick-title-premium');
@@ -1428,42 +1433,62 @@ function filterMarket() {
         if (titleEl) {
             const txtValue = titleEl.textContent || titleEl.innerText;
             if (txtValue.toLowerCase().indexOf(filter) > -1) {
-                card.style.display = ""; // Tampilkan
-                card.style.borderColor = (filter.length > 0) ? "var(--primary)" : ""; // Highlight jika ada search
+                card.style.display = ""; // Muncul
                 foundCount++;
+                // Highlight border kalau sedang search
+                if (filter.length > 0) card.style.borderColor = "var(--primary)";
+                else card.style.borderColor = ""; 
             } else {
-                card.style.display = "none"; // Sembunyikan
+                card.style.display = "none"; // Sembunyi
                 card.style.borderColor = "";
             }
         }
     }
 
-    // 2. LOGIKA MENAMPILKAN "NO RESULTS"
+    // 4. LOGIKA NOTIFIKASI "NO RESULTS" (BAGIAN INI YANG PENTING)
     
-    // Cek apakah elemen pesan error sudah ada?
-    noResMsg = document.createElement('div');
+    // Cek dulu: Apakah pesan error SUDAH ADA di layar?
+    let noResMsg = document.getElementById('no-results-msg');
+    
+    // KONDISI A: Tidak ada hasil DAN User sedang mengetik sesuatu
+    if (foundCount === 0 && filter.length > 0) {
+        
+        if (!noResMsg) {
+            // JIKA BELUM ADA -> BARU KITA BUAT (Create Element)
+            noResMsg = document.createElement('div');
             noResMsg.id = 'no-results-msg';
             noResMsg.className = 'no-results-box';
+            
+            // 👇 INI KODE GAMBAR ANDA 👇
+            // Pastikan file 'radar.svg' ada di folder yang sama dengan file HTML
             noResMsg.innerHTML = `
                 <div class="no-results-icon">
-                    <img src="radar.svg">
+                    <img src="radar.svg" alt="Radar Scan" style="width:80px; opacity:0.6;">
                 </div>
                 <div class="no-results-text">No Nickname Found</div>
                 <div class="no-results-sub">Try searching for "${input.value}" with different keywords</div>
             `;
+            
             targetContainer.appendChild(noResMsg);
+            
         } else {
-            // Update teks pencarian di pesan (opsional, biar interaktif)
-            noResMsg.querySelector('.no-results-sub').innerText = `Try searching for "${input.value}" with different keywords`;
+            // JIKA SUDAH ADA -> CUKUP UPDATE TEKSNYA SAJA (Jangan create ulang!)
+            // Ini mencegah macet
+            const subText = noResMsg.querySelector('.no-results-sub');
+            if(subText) subText.innerText = `Try searching for "${input.value}" with different keywords`;
+            
             noResMsg.style.display = "block"; // Pastikan terlihat
-            // Pindahkan ke container yang aktif (kalau user pindah tab)
+            
+            // Pindahkan ke container yang aktif (kalau user pindah tab saat search)
             if(noResMsg.parentNode !== targetContainer) {
                 targetContainer.appendChild(noResMsg);
             }
         }
+        
     } 
-    // JIKA ADA HASIL, SEMBUNYIKAN PESAN ERROR
+    // KONDISI B: Ada hasil ATAU Input kosong
     else {
+        // Sembunyikan pesan jika ada
         if (noResMsg) {
             noResMsg.style.display = "none";
         }
