@@ -604,35 +604,40 @@ function timeSince(date) {
 
     try {
         // ==========================================
-        // BAGIAN 1: GRID KARTU (ITEM YANG SAYA MILIKI)
+        // BAGIAN 1: GRID KOLEKSI & SELL (FIX GANDA)
         // ==========================================
         const userData = await gameContract.users(userAddress);
         const activeNick = userData[0]; 
         document.getElementById('active-nick-display').innerText = activeNick;
 
-        let myNicks = [];
+        // 1. Ambil Data Mentah dari Blockchain
+        let rawNicks = [];
         let index = 0;
-        // Ambil data real-time dari kontrak (Pasti milik user)
         while(true) {
             try {
                 const nick = await gameContract.myNicknames(userAddress, index);
-                myNicks.push(nick);
+                rawNicks.push(nick);
                 index++;
             } catch (e) { break; }
         }
 
+        // 🔥 FIX UTAMA: Filter Duplikat Data 🔥
+        // Gunakan 'Set' untuk membuang nama yang sama persis
+        const uniqueNicks = [...new Set(rawNicks)];
+
+        // 🔥 FIX TAMPILAN: Bersihkan wadah SETELAH data siap (Mencegah tumpuk)
         container.innerHTML = ""; 
         
-        if (myNicks.length === 0) {
+        if (uniqueNicks.length === 0) {
             container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
         } else {
-            for (let nick of myNicks) {
+            // Loop data yang sudah bersih (uniqueNicks)
+            for (let nick of uniqueNicks) {
                 const isActive = (nick === activeNick);
                 const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-                // Cek status JUAL di Smart Contract
                 const saleData = await gameContract.nickMarketplace(nickHash);
                 
-                const isForSale = saleData[0]; // true = tombol cancel, false = tombol sell
+                const isForSale = saleData[0]; 
                 const priceBig = saleData[1];  
 
                 // Render Kartu
@@ -640,12 +645,10 @@ function timeSince(date) {
                 div.className = 'nick-card';
                 
                 let actionHtml = '';
-                
-                // LOGIKA TOMBOL (Ini yang menentukan tampilan Cancel/Sell)
                 if (isForSale) {
                     const priceEth = ethers.formatEther(priceBig);
                     actionHtml = `
-                        <div style="font-size:0.8em; color:var(--gold); text-align:center; margin-bottom:5px;">Currently Listed: ${priceEth} ETH</div>
+                        <div style="font-size:0.8em; color:var(--gold); text-align:center; margin-bottom:5px;">Listed: ${priceEth} ETH</div>
                         <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">❌ Cancel Sale</button>
                     `;
                 } else {
@@ -663,7 +666,10 @@ function timeSince(date) {
                 }
 
                 div.innerHTML = `
-                    <div class="nick-title-premium" style="margin-top:15px;">${nick}</div>
+                    <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
+                    <div style="text-align:center; margin-bottom:10px;">
+                        <span class="owner-badge">Item</span>
+                    </div>
                     ${actionHtml}
                 `;
                 container.appendChild(div);
