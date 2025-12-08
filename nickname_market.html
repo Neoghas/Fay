@@ -727,35 +727,90 @@ function timeSince(date) {
         }));
 
         // B. PROSES DATA LISTING (ON SALE)
-        await Promise.all(logsList.map(async (log) => {
-            // Buat ID Unik
-            const uniqueID = `${log.transactionHash}_${log.index}`;
-            if (processedIDs.has(uniqueID)) return; 
-            
+        const latestListingsMap = new Map();
+
+
+
+        for (const log of logsList) {
+
             const seller = log.args[0].toLowerCase();
 
-            if (seller === userAddress.toLowerCase()) {
-                const nick = log.args[1];
-                
-                // Cek Status Realtime agar tidak "On Sale" padahal sudah "Soldout"
-                const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-                const saleData = await gameContract.nickMarketplace(nickHash);
-                const isStillForSale = saleData[0];
+            // Hanya proses jika saya penjualnya
 
-                if (isStillForSale) {
-                    processedIDs.add(uniqueID); // Catat ID
-                    
-                    myHistory.push({
-                        type: 'Sell',
-                        nick: nick,
-                        price: ethers.formatEther(log.args[2]),
-                        status: 'On Sale 🛒',
-                        cssClass: 'status-sale', 
-                        badgeType: 'badge-sell-active', 
-                        timestamp: Number(log.args[3]) 
-                    });
-                }
+            if (seller === userAddress.toLowerCase()) {
+
+                const nick = log.args[1];
+
+                // Simpan ke Map. Karena log urut dari lama ke baru, 
+
+                // data lama otomatis tertimpa data baru.
+
+                // Hasilnya: Map hanya berisi "Jejak Terakhir" setiap nickname.
+
+                latestListingsMap.set(nick, log);
+
             }
+
+        }
+
+
+
+        // 2. Proses Validasi (Cek ke Smart Contract)
+
+        // Kita hanya memproses data yang sudah disaring di Map
+
+        await Promise.all(Array.from(latestListingsMap.values()).map(async (log) => {
+
+            const uniqueID = `${log.transactionHash}_${log.index}`;
+
+            
+
+            // Cek ID Unik (Safety)
+
+            if (processedIDs.has(uniqueID)) return;
+
+
+
+            const nick = log.args[1];
+
+            
+
+            // Cek Status Realtime: Apakah MASIH dijual sekarang?
+
+            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+
+            const saleData = await gameContract.nickMarketplace(nickHash);
+
+            const isStillForSale = saleData[0];
+
+
+
+            if (isStillForSale) {
+
+                processedIDs.add(uniqueID); // Catat ID
+
+                
+
+                myHistory.push({
+
+                    type: 'Sell',
+
+                    nick: nick,
+
+                    price: ethers.formatEther(log.args[2]),
+
+                    status: 'On Sale 🛒',
+
+                    cssClass: 'status-sale', 
+
+                    badgeType: 'badge-sell-active', 
+
+                    timestamp: Number(log.args[3]) 
+
+                });
+
+            }
+
         }));
 
         // Sorting
