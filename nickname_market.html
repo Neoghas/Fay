@@ -564,20 +564,26 @@ function timeSince(date) {
     const container = document.getElementById('inventory-list');
     const tableBody = document.getElementById('history-body');
     
-    // Loading State
-    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Verifying ownership...</div>';
-    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Syncing blockchain history...</td></tr>';
+    // Reset Tampilan
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Syncing Collection...</div>';
+    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading history...</td></tr>';
 
     try {
-        // --- BAGIAN A: GRID KARTU (SAMA SEPERTI SEBELUMNYA) ---
+        // ==========================================
+        // BAGIAN 1: GRID KOLEKSI (ITEM MILIK SAYA)
+        // ==========================================
+        
+        // Ambil Nickname yang sedang dipakai
         const userData = await gameContract.users(userAddress);
         const activeNick = userData[0]; 
         document.getElementById('active-nick-display').innerText = activeNick;
 
+        // Ambil SEMUA nickname yang dimiliki wallet ini
         let myNicks = [];
         let index = 0;
         while(true) {
             try {
+                // Fungsi ini GARANSI hanya mengembalikan item milik User
                 const nick = await gameContract.myNicknames(userAddress, index);
                 myNicks.push(nick);
                 index++;
@@ -585,6 +591,7 @@ function timeSince(date) {
         }
 
         container.innerHTML = ""; 
+        
         if (myNicks.length === 0) {
             container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
         } else {
@@ -595,15 +602,16 @@ function timeSince(date) {
                 
                 const isForSale = saleData[0]; 
                 const priceBig = saleData[1];  
-                const rarityCode = saleData[4];
-                const ownerCount = saleData[5];
+                const rarityCode = saleData[4]; // V6 Struct
+                const ownerCount = saleData[5]; // V6 Struct
 
-                let rarityHtml = '';
+                // Badge Rarity
+                let rarityHtml = '<div class="badge-rarity rarity-0">COMMON</div>';
                 if(rarityCode == 3) rarityHtml = `<div class="badge-rarity rarity-3">MYTHICAL 💎</div>`;
                 else if(rarityCode == 2) rarityHtml = `<div class="badge-rarity rarity-2">LEGENDARY</div>`;
                 else if(rarityCode == 1) rarityHtml = `<div class="badge-rarity rarity-1">RARE</div>`;
-                else rarityHtml = `<div class="badge-rarity rarity-0">COMMON</div>`;
 
+                // Render Kartu
                 const div = document.createElement('div');
                 div.className = 'nick-card';
                 
@@ -632,7 +640,7 @@ function timeSince(date) {
                     ${rarityHtml}
                     <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
                     <div style="text-align:center; margin-bottom:10px;">
-                        <span class="owner-badge">🔄 Hand #${ownerCount}</span>
+                        <span class="owner-badge">🔄 Hand #${ownerCount || 1}</span>
                     </div>
                     ${actionHtml}
                 `;
@@ -640,85 +648,100 @@ function timeSince(date) {
             }
         }
 
-        // --- BAGIAN B: TABEL HISTORY PRIBADI (LOGIKA BARU) ---
+        // ==========================================
+        // BAGIAN 2: TABEL HISTORY (LOGIKA DIPERKETAT)
+        // ==========================================
         
         const filterList = gameContract.filters.NicknameListed();
         const filterSold = gameContract.filters.NicknameSold();
         
-        // Ambil Log
+        // Ambil Data Blockchain
         const logsList = await gameContract.queryFilter(filterList, DEPLOY_BLOCK, "latest");
         const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
 
         let myHistory = [];
+        const soldItemsSet = new Set(); // Untuk melacak item yang sudah laku
 
-        // 1. PROSES DATA LISTING (Jika Saya Seller -> Status: On Sale)
-        // Kita pakai Promise.all agar pengambilan timestamp block lebih cepat (paralel)
-        await Promise.all(logsList.map(async (log) => {
-            if (log.args[0].toLowerCase() === userAddress.toLowerCase()) {
-                const block = await log.getBlock(); // Ambil waktu blok
-                myHistory.push({
-                    type: 'Sell',
-                    nick: log.args[1],
-                    price: ethers.formatEther(log.args[2]),
-                    status: 'On Sale 🛒',
-                    cssClass: 'status-sale',  // Warna Biru
-                    badgeType: 'badge-sell',
-                    timestamp: block.timestamp
-                });
-            }
-        }));
-
-        // 2. PROSES DATA SOLD (Transaksi Terjadi)
+        // A. PROSES DATA TERJUAL (Prioritas Tinggi)
         await Promise.all(logsSold.map(async (log) => {
+            // Argumen Event: [0]=Buyer, [1]=Seller, [2]=Nick, [3]=Price
             const buyer = log.args[0].toLowerCase();
             const seller = log.args[1].toLowerCase();
-            const block = await log.getBlock(); // Ambil waktu blok
+            const nick = log.args[2];
+            const price = ethers.formatEther(log.args[3]);
+            const block = await log.getBlock();
 
+            // KASUS 1: SAYA MEMBELI (BUY)
             if (buyer === userAddress.toLowerCase()) {
-                // KASUS 1: SAYA BELI (Mode Buy)
                 myHistory.push({
                     type: 'Buy',
-                    nick: log.args[2],
-                    price: ethers.formatEther(log.args[3]),
+                    nick: nick,
+                    price: price,
                     status: 'Taken ✅',
-                    cssClass: 'status-success', // Warna Hijau
+                    cssClass: 'status-success',
                     badgeType: 'badge-buy',
                     timestamp: block.timestamp
                 });
             } 
+            // KASUS 2: BARANG SAYA LAKU (SELL - SOLD)
             else if (seller === userAddress.toLowerCase()) {
-                // KASUS 2: BARANG SAYA LAKU (Mode Sell)
                 myHistory.push({
                     type: 'Sell',
-                    nick: log.args[2],
-                    price: ethers.formatEther(log.args[3]),
+                    nick: nick,
+                    price: price,
                     status: 'SOLDOUT ✅',
-                    cssClass: 'status-sold', // Warna Merah (atau Emas)
+                    cssClass: 'status-sold', // Merah
                     badgeType: 'badge-sell',
                     timestamp: block.timestamp
                 });
+                // Tandai bahwa listing ini sudah laku (biar tidak duplikat status On Sale)
+                soldItemsSet.add(nick + seller); 
             }
         }));
 
-        // 3. SORTING: Urutkan dari Waktu Paling Baru ke Lama
+        // B. PROSES DATA LISTING (Cek apakah masih aktif)
+        await Promise.all(logsList.map(async (log) => {
+            // Argumen: [0]=Seller, [1]=Nick
+            const seller = log.args[0].toLowerCase();
+            const nick = log.args[1];
+
+            // Hanya jika SAYA yang melisting
+            if (seller === userAddress.toLowerCase()) {
+                // Cek apakah listing ini sudah berujung SOLD?
+                // Jika sudah sold, jangan tampilkan "On Sale" lagi di history agar rapi
+                // (Kecuali Anda ingin mencatat sejarah listingnya juga)
+                
+                // Cek status real-time di kontrak (Apakah masih dijual?)
+                const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+                const saleData = await gameContract.nickMarketplace(nickHash);
+                const isStillForSale = saleData[0];
+
+                if (isStillForSale) {
+                    const block = await log.getBlock();
+                    myHistory.push({
+                        type: 'Sell',
+                        nick: nick,
+                        price: ethers.formatEther(log.args[2]),
+                        status: 'On Sale 🛒',
+                        cssClass: 'status-sale', // Biru
+                        badgeType: 'badge-sell',
+                        timestamp: block.timestamp
+                    });
+                }
+            }
+        }));
+
+        // Sorting Waktu (Terbaru di atas)
         myHistory.sort((a, b) => b.timestamp - a.timestamp);
 
-        // 4. RENDER KE HTML
+        // Render Tabel
         tableBody.innerHTML = "";
-        
         if (myHistory.length === 0) {
             tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No transaction history yet.</td></tr>';
         } else {
             myHistory.forEach(item => {
-                // Konversi Timestamp ke Format Lokal (WIB/dll)
                 const dateObj = new Date(item.timestamp * 1000);
-                const dateStr = dateObj.toLocaleDateString('id-ID', {
-                    day: 'numeric', month: 'short', year: 'numeric'
-                });
-                const timeStr = dateObj.toLocaleTimeString('id-ID', {
-                    hour: '2-digit', minute: '2-digit'
-                });
-                const fullDate = `${dateStr} ${timeStr}`;
+                const fullDate = dateObj.toLocaleDateString('id-ID') + " " + dateObj.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
 
                 const row = `
                     <tr>
@@ -734,10 +757,11 @@ function timeSince(date) {
         }
 
     } catch (e) {
-        console.error("Inventory History Error:", e);
+        console.error("Inventory Load Error:", e);
         tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history.</td></tr>`;
     }
         }
+        
 
         async function loadMarketListings() {
 
@@ -760,8 +784,6 @@ function timeSince(date) {
     try {
 
         // --- A. AMBIL DATA DARI BLOCKCHAIN ---
-
-        
 
         // 1. Ambil Event Listing (Jualan)
 
