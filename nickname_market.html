@@ -656,6 +656,7 @@
     from { width: 100%; }
     to { width: 0%; }
 }
+
         
     </style>
 </head>
@@ -671,32 +672,34 @@
         <button class="tab-btn" onclick="switchTab('inventory')" id="tab-inventory">🎒 My Inventory</button>
     </div>
 
+    <div id="market-search-panel">
+
     <div class="search-container">
-    <div class="search-wrapper">
-    <img src="search.png" class="search-icon-img">
-    <input type="text" id="searchInput" placeholder="Search nickname..." onkeyup="filterMarket()" oninput="toggleClear()">      
-    <img src="x.svg" id="clearBtn" class="search-clear-img" onclick="clearSearch()">
+        <div class="search-wrapper">
+            <img src="search.png" class="search-icon-img">
+            <input type="text" id="searchInput" placeholder="Search nickname..." onkeyup="filterMarket()" oninput="toggleClear()">      
+            <img src="x.svg" id="clearBtn" class="search-clear-img" onclick="clearSearch()">
         </div>
     </div>
 
     <div class="filter-panel-simple">
-    
-    <div class="filter-box">
-        <label class="filter-label">Sort By</label>
-        <select id="sortSelect" onchange="runSmartFilter()" class="cyber-select">
-            <option value="newest">🆕 Terbaru (Newest)</option>
-            <option value="price_low">📉 Harga Terendah (Cheapest)</option>
-            <option value="price_high">📈 Harga Tertinggi (Expensive)</option>
-            <option value="rarity_high">👑 Rarity Tertinggi (Rarest)</option>
-        </select>
-    </div>
+        <div class="filter-box">
+            <label class="filter-label">Sort By</label>
+            <select id="sortSelect" onchange="runSmartFilter()" class="cyber-select">
+                <option value="newest">🆕 Terbaru (Newest)</option>
+                <option value="price_low">📉 Harga Terendah (Cheapest)</option>
+                <option value="price_high">📈 Harga Tertinggi (Expensive)</option>
+                <option value="rarity_high">👑 Rarity Tertinggi (Rarest)</option>
+            </select>
+        </div>
 
-    <div class="filter-box">
-        <label class="filter-label">Price Range (ETH)</label>
-        <div class="price-input-group">
-            <input type="number" id="minPrice" placeholder="0.01" onkeyup="runSmartFilter()" class="cyber-input">
-            <span class="separator">-</span>
-            <input type="number" id="maxPrice" placeholder="Max" onkeyup="runSmartFilter()" class="cyber-input">
+        <div class="filter-box">
+            <label class="filter-label">Price Range (ETH)</label>
+            <div class="price-input-group">
+                <input type="number" id="minPrice" placeholder="0.01" onkeyup="runSmartFilter()" class="cyber-input">
+                <span class="separator">-</span>
+                <input type="number" id="maxPrice" placeholder="Max" onkeyup="runSmartFilter()" class="cyber-input">
+            </div>
         </div>
     </div>
 
@@ -968,13 +971,28 @@ function renderMarketGrid(data) {
     }
 
     function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.market-view').forEach(v => v.style.display = 'none');
-            document.getElementById(`tab-${tab}`).classList.add('active');
-            document.getElementById(`view-${tab}`).style.display = 'block';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.market-view').forEach(v => v.style.display = 'none');
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    document.getElementById(`view-${tab}`).style.display = 'block';
 
-            if(tab === 'inventory') loadMyInventory();
-            if(tab === 'buy') loadMarketListings();
+    const filterPanel = document.getElementById('market-search-panel');
+    if (filterPanel) {
+        if (tab === 'buy') {
+            filterPanel.style.display = 'block';
+        } else {
+            filterPanel.style.display = 'none';
+        }
+    }
+    if(tab === 'inventory') loadMyInventory();
+    if(tab === 'buy') loadMarketListings();
+    }
+
+        async function initApp() {
+    // ... setup contract ...
+    
+    // Default buka Market (agar Filter muncul)
+    switchTab('market'); 
         }
 
         // --- 3. LOAD MARKET (SCAN EVENTS) ---
