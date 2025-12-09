@@ -555,6 +555,83 @@
         width: 100%;
     }
 }
+        /* --- TOAST CONTAINER --- */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999; /* Paling atas */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* --- TOAST CARD --- */
+.toast-card {
+    min-width: 300px;
+    max-width: 400px;
+    background: rgba(13, 18, 30, 0.85); /* Gelap Transparan */
+    backdrop-filter: blur(12px); /* Efek Kaca Premium */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 4px solid; /* Warna status nanti diatur JS */
+    color: #fff;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+    
+    /* Animasi Masuk */
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Efek Glow di sisi kiri */
+.toast-success { border-left-color: #00ff88; box-shadow: -5px 0 15px rgba(0, 255, 136, 0.2); }
+.toast-error   { border-left-color: #ff0055; box-shadow: -5px 0 15px rgba(255, 0, 85, 0.2); }
+.toast-info    { border-left-color: #00d2ff; box-shadow: -5px 0 15px rgba(0, 210, 255, 0.2); }
+.toast-warning { border-left-color: #ffd700; box-shadow: -5px 0 15px rgba(255, 215, 0, 0.2); }
+
+/* --- ICON & TEXT --- */
+.toast-icon {
+    font-size: 1.5rem;
+}
+.toast-message {
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* --- PROGRESS BAR (Garis Waktu) --- */
+.toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.6);
+    width: 100%;
+    /* Animasi Progress Bar */
+    animation: progressBar linear forwards;
+}
+
+/* --- ANIMATIONS --- */
+@keyframes slideInRight {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(120%); opacity: 0; }
+}
+
+@keyframes progressBar {
+    from { width: 100%; }
+    to { width: 0%; }
+}
         
     </style>
 </head>
@@ -646,6 +723,8 @@
     </div>
 
     </div>
+
+    <div id="toast-container"></div>
 
     <script>
         // --- 1. CONFIGURATION ---
@@ -1341,12 +1420,12 @@ function timeSince(date) {
                 const tx = await gameContract.buyNickname(nick, {
                     value: ethers.parseEther(priceEth)
                 });
-                alert("Buying... Please wait.");
+                showToast("Buying... Please wait.");
                 await tx.wait();
-                alert("Success! You now own: " + nick);
+                showToast("Success! You now own: " + nick);
                 loadMarketListings();
                 loadMyInventory();
-            } catch(e) { alert("Error: " + e.message); }
+            } catch(e) { showToast("Error: " + e.message); }
         }
 
         async function sellNickname(nick) {
@@ -1355,7 +1434,7 @@ function timeSince(date) {
 
     // 2. Cek Koneksi Kontrak
     if (!gameContract) {
-        alert("Koneksi ke Smart Contract terputus. Silakan refresh halaman.");
+        showToast("Koneksi ke Smart Contract terputus. Silakan refresh halaman.");
         return;
     }
 
@@ -1365,7 +1444,7 @@ function timeSince(date) {
 
     // Jika elemen tidak ditemukan, hentikan proses (Jangan crash)
     if (!inputEl) {
-        alert(`Error Sistem: Input harga dengan ID '${inputId}' tidak ditemukan di HTML.`);
+        showToast(`Error Sistem: Input harga dengan ID '${inputId}' tidak ditemukan di HTML.`);
         return;
     }
 
@@ -1373,7 +1452,7 @@ function timeSince(date) {
 
     // 4. Validasi Input
     if (!priceInput || parseFloat(priceInput) <= 0) {
-        alert("Harap masukkan harga jual yang valid (Wajib lebih dari 0 ETH)!");
+        showToast("Harap masukkan harga jual yang valid (Wajib lebih dari 0 ETH)!");
         return;
     }
 
@@ -1385,9 +1464,9 @@ function timeSince(date) {
         console.log(`Mengirim Transaksi: Sell ${nick} seharga ${priceInput} ETH`);
         // Panggil Kontrak
         const tx = await gameContract.sellNickname(nick, priceWei);
-        alert("Transaksi dikirim! Silakan cek MetaMask Anda...");
+        showToast("Transaksi dikirim! Silakan cek MetaMask Anda...");
         await tx.wait();
-        alert("Berhasil! Nickname sudah terdaftar di pasar.");
+        showToast("Berhasil! Nickname sudah terdaftar di pasar.");
         // Refresh Halaman
         if(typeof loadMyInventory === 'function') loadMyInventory();
     } catch (e) {
@@ -1401,7 +1480,7 @@ function timeSince(date) {
             msg = "Nickname ini bukan milik Anda!";
         }
         
-        alert("GAGAL: " + msg);
+        showToast("GAGAL: " + msg);
     }
         }
 
@@ -1415,24 +1494,24 @@ function timeSince(date) {
         
         // TUNGGU SAMPAI TRANSAKSI SUKSES DI BLOCKCHAIN
         await tx.wait();       
-        alert("✅ Sale Cancelled Successfully!");
+        showToast("✅ Sale Cancelled Successfully!");
         
         // Refresh Halaman Otomatis untuk memperbarui status kartu
         loadMyInventory();        
     } catch(e) { 
         console.error(e);
-        alert("❌ Error: " + (e.reason || e.message)); 
+        showToast("❌ Error: " + (e.reason || e.message)); 
     }
         }
 
         async function switchNick(nick) {
             try {
                 const tx = await gameContract.switchNickname(nick);
-                alert("Switching...");
+                showToast("Switching...");
                 await tx.wait();
-                alert("Profile Updated!");
+                showToast("Profile Updated!");
                 loadMyInventory();
-            } catch(e) { alert("Error: " + e.message); }
+            } catch(e) { showToast("Failed: " + e.message, "error"); }
         }
 
         // --- SMART SEARCH V4 (FIXED IMAGE & LOGIC) ---
@@ -1748,6 +1827,61 @@ function clearSearch() {
         container.insertAdjacentHTML('beforeend', cardHTML);
     });
         }
+
+        /**
+ * Menampilkan Toast Notification Futuristik
+ * @param {string} message - Pesan yang ingin ditampilkan
+ * @param {string} type - Tipe: 'success', 'error', 'info', 'warning'
+ * @param {number} duration - Durasi dalam milidetik (Default 4000ms)
+ */
+function showToast(message, type = 'info', duration = 4000) {
+    const container = document.getElementById('toast-container');
+    
+    // Ikon berdasarkan tipe (Bisa ganti SVG atau FontAwesome)
+    const iconMap = {
+        success: '✅', // Atau <i class="fas fa-check-circle"></i>
+        error:   '❌', // Atau <i class="fas fa-times-circle"></i>
+        info:    'ℹ️', // Atau <i class="fas fa-info-circle"></i>
+        warning: '⚠️'  // Atau <i class="fas fa-exclamation-triangle"></i>
+    };
+
+    // Buat elemen div baru
+    const toast = document.createElement('div');
+    
+    // Tambahkan class dasar dan class tipe
+    toast.classList.add('toast-card', `toast-${type}`);
+    
+    // Isi HTML Toast
+    toast.innerHTML = `
+        <div class="toast-icon">${iconMap[type] || '🔔'}</div>
+        <div class="toast-message">${message}</div>
+        <div class="toast-progress" style="animation-duration: ${duration}ms"></div>
+    `;
+
+    // Masukkan ke dalam container (DOM)
+    container.appendChild(toast);
+
+    // --- LOGIKA MENGHILANG ---
+    
+    // 1. Set waktu hapus otomatis
+    setTimeout(() => {
+        removeToast(toast);
+    }, duration);
+
+    // 2. Klik untuk menutup manual (Opsional)
+    toast.onclick = () => removeToast(toast);
+}
+
+// Fungsi Helper: Hapus Toast dengan animasi keluar
+function removeToast(element) {
+    // Tambahkan animasi keluar (CSS)
+    element.style.animation = 'slideOutRight 0.4s forwards';
+    
+    // Tunggu animasi selesai baru hapus dari DOM
+    element.addEventListener('animationend', () => {
+        element.remove();
+    });
+}
         
         // Auto connect jika sudah pernah connect di halaman utama (opsional)
         window.onload = connectWallet; 
