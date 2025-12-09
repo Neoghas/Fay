@@ -1024,7 +1024,6 @@ function timeSince(date) {
     return Math.floor(seconds) + "s";
 }
 
-        // --- SCRIPT KHUSUS KONTRAK V4 (YANG SUDAH DEPLOY) ---
         async function loadMyInventory() {
     if(!gameContract || !userAddress) return;
     
@@ -1036,13 +1035,13 @@ function timeSince(date) {
 
     try {
         // ==========================================
-        // BAGIAN 1: GRID KOLEKSI & SELL (FIX GANDA)
+        // BAGIAN 1: GRID KOLEKSI & SELL
         // ==========================================
         const userData = await gameContract.users(userAddress);
-        const activeNick = userData[0]; 
+        const activeNick = userData.nickname || userData[0]; // Support properti nama atau index
         document.getElementById('active-nick-display').innerText = activeNick;
 
-        // 1. Ambil Data Mentah dari Blockchain
+        // 1. Ambil Data Mentah
         let rawNicks = [];
         let index = 0;
         while(true) {
@@ -1053,24 +1052,23 @@ function timeSince(date) {
             } catch (e) { break; }
         }
 
-        // 🔥 FIX UTAMA: Filter Duplikat Data 🔥
-        // Gunakan 'Set' untuk membuang nama yang sama persis
         const uniqueNicks = [...new Set(rawNicks)];
-
-        // 🔥 FIX TAMPILAN: Bersihkan wadah SETELAH data siap (Mencegah tumpuk)
         container.innerHTML = ""; 
         
         if (uniqueNicks.length === 0) {
             container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
         } else {
-            // Loop data yang sudah bersih (uniqueNicks)
             for (let nick of uniqueNicks) {
                 const isActive = (nick === activeNick);
                 const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
                 const saleData = await gameContract.nickMarketplace(nickHash);
                 
-                const isForSale = saleData[0]; 
-                const priceBig = saleData[1];  
+                // 🔥 PERBAIKAN STRUCT BARU (9 DES 2025) 🔥
+                // Struct: { marketId, isForSale, price, ... }
+                // Index:      0          1        2
+                
+                const isForSale = saleData[1]; // Index 1 (Boolean)
+                const priceBig = saleData[2];  // Index 2 (Price)
 
                 // Render Kartu
                 const div = document.createElement('div');
@@ -1114,98 +1112,82 @@ function timeSince(date) {
         const filterList = gameContract.filters.NicknameListed();
         const filterSold = gameContract.filters.NicknameSold();
         
-        // Ambil Data dari Block Awal (DEPLOY_BLOCK)
         const logsList = await gameContract.queryFilter(filterList, DEPLOY_BLOCK, "latest");
         const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
 
         let myHistory = [];
-        const processedIDs = new Set(); // Anti-Duplikat
+        const processedIDs = new Set(); 
 
         // A. PROSES DATA TERJUAL & TERBELI (Logs Sold)
+        // Event: NicknameSold(buyer, seller, nickname, price, timestamp)
+        // Args:     0       1        2        3        4
         await Promise.all(logsSold.map(async (log) => {
             const uniqueID = `${log.transactionHash}_${log.index}`;
             if (processedIDs.has(uniqueID)) return;
             processedIDs.add(uniqueID);
 
-            // Parsing Data Event Sold: [buyer, seller, nick, price, timestamp]
             const buyer = log.args[0].toLowerCase();
             const seller = log.args[1].toLowerCase();
-            const nick = log.args[2];
-            const price = ethers.formatEther(log.args[3]);
-            const timestamp = Number(log.args[4]);
+            const nick = log.args[2]; // Index 2
+            const price = ethers.formatEther(log.args[3]); // Index 3
+            const timestamp = Number(log.args[4]); // Index 4
 
-            // LOGIKA PEMISAHAN BUYER DAN SELLER
-            // Gunakan else if agar tidak ganda jika user beli dari diri sendiri (testnet)
-            
             if (buyer === userAddress.toLowerCase()) {
-                // SAYA SEBAGAI PEMBELI -> 'Taken' (Biru)
                 myHistory.push({
-                    type: 'Buy',
-                    nick: nick,
-                    price: price,
-                    status: 'Taken ✅',
-                    cssClass: 'status-success', 
-                    badgeType: 'badge-buy', 
-                    timestamp: timestamp
+                    type: 'Buy', nick: nick, price: price, status: 'Taken ✅',
+                    cssClass: 'status-success', badgeType: 'badge-buy', timestamp: timestamp
                 });
             } 
             else if (seller === userAddress.toLowerCase()) {
-                // SAYA SEBAGAI PENJUAL -> 'Soldout' (Merah)
                 myHistory.push({
-                    type: 'Sell',
-                    nick: nick,
-                    price: price,
-                    status: 'SOLDOUT ✅',
-                    cssClass: 'status-sold', 
-                    badgeType: 'badge-sell-sold', 
-                    timestamp: timestamp
+                    type: 'Sell', nick: nick, price: price, status: 'SOLDOUT ✅',
+                    cssClass: 'status-sold', badgeType: 'badge-sell-sold', timestamp: timestamp
                 });
             }
         }));
 
         // B. PROSES DATA LISTING (Logs Listed)
-        // Hanya tampilkan jika statusnya MASIH ON SALE di Smart Contract
+        // Event: NicknameListed(marketId, seller, nickname, price, timestamp)
+        // Args:      0         1        2        3        4
         const latestListingsMap = new Map();
         for (const log of logsList) {
-            const seller = log.args[0].toLowerCase();
-            // Hanya proses jika saya penjualnya
+            const seller = log.args[1].toLowerCase(); // 🔥 Perbaikan: Index 1 adalah Seller
+            
             if (seller === userAddress.toLowerCase()) {
-                const nick = log.args[1];
-                // Simpan ke Map. Karena log urut dari lama ke baru, 
-                // data lama otomatis tertimpa data baru.
-                // Hasilnya: Map hanya berisi "Jejak Terakhir" setiap nickname.
+                const nick = log.args[2]; // 🔥 Perbaikan: Index 2 adalah Nickname
                 latestListingsMap.set(nick, log);
             }
         }
 
-        // 2. Proses Validasi (Cek ke Smart Contract)
-        // Kita hanya memproses data yang sudah disaring di Map
+        // Validasi Status Listing
         await Promise.all(Array.from(latestListingsMap.values()).map(async (log) => {
             const uniqueID = `${log.transactionHash}_${log.index}`;
-            // Cek ID Unik (Safety)
             if (processedIDs.has(uniqueID)) return;
-            const nick = log.args[1];
-            // Cek Status Realtime: Apakah MASIH dijual sekarang?
+            
+            const nick = log.args[2]; // 🔥 Index 2
+            
+            // Cek Status Realtime
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
             const saleData = await gameContract.nickMarketplace(nickHash);
-            const isStillForSale = saleData[0];
+            
+            // 🔥 Perbaikan Struct Check: Index 1 isForSale
+            const isStillForSale = saleData[1]; 
 
             if (isStillForSale) {
-                processedIDs.add(uniqueID); // Catat ID
-
+                processedIDs.add(uniqueID);
                 myHistory.push({
                     type: 'Sell',
                     nick: nick,
-                    price: ethers.formatEther(log.args[2]),
+                    price: ethers.formatEther(log.args[3]), // 🔥 Index 3 Price
                     status: 'On Sale 🛒',
                     cssClass: 'status-sale', 
                     badgeType: 'badge-sell-active', 
-                    timestamp: Number(log.args[3]) 
+                    timestamp: Number(log.args[4]) // 🔥 Index 4 Time
                 });
             }
         }));
 
-        // Sorting (Terbaru di atas)
+        // Sorting
         myHistory.sort((a, b) => b.timestamp - a.timestamp);
 
         // Render Tabel
@@ -1215,18 +1197,15 @@ function timeSince(date) {
         } else {
             myHistory.forEach(item => {
                 const dateObj = new Date(item.timestamp * 1000);
-                // Format Tanggal Pendek (Tgl/Bln Jam:Menit)
                 const dateStr = dateObj.toLocaleDateString('id-ID', {day:'numeric', month:'short'});
                 const timeStr = dateObj.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
 
                 const row = `
                     <tr>
                         <td><span class="badge ${item.badgeType}">${item.type}</span></td>
-                        <td style="font-weight:bold; background: linear-gradient(to bottom, #fff 0%, #ffd700 50%, #b8860b 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 2px 0px rgba(0,0,0,0.5));">${item.nick}</td>
-                        <td style="color:#00d2ff;">${item.price} ETH</td> <td class="${item.cssClass}">${item.status}</td>
+                        <td style="font-weight:bold; background: linear-gradient(to bottom, #fff 0%, #ffd700 50%, #b8860b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${item.nick}</td>
+                        <td style="color:#00d2ff;">${item.price} ETH</td> 
+                        <td class="${item.cssClass}">${item.status}</td>
                         <td style="color:#888; font-size:0.85em;">${dateStr} ${timeStr}</td>
                     </tr>
                 `;
@@ -1236,9 +1215,9 @@ function timeSince(date) {
 
     } catch (e) {
         console.error("Error History:", e);
-        tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history: ${e.message}</td></tr>`;
     }
-}
+        }
 
         async function loadMarketListings() {
     if(!gameContract) return;
