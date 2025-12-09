@@ -663,7 +663,7 @@
 <body>
 
     <header>
-        <a href="index">Faylott</a>
+        <a href="index">Faylotto</a>
         <button id="connectBtn" class="btn-connect" onclick="connectWallet()">Connect Wallet</button>
     </header>
 
@@ -776,100 +776,6 @@
     let userAddress = null;
     let rawMarketData = [];
         
-// 1. FUNGSI UTAMA: DIPANGGIL SAAT ADA PERUBAHAN INPUT
-function runSmartFilter() {
-    const searchText = document.getElementById('searchInput').value.toLowerCase();
-    const sortType = document.getElementById('sortSelect').value;
-    const minP = parseFloat(document.getElementById('minPrice').value) || 0;
-    const maxP = parseFloat(document.getElementById('maxPrice').value) || 999999;
-
-    // A. PROSES PENYARINGAN (FILTERING)
-    let results = rawMarketData.filter(item => {
-        // 1. Filter Search (Nama)
-        if (!item.nickname.toLowerCase().includes(searchText)) return false;
-
-        // 2. Filter Harga
-        const priceEth = parseFloat(item.priceEth); // Pastikan format angka
-        if (priceEth < minP || priceEth > maxP) return false;
-
-        // 3. Filter Rarity (Cek apakah rarity item ada di list aktif)
-        // Convert Enum contract (0,1,2,3) ke String
-        const rarityMap = ["COMMON", "RARE", "LEGENDARY", "MYTHICAL"];
-        const itemRarityStr = rarityMap[item.rarity]; 
-        if (!activeFilters.rarity.includes(itemRarityStr)) return false;
-
-        // 4. Filter DNA (Pola Khusus) - INI YANG CANGGIH
-        if (activeFilters.dna.length > 0) {
-            let dnaMatch = false;
-            const nick = item.nickname;
-            
-            // Cek setiap filter DNA yang aktif
-            activeFilters.dna.forEach(filter => {
-                if (filter === '3_CHAR' && nick.length === 3) dnaMatch = true;
-                if (filter === '4_CHAR' && nick.length === 4) dnaMatch = true;
-                if (filter === 'NUMBERS' && /^[0-9]+$/.test(nick)) dnaMatch = true; // Regex Angka
-                if (filter === 'PALINDROME' && isPalindromeJS(nick)) dnaMatch = true;
-            });
-            
-            if (!dnaMatch) return false;
-        }
-
-        return true; // Lolos semua filter
-    });
-
-    // B. PROSES PENGURUTAN (SORTING)
-    results.sort((a, b) => {
-        if (sortType === 'newest') return b.timestamp - a.timestamp;
-        if (sortType === 'price_low') return a.priceEth - b.priceEth;
-        if (sortType === 'price_high') return b.priceEth - a.priceEth;
-        if (sortType === 'rarity_high') return b.rarity - a.rarity; // Mythical (3) diatas Common (0)
-        return 0;
-    });
-
-    // C. RENDER HASIL
-    renderMarketGrid(results);
-}
-
-// 2. HELPER: MENGATUR TOMBOL CHIP (Toggle)
-function toggleChip(btn, category, value) {
-    // Ubah visual tombol
-    btn.classList.toggle('active');
-
-    // Update logika data
-    const list = activeFilters[category];
-    if (list.includes(value)) {
-        // Hapus dari list
-        activeFilters[category] = list.filter(item => item !== value);
-    } else {
-        // Tambah ke list
-        activeFilters[category].push(value);
-    }
-
-    // Jalankan filter otomatis
-    runSmartFilter();
-}
-
-// 3. HELPER: CEK PALINDROM (Versi JS)
-function isPalindromeJS(str) {
-    const cleanStr = str.toLowerCase();
-    return cleanStr === cleanStr.split('').reverse().join('');
-}
-
-// 4. HELPER: RENDER (Mockup)
-function renderMarketGrid(data) {
-    const container = document.getElementById('market-list'); // ID Container di HTML Anda
-    container.innerHTML = "";
-    document.getElementById('result-count').innerText = `${data.length} Items Found`;
-    if(data.length === 0) {
-        container.innerHTML = `<div class="empty-state">📡 No items found in this sector.</div>`;
-        return;
-    }
-
-    data.forEach(item => {
-        // Panggil fungsi createCard Anda yang lama disini
-        // container.appendChild(createCard(item));
-    });
-}
 
     // --- 2. CORE FUNCTIONS (UPDATED) ---
 
