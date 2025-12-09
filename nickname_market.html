@@ -1376,81 +1376,77 @@ function timeSince(date) {
             } catch(e) { showToast("Failed: " + e.message, "error"); }
         }
 
-        async function sellNickname(nick) {
-    // 1. Debugging Awal (Cek apakah tombol merespon)
-    console.log("Tombol Sell ditekan untuk:", nick);
-
-    // 2. Cek Koneksi Kontrak
-    if (!gameContract) {
-        showToast("Koneksi ke Smart Contract terputus. Silakan refresh halaman.", "warning");
-        return;
-    }
-
-    // 3. Ambil Elemen Input dengan Aman
-    const inputId = `price-${nick}`;
-    const inputEl = document.getElementById(inputId);
-
-    // Jika elemen tidak ditemukan, hentikan proses (Jangan crash)
-    if (!inputEl) {
-        showToast(`Failed Sistem: Input harga dengan ID '${inputId}' tidak ditemukan di HTML.`, "error");
-        return;
-    }
-
-    const priceInput = inputEl.value;
-
-    // 4. Validasi Input
-    if (!priceInput || parseFloat(priceInput) <= 0) {
-        showToast("Harap masukkan harga jual yang valid (Wajib lebih dari 0 ETH)!", "warning");
-        return;
-    }
-
+        // --- FUNGSI JUAL NICKNAME (FIXED) ---
+async function sellNickname(nick) {
     try {
-        // 5. Konversi Harga & Eksekusi
-        // Pastikan dikonversi ke string dulu agar parseEther aman
-        const priceWei = ethers.parseEther(priceInput.toString());
+        // 1. Ambil Harga dari Input HTML
+        const priceInput = document.getElementById(`price-${nick}`);
+        if (!priceInput || !priceInput.value) {
+            showToast("Please enter a price!", "warning");
+            return;
+        }
         
-        console.log(`Mengirim Transaksi: Sell ${nick} seharga ${priceInput} ETH`);
-        // Panggil Kontrak
-        const tx = await gameContract.sellNickname(nick, priceWei);
-        showToast("Transaksi dikirim! Silakan cek MetaMask Anda...", "loading");
+        // Konversi ke Wei
+        const priceEth = priceInput.value;
+        const priceWei = ethers.utils.parseEther(priceEth);
+
+        // 2. SIAPKAN KONEKSI KE MARKET (Bukan Game Contract)
+        if (!gameContract) return;
+        const marketAddress = await gameContract.marketContract();
+        
+        // ABI Minimal untuk fungsi Jual
+        const marketAbi = ["function sellNickname(string memory _nick, uint256 _price) external"];
+        
+        // Buat Instance Market dengan Signer (agar bisa kirim transaksi)
+        const signer = provider.getSigner(); // Pastikan provider global sudah ada
+        const marketInstance = new ethers.Contract(marketAddress, marketAbi, signer);
+
+        // 3. EKSEKUSI TRANSAKSI
+        showToast("Confirm listing in wallet...", "loading");
+        
+        // Panggil fungsi di MARKET INSTANCE
+        const tx = await marketInstance.sellNickname(nick, priceWei);
+        
+        showToast("Transaction sent! Waiting...", "info");
         await tx.wait();
-        showToast("Berhasil! Nickname sudah terdaftar di pasar.", "success");
+        
+        showToast("Success! Item is now on sale.", "success");
+        
         // Refresh Halaman
-        if(typeof loadMyInventory === 'function') loadMyInventory();
-    } catch (e) {
-        console.error("Error Sell:", e);
-        
-        // Parsing pesan error agar mudah dibaca user
-        let msg = e.reason || e.message || "Unknown Error";
-        if (msg.includes("user rejected")) {
-            msg = "Anda membatalkan transaksi di MetaMask.";
-        } else if (msg.includes("Not yours")) {
-            msg = "Nickname ini bukan milik Anda!";
-        }
-        
-        showToast("Failed: " + msg, "error");
-    }
-        }
+        loadMyInventory(); 
 
-        async function cancelSale(nick) {
-    if(!gameContract) return;
-    try {
-        const tx = await gameContract.cancelSale(nick);        
-        // Ubah tombol jadi Loading
-        const btn = document.activeElement;
-        if(btn) btn.innerText = "Processing...";
-        
-        // TUNGGU SAMPAI TRANSAKSI SUKSES DI BLOCKCHAIN
-        await tx.wait();       
-        showToast("Sale Cancelled Successfully!", "success");
-        
-        // Refresh Halaman Otomatis untuk memperbarui status kartu
-        loadMyInventory();        
-    } catch(e) { 
+    } catch (e) {
         console.error(e);
-        showToast("Failed: " + (e.reason || e.message), "error"); 
+        // Tampilkan pesan error yang lebih bersih
+        const errMsg = e.reason || e.message || "Transaction failed";
+        showToast("Error: " + errMsg, "error");
     }
-        }
+}
+
+// --- FUNGSI BATAL JUAL (FIXED JUGA BIAR GAK ERROR NANTI) ---
+async function cancelSale(nick) {
+    try {
+        // 1. SIAPKAN KONEKSI KE MARKET
+        const marketAddress = await gameContract.marketContract();
+        const marketAbi = ["function cancelSale(string memory _nick) external"];
+        const signer = provider.getSigner();
+        const marketInstance = new ethers.Contract(marketAddress, marketAbi, signer);
+
+        // 2. EKSEKUSI
+        showToast("Confirm cancellation...", "loading");
+        const tx = await marketInstance.cancelSale(nick);
+        
+        showToast("Cancelling listing...", "info");
+        await tx.wait();
+        
+        showToast("Listing Cancelled!", "success");
+        loadMyInventory();
+
+    } catch (e) {
+        console.error(e);
+        showToast("Error: " + (e.reason || e.message), "error");
+    }
+}
 
         async function switchNick(nick) {
             try {
