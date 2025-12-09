@@ -997,6 +997,7 @@ function renderMarketGrid(data) {
 
         // --- 3. LOAD MARKET (SCAN EVENTS) ---
         async function loadMarketListings() {
+        rawMarketData = [];
     if(!gameContract) return;
     const container = document.getElementById('market-list');
     container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
@@ -1019,6 +1020,38 @@ function renderMarketGrid(data) {
                 uniqueListings.set(nick, { seller, price, timestamp }); 
             }
         }
+
+        
+    const totalItems = await contract.currentMarketId(); 
+    // MULAI LOOPING
+    for (let i = 1; i <= totalItems; i++) {
+        // ... kode lama anda (fetch data dari blockchain) ...
+        const item = await contract.nickMarketplace(i);
+        // Cek validasi (misal: hanya yang forSale yang diambil)
+        if (item.isForSale) {
+
+            // BAGIAN 2: FORMAT DATA (Tempel DI DALAM IF / LOOP)
+            // Tepat setelah anda mendapatkan variabel 'item'
+            const formattedItem = {
+                originalData: item, 
+                marketId: Number(item.marketId || i), 
+                priceEth: parseFloat(ethers.utils.formatEther(item.price)), 
+                rarity: Number(item.rarity),
+                nickname: item.nickname || "Unknown"
+            };
+            // Masukkan ke array global
+            rawMarketData.push(formattedItem);
+            // ⚠️ PENTING:
+            // HAPUS kode lama yang merender HTML card disini (container.innerHTML += ...)
+            // Karena sekarang tugas rendering diambil alih oleh runSmartFilter()
+        }
+    } 
+    // SELESAI LOOPING (Tutup Kurawal For Loop)
+    // BAGIAN 3: JALANKAN FILTER (Tempel SETELAH tutup kurawal loop)
+    console.log("Data loaded successfully:", rawMarketData.length);
+    // Ini pemicu agar kartu muncul di layar pertama kali
+    runSmartFilter();
+    }
 
         container.innerHTML = ""; 
         let activeCount = 0;
@@ -1325,135 +1358,103 @@ function timeSince(date) {
     }
 }
 
-        async function loadMarketListings() {
+        // --- 3. LOAD MARKET (SCAN EVENTS & FILTER READY) ---
+async function loadMarketListings() {
     if(!gameContract) return;
+
+    // 1. RESET ARRAY GLOBAL (Wajib untuk Filter)
+    rawMarketData = [];
+    
     const container = document.getElementById('market-list');
-    const tableBody = document.getElementById('history-body');
-
-    // Tampilkan Loading
     container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
-    tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Syncing history...</td></tr>';
-
+    
     try {
-        // --- A. AMBIL DATA DARI BLOCKCHAIN ---
-        // 1. Ambil Event Listing (Jualan)
-        const filterListed = gameContract.filters.NicknameListed();
-        const logsListed = await gameContract.queryFilter(filterListed, DEPLOY_BLOCK, "latest");
-        // 2. Ambil Event Sold (Laku)
-        const filterSold = gameContract.filters.NicknameSold();
-        const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
-        // --- B. PROSES DATA GRID (KARTU BARANG) ---
+        // --- LOGIKA SCAN EVENT (KODE LAMA ANDA YANG BAGUS) ---
+        const filter = gameContract.filters.NicknameListed();
+        const logs = await gameContract.queryFilter(filter, DEPLOY_BLOCK, "latest");
+
         const uniqueListings = new Map();
-        // Loop Listing (Reverse biar terbaru dulu)
-        for (const log of logsListed.reverse()) {
+
+        // Loop Log (Reverse)
+        for (const log of logs.reverse()) {
+            const seller = log.args[0];
             const nick = log.args[1];
+            const price = log.args[2];
+            const timestamp = log.args[3]; 
+            
             if (!uniqueListings.has(nick)) {
-                uniqueListings.set(nick, { 
-                    seller: log.args[0], 
-                    price: log.args[2],
-                    block: log.blockNumber 
-                }); 
+                uniqueListings.set(nick, { seller, price, timestamp }); 
             }
         }
 
-        container.innerHTML = ""; 
-        let activeItems = []; // Simpan item aktif untuk tabel nanti
-        let activeCount = 0;
-
-        // Cek Status Realtime ke Smart Contract
+        // --- MULAI MEMPROSES DATA ---
         for (let [nick, data] of uniqueListings) {
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-            // Panggil mapping nickMarketplace dari kontrak
             const saleData = await gameContract.nickMarketplace(nickHash);
+            
             const isForSale = saleData[0];
             const currentPriceBig = saleData[1];
             const currentSeller = saleData[2];
+            // Cek Rarity & ID (Fallback ke 0 jika kontrak versi lama)
+            const currentRarity = saleData.rarity ? Number(saleData.rarity) : 0;
+            const currentId = saleData.marketId ? Number(saleData.marketId) : Number(data.timestamp);
 
             if (isForSale) {
-                activeCount++;
                 const priceEth = ethers.formatEther(currentPriceBig);
-                // 1. Render Kartu Grid (Seperti Biasa)
-                const card = document.createElement('div');
-                card.className = 'nick-card';
+
+                // 1. LOGIKA AVATAR (KODE LAMA ANDA)
+                let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png"; 
+                try {
+                    const sellerProfile = await gameContract.users(currentSeller);
+                    if(sellerProfile.avatarUrl && sellerProfile.avatarUrl.length > 5) {
+                        avatarUrl = sellerProfile.avatarUrl;
+                    }
+                } catch(err) { /* Silent error */ }
+
+                // 2. LOGIKA WAKTU (KODE LAMA ANDA)
+                const listDate = new Date(Number(data.timestamp) * 1000);
+                const dateString = listDate.toLocaleDateString() + " " + listDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const timeAgoStr = timeSince(listDate); // Pastikan fungsi timeSince ada
+
+                // 3. LOGIKA OWNERSHIP
                 const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
-                let btnAction = isMyListing 
-                    ? `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Your Listing (Cancel)</button>`
-                    : `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`;
+                const shortSeller = currentSeller.substring(0,6) + "..." + currentSeller.substring(38);
 
-                card.innerHTML = `
-                    <div class="nick-title">${nick}</div>
-                    <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Seller: ${currentSeller.substring(0,6)}...</div>
-                    <div class="nick-price">${priceEth} ETH</div>
-                    ${btnAction}
-                `;
-                container.appendChild(card);
+                // --- BAGIAN UTAMA: MASUKKAN KE ARRAY DATA (JANGAN BIKIN HTML DISINI) ---
+                const formattedItem = {
+                    // Data Inti untuk Filter
+                    nickname: nick,
+                    priceEth: parseFloat(priceEth),
+                    rarity: currentRarity,
+                    marketId: currentId,
+                    timestamp: Number(data.timestamp),
+                    
+                    // Data Tambahan untuk Tampilan (UI)
+                    seller: currentSeller,
+                    shortSeller: shortSeller,
+                    avatarUrl: avatarUrl,
+                    dateString: dateString,
+                    timeAgo: timeAgoStr,
+                    isMyListing: isMyListing,
+                    originalData: data
+                };
 
-                // 2. Simpan ke array untuk Tabel (Status: On Sale)
-                activeItems.push({
-                    type: 'Sell',
-                    nick: nick,
-                    price: priceEth,
-                    status: 'On Sale 🛒',
-                    cssClass: 'status-sale',
-                    badgeClass: 'badge-sell',
-                    block: data.block // Pakai blok listing
-                });
+                // Push ke Array Global
+                rawMarketData.push(formattedItem);
             }
         }
 
-        if (activeCount === 0) {
-            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty.</div>`;
-        }
+        // --- FINAL STEP: PANGGIL FILTER ---
+        console.log("Data loaded:", rawMarketData.length);
+        
+        // Fungsi ini yang akan menghapus 'Scanning...' dan membuat HTML Kartu
+        runSmartFilter(); 
 
-        // --- C. PROSES DATA TABEL (GABUNGAN AKTIF + SOLD) ---
-
-        let historyData = [...activeItems]; // Masukkan yang aktif dulu
-        // Masukkan yang sudah SOLD (Laku)
-        for (const log of logsSold) {
-            const nick = log.args[2]; // arg ke-3 di event NicknameSold adalah nickname string
-            const price = ethers.formatEther(log.args[3]);
-
-            historyData.push({
-                type: 'Buy', // Karena ini transaksi pembelian
-                nick: nick,
-                price: price,
-                status: 'Soldout ✅',
-                cssClass: 'status-taken', // atau status-sold
-                badgeClass: 'badge-buy',
-                block: log.blockNumber
-            });
-        }
-
-        // Urutkan berdasarkan Block Number (Terbaru di atas)
-        historyData.sort((a, b) => b.block - a.block);
-
-        // Render ke Tabel HTML
-        tableBody.innerHTML = "";
-        if (historyData.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No history yet.</td></tr>';
-        } else {
-            historyData.forEach(item => {
-                const row = `
-                    <tr>
-                        <td><span class="badge ${item.badgeClass}">${item.type}</span></td>
-                        <td style="font-weight:bold; color:white;">${item.nick}</td>
-                        <td>${item.price} ETH</td>
-                        <td class="${item.cssClass}">${item.status}</td>
-                    </tr>
-                `;
-                tableBody.innerHTML += row;
-           });
-        }
     } catch (e) {
-        console.error("Load Error:", e);
-        let msg = e.message;
-        if(msg.includes("max block range")) msg = "Please update DEPLOY_BLOCK variable!";
-
-        container.innerHTML = `<div style="color:red; text-align:center;">Error: ${msg}</div>`;
-        tableBody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Error loading history</td></tr>`;
+        console.error("Market Load Error:", e);
+        container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error: ${e.message}</div>`;
     }
-
-        }
+}           
         
         // --- 5. TRANSAKSI (BUY, SELL, SWITCH) ---
 
