@@ -759,9 +759,7 @@ function isPalindromeJS(str) {
 function renderMarketGrid(data) {
     const container = document.getElementById('market-list'); // ID Container di HTML Anda
     container.innerHTML = "";
-    
     document.getElementById('result-count').innerText = `${data.length} Items Found`;
-
     if(data.length === 0) {
         container.innerHTML = `<div class="empty-state">📡 No items found in this sector.</div>`;
         return;
@@ -875,7 +873,6 @@ function renderMarketGrid(data) {
     function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.market-view').forEach(v => v.style.display = 'none');
-            
             document.getElementById(`tab-${tab}`).classList.add('active');
             document.getElementById(`view-${tab}`).style.display = 'block';
 
@@ -965,7 +962,6 @@ function renderMarketGrid(data) {
                         </div>
                         <div class="price-tag">${priceEth} ETH</div>
                     </div>
-
                     ${btnAction}
                 `;
                 container.appendChild(card);
@@ -975,7 +971,7 @@ function renderMarketGrid(data) {
         if (activeCount === 0) {
             container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty.</div>`;
         }
-
+        
     } catch (e) {
         console.error("Market Load Error:", e);
         container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error loading market data.</div>`;
@@ -1070,7 +1066,6 @@ function timeSince(date) {
                         </div>
                     `;
                 }
-
                 div.innerHTML = `
                     <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
                     <div style="text-align:center; margin-bottom:10px;">
@@ -1141,89 +1136,43 @@ function timeSince(date) {
         // B. PROSES DATA LISTING (Logs Listed)
         // Hanya tampilkan jika statusnya MASIH ON SALE di Smart Contract
         const latestListingsMap = new Map();
-
-
-
         for (const log of logsList) {
-
             const seller = log.args[0].toLowerCase();
-
             // Hanya proses jika saya penjualnya
-
             if (seller === userAddress.toLowerCase()) {
-
                 const nick = log.args[1];
-
                 // Simpan ke Map. Karena log urut dari lama ke baru, 
-
                 // data lama otomatis tertimpa data baru.
-
                 // Hasilnya: Map hanya berisi "Jejak Terakhir" setiap nickname.
-
                 latestListingsMap.set(nick, log);
-
             }
-
         }
 
-
-
         // 2. Proses Validasi (Cek ke Smart Contract)
-
         // Kita hanya memproses data yang sudah disaring di Map
-
         await Promise.all(Array.from(latestListingsMap.values()).map(async (log) => {
-
             const uniqueID = `${log.transactionHash}_${log.index}`;
-
-            
-
             // Cek ID Unik (Safety)
-
             if (processedIDs.has(uniqueID)) return;
-
-
-
             const nick = log.args[1];
-
-            
-
             // Cek Status Realtime: Apakah MASIH dijual sekarang?
-
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-
             const saleData = await gameContract.nickMarketplace(nickHash);
-
             const isStillForSale = saleData[0];
 
-
-
             if (isStillForSale) {
-
                 processedIDs.add(uniqueID); // Catat ID
 
-                
-
                 myHistory.push({
-
                     type: 'Sell',
-
                     nick: nick,
-
                     price: ethers.formatEther(log.args[2]),
-
                     status: 'On Sale 🛒',
-
                     cssClass: 'status-sale', 
-
                     badgeType: 'badge-sell-active', 
-
                     timestamp: Number(log.args[3]) 
-
                 });
-
             }
-
         }));
 
         // Sorting (Terbaru di atas)
@@ -1259,280 +1208,134 @@ function timeSince(date) {
         console.error("Error History:", e);
         tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history.</td></tr>`;
     }
-                }
+}
 
         async function loadMarketListings() {
-
     if(!gameContract) return;
-
     const container = document.getElementById('market-list');
-
     const tableBody = document.getElementById('history-body');
 
-    
-
     // Tampilkan Loading
-
     container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
-
     tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Syncing history...</td></tr>';
 
-    
-
     try {
-
         // --- A. AMBIL DATA DARI BLOCKCHAIN ---
-
         // 1. Ambil Event Listing (Jualan)
-
         const filterListed = gameContract.filters.NicknameListed();
-
         const logsListed = await gameContract.queryFilter(filterListed, DEPLOY_BLOCK, "latest");
-
-
-
         // 2. Ambil Event Sold (Laku)
-
         const filterSold = gameContract.filters.NicknameSold();
-
         const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
-
-
-
         // --- B. PROSES DATA GRID (KARTU BARANG) ---
-
-        
-
         const uniqueListings = new Map();
-
-
-
         // Loop Listing (Reverse biar terbaru dulu)
-
         for (const log of logsListed.reverse()) {
-
             const nick = log.args[1];
-
             if (!uniqueListings.has(nick)) {
-
                 uniqueListings.set(nick, { 
-
                     seller: log.args[0], 
-
                     price: log.args[2],
-
                     block: log.blockNumber 
-
                 }); 
-
             }
-
         }
-
-
 
         container.innerHTML = ""; 
-
         let activeItems = []; // Simpan item aktif untuk tabel nanti
-
         let activeCount = 0;
 
-
-
         // Cek Status Realtime ke Smart Contract
-
         for (let [nick, data] of uniqueListings) {
-
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-
             // Panggil mapping nickMarketplace dari kontrak
-
             const saleData = await gameContract.nickMarketplace(nickHash);
-
-            
-
             const isForSale = saleData[0];
-
             const currentPriceBig = saleData[1];
-
             const currentSeller = saleData[2];
 
-
-
             if (isForSale) {
-
                 activeCount++;
-
                 const priceEth = ethers.formatEther(currentPriceBig);
-
-
-
                 // 1. Render Kartu Grid (Seperti Biasa)
-
                 const card = document.createElement('div');
-
                 card.className = 'nick-card';
-
                 const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
-
-
-
                 let btnAction = isMyListing 
-
                     ? `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Your Listing (Cancel)</button>`
-
                     : `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`;
 
-
-
                 card.innerHTML = `
-
                     <div class="nick-title">${nick}</div>
-
                     <div style="font-size:0.8em; color:#888; margin-bottom:5px;">Seller: ${currentSeller.substring(0,6)}...</div>
-
                     <div class="nick-price">${priceEth} ETH</div>
-
                     ${btnAction}
-
                 `;
-
                 container.appendChild(card);
 
-
-
                 // 2. Simpan ke array untuk Tabel (Status: On Sale)
-
                 activeItems.push({
-
                     type: 'Sell',
-
                     nick: nick,
-
                     price: priceEth,
-
                     status: 'On Sale 🛒',
-
                     cssClass: 'status-sale',
-
                     badgeClass: 'badge-sell',
-
                     block: data.block // Pakai blok listing
-
                 });
-
             }
-
         }
-
-
 
         if (activeCount === 0) {
-
             container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty.</div>`;
-
         }
-
-
 
         // --- C. PROSES DATA TABEL (GABUNGAN AKTIF + SOLD) ---
 
-        
-
         let historyData = [...activeItems]; // Masukkan yang aktif dulu
-
-
-
         // Masukkan yang sudah SOLD (Laku)
-
         for (const log of logsSold) {
-
             const nick = log.args[2]; // arg ke-3 di event NicknameSold adalah nickname string
-
             const price = ethers.formatEther(log.args[3]);
 
-            
-
             historyData.push({
-
                 type: 'Buy', // Karena ini transaksi pembelian
-
                 nick: nick,
-
                 price: price,
-
                 status: 'Soldout ✅',
-
                 cssClass: 'status-taken', // atau status-sold
-
                 badgeClass: 'badge-buy',
-
                 block: log.blockNumber
-
             });
-
         }
-
-
 
         // Urutkan berdasarkan Block Number (Terbaru di atas)
-
         historyData.sort((a, b) => b.block - a.block);
 
-
-
         // Render ke Tabel HTML
-
         tableBody.innerHTML = "";
-
-        
-
         if (historyData.length === 0) {
-
             tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No history yet.</td></tr>';
-
         } else {
-
             historyData.forEach(item => {
-
                 const row = `
-
                     <tr>
-
                         <td><span class="badge ${item.badgeClass}">${item.type}</span></td>
-
                         <td style="font-weight:bold; color:white;">${item.nick}</td>
-
                         <td>${item.price} ETH</td>
-
                         <td class="${item.cssClass}">${item.status}</td>
-
                     </tr>
-
                 `;
-
                 tableBody.innerHTML += row;
-
-            });
-
+           });
         }
-
-
-
     } catch (e) {
-
         console.error("Load Error:", e);
-
         let msg = e.message;
-
         if(msg.includes("max block range")) msg = "Please update DEPLOY_BLOCK variable!";
 
-        
-
         container.innerHTML = `<div style="color:red; text-align:center;">Error: ${msg}</div>`;
-
         tableBody.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Error loading history</td></tr>`;
-
     }
 
         }
@@ -1586,19 +1389,13 @@ function timeSince(date) {
         const priceWei = ethers.parseEther(priceInput.toString());
         
         console.log(`Mengirim Transaksi: Sell ${nick} seharga ${priceInput} ETH`);
-        
         // Panggil Kontrak
         const tx = await gameContract.sellNickname(nick, priceWei);
-        
         alert("Transaksi dikirim! Silakan cek MetaMask Anda...");
-        
         await tx.wait();
-        
         alert("Berhasil! Nickname sudah terdaftar di pasar.");
-        
         // Refresh Halaman
         if(typeof loadMyInventory === 'function') loadMyInventory();
-
     } catch (e) {
         console.error("Error Sell:", e);
         
@@ -1617,20 +1414,17 @@ function timeSince(date) {
         async function cancelSale(nick) {
     if(!gameContract) return;
     try {
-        const tx = await gameContract.cancelSale(nick);
-        
+        const tx = await gameContract.cancelSale(nick);        
         // Ubah tombol jadi Loading
         const btn = document.activeElement;
         if(btn) btn.innerText = "Processing...";
         
         // TUNGGU SAMPAI TRANSAKSI SUKSES DI BLOCKCHAIN
-        await tx.wait(); 
-        
+        await tx.wait();       
         alert("✅ Sale Cancelled Successfully!");
         
         // Refresh Halaman Otomatis untuk memperbarui status kartu
-        loadMyInventory();
-        
+        loadMyInventory();        
     } catch(e) { 
         console.error(e);
         alert("❌ Error: " + (e.reason || e.message)); 
@@ -1772,193 +1566,100 @@ function clearSearch() {
 }
 
         function runSmartFilter() {
-
     const searchText = document.getElementById('searchInput').value.toLowerCase();
-
     const sortType = document.getElementById('sortSelect').value;
-
     const minP = parseFloat(document.getElementById('minPrice').value) || 0;
-
     const maxP = parseFloat(document.getElementById('maxPrice').value) || 999999;
 
-
-
     // A. PROSES PENYARINGAN (FILTERING)
-
     let results = rawMarketData.filter(item => {
-
         // 1. Filter Search (Nama)
-
         if (!item.nickname.toLowerCase().includes(searchText)) return false;
 
-
-
         // 2. Filter Harga
-
         const priceEth = parseFloat(item.priceEth); // Pastikan format angka
-
         if (priceEth < minP || priceEth > maxP) return false;
 
-
-
         // 3. Filter Rarity (Cek apakah rarity item ada di list aktif)
-
         // Convert Enum contract (0,1,2,3) ke String
-
         const rarityMap = ["COMMON", "RARE", "LEGENDARY", "MYTHICAL"];
-
         const itemRarityStr = rarityMap[item.rarity]; 
-
         if (!activeFilters.rarity.includes(itemRarityStr)) return false;
 
 
-
         // 4. Filter DNA (Pola Khusus) - INI YANG CANGGIH
-
         if (activeFilters.dna.length > 0) {
-
             let dnaMatch = false;
-
-            const nick = item.nickname;
-
-            
+            const nick = item.nickname;           
 
             // Cek setiap filter DNA yang aktif
-
             activeFilters.dna.forEach(filter => {
-
                 if (filter === '3_CHAR' && nick.length === 3) dnaMatch = true;
-
                 if (filter === '4_CHAR' && nick.length === 4) dnaMatch = true;
-
                 if (filter === 'NUMBERS' && /^[0-9]+$/.test(nick)) dnaMatch = true; // Regex Angka
-
                 if (filter === 'PALINDROME' && isPalindromeJS(nick)) dnaMatch = true;
-
             });
-
             
-
             if (!dnaMatch) return false;
-
         }
 
-
-
         return true; // Lolos semua filter
-
     });
-
-
 
     // B. PROSES PENGURUTAN (SORTING)
-
     results.sort((a, b) => {
-
         if (sortType === 'newest') return b.timestamp - a.timestamp;
-
         if (sortType === 'price_low') return a.priceEth - b.priceEth;
-
         if (sortType === 'price_high') return b.priceEth - a.priceEth;
-
         if (sortType === 'rarity_high') return b.rarity - a.rarity; // Mythical (3) diatas Common (0)
-
         return 0;
-
     });
 
-
-
     // C. RENDER HASIL
-
     renderMarketGrid(results);
-
 }
-
-
 
 // 2. HELPER: MENGATUR TOMBOL CHIP (Toggle)
-
 function toggleChip(btn, category, value) {
-
     // Ubah visual tombol
-
     btn.classList.toggle('active');
 
-
-
     // Update logika data
-
     const list = activeFilters[category];
-
     if (list.includes(value)) {
-
         // Hapus dari list
-
         activeFilters[category] = list.filter(item => item !== value);
-
     } else {
-
         // Tambah ke list
-
         activeFilters[category].push(value);
-
     }
-
-
 
     // Jalankan filter otomatis
-
     runSmartFilter();
-
 }
-
-
 
 // 3. HELPER: CEK PALINDROM (Versi JS)
-
 function isPalindromeJS(str) {
-
     const cleanStr = str.toLowerCase();
-
     return cleanStr === cleanStr.split('').reverse().join('');
-
 }
 
-
-
 // 4. HELPER: RENDER (Mockup)
-
 function renderMarketGrid(data) {
-
     const container = document.getElementById('market-list'); // ID Container di HTML Anda
-
     container.innerHTML = "";
-
-    
-
     document.getElementById('result-count').innerText = `${data.length} Items Found`;
 
-
-
     if(data.length === 0) {
-
         container.innerHTML = `<div class="empty-state">📡 No items found in this sector.</div>`;
-
         return;
-
     }
 
-
-
     data.forEach(item => {
-
         // Panggil fungsi createCard Anda yang lama disini
 
         // container.appendChild(createCard(item));
-
     });
-
 }
         
         // Auto connect jika sudah pernah connect di halaman utama (opsional)
