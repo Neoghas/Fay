@@ -995,14 +995,18 @@ function renderMarketGrid(data) {
     switchTab('market'); 
         }
 
-        // --- 3. LOAD MARKET (SCAN EVENTS) ---
-        async function loadMarketListings() {
+        // --- 3. LOAD MARKET (SCAN EVENTS & FILTER READY) ---
+async function loadMarketListings() {
     if(!gameContract) return;
+
+    // 1. RESET ARRAY GLOBAL (Wajib untuk Filter)
+    rawMarketData = [];
+    
     const container = document.getElementById('market-list');
     container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
     
     try {
-        // 1. Ambil Log Listing
+        // --- LOGIKA SCAN EVENT (KODE LAMA ANDA YANG BAGUS) ---
         const filter = gameContract.filters.NicknameListed();
         const logs = await gameContract.queryFilter(filter, DEPLOY_BLOCK, "latest");
 
@@ -1013,16 +1017,14 @@ function renderMarketGrid(data) {
             const seller = log.args[0];
             const nick = log.args[1];
             const price = log.args[2];
-            const timestamp = log.args[3]; // AMBIL TIMESTAMP DARI EVENT
+            const timestamp = log.args[3]; 
             
             if (!uniqueListings.has(nick)) {
                 uniqueListings.set(nick, { seller, price, timestamp }); 
             }
         }
 
-        container.innerHTML = ""; 
-        let activeCount = 0;
-
+        // --- MULAI MEMPROSES DATA ---
         for (let [nick, data] of uniqueListings) {
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
             const saleData = await gameContract.nickMarketplace(nickHash);
@@ -1030,66 +1032,64 @@ function renderMarketGrid(data) {
             const isForSale = saleData[0];
             const currentPriceBig = saleData[1];
             const currentSeller = saleData[2];
+            // Cek Rarity & ID (Fallback ke 0 jika kontrak versi lama)
+            const currentRarity = saleData.rarity ? Number(saleData.rarity) : 0;
+            const currentId = saleData.marketId ? Number(saleData.marketId) : Number(data.timestamp);
 
             if (isForSale) {
-                activeCount++;
                 const priceEth = ethers.formatEther(currentPriceBig);
 
-                // --- FITUR BARU: AMBIL AVATAR PENJUAL ---
-                let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png"; // Default Placeholder (Effigy)
+                // 1. LOGIKA AVATAR (KODE LAMA ANDA)
+                let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png"; 
                 try {
                     const sellerProfile = await gameContract.users(currentSeller);
                     if(sellerProfile.avatarUrl && sellerProfile.avatarUrl.length > 5) {
                         avatarUrl = sellerProfile.avatarUrl;
                     }
-                } catch(err) { console.log("No avatar set"); }
+                } catch(err) { /* Silent error */ }
 
-                // --- FITUR BARU: FORMAT WAKTU ---
-                // Konversi Timestamp block (detik) ke format tanggal
+                // 2. LOGIKA WAKTU (KODE LAMA ANDA)
                 const listDate = new Date(Number(data.timestamp) * 1000);
                 const dateString = listDate.toLocaleDateString() + " " + listDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const timeAgoStr = timeSince(listDate); // Pastikan fungsi timeSince ada
 
-                const card = document.createElement('div');
-                card.className = 'nick-card';
-                
+                // 3. LOGIKA OWNERSHIP
                 const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
                 const shortSeller = currentSeller.substring(0,6) + "..." + currentSeller.substring(38);
 
-                let btnAction = isMyListing 
-                    ? `<button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">Cancel Sale</button>` 
-                    : `<button class="btn-action btn-buy" onclick="buyNickname('${nick}', '${priceEth}')">BUY NOW</button>`;
+                // --- BAGIAN UTAMA: MASUKKAN KE ARRAY DATA (JANGAN BIKIN HTML DISINI) ---
+                const formattedItem = {
+                    // Data Inti untuk Filter
+                    nickname: nick,
+                    priceEth: parseFloat(priceEth),
+                    rarity: currentRarity,
+                    marketId: currentId,
+                    timestamp: Number(data.timestamp),
+                    
+                    // Data Tambahan untuk Tampilan (UI)
+                    seller: currentSeller,
+                    shortSeller: shortSeller,
+                    avatarUrl: avatarUrl,
+                    dateString: dateString,
+                    timeAgo: timeAgoStr,
+                    isMyListing: isMyListing,
+                    originalData: data
+                };
 
-                // --- HTML BARU ---
-                card.innerHTML = `
-                    <div class="card-header-row">
-                        <img src="${avatarUrl}" class="seller-avatar" alt="avt" onerror="this.src='https://effigy.im/a/${currentSeller}.png'">
-                        <div class="seller-info">
-                            <span class="seller-label">Seller</span>
-                            <span class="seller-address">${shortSeller}</span>
-                        </div>
-                    </div>
-
-                    <div class="nick-title-premium">${nick}</div>
-
-                    <div class="info-bar">
-                        <div class="time-info" title="Listed at: ${dateString}">
-                            🕐 <span style="font-size:0.9em">${timeSince(listDate)} ago</span>
-                        </div>
-                        <div class="price-tag">${priceEth} ETH</div>
-                    </div>
-                    ${btnAction}
-                `;
-                container.appendChild(card);
+                // Push ke Array Global
+                rawMarketData.push(formattedItem);
             }
         }
 
-        if (activeCount === 0) {
-            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:50px;">Market is empty.</div>`;
-        }
+        // --- FINAL STEP: PANGGIL FILTER ---
+        console.log("Data loaded:", rawMarketData.length);
         
+        // Fungsi ini yang akan menghapus 'Scanning...' dan membuat HTML Kartu
+        runSmartFilter(); 
+
     } catch (e) {
         console.error("Market Load Error:", e);
-        container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error loading market data.</div>`;
+        container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error: ${e.message}</div>`;
     }
 }
 
