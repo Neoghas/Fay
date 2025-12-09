@@ -560,10 +560,7 @@
     </div>
 
     <div class="smart-filter-panel">
-    
     <div class="filter-top-row">
-        <input type="text" id="searchInput" onkeyup="runSmartFilter()" placeholder="🔍 Cari nama specific...">
-        
         <select id="sortSelect" onchange="runSmartFilter()" class="futuristic-select">
             <option value="newest">🆕 Terbaru</option>
             <option value="price_low">📉 Harga Terendah</option>
@@ -1565,57 +1562,35 @@ function clearSearch() {
     input.focus();
 }
 
-        function runSmartFilter() {
+function runSmartFilter() {
+    console.log("--- Memulai Filter ---");
+    console.log("Total Data Mentah:", rawMarketData.length);
+
+    if (rawMarketData.length === 0) {
+        console.warn("AWAS: Data kosong! Cek fungsi loadMarketListings Anda.");
+        return;
+    }
+
+    // Cek sampel data pertama biar ketahuan isinya apa
+    console.log("Sampel Data Pertama:", rawMarketData[0]);
+
     const searchText = document.getElementById('searchInput').value.toLowerCase();
-    const sortType = document.getElementById('sortSelect').value;
-    const minP = parseFloat(document.getElementById('minPrice').value) || 0;
-    const maxP = parseFloat(document.getElementById('maxPrice').value) || 999999;
+    
+    // ... (kode filter lainnya) ...
 
-    // A. PROSES PENYARINGAN (FILTERING)
     let results = rawMarketData.filter(item => {
-        // 1. Filter Search (Nama)
-        if (!item.nickname.toLowerCase().includes(searchText)) return false;
-
-        // 2. Filter Harga
-        const priceEth = parseFloat(item.priceEth); // Pastikan format angka
-        if (priceEth < minP || priceEth > maxP) return false;
-
-        // 3. Filter Rarity (Cek apakah rarity item ada di list aktif)
-        // Convert Enum contract (0,1,2,3) ke String
-        const rarityMap = ["COMMON", "RARE", "LEGENDARY", "MYTHICAL"];
-        const itemRarityStr = rarityMap[item.rarity]; 
-        if (!activeFilters.rarity.includes(itemRarityStr)) return false;
-
-
-        // 4. Filter DNA (Pola Khusus) - INI YANG CANGGIH
-        if (activeFilters.dna.length > 0) {
-            let dnaMatch = false;
-            const nick = item.nickname;           
-
-            // Cek setiap filter DNA yang aktif
-            activeFilters.dna.forEach(filter => {
-                if (filter === '3_CHAR' && nick.length === 3) dnaMatch = true;
-                if (filter === '4_CHAR' && nick.length === 4) dnaMatch = true;
-                if (filter === 'NUMBERS' && /^[0-9]+$/.test(nick)) dnaMatch = true; // Regex Angka
-                if (filter === 'PALINDROME' && isPalindromeJS(nick)) dnaMatch = true;
-            });
-            
-            if (!dnaMatch) return false;
+        // DEBUGGING: Cek apakah item.nickname ada?
+        if (typeof item.nickname === 'undefined') {
+            console.error("ERROR KEY: 'item.nickname' tidak ditemukan! Cek nama variabel Anda.");
+            return false;
         }
-
-        return true; // Lolos semua filter
+        
+        // Lanjut logika filter...
+        if (!item.nickname.toLowerCase().includes(searchText)) return false;
+        return true;
     });
 
-    // B. PROSES PENGURUTAN (SORTING)
-    results.sort((a, b) => {
-        if (sortType === 'newest') return b.timestamp - a.timestamp;
-        if (sortType === 'price_low') return a.priceEth - b.priceEth;
-        if (sortType === 'price_high') return b.priceEth - a.priceEth;
-        if (sortType === 'rarity_high') return b.rarity - a.rarity; // Mythical (3) diatas Common (0)
-        return 0;
-    });
-
-    // C. RENDER HASIL
+    console.log("Hasil Filter:", results.length, "item ditemukan.");
     renderMarketGrid(results);
 }
 
