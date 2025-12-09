@@ -901,7 +901,7 @@
     switchTab('market'); 
         }
 
-        // --- LOAD MARKET (UPDATE SESUAI KONTRAK BARU 9 DESEMBER 2025) ---
+        // --- LOAD MARKET (FIXED: ABI MANUAL & FILTER MARKET) ---
 async function loadMarketListings() {
     if(!gameContract) return;
 
@@ -909,20 +909,28 @@ async function loadMarketListings() {
     rawMarketData = [];
     
     const container = document.getElementById('market-list');
-    // Bersihkan error message lama
+    // Bersihkan & Tampilkan Loading
     if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
     
     try {
-        // Ambil Market Contract Instance (Pastikan ABI Market sudah diupdate!)
-        // Jika gameContract adalah Main Contract, kita butuh instance Market terpisah
-        // Asumsi: variable 'marketContract' sudah di-init dengan alamat Market baru
-        // Jika belum ada variable khusus, pakai gameContract (kalau logicnya nyampur)
-        // TAPI IDEALNYA:
+        // ============================================================
+        // 🔌 LANGKAH 1: KONEKSI KE MARKET (DENGAN ABI MANUAL)
+        // ============================================================
+        
+        // Ambil alamat Market dari Game Utama
         const marketAddress = await gameContract.marketContract(); 
-        // Pastikan Anda punya ABI Market.json
-        const marketInstance = new ethers.Contract(marketAddress, MARKET_ABI, provider); 
+        
+        // 🔥 DEFINISI ABI MANUAL (Supaya tidak error variable undefined) 🔥
+        const marketAbi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameDelisted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameListed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"oldPrice","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"newPrice","type":"uint256"}],"name":"NicknamePriceUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"buyer","type":"address"},{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameSold","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickA","type":"string"},{"indexed":false,"internalType":"string","name":"nickB","type":"string"},{"indexed":false,"internalType":"address","name":"ownerA","type":"address"},{"indexed":false,"internalType":"address","name":"ownerB","type":"address"}],"name":"SwapAccepted","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"myNick","type":"string"},{"indexed":false,"internalType":"string","name":"targetNick","type":"string"}],"name":"SwapCancelled","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"myNick","type":"string"},{"indexed":false,"internalType":"string","name":"targetNick","type":"string"},{"indexed":false,"internalType":"uint256","name":"ethOffered","type":"uint256"},{"indexed":false,"internalType":"address","name":"initiator","type":"address"}],"name":"SwapRequested","type":"event"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"buyNickname","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"cancelSale","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_myNick","type":"string"},{"internalType":"string","name":"_targetNick","type":"string"}],"name":"cancelSwap","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentMarketId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_myNick","type":"string"},{"internalType":"string","name":"_offeredNick","type":"string"}],"name":"executeSwap","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"gameContractAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"marketIdToHash","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"myNicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickHandHistory","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickMarketplace","outputs":[{"internalType":"uint256","name":"marketId","type":"uint256"},{"internalType":"bool","name":"isForSale","type":"bool"},{"internalType":"uint256","name":"price","type":"uint256"},{"internalType":"address","name":"seller","type":"address"},{"internalType":"uint256","name":"listedAt","type":"uint256"},{"internalType":"enum Market.Rarity","name":"rarity","type":"uint8"},{"internalType":"uint256","name":"ownerCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"},{"internalType":"string","name":"_nick","type":"string"}],"name":"registerNicknameFromGame","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_myNick","type":"string"},{"internalType":"string","name":"_targetNick","type":"string"}],"name":"requestSwap","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint256","name":"_price","type":"uint256"}],"name":"sellNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_game","type":"address"}],"name":"setGameContract","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"swapRequests","outputs":[{"internalType":"address","name":"initiator","type":"address"},{"internalType":"string","name":"myNick","type":"string"},{"internalType":"string","name":"targetNick","type":"string"},{"internalType":"uint256","name":"ethOffered","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_newNick","type":"string"}],"name":"switchNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"string","name":"nickname","type":"string"}],"stateMutability":"view","type":"function"}];
 
-        // Ambil Logs dari Market Contract
+        // Buat Instance Market
+        const marketInstance = new ethers.Contract(marketAddress, marketAbi, provider); 
+
+        // ============================================================
+        // 🔌 LANGKAH 2: AMBIL LOGS DARI MARKET INSTANCE
+        // ============================================================
+
+        // 🔥 PANGGIL FILTER DARI MARKET INSTANCE, BUKAN GAME CONTRACT 🔥
         const filter = marketInstance.filters.NicknameListed();
         const logs = await marketInstance.queryFilter(filter, DEPLOY_BLOCK, "latest");
 
@@ -930,8 +938,9 @@ async function loadMarketListings() {
 
         // Loop Log (Reverse - Terbaru diatas)
         for (const log of logs.reverse()) {
-            const nick = log.args[2]; // Di event baru: arg 2 adalah nickname
-            // Event NicknameListed(marketId, seller, nickname, price, timestamp)
+            // Event Baru: (marketId, seller, nickname, price, timestamp)
+            // Args Index:    0        1        2        3        4
+            const nick = log.args[2]; 
             const timestamp = log.args[4]; 
             
             if (!uniqueListings.has(nick)) {
@@ -943,31 +952,26 @@ async function loadMarketListings() {
         for (let [nick, data] of uniqueListings) {
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
             
-            // Panggil mapping nickMarketplace
+            // Panggil mapping nickMarketplace DARI MARKET INSTANCE
             const saleData = await marketInstance.nickMarketplace(nickHash);
             
-            // 🔥 UPDATE PENTING: SESUAIKAN DENGAN STRUCT BARU 🔥
-            // Struct: { marketId, isForSale, price, seller, listedAt, rarity, ownerCount }
-            // Index:      0          1        2       3        4        5         6
+            // Struct Baru: { marketId, isForSale, price, seller, listedAt, rarity, ownerCount }
+            // Index:           0          1        2       3        4        5         6
             
-            // Ambil data pakai NAMA PROPERTI (Lebih Aman) atau INDEX BARU
-            // Kita pakai Index manual untuk memastikan urutan:
-            
-            const currentMarketId = Number(saleData[0]); // Index 0
-            const isForSale = saleData[1];               // Index 1 (Bool)
+            const currentMarketId = Number(saleData[0]); 
+            const isForSale = saleData[1];               
             
             if (isForSale) {
-                const currentPriceBig = saleData[2];     // Index 2 (Price)
-                const currentSeller = saleData[3];       // Index 3 (Seller)
-                const currentTimestamp = saleData[4];    // Index 4 (Time)
-                const currentRarity = Number(saleData[5]); // Index 5 (Rarity Enum)
+                const currentPriceBig = saleData[2];     
+                const currentSeller = saleData[3];       
+                const currentTimestamp = saleData[4];    
+                const currentRarity = Number(saleData[5]); 
                 
                 const priceEth = ethers.formatEther(currentPriceBig);
 
-                // --- AVATAR & UI ---
+                // --- AVATAR & UI (Ambil dari Game Utama karena Profile user disana) ---
                 let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png"; 
                 try {
-                    // Ambil profil dari Game Contract Utama
                     const sellerProfile = await gameContract.users(currentSeller);
                     if(sellerProfile.avatarUrl && sellerProfile.avatarUrl.length > 5) {
                         avatarUrl = sellerProfile.avatarUrl;
@@ -986,7 +990,7 @@ async function loadMarketListings() {
                     nickname: nick,
                     priceEth: parseFloat(priceEth),
                     rarity: currentRarity, 
-                    marketId: currentMarketId, // ID Asli dari Kontrak
+                    marketId: currentMarketId, 
                     timestamp: Number(currentTimestamp),
                     seller: currentSeller,
                     shortSeller: shortSeller,
