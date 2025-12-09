@@ -995,18 +995,18 @@ function renderMarketGrid(data) {
     switchTab('market'); 
         }
 
-        // --- 3. LOAD MARKET (SCAN EVENTS & FILTER READY) ---
+        // --- LOAD MARKET (VERSI KONTRAK LAMA / COMPATIBILITY MODE) ---
 async function loadMarketListings() {
     if(!gameContract) return;
 
-    // 1. RESET ARRAY GLOBAL (Wajib untuk Filter)
+    // 1. Reset Array Global
     rawMarketData = [];
     
     const container = document.getElementById('market-list');
-    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
+    if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
     
     try {
-        // --- LOGIKA SCAN EVENT (KODE LAMA ANDA YANG BAGUS) ---
+        // Ambil Event Log (Tetap sama)
         const filter = gameContract.filters.NicknameListed();
         const logs = await gameContract.queryFilter(filter, DEPLOY_BLOCK, "latest");
 
@@ -1014,82 +1014,96 @@ async function loadMarketListings() {
 
         // Loop Log (Reverse)
         for (const log of logs.reverse()) {
-            const seller = log.args[0];
             const nick = log.args[1];
-            const price = log.args[2];
+            // Kita butuh timestamp dari event ini karena di struct lama mungkin ga ada listedAt yang akurat
             const timestamp = log.args[3]; 
             
+            // Simpan data unik berdasarkan nickname
             if (!uniqueListings.has(nick)) {
-                uniqueListings.set(nick, { seller, price, timestamp }); 
+                uniqueListings.set(nick, { timestamp }); 
             }
         }
 
-        // --- MULAI MEMPROSES DATA ---
+        // --- LOOPING DATA UNTUK DIBACA DARI SMART CONTRACT ---
         for (let [nick, data] of uniqueListings) {
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
             const saleData = await gameContract.nickMarketplace(nickHash);
             
-            const isForSale = saleData[0];
-            const currentPriceBig = saleData[1];
-            const currentSeller = saleData[2];
-            // Cek Rarity & ID (Fallback ke 0 jika kontrak versi lama)
-            const currentRarity = saleData.rarity ? Number(saleData.rarity) : 0;
-            const currentId = saleData.marketId ? Number(saleData.marketId) : Number(data.timestamp);
-
+            // ⚠️ KUNCI PERBAIKAN UNTUK KONTRAK LAMA ⚠️
+            // Struct Lama: { bool isForSale, uint256 price, address seller, ... }
+            // Index 0 = isForSale
+            // Index 1 = Price
+            // Index 2 = Seller
+            
+            // Kita pakai pengecekan manual agar aman
+            const isForSale = saleData[0]; // Index 0 pasti boolean di kontrak lama
+            
             if (isForSale) {
+                const currentPriceBig = saleData[1]; // Index 1 adalah Harga
+                const currentSeller = saleData[2];   // Index 2 adalah Seller
+                
+                // --- HANDLING RARITY (Jaga-jaga kalau kontrak lama belum ada Rarity) ---
+                // Cek apakah saleData punya index ke-4 atau properti rarity?
+                // Kalau tidak ada, kita anggap 0 (COMMON) agar filter tidak error.
+                let currentRarity = 0; 
+                if (saleData.rarity !== undefined) {
+                    currentRarity = Number(saleData.rarity);
+                } else if (saleData[4] !== undefined) {
+                    currentRarity = Number(saleData[4]);
+                }
+
+                // --- HANDLING MARKET ID (PENGGANTI) ---
+                // Karena kontrak lama tidak punya 'marketId', kita pakai Timestamp sebagai ID.
+                // Efeknya sama: Timestamp besar = Listing Terbaru.
+                const simulatedId = Number(data.timestamp); 
+
                 const priceEth = ethers.formatEther(currentPriceBig);
 
-                // 1. LOGIKA AVATAR (KODE LAMA ANDA)
+                // --- LOGIKA UI (AVATAR & WAKTU) ---
                 let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png"; 
                 try {
                     const sellerProfile = await gameContract.users(currentSeller);
                     if(sellerProfile.avatarUrl && sellerProfile.avatarUrl.length > 5) {
                         avatarUrl = sellerProfile.avatarUrl;
                     }
-                } catch(err) { /* Silent error */ }
+                } catch(err) {}
 
-                // 2. LOGIKA WAKTU (KODE LAMA ANDA)
                 const listDate = new Date(Number(data.timestamp) * 1000);
-                const dateString = listDate.toLocaleDateString() + " " + listDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                const timeAgoStr = timeSince(listDate); // Pastikan fungsi timeSince ada
+                const dateString = listDate.toLocaleDateString();
+                const timeAgoStr = (typeof timeSince === 'function') ? timeSince(listDate) : dateString; 
 
-                // 3. LOGIKA OWNERSHIP
                 const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
                 const shortSeller = currentSeller.substring(0,6) + "..." + currentSeller.substring(38);
 
-                // --- BAGIAN UTAMA: MASUKKAN KE ARRAY DATA (JANGAN BIKIN HTML DISINI) ---
+                // --- MASUKKAN KE ARRAY (FORMAT TETAP SAMA AGAR FILTER JALAN) ---
                 const formattedItem = {
-                    // Data Inti untuk Filter
+                    // Data Kunci untuk Filter
                     nickname: nick,
                     priceEth: parseFloat(priceEth),
-                    rarity: currentRarity,
-                    marketId: currentId,
+                    rarity: currentRarity, // Default 0 jika tidak ada
+                    marketId: simulatedId, // Pakai Timestamp sebagai ID
                     timestamp: Number(data.timestamp),
                     
-                    // Data Tambahan untuk Tampilan (UI)
+                    // Data UI
                     seller: currentSeller,
                     shortSeller: shortSeller,
                     avatarUrl: avatarUrl,
-                    dateString: dateString,
                     timeAgo: timeAgoStr,
-                    isMyListing: isMyListing,
-                    originalData: data
+                    isMyListing: isMyListing
                 };
 
-                // Push ke Array Global
                 rawMarketData.push(formattedItem);
             }
         }
 
-        // --- FINAL STEP: PANGGIL FILTER ---
         console.log("Data loaded:", rawMarketData.length);
         
-        // Fungsi ini yang akan menghapus 'Scanning...' dan membuat HTML Kartu
+        // Panggil Filter untuk render kartu
         runSmartFilter(); 
 
     } catch (e) {
         console.error("Market Load Error:", e);
-        container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error: ${e.message}</div>`;
+        if(container) container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error: ${e.message}</div>`;
     }
 }
 
