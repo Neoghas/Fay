@@ -457,85 +457,104 @@
     transform: scale(1.05);
 }
 
-        /* Container Panel */
-.smart-filter-panel {
-    background: rgba(10, 15, 30, 0.9);
-    border: 1px solid rgba(0, 210, 255, 0.3);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    color: #fff;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
-
-/* Row Layout */
-.filter-top-row {
+        /* Container Utama Panel */
+.filter-panel-simple {
     display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
+    flex-wrap: wrap; /* Supaya rapi di HP */
+    gap: 20px;
+    background: rgba(13, 18, 30, 0.85); /* Dark Transparent */
+    border: 1px solid rgba(0, 210, 255, 0.3); /* Border Neon Tipis */
+    backdrop-filter: blur(10px); /* Efek Glass */
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    align-items: flex-end; /* Supaya input sejajar bawah */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
-.filter-group {
-    margin-bottom: 15px;
+/* Kotak per Group */
+.filter-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
-.filter-group label {
-    display: block;
-    font-size: 0.8em;
-    color: #00d2ff;
-    margin-bottom: 5px;
+/* Label Kecil di atas Input */
+.filter-label {
+    font-size: 0.85rem;
+    color: #00d2ff; /* Warna Cyan Futuristik */
     text-transform: uppercase;
     letter-spacing: 1px;
+    font-weight: bold;
 }
 
-/* Chip Buttons (Tombol Lonjong) */
-.chips-container {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.chip {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid #444;
-    color: #aaa;
-    padding: 5px 12px;
-    border-radius: 15px;
-    cursor: pointer;
-    font-size: 0.85em;
-    transition: all 0.2s;
-}
-
-.chip:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-/* Chip Active State (Menyala) */
-.chip.active {
-    background: rgba(0, 210, 255, 0.2);
-    border-color: #00d2ff;
-    color: #fff;
-    box-shadow: 0 0 8px rgba(0, 210, 255, 0.4);
-}
-
-/* Inputs */
-#searchInput, .futuristic-select, .price-inputs input {
-    background: #0f1219;
-    border: 1px solid #333;
+/* Styling Dropdown Select */
+.cyber-select {
+    background-color: #0f172a;
     color: white;
-    padding: 10px;
-    border-radius: 6px;
+    border: 1px solid #334155;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    min-width: 200px;
     outline: none;
+    transition: all 0.3s ease;
 }
 
-#searchInput { width: 100%; }
+.cyber-select:focus {
+    border-color: #00d2ff;
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+}
 
-.price-inputs {
+/* Styling Group Input Harga */
+.price-input-group {
     display: flex;
     align-items: center;
     gap: 10px;
 }
-.price-inputs input { width: 80px; }
+
+/* Styling Input Angka */
+.cyber-input {
+    background-color: #0f172a;
+    color: white;
+    border: 1px solid #334155;
+    padding: 10px;
+    border-radius: 8px;
+    width: 100px; /* Lebar input */
+    outline: none;
+    transition: all 0.3s ease;
+}
+
+.cyber-input:focus {
+    border-color: #00d2ff;
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+}
+
+/* Garis pisah (-) */
+.separator {
+    color: #64748b;
+    font-weight: bold;
+}
+
+/* Placeholder warna abu */
+::placeholder {
+    color: #475569;
+}
+
+/* Responsive: Di HP input harga jadi full width */
+@media (max-width: 600px) {
+    .filter-panel-simple {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .cyber-select, .price-input-group {
+        width: 100%;
+    }
+    .cyber-input {
+        width: 100%;
+    }
+}
         
     </style>
 </head>
@@ -559,42 +578,24 @@
         </div>
     </div>
 
-    <div class="smart-filter-panel">
-    <div class="filter-top-row">
-        <select id="sortSelect" onchange="runSmartFilter()" class="futuristic-select">
-            <option value="newest">🆕 Terbaru</option>
-            <option value="price_low">📉 Harga Terendah</option>
-            <option value="price_high">📈 Harga Tertinggi</option>
-            <option value="rarity_high">👑 Rarity Tertinggi</option>
+    <div class="filter-panel-simple">
+    
+    <div class="filter-box">
+        <label class="filter-label">Sort By</label>
+        <select id="sortSelect" onchange="runSmartFilter()" class="cyber-select">
+            <option value="newest">🆕 Terbaru (Newest)</option>
+            <option value="price_low">📉 Harga Terendah (Cheapest)</option>
+            <option value="price_high">📈 Harga Tertinggi (Expensive)</option>
+            <option value="rarity_high">👑 Rarity Tertinggi (Rarest)</option>
         </select>
     </div>
 
-    <div class="filter-group">
-        <label>Rarity Class:</label>
-        <div class="chips-container">
-            <button class="chip active" onclick="toggleChip(this, 'rarity', 'MYTHICAL')">🦄 Mythical</button>
-            <button class="chip active" onclick="toggleChip(this, 'rarity', 'LEGENDARY')">👑 Legendary</button>
-            <button class="chip active" onclick="toggleChip(this, 'rarity', 'RARE')">💎 Rare</button>
-            <button class="chip active" onclick="toggleChip(this, 'rarity', 'COMMON')">⚪ Common</button>
-        </div>
-    </div>
-
-    <div class="filter-group">
-        <label>Character DNA:</label>
-        <div class="chips-container">
-            <button class="chip" onclick="toggleChip(this, 'dna', '3_CHAR')">💎 3 Letters</button>
-            <button class="chip" onclick="toggleChip(this, 'dna', '4_CHAR')">✨ 4 Letters</button>
-            <button class="chip" onclick="toggleChip(this, 'dna', 'NUMBERS')">🔢 Numbers Only</button>
-            <button class="chip" onclick="toggleChip(this, 'dna', 'PALINDROME')">🔄 Palindrome</button>
-        </div>
-    </div>
-
-    <div class="filter-group">
-        <label>Price Range (ETH):</label>
-        <div class="price-inputs">
-            <input type="number" id="minPrice" placeholder="Min" onkeyup="runSmartFilter()">
-            <span>-</span>
-            <input type="number" id="maxPrice" placeholder="Max" onkeyup="runSmartFilter()">
+    <div class="filter-box">
+        <label class="filter-label">Price Range (ETH)</label>
+        <div class="price-input-group">
+            <input type="number" id="minPrice" placeholder="0.01" onkeyup="runSmartFilter()" class="cyber-input">
+            <span class="separator">-</span>
+            <input type="number" id="maxPrice" placeholder="Max" onkeyup="runSmartFilter()" class="cyber-input">
         </div>
     </div>
 
@@ -668,11 +669,7 @@
     let provider, signer, gameContract;
     let userAddress = null;
     let rawMarketData = [];
-    let activeFilters = {
-    rarity: ['MYTHICAL', 'LEGENDARY', 'RARE', 'COMMON'],
-    dna: []
-    };
-
+        
 // 1. FUNGSI UTAMA: DIPANGGIL SAAT ADA PERUBAHAN INPUT
 function runSmartFilter() {
     const searchText = document.getElementById('searchInput').value.toLowerCase();
@@ -1562,80 +1559,195 @@ function clearSearch() {
     input.focus();
 }
 
-function runSmartFilter() {
-    console.log("--- Memulai Filter ---");
-    console.log("Total Data Mentah:", rawMarketData.length);
+         function runSmartFilter() {
 
-    if (rawMarketData.length === 0) {
-        console.warn("AWAS: Data kosong! Cek fungsi loadMarketListings Anda.");
-        return;
-    }
+    console.log("Menjalankan Filter...");
 
-    // Cek sampel data pertama biar ketahuan isinya apa
-    console.log("Sampel Data Pertama:", rawMarketData[0]);
 
-    const searchText = document.getElementById('searchInput').value.toLowerCase();
-    
-    // ... (kode filter lainnya) ...
+
+    // 1. AMBIL NILAI DARI HTML
+
+    const sortType = document.getElementById('sortSelect').value;
+
+    let minP = parseFloat(document.getElementById('minPrice').value);
+
+    let maxP = parseFloat(document.getElementById('maxPrice').value);
+
+
+
+    // Kalau input kosong/error, kasih nilai default (0 sampai Tak Terhingga)
+
+    if (isNaN(minP)) minP = 0;
+
+    if (isNaN(maxP)) maxP = 999999999;
+
+
+
+    // 2. PROSES FILTER (HARGA)
+
+    // Kita saring array 'rawMarketData'
 
     let results = rawMarketData.filter(item => {
-        // DEBUGGING: Cek apakah item.nickname ada?
-        if (typeof item.nickname === 'undefined') {
-            console.error("ERROR KEY: 'item.nickname' tidak ditemukan! Cek nama variabel Anda.");
-            return false;
+
+        // Cek apakah harga item masuk dalam range?
+
+        if (item.priceEth >= minP && item.priceEth <= maxP) {
+
+            return true; // Lolos
+
         }
-        
-        // Lanjut logika filter...
-        if (!item.nickname.toLowerCase().includes(searchText)) return false;
-        return true;
+
+        return false; // Gagal (Hilang)
+
     });
 
-    console.log("Hasil Filter:", results.length, "item ditemukan.");
-    renderMarketGrid(results);
+
+
+    // 3. PROSES SORTING (URUTAN)
+
+    results.sort((a, b) => {
+
+        if (sortType === 'newest') {
+
+            // ID Besar ke Kecil (Terbaru diatas)
+
+            return b.marketId - a.marketId; 
+
+        }
+
+        if (sortType === 'price_low') {
+
+            // Harga Kecil ke Besar
+
+            return a.priceEth - b.priceEth; 
+
+        }
+
+        if (sortType === 'price_high') {
+
+            // Harga Besar ke Kecil
+
+            return b.priceEth - a.priceEth; 
+
+        }
+
+        if (sortType === 'rarity_high') {
+
+            // Rarity Besar ke Kecil (Mythical=3, Common=0)
+
+            return b.rarity - a.rarity; 
+
+        }
+
+        return 0;
+
+    });
+
+
+
+    console.log(`Menampilkan ${results.length} item setelah filter.`);
+
+
+
+    // 4. RENDER KE LAYAR
+
+    renderFilteredCards(results);
+
 }
 
-// 2. HELPER: MENGATUR TOMBOL CHIP (Toggle)
-function toggleChip(btn, category, value) {
-    // Ubah visual tombol
-    btn.classList.toggle('active');
-
-    // Update logika data
-    const list = activeFilters[category];
-    if (list.includes(value)) {
-        // Hapus dari list
-        activeFilters[category] = list.filter(item => item !== value);
-    } else {
-        // Tambah ke list
-        activeFilters[category].push(value);
-    }
-
-    // Jalankan filter otomatis
-    runSmartFilter();
-}
-
-// 3. HELPER: CEK PALINDROM (Versi JS)
-function isPalindromeJS(str) {
-    const cleanStr = str.toLowerCase();
-    return cleanStr === cleanStr.split('').reverse().join('');
-}
-
-// 4. HELPER: RENDER (Mockup)
-function renderMarketGrid(data) {
-    const container = document.getElementById('market-list'); // ID Container di HTML Anda
-    container.innerHTML = "";
-    document.getElementById('result-count').innerText = `${data.length} Items Found`;
-
-    if(data.length === 0) {
-        container.innerHTML = `<div class="empty-state">📡 No items found in this sector.</div>`;
+        function renderFilteredCards(data) {
+    // 1. Target Container (Pastikan di HTML ada <div id="market-list"></div>)
+    const container = document.getElementById('market-list');
+    
+    // Safety check: Kalau elemen HTML nya belum dibuat
+    if (!container) {
+        console.error("Dev, tolong buat <div id='market-list'></div> di HTML dulu ya!");
         return;
     }
 
-    data.forEach(item => {
-        // Panggil fungsi createCard Anda yang lama disini
+    // 2. Bersihkan isi lama (Reset)
+    container.innerHTML = "";
 
-        // container.appendChild(createCard(item));
+    // 3. Handle Empty State (Jika tidak ada hasil filter)
+    if (data.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📡</div>
+                <h3>No signals detected</h3>
+                <p>Coba ubah filter atau cari nama lain.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // 4. Looping Data & Buat HTML
+    data.forEach(item => {
+        
+        // A. Tentukan Styling berdasarkan Rarity (0,1,2,3)
+        let rarityLabel = "COMMON";
+        let rarityClass = "card-common";
+        let glowColor = "gray"; // Default
+
+        if (item.rarity === 1) { 
+            rarityLabel = "RARE"; 
+            rarityClass = "card-rare"; 
+            glowColor = "#00d2ff"; // Biru
+        }
+        if (item.rarity === 2) { 
+            rarityLabel = "LEGENDARY"; 
+            rarityClass = "card-legendary"; 
+            glowColor = "#ffd700"; // Emas
+        }
+        if (item.rarity === 3) { 
+            rarityLabel = "MYTHICAL"; 
+            rarityClass = "card-mythical"; 
+            glowColor = "#ff0055"; // Merah Neon
+        }
+
+        // B. Avatar Generator (Biar gak kosong)
+        // Kita pakai seed dari nickname biar gambarnya konsisten
+        const avatarUrl = `https://api.dicebear.com/7.x/identicon/svg?seed=${item.nickname}`;
+
+        // C. Format Harga (Maksimal 4 desimal biar rapi)
+        const displayPrice = parseFloat(item.priceEth).toFixed(4);
+
+        // D. Template HTML Kartu
+        const cardHTML = `
+            <div class="market-card ${rarityClass}">
+                <div class="card-header">
+                    <span class="rarity-badge" style="border-color: ${glowColor}; color: ${glowColor}">
+                        ${rarityLabel}
+                    </span>
+                    <span class="id-badge">#${item.marketId}</span>
+                </div>
+
+                <div class="card-img-wrapper">
+                    <img src="${avatarUrl}" alt="${item.nickname}" class="card-avatar">
+                </div>
+
+                <div class="card-body">
+                    <h3 class="nick-title">${item.nickname}</h3>
+                    <div class="price-section">
+                        <span class="price-label">Price</span>
+                        <span class="price-value">${displayPrice} ETH</span>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <button class="btn-buy" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">
+                        ⚡ BUY NOW
+                    </button>
+                    <button class="btn-offer" onclick="openOfferModal('${item.nickname}')">
+                        🤝 NEGO
+                    </button>
+                </div>
+            </div>
+        `;
+
+        // 5. Masukkan ke Container (Append)
+        container.insertAdjacentHTML('beforeend', cardHTML);
     });
-}
+        }
         
         // Auto connect jika sudah pernah connect di halaman utama (opsional)
         window.onload = connectWallet; 
