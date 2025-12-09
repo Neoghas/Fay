@@ -901,96 +901,112 @@
     switchTab('market'); 
         }
 
-        // --- LOAD MARKET (VERSI KONTRAK LAMA / COMPATIBILITY MODE) ---
-        async function loadMarketListings() {
+        // --- LOAD MARKET (UPDATE SESUAI KONTRAK BARU 9 DESEMBER 2025) ---
+async function loadMarketListings() {
     if(!gameContract) return;
 
-    // 1. Reset & Tampilkan Loading
+    // 1. Reset Array Global
     rawMarketData = [];
+    
     const container = document.getElementById('market-list');
+    // Bersihkan error message lama
     if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
     
-    console.log("🚀 MEMULAI SCAN BLOCKCHAIN...");
-
     try {
-        // 2. Ambil Event Logs
-        // Pastikan DEPLOY_BLOCK sudah benar nilainya di file config Anda
-        const filter = gameContract.filters.NicknameListed();
-        const logs = await gameContract.queryFilter(filter, DEPLOY_BLOCK, "latest");
-        
-        console.log(`📡 Ditemukan ${logs.length} Log Transaksi Listing.`);
+        // Ambil Market Contract Instance (Pastikan ABI Market sudah diupdate!)
+        // Jika gameContract adalah Main Contract, kita butuh instance Market terpisah
+        // Asumsi: variable 'marketContract' sudah di-init dengan alamat Market baru
+        // Jika belum ada variable khusus, pakai gameContract (kalau logicnya nyampur)
+        // TAPI IDEALNYA:
+        const marketAddress = await gameContract.marketContract(); 
+        // Pastikan Anda punya ABI Market.json
+        const marketInstance = new ethers.Contract(marketAddress, MARKET_ABI, provider); 
+
+        // Ambil Logs dari Market Contract
+        const filter = marketInstance.filters.NicknameListed();
+        const logs = await marketInstance.queryFilter(filter, DEPLOY_BLOCK, "latest");
 
         const uniqueListings = new Map();
 
-        // Loop Log (Terbaru dulu)
+        // Loop Log (Reverse - Terbaru diatas)
         for (const log of logs.reverse()) {
-            const nick = log.args[1];
-            const timestamp = log.args[3]; 
+            const nick = log.args[2]; // Di event baru: arg 2 adalah nickname
+            // Event NicknameListed(marketId, seller, nickname, price, timestamp)
+            const timestamp = log.args[4]; 
             
-            // Ambil listing unik terbaru
             if (!uniqueListings.has(nick)) {
                 uniqueListings.set(nick, { timestamp }); 
             }
         }
 
-        console.log(`🔍 Ada ${uniqueListings.size} Nickname Unik yang perlu dicek statusnya.`);
-
-        // 3. Cek Status Aktif ke Smart Contract
+        // --- LOOPING DATA ---
         for (let [nick, data] of uniqueListings) {
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-            const saleData = await gameContract.nickMarketplace(nickHash);
             
-            // --- KOMPATIBILITAS KONTRAK LAMA ---
-            // Index 0 = bool isForSale
-            // Index 1 = uint256 price
-            // Index 2 = address seller
-            const isForSale = saleData[0]; 
-
+            // Panggil mapping nickMarketplace
+            const saleData = await marketInstance.nickMarketplace(nickHash);
+            
+            // 🔥 UPDATE PENTING: SESUAIKAN DENGAN STRUCT BARU 🔥
+            // Struct: { marketId, isForSale, price, seller, listedAt, rarity, ownerCount }
+            // Index:      0          1        2       3        4        5         6
+            
+            // Ambil data pakai NAMA PROPERTI (Lebih Aman) atau INDEX BARU
+            // Kita pakai Index manual untuk memastikan urutan:
+            
+            const currentMarketId = Number(saleData[0]); // Index 0
+            const isForSale = saleData[1];               // Index 1 (Bool)
+            
             if (isForSale) {
-                const currentPriceBig = saleData[1];
-                const currentSeller = saleData[2];
-                const priceEth = parseFloat(ethers.formatEther(currentPriceBig));
+                const currentPriceBig = saleData[2];     // Index 2 (Price)
+                const currentSeller = saleData[3];       // Index 3 (Seller)
+                const currentTimestamp = saleData[4];    // Index 4 (Time)
+                const currentRarity = Number(saleData[5]); // Index 5 (Rarity Enum)
+                
+                const priceEth = ethers.formatEther(currentPriceBig);
 
-                // Fallback Rarity (Jika kontrak lama, anggap 0/Common)
-                let currentRarity = 0;
-                if (saleData.rarity !== undefined) currentRarity = Number(saleData.rarity);
+                // --- AVATAR & UI ---
+                let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png"; 
+                try {
+                    // Ambil profil dari Game Contract Utama
+                    const sellerProfile = await gameContract.users(currentSeller);
+                    if(sellerProfile.avatarUrl && sellerProfile.avatarUrl.length > 5) {
+                        avatarUrl = sellerProfile.avatarUrl;
+                    }
+                } catch(err) {}
 
-                // Fallback ID (Pakai Timestamp)
-                const simulatedId = Number(data.timestamp);
+                const listDate = new Date(Number(currentTimestamp) * 1000);
+                const dateString = listDate.toLocaleDateString();
+                const timeAgoStr = (typeof timeSince === 'function') ? timeSince(listDate) : dateString; 
 
-                // AVATAR & WAKTU
-                let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png";
-                // (Kode effigy/timeSince lama Anda simpan disini...)
+                const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
+                const shortSeller = currentSeller.substring(0,6) + "..." + currentSeller.substring(38);
 
+                // --- PUSH DATA ---
                 const formattedItem = {
                     nickname: nick,
-                    priceEth: priceEth, // FLOAT
-                    rarity: currentRarity,
-                    marketId: simulatedId,
-                    timestamp: Number(data.timestamp),
+                    priceEth: parseFloat(priceEth),
+                    rarity: currentRarity, 
+                    marketId: currentMarketId, // ID Asli dari Kontrak
+                    timestamp: Number(currentTimestamp),
                     seller: currentSeller,
-                    avatarUrl: avatarUrl
+                    shortSeller: shortSeller,
+                    avatarUrl: avatarUrl,
+                    timeAgo: timeAgoStr,
+                    isMyListing: isMyListing
                 };
 
-                // PENTING: Log item yang berhasil diambil
-                console.log(`✅ ITEM DITEMUKAN: ${nick} | Harga: ${priceEth} ETH`);
-                
                 rawMarketData.push(formattedItem);
-            } else {
-                // console.log(`❌ ${nick} sudah tidak dijual (Sold/Cancel).`);
             }
         }
 
-        console.log(`🎉 TOTAL DATA SIAP TAMPIL: ${rawMarketData.length} ITEM`);
-        
-        // Panggil Filter
+        console.log("Data loaded:", rawMarketData.length);
         runSmartFilter(); 
 
     } catch (e) {
-        console.error("🔥 FATAL ERROR LOAD DATA:", e);
-        if(container) container.innerHTML = `<div style="color:red; text-align:center;">ERROR: ${e.message}</div>`;
+        console.error("Market Load Error:", e);
+        if(container) container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error loading data: ${e.message}</div>`;
     }
-        }
+}
 
 // Helper Function: "2 hours ago", "5 mins ago"
 function timeSince(date) {
