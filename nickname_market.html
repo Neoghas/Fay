@@ -594,10 +594,34 @@
 .toast-error   { border-left-color: #ff0055; box-shadow: -5px 0 15px rgba(255, 0, 85, 0.2); }
 .toast-info    { border-left-color: #00d2ff; box-shadow: -5px 0 15px rgba(0, 210, 255, 0.2); }
 .toast-warning { border-left-color: #ffd700; box-shadow: -5px 0 15px rgba(255, 215, 0, 0.2); }
+/* Style untuk Loading */
+.toast-loading { 
+    border-left-color: #ffffff; 
+    box-shadow: -5px 0 15px rgba(255, 255, 255, 0.2); 
+}
 
+/* Animasi Putar untuk Ikon Loading */
+@keyframes spin { 100% { transform: rotate(360deg); } }
+.spin-icon { 
+    display: inline-block; 
+    animation: spin 1s linear infinite; 
+}
+        
 /* --- ICON & TEXT --- */
+/* Atur ukuran icon gambar */
+.toast-custom-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain; /* Agar gambar tidak gepeng */
+    display: block;
+}
+
+/* Update sedikit wrapper iconnya */
 .toast-icon {
-    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px; /* Space aman untuk icon */
 }
 .toast-message {
     font-size: 0.95rem;
@@ -1837,41 +1861,42 @@ function clearSearch() {
 function showToast(message, type = 'info', duration = 4000) {
     const container = document.getElementById('toast-container');
     
-    // Ikon berdasarkan tipe (Bisa ganti SVG atau FontAwesome)
+    // Map Icon Anda (File Path)
     const iconMap = {
-        success: 'success.svg', // Atau <i class="fas fa-check-circle"></i>
-        error:   'x.svg', // Atau <i class="fas fa-times-circle"></i>
-        info:    'info-icon.svg', // Atau <i class="fas fa-info-circle"></i>
-        warning: 'warning.svg'  // Atau <i class="fas fa-exclamation-triangle"></i>
+        success: 'success.svg', 
+        error:   'x.svg',
+        info:    'info-icon.svg', 
+        warning: 'warning.svg',
+        loading: 'loading.svg' // Tambahkan loading jika ada
     };
 
-    // Buat elemen div baru
+    // LOGIKA BARU: Cek apakah icon berupa file gambar atau teks biasa?
+    const iconSrc = iconMap[type] || 'info-icon.svg'; // Default fallback
+    let iconHTML = '';
+
+    if (iconSrc.includes('.svg') || iconSrc.includes('.png')) {
+        // Jika file gambar -> Pakai tag IMG
+        iconHTML = `<img src="${iconSrc}" class="toast-custom-icon" alt="${type}">`;
+    } else {
+        // Jika teks/emoji -> Pakai teks biasa
+        iconHTML = iconSrc; 
+    }
+
     const toast = document.createElement('div');
-    
-    // Tambahkan class dasar dan class tipe
     toast.classList.add('toast-card', `toast-${type}`);
     
-    // Isi HTML Toast
+    // Masukkan iconHTML yang sudah diproses
     toast.innerHTML = `
-        <div class="toast-icon">${iconMap[type] || '🔔'}</div>
+        <div class="toast-icon">${iconHTML}</div>
         <div class="toast-message">${message}</div>
         <div class="toast-progress" style="animation-duration: ${duration}ms"></div>
     `;
 
-    // Masukkan ke dalam container (DOM)
     container.appendChild(toast);
 
-    // --- LOGIKA MENGHILANG ---
-    
-    // 1. Set waktu hapus otomatis
-    setTimeout(() => {
-        removeToast(toast);
-    }, duration);
-
-    // 2. Klik untuk menutup manual (Opsional)
+    setTimeout(() => { removeToast(toast); }, duration);
     toast.onclick = () => removeToast(toast);
 }
-
 // Fungsi Helper: Hapus Toast dengan animasi keluar
 function removeToast(element) {
     // Tambahkan animasi keluar (CSS)
