@@ -1377,49 +1377,58 @@ function timeSince(date) {
         }
 
         // --- FUNGSI JUAL NICKNAME (FIXED) ---
-async function sellNickname(nick) {
+        async function sellNickname(nick) {
     try {
-        // 1. Ambil Harga dari Input HTML
+        // 1. Ambil Harga dari Input
         const priceInput = document.getElementById(`price-${nick}`);
-        if (!priceInput || !priceInput.value) {
-            showToast("Please enter a price!", "warning");
+        
+        // Validasi input kosong
+        if (!priceInput || !priceInput.value || parseFloat(priceInput.value) <= 0) {
+            // Jika Anda punya fungsi showToast, pakai itu. Kalau tidak, alert biasa.
+            if(typeof showToast === "function") showToast("Please enter a valid price!", "warning");
+            else alert("Please enter a valid price!");
             return;
         }
         
-        // Konversi ke Wei
-        const priceEth = priceInput.value;
-        const priceWei = ethers.utils.parseEther(priceEth);
+        // 2. KONVERSI HARGA (FIX Ethers V6) 🔥
+        const priceEth = priceInput.value.toString(); // Pastikan string
+        
+        // DULU: ethers.utils.parseEther(priceEth); -> ERROR di V6
+        // SEKARANG: Langsung panggil parseEther dari induk ethers
+        const priceWei = ethers.parseEther(priceEth); 
 
-        // 2. SIAPKAN KONEKSI KE MARKET (Bukan Game Contract)
+        // 3. KONEKSI KE MARKET
         if (!gameContract) return;
+        
+        // Ambil alamat Market dari Kontrak Utama
         const marketAddress = await gameContract.marketContract();
         
-        // ABI Minimal untuk fungsi Jual
+        // ABI Minimal untuk Jual
         const marketAbi = ["function sellNickname(string memory _nick, uint256 _price) external"];
         
-        // Buat Instance Market dengan Signer (agar bisa kirim transaksi)
-        const signer = provider.getSigner(); // Pastikan provider global sudah ada
+        // Gunakan Signer (Wallet User)
+        const signer = await provider.getSigner(); 
         const marketInstance = new ethers.Contract(marketAddress, marketAbi, signer);
 
-        // 3. EKSEKUSI TRANSAKSI
-        showToast("Confirm listing in wallet...", "loading");
+        // 4. EKSEKUSI
+        if(typeof showToast === "function") showToast("Confirm listing in wallet...", "loading");
         
-        // Panggil fungsi di MARKET INSTANCE
         const tx = await marketInstance.sellNickname(nick, priceWei);
         
-        showToast("Transaction sent! Waiting...", "info");
+        if(typeof showToast === "function") showToast("Transaction sent! Waiting...", "info");
+        
         await tx.wait();
         
-        showToast("Success! Item is now on sale.", "success");
+        if(typeof showToast === "function") showToast("Success! Item is listed.", "success");
         
-        // Refresh Halaman
+        // Refresh Halaman Inventory
         loadMyInventory(); 
 
     } catch (e) {
         console.error(e);
-        // Tampilkan pesan error yang lebih bersih
         const errMsg = e.reason || e.message || "Transaction failed";
-        showToast("Error: " + errMsg, "error");
+        if(typeof showToast === "function") showToast("Error: " + errMsg, "error");
+        else alert("Error: " + errMsg);
     }
 }
 
