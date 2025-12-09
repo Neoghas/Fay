@@ -903,68 +903,73 @@
 
         // --- LOAD GLOBAL MARKET (FIXED: KONEKSI KE MARKET INSTANCE) ---
 async function loadMarketListings() {
-    // Pastikan koneksi ke Game Utama ada dulu (untuk ambil alamat Market)
+    // Cek koneksi dasar
     if(!gameContract) return;
 
-    // 1. Reset Array Global
+    // 1. Reset Wadah Data Global
     rawMarketData = [];
     
     const container = document.getElementById('market-list');
-    // Tampilkan Loading
     if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
     
     try {
         // ============================================================
-        // 🔌 LANGKAH 1: BIKIN KONEKSI KE MARKET (AUTO DETECT)
+        // 🔌 LANGKAH 1: BUAT KONEKSI KHUSUS KE KONTRAK MARKET
         // ============================================================
         
-        // Ambil alamat Market yang tersimpan di Kontrak Utama
+        // Ambil alamat Market yang tersimpan di dalam Game Utama
         const marketAddress = await gameContract.marketContract(); 
+        console.log("Market Address detected:", marketAddress);
         
-        // 🔥 DEFINISI ABI MANUAL (Agar JS tahu cara baca Market.sol) 🔥
+        // 🔥 DEFINISI ABI MANUAL (Agar JS tahu cara baca Event & Data Market) 🔥
         const marketAbi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameDelisted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameListed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"oldPrice","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"newPrice","type":"uint256"}],"name":"NicknamePriceUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"buyer","type":"address"},{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameSold","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickA","type":"string"},{"indexed":false,"internalType":"string","name":"nickB","type":"string"},{"indexed":false,"internalType":"address","name":"ownerA","type":"address"},{"indexed":false,"internalType":"address","name":"ownerB","type":"address"}],"name":"SwapAccepted","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"myNick","type":"string"},{"indexed":false,"internalType":"string","name":"targetNick","type":"string"}],"name":"SwapCancelled","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"myNick","type":"string"},{"indexed":false,"internalType":"string","name":"targetNick","type":"string"},{"indexed":false,"internalType":"uint256","name":"ethOffered","type":"uint256"},{"indexed":false,"internalType":"address","name":"initiator","type":"address"}],"name":"SwapRequested","type":"event"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"buyNickname","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"cancelSale","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_myNick","type":"string"},{"internalType":"string","name":"_targetNick","type":"string"}],"name":"cancelSwap","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentMarketId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_myNick","type":"string"},{"internalType":"string","name":"_offeredNick","type":"string"}],"name":"executeSwap","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"gameContractAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"marketIdToHash","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"myNicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickHandHistory","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickMarketplace","outputs":[{"internalType":"uint256","name":"marketId","type":"uint256"},{"internalType":"bool","name":"isForSale","type":"bool"},{"internalType":"uint256","name":"price","type":"uint256"},{"internalType":"address","name":"seller","type":"address"},{"internalType":"uint256","name":"listedAt","type":"uint256"},{"internalType":"enum Market.Rarity","name":"rarity","type":"uint8"},{"internalType":"uint256","name":"ownerCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"},{"internalType":"string","name":"_nick","type":"string"}],"name":"registerNicknameFromGame","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_myNick","type":"string"},{"internalType":"string","name":"_targetNick","type":"string"}],"name":"requestSwap","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint256","name":"_price","type":"uint256"}],"name":"sellNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_game","type":"address"}],"name":"setGameContract","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"swapRequests","outputs":[{"internalType":"address","name":"initiator","type":"address"},{"internalType":"string","name":"myNick","type":"string"},{"internalType":"string","name":"targetNick","type":"string"},{"internalType":"uint256","name":"ethOffered","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_newNick","type":"string"}],"name":"switchNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"string","name":"nickname","type":"string"}],"stateMutability":"view","type":"function"}];
 
-        // Buat Instance Khusus Market
-        // (Pastikan variabel 'provider' sudah didefinisikan di kode setup awal Anda)
+        // Buat Instance Kontrak Market (Pakai Provider untuk baca data)
         const marketInstance = new ethers.Contract(marketAddress, marketAbi, provider); 
 
         // ============================================================
-        // 🔌 LANGKAH 2: AMBIL LOGS DARI MARKET INSTANCE
+        // 🔌 LANGKAH 2: AMBIL LOGS DARI MARKET INSTANCE (BUKAN GAME CONTRACT)
         // ============================================================
 
-        // 🔥 PANGGIL FILTER DARI MARKET INSTANCE 🔥
+        // 🔥 PERBAIKAN UTAMA: PANGGIL FILTER DARI MARKET INSTANCE 🔥
+        // Dulu error karena: gameContract.filters.NicknameListed()
         const filter = marketInstance.filters.NicknameListed();
+        
+        // Ambil Logs (Pastikan DEPLOY_BLOCK Anda benar, atau ganti 0 jika ragu)
         const logs = await marketInstance.queryFilter(filter, DEPLOY_BLOCK, "latest");
 
         const uniqueListings = new Map();
 
-        // Loop Log (Reverse - Terbaru diatas)
+        // Loop Log (Reverse - Dari Terbaru ke Terlama)
         for (const log of logs.reverse()) {
-            // Event: NicknameListed(marketId, seller, nickname, price, timestamp)
-            // Args Index:            0        1        2        3        4
+            // Event Baru: (marketId, seller, nickname, price, timestamp)
+            // Urutan Args:    0        1        2        3        4
             
-            const nick = log.args[2]; // Index 2 = Nickname
-            const timestamp = log.args[4]; // Index 4 = Timestamp
+            const nick = log.args[2]; // Index 2 adalah Nickname
+            const timestamp = log.args[4]; // Index 4 adalah Timestamp
             
+            // Kita hanya butuh data unik terbaru
             if (!uniqueListings.has(nick)) {
                 uniqueListings.set(nick, { timestamp }); 
             }
         }
 
-        // --- LOOPING DATA ---
+        console.log(`Ditemukan ${uniqueListings.size} item unik.`);
+
+        // --- LOOPING DATA UTAMA ---
         for (let [nick, data] of uniqueListings) {
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
             
             // 🔥 PANGGIL DATA DARI MARKET INSTANCE 🔥
             const saleData = await marketInstance.nickMarketplace(nickHash);
             
-            // Struct Market.sol: 
-            // { marketId, isForSale, price, seller, listedAt, rarity, ownerCount }
-            // Index: 0       1        2       3        4        5         6
+            // Struct Market Baru: { marketId, isForSale, price, seller, listedAt, rarity, ownerCount }
+            // Index:                 0          1        2       3        4        5         6
             
             const currentMarketId = Number(saleData[0]); 
-            const isForSale = saleData[1];               
+            const isForSale = saleData[1]; // Boolean
             
+            // Hanya tampilkan yang statusnya TRUE (Sedang Dijual)
             if (isForSale) {
                 const currentPriceBig = saleData[2];     
                 const currentSeller = saleData[3];       
@@ -973,8 +978,8 @@ async function loadMarketListings() {
                 
                 const priceEth = ethers.formatEther(currentPriceBig);
 
-                // --- AVATAR & UI ---
-                // (Kita ambil Avatar dari GameContract karena profile user ada di sana)
+                // --- LOGIKA UI (AVATAR & WAKTU) ---
+                // Avatar tetap diambil dari Game Utama karena user profile ada disana
                 let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png"; 
                 try {
                     const sellerProfile = await gameContract.users(currentSeller);
@@ -985,13 +990,12 @@ async function loadMarketListings() {
 
                 const listDate = new Date(Number(currentTimestamp) * 1000);
                 const dateString = listDate.toLocaleDateString();
-                // Pastikan fungsi timeSince ada di utils.js Anda
                 const timeAgoStr = (typeof timeSince === 'function') ? timeSince(listDate) : dateString; 
 
                 const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
                 const shortSeller = currentSeller.substring(0,6) + "..." + currentSeller.substring(38);
 
-                // --- PUSH DATA KE ARRAY GLOBAL ---
+                // --- SIMPAN KE ARRAY GLOBAL ---
                 const formattedItem = {
                     nickname: nick,
                     priceEth: parseFloat(priceEth),
@@ -1011,12 +1015,12 @@ async function loadMarketListings() {
 
         console.log("Global Market Loaded:", rawMarketData.length);
         
-        // Jalankan Filter & Render
+        // Jalankan Filter & Render Kartu
         runSmartFilter(); 
 
     } catch (e) {
         console.error("Market Load Error:", e);
-        if(container) container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error loading data: ${e.message}</div>`;
+        if(container) container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error: ${e.message}</div>`;
     }
 }
 
