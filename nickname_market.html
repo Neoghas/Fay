@@ -902,116 +902,95 @@
         }
 
         // --- LOAD MARKET (VERSI KONTRAK LAMA / COMPATIBILITY MODE) ---
-async function loadMarketListings() {
+        async function loadMarketListings() {
     if(!gameContract) return;
 
-    // 1. Reset Array Global
+    // 1. Reset & Tampilkan Loading
     rawMarketData = [];
-    
     const container = document.getElementById('market-list');
     if (container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">Scanning Blockchain...</div>';
     
+    console.log("🚀 MEMULAI SCAN BLOCKCHAIN...");
+
     try {
-        // Ambil Event Log (Tetap sama)
+        // 2. Ambil Event Logs
+        // Pastikan DEPLOY_BLOCK sudah benar nilainya di file config Anda
         const filter = gameContract.filters.NicknameListed();
         const logs = await gameContract.queryFilter(filter, DEPLOY_BLOCK, "latest");
+        
+        console.log(`📡 Ditemukan ${logs.length} Log Transaksi Listing.`);
 
         const uniqueListings = new Map();
 
-        // Loop Log (Reverse)
+        // Loop Log (Terbaru dulu)
         for (const log of logs.reverse()) {
             const nick = log.args[1];
-            // Kita butuh timestamp dari event ini karena di struct lama mungkin ga ada listedAt yang akurat
             const timestamp = log.args[3]; 
             
-            // Simpan data unik berdasarkan nickname
+            // Ambil listing unik terbaru
             if (!uniqueListings.has(nick)) {
                 uniqueListings.set(nick, { timestamp }); 
             }
         }
 
-        // --- LOOPING DATA UNTUK DIBACA DARI SMART CONTRACT ---
+        console.log(`🔍 Ada ${uniqueListings.size} Nickname Unik yang perlu dicek statusnya.`);
+
+        // 3. Cek Status Aktif ke Smart Contract
         for (let [nick, data] of uniqueListings) {
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
             const saleData = await gameContract.nickMarketplace(nickHash);
             
-            // ⚠️ KUNCI PERBAIKAN UNTUK KONTRAK LAMA ⚠️
-            // Struct Lama: { bool isForSale, uint256 price, address seller, ... }
-            // Index 0 = isForSale
-            // Index 1 = Price
-            // Index 2 = Seller
-            
-            // Kita pakai pengecekan manual agar aman
-            const isForSale = saleData[0]; // Index 0 pasti boolean di kontrak lama
-            
+            // --- KOMPATIBILITAS KONTRAK LAMA ---
+            // Index 0 = bool isForSale
+            // Index 1 = uint256 price
+            // Index 2 = address seller
+            const isForSale = saleData[0]; 
+
             if (isForSale) {
-                const currentPriceBig = saleData[1]; // Index 1 adalah Harga
-                const currentSeller = saleData[2];   // Index 2 adalah Seller
-                
-                // --- HANDLING RARITY (Jaga-jaga kalau kontrak lama belum ada Rarity) ---
-                // Cek apakah saleData punya index ke-4 atau properti rarity?
-                // Kalau tidak ada, kita anggap 0 (COMMON) agar filter tidak error.
-                let currentRarity = 0; 
-                if (saleData.rarity !== undefined) {
-                    currentRarity = Number(saleData.rarity);
-                } else if (saleData[4] !== undefined) {
-                    currentRarity = Number(saleData[4]);
-                }
+                const currentPriceBig = saleData[1];
+                const currentSeller = saleData[2];
+                const priceEth = parseFloat(ethers.formatEther(currentPriceBig));
 
-                // --- HANDLING MARKET ID (PENGGANTI) ---
-                // Karena kontrak lama tidak punya 'marketId', kita pakai Timestamp sebagai ID.
-                // Efeknya sama: Timestamp besar = Listing Terbaru.
-                const simulatedId = Number(data.timestamp); 
+                // Fallback Rarity (Jika kontrak lama, anggap 0/Common)
+                let currentRarity = 0;
+                if (saleData.rarity !== undefined) currentRarity = Number(saleData.rarity);
 
-                const priceEth = ethers.formatEther(currentPriceBig);
+                // Fallback ID (Pakai Timestamp)
+                const simulatedId = Number(data.timestamp);
 
-                // --- LOGIKA UI (AVATAR & WAKTU) ---
-                let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png"; 
-                try {
-                    const sellerProfile = await gameContract.users(currentSeller);
-                    if(sellerProfile.avatarUrl && sellerProfile.avatarUrl.length > 5) {
-                        avatarUrl = sellerProfile.avatarUrl;
-                    }
-                } catch(err) {}
+                // AVATAR & WAKTU
+                let avatarUrl = "https://effigy.im/a/" + currentSeller + ".png";
+                // (Kode effigy/timeSince lama Anda simpan disini...)
 
-                const listDate = new Date(Number(data.timestamp) * 1000);
-                const dateString = listDate.toLocaleDateString();
-                const timeAgoStr = (typeof timeSince === 'function') ? timeSince(listDate) : dateString; 
-
-                const isMyListing = (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase());
-                const shortSeller = currentSeller.substring(0,6) + "..." + currentSeller.substring(38);
-
-                // --- MASUKKAN KE ARRAY (FORMAT TETAP SAMA AGAR FILTER JALAN) ---
                 const formattedItem = {
-                    // Data Kunci untuk Filter
                     nickname: nick,
-                    priceEth: parseFloat(priceEth),
-                    rarity: currentRarity, // Default 0 jika tidak ada
-                    marketId: simulatedId, // Pakai Timestamp sebagai ID
+                    priceEth: priceEth, // FLOAT
+                    rarity: currentRarity,
+                    marketId: simulatedId,
                     timestamp: Number(data.timestamp),
-                    
-                    // Data UI
                     seller: currentSeller,
-                    shortSeller: shortSeller,
-                    avatarUrl: avatarUrl,
-                    timeAgo: timeAgoStr,
-                    isMyListing: isMyListing
+                    avatarUrl: avatarUrl
                 };
 
+                // PENTING: Log item yang berhasil diambil
+                console.log(`✅ ITEM DITEMUKAN: ${nick} | Harga: ${priceEth} ETH`);
+                
                 rawMarketData.push(formattedItem);
+            } else {
+                // console.log(`❌ ${nick} sudah tidak dijual (Sold/Cancel).`);
             }
         }
 
-        console.log("Data loaded:", rawMarketData.length);
+        console.log(`🎉 TOTAL DATA SIAP TAMPIL: ${rawMarketData.length} ITEM`);
         
-        // Panggil Filter untuk render kartu
+        // Panggil Filter
         runSmartFilter(); 
 
     } catch (e) {
-        console.error("Market Load Error:", e);
-        if(container) container.innerHTML = `<div style="color:red; text-align:center; grid-column:1/-1;">Error: ${e.message}</div>`;
+        console.error("🔥 FATAL ERROR LOAD DATA:", e);
+        if(container) container.innerHTML = `<div style="color:red; text-align:center;">ERROR: ${e.message}</div>`;
     }
-}
+        }
 
 // Helper Function: "2 hours ago", "5 mins ago"
 function timeSince(date) {
@@ -1601,101 +1580,55 @@ function clearSearch() {
 }
 
          function runSmartFilter() {
+    console.log("--- MENJALANKAN FILTER ---");
 
-    console.log("Menjalankan Filter...");
-
-
-
-    // 1. AMBIL NILAI DARI HTML
+    // 1. Ambil Nilai Input
+    const searchInput = document.getElementById('searchInput');
+    const searchText = searchInput ? searchInput.value.toLowerCase() : "";
 
     const sortType = document.getElementById('sortSelect').value;
+    
+    // Hati-hati mengambil nilai input
+    const minEl = document.getElementById('minPrice');
+    const maxEl = document.getElementById('maxPrice');
 
-    let minP = parseFloat(document.getElementById('minPrice').value);
+    // Jika input kosong string "", anggap null. Jika ada angka, jadikan Float.
+    let minP = (minEl && minEl.value !== "") ? parseFloat(minEl.value) : 0;
+    let maxP = (maxEl && maxEl.value !== "") ? parseFloat(maxEl.value) : 999999999;
 
-    let maxP = parseFloat(document.getElementById('maxPrice').value);
+    console.log(`🎯 PARAMETER FILTER -> Cari: "${searchText}" | Harga: ${minP} - ${maxP} ETH`);
 
-
-
-    // Kalau input kosong/error, kasih nilai default (0 sampai Tak Terhingga)
-
-    if (isNaN(minP)) minP = 0;
-
-    if (isNaN(maxP)) maxP = 999999999;
-
-
-
-    // 2. PROSES FILTER (HARGA)
-
-    // Kita saring array 'rawMarketData'
-
+    // 2. PROSES FILTER
     let results = rawMarketData.filter(item => {
-
-        // Cek apakah harga item masuk dalam range?
-
-        if (item.priceEth >= minP && item.priceEth <= maxP) {
-
-            return true; // Lolos
-
+        // Cek Nama
+        if (searchText && !item.nickname.toLowerCase().includes(searchText)) {
+            return false;
         }
 
-        return false; // Gagal (Hilang)
+        // Cek Harga (DEBUG: Tampilkan item yang gagal lolos harga)
+        if (item.priceEth < minP || item.priceEth > maxP) {
+            console.log(`⚠️ Item "${item.nickname}" (${item.priceEth} ETH) dibuang karena di luar range harga.`);
+            return false;
+        }
 
+        return true;
     });
 
+    console.log(`✅ HASIL AKHIR: ${results.length} item lolos filter.`);
 
-
-    // 3. PROSES SORTING (URUTAN)
-
+    // 3. SORTING
     results.sort((a, b) => {
-
-        if (sortType === 'newest') {
-
-            // ID Besar ke Kecil (Terbaru diatas)
-
-            return b.marketId - a.marketId; 
-
-        }
-
-        if (sortType === 'price_low') {
-
-            // Harga Kecil ke Besar
-
-            return a.priceEth - b.priceEth; 
-
-        }
-
-        if (sortType === 'price_high') {
-
-            // Harga Besar ke Kecil
-
-            return b.priceEth - a.priceEth; 
-
-        }
-
-        if (sortType === 'rarity_high') {
-
-            // Rarity Besar ke Kecil (Mythical=3, Common=0)
-
-            return b.rarity - a.rarity; 
-
-        }
-
+        if (sortType === 'newest') return b.timestamp - a.timestamp; // Pakai timestamp biar aman
+        if (sortType === 'price_low') return a.priceEth - b.priceEth;
+        if (sortType === 'price_high') return b.priceEth - a.priceEth;
+        if (sortType === 'rarity_high') return b.rarity - a.rarity;
         return 0;
-
     });
 
-
-
-    console.log(`Menampilkan ${results.length} item setelah filter.`);
-
-
-
-    // 4. RENDER KE LAYAR
-
+    // 4. RENDER
     renderFilteredCards(results);
-
-}
-
+         }
+    
         function renderFilteredCards(data) {
     // 1. Target Container (Pastikan di HTML ada <div id="market-list"></div>)
     const container = document.getElementById('market-list');
