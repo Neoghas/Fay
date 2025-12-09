@@ -1420,12 +1420,12 @@ function timeSince(date) {
                 const tx = await gameContract.buyNickname(nick, {
                     value: ethers.parseEther(priceEth)
                 });
-                showToast("Buying... Please wait.");
+                showToast("Buying... Please wait.", "loading");
                 await tx.wait();
-                showToast("Success! You now own: " + nick);
+                showToast("Success! You now own: " + nick, "success");
                 loadMarketListings();
                 loadMyInventory();
-            } catch(e) { showToast("Error: " + e.message); }
+            } catch(e) { showToast("Failed: " + e.message, "error"); }
         }
 
         async function sellNickname(nick) {
@@ -1434,7 +1434,7 @@ function timeSince(date) {
 
     // 2. Cek Koneksi Kontrak
     if (!gameContract) {
-        showToast("Koneksi ke Smart Contract terputus. Silakan refresh halaman.");
+        showToast("Koneksi ke Smart Contract terputus. Silakan refresh halaman.", "warning");
         return;
     }
 
@@ -1444,7 +1444,7 @@ function timeSince(date) {
 
     // Jika elemen tidak ditemukan, hentikan proses (Jangan crash)
     if (!inputEl) {
-        showToast(`Error Sistem: Input harga dengan ID '${inputId}' tidak ditemukan di HTML.`);
+        showToast(`Failed Sistem: Input harga dengan ID '${inputId}' tidak ditemukan di HTML.`, "error");
         return;
     }
 
@@ -1452,7 +1452,7 @@ function timeSince(date) {
 
     // 4. Validasi Input
     if (!priceInput || parseFloat(priceInput) <= 0) {
-        showToast("Harap masukkan harga jual yang valid (Wajib lebih dari 0 ETH)!");
+        showToast("Harap masukkan harga jual yang valid (Wajib lebih dari 0 ETH)!", "warning");
         return;
     }
 
@@ -1464,9 +1464,9 @@ function timeSince(date) {
         console.log(`Mengirim Transaksi: Sell ${nick} seharga ${priceInput} ETH`);
         // Panggil Kontrak
         const tx = await gameContract.sellNickname(nick, priceWei);
-        showToast("Transaksi dikirim! Silakan cek MetaMask Anda...");
+        showToast("Transaksi dikirim! Silakan cek MetaMask Anda..., "loading"");
         await tx.wait();
-        showToast("Berhasil! Nickname sudah terdaftar di pasar.");
+        showToast("Berhasil! Nickname sudah terdaftar di pasar., "success"");
         // Refresh Halaman
         if(typeof loadMyInventory === 'function') loadMyInventory();
     } catch (e) {
@@ -1480,7 +1480,7 @@ function timeSince(date) {
             msg = "Nickname ini bukan milik Anda!";
         }
         
-        showToast("GAGAL: " + msg);
+        showToast("Failed: " + msg, "error");
     }
         }
 
@@ -1494,22 +1494,22 @@ function timeSince(date) {
         
         // TUNGGU SAMPAI TRANSAKSI SUKSES DI BLOCKCHAIN
         await tx.wait();       
-        showToast("✅ Sale Cancelled Successfully!");
+        showToast("Sale Cancelled Successfully!, "success"");
         
         // Refresh Halaman Otomatis untuk memperbarui status kartu
         loadMyInventory();        
     } catch(e) { 
         console.error(e);
-        showToast("❌ Error: " + (e.reason || e.message)); 
+        showToast("Failed: " + (e.reason || e.message), "error"); 
     }
         }
 
         async function switchNick(nick) {
             try {
                 const tx = await gameContract.switchNickname(nick);
-                showToast("Switching...");
+                showToast("Switching...", "loading");
                 await tx.wait();
-                showToast("Profile Updated!");
+                showToast("Profile Updated!", "success");
                 loadMyInventory();
             } catch(e) { showToast("Failed: " + e.message, "error"); }
         }
@@ -1839,10 +1839,10 @@ function showToast(message, type = 'info', duration = 4000) {
     
     // Ikon berdasarkan tipe (Bisa ganti SVG atau FontAwesome)
     const iconMap = {
-        success: '✅', // Atau <i class="fas fa-check-circle"></i>
-        error:   '❌', // Atau <i class="fas fa-times-circle"></i>
-        info:    'ℹ️', // Atau <i class="fas fa-info-circle"></i>
-        warning: '⚠️'  // Atau <i class="fas fa-exclamation-triangle"></i>
+        success: 'success.svg', // Atau <i class="fas fa-check-circle"></i>
+        error:   'x.svg', // Atau <i class="fas fa-times-circle"></i>
+        info:    'info-icon.svg', // Atau <i class="fas fa-info-circle"></i>
+        warning: 'warning.svg'  // Atau <i class="fas fa-exclamation-triangle"></i>
     };
 
     // Buat elemen div baru
