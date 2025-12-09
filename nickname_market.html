@@ -456,6 +456,86 @@
     filter: grayscale(0%) opacity(1) drop-shadow(0 0 15px rgba(0, 210, 255, 0.6));
     transform: scale(1.05);
 }
+
+        /* Container Panel */
+.smart-filter-panel {
+    background: rgba(10, 15, 30, 0.9);
+    border: 1px solid rgba(0, 210, 255, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+/* Row Layout */
+.filter-top-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.filter-group {
+    margin-bottom: 15px;
+}
+
+.filter-group label {
+    display: block;
+    font-size: 0.8em;
+    color: #00d2ff;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Chip Buttons (Tombol Lonjong) */
+.chips-container {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.chip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 5px 12px;
+    border-radius: 15px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s;
+}
+
+.chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Chip Active State (Menyala) */
+.chip.active {
+    background: rgba(0, 210, 255, 0.2);
+    border-color: #00d2ff;
+    color: #fff;
+    box-shadow: 0 0 8px rgba(0, 210, 255, 0.4);
+}
+
+/* Inputs */
+#searchInput, .futuristic-select, .price-inputs input {
+    background: #0f1219;
+    border: 1px solid #333;
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    outline: none;
+}
+
+#searchInput { width: 100%; }
+
+.price-inputs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.price-inputs input { width: 80px; }
         
     </style>
 </head>
@@ -477,6 +557,50 @@
     <input type="text" id="searchInput" placeholder="Search nickname..." onkeyup="filterMarket()" oninput="toggleClear()">      
     <img src="x.svg" id="clearBtn" class="search-clear-img" onclick="clearSearch()">
         </div>
+    </div>
+
+    <div class="smart-filter-panel">
+    
+    <div class="filter-top-row">
+        <input type="text" id="searchInput" onkeyup="runSmartFilter()" placeholder="🔍 Cari nama specific...">
+        
+        <select id="sortSelect" onchange="runSmartFilter()" class="futuristic-select">
+            <option value="newest">🆕 Terbaru</option>
+            <option value="price_low">📉 Harga Terendah</option>
+            <option value="price_high">📈 Harga Tertinggi</option>
+            <option value="rarity_high">👑 Rarity Tertinggi</option>
+        </select>
+    </div>
+
+    <div class="filter-group">
+        <label>Rarity Class:</label>
+        <div class="chips-container">
+            <button class="chip active" onclick="toggleChip(this, 'rarity', 'MYTHICAL')">🦄 Mythical</button>
+            <button class="chip active" onclick="toggleChip(this, 'rarity', 'LEGENDARY')">👑 Legendary</button>
+            <button class="chip active" onclick="toggleChip(this, 'rarity', 'RARE')">💎 Rare</button>
+            <button class="chip active" onclick="toggleChip(this, 'rarity', 'COMMON')">⚪ Common</button>
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <label>Character DNA:</label>
+        <div class="chips-container">
+            <button class="chip" onclick="toggleChip(this, 'dna', '3_CHAR')">💎 3 Letters</button>
+            <button class="chip" onclick="toggleChip(this, 'dna', '4_CHAR')">✨ 4 Letters</button>
+            <button class="chip" onclick="toggleChip(this, 'dna', 'NUMBERS')">🔢 Numbers Only</button>
+            <button class="chip" onclick="toggleChip(this, 'dna', 'PALINDROME')">🔄 Palindrome</button>
+        </div>
+    </div>
+
+    <div class="filter-group">
+        <label>Price Range (ETH):</label>
+        <div class="price-inputs">
+            <input type="number" id="minPrice" placeholder="Min" onkeyup="runSmartFilter()">
+            <span>-</span>
+            <input type="number" id="maxPrice" placeholder="Max" onkeyup="runSmartFilter()">
+        </div>
+    </div>
+
     </div>
 
     <div id="view-buy" class="market-view">
@@ -546,6 +670,108 @@
         
     let provider, signer, gameContract;
     let userAddress = null;
+    let rawMarketData = [];
+    let activeFilters = {
+    rarity: ['MYTHICAL', 'LEGENDARY', 'RARE', 'COMMON'],
+    dna: []
+    };
+
+// 1. FUNGSI UTAMA: DIPANGGIL SAAT ADA PERUBAHAN INPUT
+function runSmartFilter() {
+    const searchText = document.getElementById('searchInput').value.toLowerCase();
+    const sortType = document.getElementById('sortSelect').value;
+    const minP = parseFloat(document.getElementById('minPrice').value) || 0;
+    const maxP = parseFloat(document.getElementById('maxPrice').value) || 999999;
+
+    // A. PROSES PENYARINGAN (FILTERING)
+    let results = rawMarketData.filter(item => {
+        // 1. Filter Search (Nama)
+        if (!item.nickname.toLowerCase().includes(searchText)) return false;
+
+        // 2. Filter Harga
+        const priceEth = parseFloat(item.priceEth); // Pastikan format angka
+        if (priceEth < minP || priceEth > maxP) return false;
+
+        // 3. Filter Rarity (Cek apakah rarity item ada di list aktif)
+        // Convert Enum contract (0,1,2,3) ke String
+        const rarityMap = ["COMMON", "RARE", "LEGENDARY", "MYTHICAL"];
+        const itemRarityStr = rarityMap[item.rarity]; 
+        if (!activeFilters.rarity.includes(itemRarityStr)) return false;
+
+        // 4. Filter DNA (Pola Khusus) - INI YANG CANGGIH
+        if (activeFilters.dna.length > 0) {
+            let dnaMatch = false;
+            const nick = item.nickname;
+            
+            // Cek setiap filter DNA yang aktif
+            activeFilters.dna.forEach(filter => {
+                if (filter === '3_CHAR' && nick.length === 3) dnaMatch = true;
+                if (filter === '4_CHAR' && nick.length === 4) dnaMatch = true;
+                if (filter === 'NUMBERS' && /^[0-9]+$/.test(nick)) dnaMatch = true; // Regex Angka
+                if (filter === 'PALINDROME' && isPalindromeJS(nick)) dnaMatch = true;
+            });
+            
+            if (!dnaMatch) return false;
+        }
+
+        return true; // Lolos semua filter
+    });
+
+    // B. PROSES PENGURUTAN (SORTING)
+    results.sort((a, b) => {
+        if (sortType === 'newest') return b.timestamp - a.timestamp;
+        if (sortType === 'price_low') return a.priceEth - b.priceEth;
+        if (sortType === 'price_high') return b.priceEth - a.priceEth;
+        if (sortType === 'rarity_high') return b.rarity - a.rarity; // Mythical (3) diatas Common (0)
+        return 0;
+    });
+
+    // C. RENDER HASIL
+    renderMarketGrid(results);
+}
+
+// 2. HELPER: MENGATUR TOMBOL CHIP (Toggle)
+function toggleChip(btn, category, value) {
+    // Ubah visual tombol
+    btn.classList.toggle('active');
+
+    // Update logika data
+    const list = activeFilters[category];
+    if (list.includes(value)) {
+        // Hapus dari list
+        activeFilters[category] = list.filter(item => item !== value);
+    } else {
+        // Tambah ke list
+        activeFilters[category].push(value);
+    }
+
+    // Jalankan filter otomatis
+    runSmartFilter();
+}
+
+// 3. HELPER: CEK PALINDROM (Versi JS)
+function isPalindromeJS(str) {
+    const cleanStr = str.toLowerCase();
+    return cleanStr === cleanStr.split('').reverse().join('');
+}
+
+// 4. HELPER: RENDER (Mockup)
+function renderMarketGrid(data) {
+    const container = document.getElementById('market-list'); // ID Container di HTML Anda
+    container.innerHTML = "";
+    
+    document.getElementById('result-count').innerText = `${data.length} Items Found`;
+
+    if(data.length === 0) {
+        container.innerHTML = `<div class="empty-state">📡 No items found in this sector.</div>`;
+        return;
+    }
+
+    data.forEach(item => {
+        // Panggil fungsi createCard Anda yang lama disini
+        // container.appendChild(createCard(item));
+    });
+}
 
     // --- 2. CORE FUNCTIONS (UPDATED) ---
 
@@ -1543,6 +1769,196 @@ function clearSearch() {
     
     // d. UX Premium: Kembalikan kursor ke input agar user bisa langsung ketik lagi
     input.focus();
+}
+
+        function runSmartFilter() {
+
+    const searchText = document.getElementById('searchInput').value.toLowerCase();
+
+    const sortType = document.getElementById('sortSelect').value;
+
+    const minP = parseFloat(document.getElementById('minPrice').value) || 0;
+
+    const maxP = parseFloat(document.getElementById('maxPrice').value) || 999999;
+
+
+
+    // A. PROSES PENYARINGAN (FILTERING)
+
+    let results = rawMarketData.filter(item => {
+
+        // 1. Filter Search (Nama)
+
+        if (!item.nickname.toLowerCase().includes(searchText)) return false;
+
+
+
+        // 2. Filter Harga
+
+        const priceEth = parseFloat(item.priceEth); // Pastikan format angka
+
+        if (priceEth < minP || priceEth > maxP) return false;
+
+
+
+        // 3. Filter Rarity (Cek apakah rarity item ada di list aktif)
+
+        // Convert Enum contract (0,1,2,3) ke String
+
+        const rarityMap = ["COMMON", "RARE", "LEGENDARY", "MYTHICAL"];
+
+        const itemRarityStr = rarityMap[item.rarity]; 
+
+        if (!activeFilters.rarity.includes(itemRarityStr)) return false;
+
+
+
+        // 4. Filter DNA (Pola Khusus) - INI YANG CANGGIH
+
+        if (activeFilters.dna.length > 0) {
+
+            let dnaMatch = false;
+
+            const nick = item.nickname;
+
+            
+
+            // Cek setiap filter DNA yang aktif
+
+            activeFilters.dna.forEach(filter => {
+
+                if (filter === '3_CHAR' && nick.length === 3) dnaMatch = true;
+
+                if (filter === '4_CHAR' && nick.length === 4) dnaMatch = true;
+
+                if (filter === 'NUMBERS' && /^[0-9]+$/.test(nick)) dnaMatch = true; // Regex Angka
+
+                if (filter === 'PALINDROME' && isPalindromeJS(nick)) dnaMatch = true;
+
+            });
+
+            
+
+            if (!dnaMatch) return false;
+
+        }
+
+
+
+        return true; // Lolos semua filter
+
+    });
+
+
+
+    // B. PROSES PENGURUTAN (SORTING)
+
+    results.sort((a, b) => {
+
+        if (sortType === 'newest') return b.timestamp - a.timestamp;
+
+        if (sortType === 'price_low') return a.priceEth - b.priceEth;
+
+        if (sortType === 'price_high') return b.priceEth - a.priceEth;
+
+        if (sortType === 'rarity_high') return b.rarity - a.rarity; // Mythical (3) diatas Common (0)
+
+        return 0;
+
+    });
+
+
+
+    // C. RENDER HASIL
+
+    renderMarketGrid(results);
+
+}
+
+
+
+// 2. HELPER: MENGATUR TOMBOL CHIP (Toggle)
+
+function toggleChip(btn, category, value) {
+
+    // Ubah visual tombol
+
+    btn.classList.toggle('active');
+
+
+
+    // Update logika data
+
+    const list = activeFilters[category];
+
+    if (list.includes(value)) {
+
+        // Hapus dari list
+
+        activeFilters[category] = list.filter(item => item !== value);
+
+    } else {
+
+        // Tambah ke list
+
+        activeFilters[category].push(value);
+
+    }
+
+
+
+    // Jalankan filter otomatis
+
+    runSmartFilter();
+
+}
+
+
+
+// 3. HELPER: CEK PALINDROM (Versi JS)
+
+function isPalindromeJS(str) {
+
+    const cleanStr = str.toLowerCase();
+
+    return cleanStr === cleanStr.split('').reverse().join('');
+
+}
+
+
+
+// 4. HELPER: RENDER (Mockup)
+
+function renderMarketGrid(data) {
+
+    const container = document.getElementById('market-list'); // ID Container di HTML Anda
+
+    container.innerHTML = "";
+
+    
+
+    document.getElementById('result-count').innerText = `${data.length} Items Found`;
+
+
+
+    if(data.length === 0) {
+
+        container.innerHTML = `<div class="empty-state">📡 No items found in this sector.</div>`;
+
+        return;
+
+    }
+
+
+
+    data.forEach(item => {
+
+        // Panggil fungsi createCard Anda yang lama disini
+
+        // container.appendChild(createCard(item));
+
+    });
+
 }
         
         // Auto connect jika sudah pernah connect di halaman utama (opsional)
