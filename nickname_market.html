@@ -1025,52 +1025,76 @@ function timeSince(date) {
 }
 
         async function loadMyInventory() {
+    // Pastikan user sudah connect
     if(!gameContract || !userAddress) return;
     
     const container = document.getElementById('inventory-list');
     const tableBody = document.getElementById('history-body');
     
-    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Updating Collection...</div>';
-    tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Scanning history...</td></tr>';
+    // Tampilkan Loading
+    if(container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Updating Collection...</div>';
+    if(tableBody) tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Scanning history...</td></tr>';
 
     try {
-        // ==========================================
-        // BAGIAN 1: GRID KOLEKSI & SELL
-        // ==========================================
-        const userData = await gameContract.users(userAddress);
-        const activeNick = userData.nickname || userData[0]; // Support properti nama atau index
-        document.getElementById('active-nick-display').innerText = activeNick;
+        // ============================================================
+        // 🔌 LANGKAH 1: BUAT KONEKSI KE KONTRAK MARKET (AUTO DETECT)
+        // ============================================================
+        
+        // 1. Ambil alamat Market yang tersimpan di Kontrak Utama
+        const marketAddress = await gameContract.marketContract();
+        
+        // 2. Definisi ABI Minimal khusus Market (Agar JS tahu cara bacanya)
+        const marketAbi = [
+            "function myNicknames(address user, uint256 index) view returns (string)",
+            "function nickMarketplace(bytes32 hash) view returns (uint256, bool, uint256, address, uint256, uint8, uint256)",
+            "event NicknameListed(uint256 indexed marketId, address indexed seller, string nickname, uint256 price, uint256 timestamp)",
+            "event NicknameSold(address indexed buyer, address indexed seller, string nickname, uint256 price, uint256 timestamp)"
+        ];
 
-        // 1. Ambil Data Mentah
+        // 3. Buat Instance Kontrak Market Baru
+        // (Pastikan variabel 'provider' atau 'signer' sudah ada di kode global Anda)
+        const marketInstance = new ethers.Contract(marketAddress, marketAbi, provider);
+
+        // ============================================================
+        // BAGIAN 2: GRID KOLEKSI (DATA DARI MARKET INSTANCE)
+        // ============================================================
+        
+        // Ambil Active Nickname dari Game Utama (Profile user tetap di Game Utama)
+        const userData = await gameContract.users(userAddress);
+        const activeNick = userData.nickname || userData[0]; 
+        if(document.getElementById('active-nick-display')) {
+            document.getElementById('active-nick-display').innerText = activeNick;
+        }
+
+        // Ambil daftar nickname milik user DARI MARKET
         let rawNicks = [];
         let index = 0;
         while(true) {
             try {
-                const nick = await gameContract.myNicknames(userAddress, index);
+                // 🔥 PANGGIL MARKET INSTANCE, BUKAN GAME CONTRACT 🔥
+                const nick = await marketInstance.myNicknames(userAddress, index);
                 rawNicks.push(nick);
                 index++;
-            } catch (e) { break; }
+            } catch (e) { break; } // Berhenti jika sudah habis
         }
 
         const uniqueNicks = [...new Set(rawNicks)];
-        container.innerHTML = ""; 
+        if(container) container.innerHTML = ""; 
         
         if (uniqueNicks.length === 0) {
-            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
+            if(container) container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
         } else {
             for (let nick of uniqueNicks) {
                 const isActive = (nick === activeNick);
                 const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-                const saleData = await gameContract.nickMarketplace(nickHash);
                 
-                // 🔥 PERBAIKAN STRUCT BARU (9 DES 2025) 🔥
-                // Struct: { marketId, isForSale, price, ... }
-                // Index:      0          1        2
+                // 🔥 PANGGIL MARKET INSTANCE 🔥
+                const saleData = await marketInstance.nickMarketplace(nickHash);
                 
-                const isForSale = saleData[1]; // Index 1 (Boolean)
-                const priceBig = saleData[2];  // Index 2 (Price)
+                // Struct Market Baru: [marketId, isForSale, price, seller, timestamp, rarity, ...]
+                const isForSale = saleData[1]; // Index 1 = Bool
+                const priceBig = saleData[2];  // Index 2 = Price
 
-                // Render Kartu
                 const div = document.createElement('div');
                 div.className = 'nick-card';
                 
@@ -1101,26 +1125,26 @@ function timeSince(date) {
                     </div>
                     ${actionHtml}
                 `;
-                container.appendChild(div);
+                if(container) container.appendChild(div);
             }
         }
 
-        // ==========================================
-        // BAGIAN 2: TABEL HISTORY (LOGIKA DIPERBAIKI)
-        // ==========================================
+        // ============================================================
+        // BAGIAN 3: HISTORY (FILTER DARI MARKET INSTANCE)
+        // ============================================================
         
-        const filterList = gameContract.filters.NicknameListed();
-        const filterSold = gameContract.filters.NicknameSold();
+        // 🔥 INI SOLUSI ERROR "filters... is not a function" 🔥
+        const filterList = marketInstance.filters.NicknameListed();
+        const filterSold = marketInstance.filters.NicknameSold();
         
-        const logsList = await gameContract.queryFilter(filterList, DEPLOY_BLOCK, "latest");
-        const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
+        // Query Filter ke MARKET, bukan Game Utama
+        const logsList = await marketInstance.queryFilter(filterList, DEPLOY_BLOCK, "latest");
+        const logsSold = await marketInstance.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
 
         let myHistory = [];
         const processedIDs = new Set(); 
 
-        // A. PROSES DATA TERJUAL & TERBELI (Logs Sold)
-        // Event: NicknameSold(buyer, seller, nickname, price, timestamp)
-        // Args:     0       1        2        3        4
+        // A. PROSES DATA TERJUAL & TERBELI
         await Promise.all(logsSold.map(async (log) => {
             const uniqueID = `${log.transactionHash}_${log.index}`;
             if (processedIDs.has(uniqueID)) return;
@@ -1128,96 +1152,84 @@ function timeSince(date) {
 
             const buyer = log.args[0].toLowerCase();
             const seller = log.args[1].toLowerCase();
-            const nick = log.args[2]; // Index 2
-            const price = ethers.formatEther(log.args[3]); // Index 3
-            const timestamp = Number(log.args[4]); // Index 4
+            const nick = log.args[2]; 
+            const price = ethers.formatEther(log.args[3]); 
+            const timestamp = Number(log.args[4]); 
 
             if (buyer === userAddress.toLowerCase()) {
-                myHistory.push({
-                    type: 'Buy', nick: nick, price: price, status: 'Taken ✅',
-                    cssClass: 'status-success', badgeType: 'badge-buy', timestamp: timestamp
-                });
+                myHistory.push({ type: 'Buy', nick, price, status: 'Taken ✅', cssClass: 'status-success', badgeType: 'badge-buy', timestamp });
             } 
             else if (seller === userAddress.toLowerCase()) {
-                myHistory.push({
-                    type: 'Sell', nick: nick, price: price, status: 'SOLDOUT ✅',
-                    cssClass: 'status-sold', badgeType: 'badge-sell-sold', timestamp: timestamp
-                });
+                myHistory.push({ type: 'Sell', nick, price, status: 'SOLDOUT ✅', cssClass: 'status-sold', badgeType: 'badge-sell-sold', timestamp });
             }
         }));
 
-        // B. PROSES DATA LISTING (Logs Listed)
-        // Event: NicknameListed(marketId, seller, nickname, price, timestamp)
-        // Args:      0         1        2        3        4
+        // B. PROSES DATA LISTING (Cek Status Aktif)
         const latestListingsMap = new Map();
         for (const log of logsList) {
-            const seller = log.args[1].toLowerCase(); // 🔥 Perbaikan: Index 1 adalah Seller
-            
+            const seller = log.args[1].toLowerCase(); 
             if (seller === userAddress.toLowerCase()) {
-                const nick = log.args[2]; // 🔥 Perbaikan: Index 2 adalah Nickname
+                const nick = log.args[2];
                 latestListingsMap.set(nick, log);
             }
         }
 
-        // Validasi Status Listing
         await Promise.all(Array.from(latestListingsMap.values()).map(async (log) => {
             const uniqueID = `${log.transactionHash}_${log.index}`;
             if (processedIDs.has(uniqueID)) return;
             
-            const nick = log.args[2]; // 🔥 Index 2
-            
-            // Cek Status Realtime
+            const nick = log.args[2];
             const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-            const saleData = await gameContract.nickMarketplace(nickHash);
             
-            // 🔥 Perbaikan Struct Check: Index 1 isForSale
-            const isStillForSale = saleData[1]; 
+            // 🔥 Cek Status ke Market Instance 🔥
+            const saleData = await marketInstance.nickMarketplace(nickHash);
+            const isStillForSale = saleData[1]; // Index 1 isForSale
 
             if (isStillForSale) {
                 processedIDs.add(uniqueID);
                 myHistory.push({
                     type: 'Sell',
                     nick: nick,
-                    price: ethers.formatEther(log.args[3]), // 🔥 Index 3 Price
+                    price: ethers.formatEther(log.args[3]),
                     status: 'On Sale 🛒',
                     cssClass: 'status-sale', 
                     badgeType: 'badge-sell-active', 
-                    timestamp: Number(log.args[4]) // 🔥 Index 4 Time
+                    timestamp: Number(log.args[4])
                 });
             }
         }));
 
-        // Sorting
+        // Sorting & Render
         myHistory.sort((a, b) => b.timestamp - a.timestamp);
+        if(tableBody) {
+            tableBody.innerHTML = "";
+            if (myHistory.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No transaction history yet.</td></tr>';
+            } else {
+                myHistory.forEach(item => {
+                    const dateObj = new Date(item.timestamp * 1000);
+                    const dateStr = dateObj.toLocaleDateString('id-ID', {day:'numeric', month:'short'});
+                    const timeStr = dateObj.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
 
-        // Render Tabel
-        tableBody.innerHTML = "";
-        if (myHistory.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No transaction history yet.</td></tr>';
-        } else {
-            myHistory.forEach(item => {
-                const dateObj = new Date(item.timestamp * 1000);
-                const dateStr = dateObj.toLocaleDateString('id-ID', {day:'numeric', month:'short'});
-                const timeStr = dateObj.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
-
-                const row = `
-                    <tr>
-                        <td><span class="badge ${item.badgeType}">${item.type}</span></td>
-                        <td style="font-weight:bold; background: linear-gradient(to bottom, #fff 0%, #ffd700 50%, #b8860b 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${item.nick}</td>
-                        <td style="color:#00d2ff;">${item.price} ETH</td> 
-                        <td class="${item.cssClass}">${item.status}</td>
-                        <td style="color:#888; font-size:0.85em;">${dateStr} ${timeStr}</td>
-                    </tr>
-                `;
-                tableBody.innerHTML += row;
-            });
+                    const row = `
+                        <tr>
+                            <td><span class="badge ${item.badgeType}">${item.type}</span></td>
+                            <td style="font-weight:bold; color:white;">${item.nick}</td>
+                            <td style="color:#00d2ff;">${item.price} ETH</td> 
+                            <td class="${item.cssClass}">${item.status}</td>
+                            <td style="color:#888; font-size:0.85em;">${dateStr} ${timeStr}</td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            }
         }
 
     } catch (e) {
         console.error("Error History:", e);
-        tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history: ${e.message}</td></tr>`;
+        if(tableBody) tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history: ${e.message}</td></tr>`;
     }
-        }
+ }
 
         async function loadMarketListings() {
     if(!gameContract) return;
