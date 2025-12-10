@@ -759,18 +759,23 @@ async function connectWallet() {
 }
 
         function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.market-view').forEach(v => v.style.display = 'none');
-            document.getElementById(`tab-${tab}`).classList.add('active');
-            document.getElementById(`view-${tab}`).style.display = 'block';
+    // 1. Matikan Inbox Panel (PENTING!)
+    const inboxPanel = document.getElementById('offer-inbox-panel');
+    if(inboxPanel) inboxPanel.style.display = 'none';
 
-            const filterPanel = document.getElementById('market-search-panel');
-            if (filterPanel) {
-                // Tampilkan filter hanya di tab BUY
-                filterPanel.style.display = (tab === 'buy') ? 'block' : 'none';
-            }
-            if(tab === 'inventory') loadMyInventory();
-            if(tab === 'buy') loadMarketListings();
+    // 2. Logic Lama
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.market-view').forEach(v => v.style.display = 'none');
+    
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    document.getElementById(`view-${tab}`).style.display = 'block';
+
+    const filterPanel = document.getElementById('market-search-panel');
+    if (filterPanel) {
+        filterPanel.style.display = (tab === 'buy') ? 'block' : 'none';
+    }
+    if(tab === 'inventory') loadMyInventory();
+    if(tab === 'buy') loadMarketListings();
         }
 
         // --- 3. LOAD MARKET LISTINGS (GLOBAL) ---
@@ -1094,30 +1099,44 @@ function runSmartFilter() {
 
     // --- JIKA ADA HASIL -> RENDER KARTU ---
     results.forEach(item => {
-        // A. Setup Class Rarity (Tetap sama)
+        // A. Setup Class Rarity
         let rarityClass = "card-common";
         if(item.rarity===1) rarityClass="card-rare";
         if(item.rarity===2) rarityClass="card-legendary";
         if(item.rarity===3) rarityClass="card-mythical";
 
-        // B. Logika Tombol (Tetap sama)
-        let btnAction = item.isMyListing
-            ? `<button class="btn-action btn-cancel" onclick="cancelSale('${item.nickname}')">Cancel Listing</button>`
-            : `<button class="btn-action btn-buy" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">⚡ BUY NOW</button>`;
+        // B. UPDATE LOGIKA TOMBOL (Supaya Ada Tombol Nego)
+        let actionButtons = '';
+        
+        if (item.isMyListing) {
+            // Jika milik sendiri -> Tombol Cancel saja
+            actionButtons = `<button class="btn-action btn-cancel" onclick="cancelSale('${item.nickname}')">Cancel Listing</button>`;
+        } else {
+            // Jika milik orang lain -> Tombol Buy DAN Nego (Sebelah-sebelahan)
+            actionButtons = `
+                <div style="display:flex; gap:5px; width:100%; margin-top:auto;">
+                    <button class="btn-action btn-buy" style="flex:1;" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">⚡ BUY</button>
+                    <button class="btn-action" style="flex:1; background:#ff007a; color:white;" onclick="openOfferModal('${item.nickname}')">🤝 NEGO</button>
+                </div>
+            `;
+        }
 
-        // --- C. FITUR BARU: FORMAT WAKTU LOKAL ---
-        // Mengubah timestamp blockchain menjadi waktu HP/Laptop user
-        const dateObj = new Date(item.timestamp * 1000);
-        const dateStr = dateObj.toLocaleDateString([], {day:'numeric', month:'short'}); // Contoh: 10 Dec
-        const timeStr = dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); // Contoh: 14:30
-        const fullTime = `${dateStr}, ${timeStr}`;
+        // C. FORMAT WAKTU (Dengan Pengaman biar gak 'Invalid Date')
+        let fullTime = "Recently";
+        if (item.timestamp && Number(item.timestamp) > 0) {
+            const dateObj = new Date(Number(item.timestamp) * 1000);
+            const dateStr = dateObj.toLocaleDateString([], {day:'numeric', month:'short'});
+            const timeStr = dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            fullTime = `${dateStr}, ${timeStr}`;
+        }
 
-        // --- D. HTML CARD (UPDATED) ---
+        // D. HTML CARD (STRUKTUR YANG BENAR & RAPI)
         const cardHTML = `
             <div class="nick-card ${rarityClass}">
-
+                
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:10px;">
-                    <span style="background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; font-size:0.75em; color:#aaa; font-family:monospace;">#${item.marketId}
+                    <span style="background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; font-size:0.75em; color:#aaa; font-family:monospace;">
+                        #${item.marketId}
                     </span>
                     <span style="font-size:0.75em; color:#666;" title="Listed Time">
                         ${fullTime}
@@ -1129,20 +1148,19 @@ function runSmartFilter() {
                 </div>
 
                 <div class="nick-title-premium">${item.nickname}</div>
+                
                 <div class="info-bar">
                     <div style="display:flex; flex-direction:column; align-items:flex-start;">
                         <span style="font-size:0.7em; color:#888;">SELLER</span>
                         <span style="font-size:0.85em; color:#ccc;">${item.seller.substring(0, 6)}...${item.seller.slice(-4)}</span>
                     </div>
-                    </div>
-                    <div class="info-bar">
-                    <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                    <div style="display:flex; flex-direction:column; align-items:flex-end;">
                         <span style="font-size:0.7em; color:#888;">PRICE</span>
-                        <span class="price-tag">${item.priceEth.toFixed(4)} ETH</span>
+                        <span class="price-tag">${parseFloat(item.priceEth).toFixed(4)} ETH</span>
                     </div>
                 </div>
-                ${btnAction}
-            </div>
+                
+                ${actionButtons}
             </div>
         `;
         container.insertAdjacentHTML('beforeend', cardHTML);
@@ -1384,132 +1402,78 @@ async function sendSwapRequest() {
 
 }
 
-
-
 // 3. LOAD INCOMING OFFERS (INBOX)
-
-// Panggil fungsi ini di switchTab atau tombol khusus
-
 async function loadIncomingOffers() {
-
-    const container = document.getElementById('inbox-list');
-
+    // A. Matikan Tab Lain
+    document.querySelectorAll('.market-view').forEach(v => v.style.display = 'none');
+    document.getElementById('market-search-panel').style.display = 'none';
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    // B. Nyalakan Panel Inbox
     const panel = document.getElementById('offer-inbox-panel');
-
-    panel.style.display = 'block'; // Tampilkan panel
-
-    container.innerHTML = '<div style="text-align:center;">Scanning offers...</div>';
-
-
+    panel.style.display = 'block'; 
+    
+    const container = document.getElementById('inbox-list');
+    container.innerHTML = '<div style="grid-column:1/-1; text-align:center; padding:40px; color:#666;">Scanning offers...</div>';
 
     try {
-
-        // Ambil Event SwapRequested
-
-        // Event: SwapRequested(myNick, targetNick, ethOffered, initiator)
-
+        // ... (Sisa kode fetch log sama persis dengan yang Anda punya) ...
         const filter = gameContract.filters.SwapRequested();
-
         const logs = await gameContract.queryFilter(filter, DEPLOY_BLOCK, "latest");
-
         
-
         container.innerHTML = "";
-
         let count = 0;
 
-
-
-        // Loop Log
-
         for(const log of logs.reverse()) {
+            const offerNick = log.args[0]; 
+            const targetNick = log.args[1]; 
+            const ethVal = log.args[2];    
+            const bidder = log.args[3];    
 
-            const offerNick = log.args[0]; // Nickname Penawar
-
-            const targetNick = log.args[1]; // Nickname Saya (Target)
-
-            const ethVal = log.args[2];    // ETH tambahan
-
-            const bidder = log.args[3];    // Alamat Penawar
-
-
-
-            // Validasi: Apakah saya pemilik targetNick saat ini?
-
+            // Validasi Pemilik
             const targetHash = ethers.keccak256(ethers.toUtf8Bytes(targetNick));
-
             const owner = await gameContract.nickOwner(targetHash);
-
             
-
-            // Cek di mapping apakah offer masih aktif?
-
+            // Validasi Aktif
             const offerHash = ethers.keccak256(ethers.toUtf8Bytes(offerNick));
-
             const swapData = await gameContract.swapRequests(targetHash, offerHash);
-
-            // swapData: [initiator, myNick, targetNick, ethOffered, timestamp, isActive]
-
             const isActive = swapData[5]; 
 
-
-
             if (owner.toLowerCase() === userAddress.toLowerCase() && isActive) {
-
                 count++;
-
                 const ethStr = ethers.formatEther(ethVal);
-
                 
-
                 const div = document.createElement('div');
-
                 div.className = 'nick-card offer-card';
-
                 div.innerHTML = `
-
-                    <div class="offer-badge">INCOMING OFFER</div>
-
-                    <div style="font-size:0.8em; color:#aaa;">Target: <b>${targetNick}</b></div>
-
-                    <div style="margin:10px 0; text-align:center;">
-
-                        <div style="color:var(--gold); font-weight:bold;">${offerNick}</div>
-
-                        <div style="font-size:0.8em;">+ ${ethStr} ETH</div>
-
+                    <div style="background:var(--accent); color:white; padding:2px 8px; border-radius:4px; font-size:0.7em; position:absolute; top:10px; right:10px;">INCOMING</div>
+                    <div style="font-size:0.8em; color:#aaa; margin-top:20px;">Target Item:</div>
+                    <div style="font-size:1.2em; font-weight:bold; color:white;">${targetNick}</div>
+                    
+                    <div style="margin:15px 0; text-align:center; border:1px dashed #333; padding:10px; border-radius:8px;">
+                        <div style="font-size:0.8em; color:#888;">OFFER RECEIVED</div>
+                        <div style="color:var(--gold); font-weight:bold; font-size:1.1em;">${offerNick}</div>
+                        <div style="font-size:0.9em; color:#00ff9d;">+ ${ethStr} ETH</div>
                     </div>
-
-                    <div style="font-size:0.7em; color:#666;">From: ${bidder.substring(0,6)}...</div>
-
-                    <button class="btn-action btn-success" onclick="acceptSwap('${targetNick}', '${offerNick}')" style="margin-top:5px; background:var(--primary); color:black;">✅ ACCEPT DEAL</button>
-
+                    
+                    <div style="font-size:0.7em; color:#666; margin-bottom:10px;">From: ${bidder.substring(0,6)}...</div>
+                    <button class="btn-action" onclick="acceptSwap('${targetNick}', '${offerNick}')" style="background:var(--primary); color:black;">✅ ACCEPT DEAL</button>
                 `;
-
                 container.appendChild(div);
-
             }
-
         }
-
-
 
         if(count === 0) {
-
-            container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#555;">No active offers received.</div>';
-
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:50px; color:#555;">
+                <div style="font-size:2em; margin-bottom:10px;">📭</div>
+                No active offers received.
+            </div>`;
         }
 
-
-
     } catch(e) {
-
         console.error(e);
-
-        container.innerHTML = '<div style="color:red;">Error loading offers.</div>';
-
+        container.innerHTML = '<div style="color:red; text-align:center;">Error loading offers.</div>';
     }
-
 }
 
 
