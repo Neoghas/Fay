@@ -686,6 +686,84 @@
 
 /* Supaya konten utama tidak ketutup bar di bawah */
 body { padding-bottom: 50px; }
+
+        /* --- SOSIAL BAR DI KARTU --- */
+.social-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+/* TOMBOL LIKE (LOVE) */
+.like-btn {
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #666;
+    transition: all 0.3s;
+    display: flex; align-items: center; gap: 5px;
+}
+.like-btn:hover { color: #ff0055; transform: scale(1.1); }
+.like-btn.liked { color: #ff0055; animation: heartBeat 0.5s; }
+
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+/* RATING DISPLAY (KECIL DI KARTU) */
+.rating-display {
+    font-size: 0.9em;
+    color: var(--gold);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+}
+.rating-display:hover { text-decoration: underline; }
+
+/* --- RATING MODAL STYLES --- */
+.star-rating {
+    font-size: 2.5em;
+    color: #444; /* Warna bintang mati */
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0;
+    cursor: pointer;
+}
+.star-rating span:hover,
+.star-rating span.active {
+    color: var(--gold); /* Warna bintang hidup */
+    text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+/* QUOTE CHIPS (TOMBOL KATA-KATA) */
+.quote-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+.quote-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid #444;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    color: #aaa;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.quote-chip:hover { border-color: var(--primary); color: white; }
+.quote-chip.selected {
+    background: var(--primary);
+    color: black;
+    border-color: var(--primary);
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
+}
     </style>
 </head>
 <body>
@@ -837,6 +915,40 @@ body { padding-bottom: 50px; }
     </div>
 </div>
 
+    <div id="ratingModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-content" style="text-align:center;">
+        <div class="modal-header">
+            <h3>⭐ Rate Seller</h3>
+            <span class="close-btn" onclick="closeRatingModal()">×</span>
+        </div>
+        
+        <div class="modal-body">
+            <h2 id="ratingTargetNick" style="color:var(--gold); margin-bottom:5px;">Target</h2>
+            <p style="color:#666; font-size:0.9em;">How was your experience?</p>
+
+            <div class="star-rating">
+                <span onclick="setStar(1)">★</span>
+                <span onclick="setStar(2)">★</span>
+                <span onclick="setStar(3)">★</span>
+                <span onclick="setStar(4)">★</span>
+                <span onclick="setStar(5)">★</span>
+            </div>
+            <input type="hidden" id="selectedStar" value="0">
+
+            <div style="margin-top:20px; text-align:left;">
+                <label style="color:var(--primary); font-size:0.8em; font-weight:bold;">QUICK FEEDBACK (Select One)</label>
+                <div class="quote-container" id="quoteList">
+                    </div>
+                <input type="hidden" id="selectedQuote" value="">
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-action" onclick="submitRatingToContract()" style="background:var(--success); color:black;">✅ SUBMIT RATING</button>
+        </div>
+    </div>
+    </div>
+
     <div class="live-feed-bar">
     <div class="feed-label">⚡ LIVE OFFERS</div>
     <div class="feed-window">
@@ -866,11 +978,21 @@ body { padding-bottom: 50px; }
 
         // ABI LENGKAP UNTUK MARKET (Termasuk Struct & Event Baru)
         const GAME_ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":true,"internalType":"address","name":"author","type":"address"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"}],"name":"CommentAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":true,"internalType":"address","name":"author","type":"address"},{"indexed":false,"internalType":"uint256","name":"commentId","type":"uint256"}],"name":"CommentEdited","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"Liked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameDelisted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"marketId","type":"uint256"},{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameListed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"oldPrice","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"newPrice","type":"uint256"}],"name":"NicknamePriceUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"buyer","type":"address"},{"indexed":true,"internalType":"address","name":"seller","type":"address"},{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":false,"internalType":"uint256","name":"price","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"}],"name":"NicknameSold","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"stars","type":"uint8"}],"name":"Rated","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickA","type":"string"},{"indexed":false,"internalType":"string","name":"nickB","type":"string"},{"indexed":false,"internalType":"address","name":"ownerA","type":"address"},{"indexed":false,"internalType":"address","name":"ownerB","type":"address"}],"name":"SwapAccepted","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"myNick","type":"string"},{"indexed":false,"internalType":"string","name":"targetNick","type":"string"}],"name":"SwapCancelled","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"myNick","type":"string"},{"indexed":false,"internalType":"string","name":"targetNick","type":"string"},{"indexed":false,"internalType":"uint256","name":"ethOffered","type":"uint256"},{"indexed":false,"internalType":"address","name":"initiator","type":"address"}],"name":"SwapRequested","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"nickname","type":"string"},{"indexed":true,"internalType":"address","name":"user","type":"address"}],"name":"Unliked","type":"event"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"string","name":"_text","type":"string"}],"name":"addComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"buyNickname","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"cancelSale","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_myNick","type":"string"},{"internalType":"string","name":"_targetNick","type":"string"}],"name":"cancelSwap","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"currentMarketId","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint256","name":"_commentId","type":"uint256"},{"internalType":"string","name":"_newText","type":"string"}],"name":"editComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_myNick","type":"string"},{"internalType":"string","name":"_offeredNick","type":"string"}],"name":"executeSwap","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"gameContractAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"getAverageRating","outputs":[{"internalType":"uint256","name":"average","type":"uint256"},{"internalType":"uint256","name":"count","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"getComments","outputs":[{"components":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"author","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isEdited","type":"bool"}],"internalType":"struct Market.Comment[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"getRaters","outputs":[{"components":[{"internalType":"address","name":"rater","type":"address"},{"internalType":"uint8","name":"stars","type":"uint8"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct Market.RatingData[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint8","name":"_stars","type":"uint8"}],"name":"giveRating","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"address","name":"","type":"address"}],"name":"hasLiked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"address","name":"","type":"address"}],"name":"hasRated","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"likeCounts","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"marketIdToHash","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"myNicknames","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickHandHistory","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickMarketplace","outputs":[{"internalType":"uint256","name":"marketId","type":"uint256"},{"internalType":"bool","name":"isForSale","type":"bool"},{"internalType":"uint256","name":"price","type":"uint256"},{"internalType":"address","name":"seller","type":"address"},{"internalType":"uint256","name":"listedAt","type":"uint256"},{"internalType":"enum Market.Rarity","name":"rarity","type":"uint8"},{"internalType":"uint256","name":"ownerCount","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"nickOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"nicknameComments","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"author","type":"address"},{"internalType":"string","name":"text","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isEdited","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"nicknameRatings","outputs":[{"internalType":"address","name":"rater","type":"address"},{"internalType":"uint8","name":"stars","type":"uint8"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint8","name":"_stars","type":"uint8"},{"internalType":"string","name":"_commentText","type":"string"}],"name":"rateAndComment","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_user","type":"address"},{"internalType":"string","name":"_nick","type":"string"}],"name":"registerNicknameFromGame","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_myNick","type":"string"},{"internalType":"string","name":"_targetNick","type":"string"}],"name":"requestSwap","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"},{"internalType":"uint256","name":"_price","type":"uint256"}],"name":"sellNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_game","type":"address"}],"name":"setGameContract","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"swapRequests","outputs":[{"internalType":"address","name":"initiator","type":"address"},{"internalType":"string","name":"myNick","type":"string"},{"internalType":"string","name":"targetNick","type":"string"},{"internalType":"uint256","name":"ethOffered","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"_newNick","type":"string"}],"name":"switchNickname","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"string","name":"_nick","type":"string"}],"name":"toggleLike","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"name":"totalStars","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"users","outputs":[{"internalType":"string","name":"nickname","type":"string"}],"stateMutability":"view","type":"function"}];
-        
+
+        const REVIEW_QUOTES = [
+    "⚡ Fast Response",
+    "✅ Trusted Seller",
+    "💎 Premium Name",
+    "🤝 Good Deal",
+    "🔥 Recommended",
+    "📦 Smooth Process",
+    "💰 Reasonable Price"
+];
         let provider, signer, gameContract;
         let userAddress = null;
         let rawMarketData = [];
         let currentTargetNick = "";
+        let currentRateNick = "";
         let toastTimeout;
 
         // --- 2. CORE FUNCTIONS ---
@@ -1368,6 +1490,9 @@ function runSmartFilter() {
         }
 
         // D. HTML CARD (STRUKTUR YANG BENAR & RAPI)
+        const likeId = `like-${item.nickname}`;
+        const rateId = `rate-${item.nickname}`;
+        
         const cardHTML = `
             <div class="nick-card ${rarityClass}">
                 
@@ -1398,11 +1523,19 @@ function runSmartFilter() {
                         <span class="price-tag">${parseFloat(item.priceEth).toFixed(4)} ETH</span>
                     </div>
                 </div>
-                
+                <div class="social-bar">
+                    <div class="like-btn" onclick="toggleLike('${item.nickname}')">
+                        ❤️ <span id="${likeId}">...</span>
+                    </div>
+                    <div class="rating-display" onclick="openRatingModal('${item.nickname}')">
+                        ⭐ <span id="${rateId}">...</span>
+                    </div>
+                </div>
                 ${actionButtons}
             </div>
         `;
         container.insertAdjacentHTML('beforeend', cardHTML);
+        fetchSocialStats(item.nickname);
     });
 }
 
@@ -1793,6 +1926,126 @@ async function acceptSwap(myNick, offeredNick) {
         x.className = x.className.replace("show", ""); 
     }, 10000); 
         }
+
+        // --- 8. LOGIKA SOCIAL (LIKE & RATE) ---
+
+// A. Fetch Data (Like Count & Avg Rating) secara Async
+async function fetchSocialStats(nick) {
+    try {
+        const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+        
+        // 1. Ambil Like Count
+        const likes = await gameContract.likeCounts(nickHash);
+        document.getElementById(`like-${nick}`).innerText = likes.toString();
+
+        // 2. Ambil Rating (Avg, Count)
+        // Return kontrak: (average, count). Average skala 10 (45 = 4.5)
+        const rateData = await gameContract.getAverageRating(nick);
+        const avg = Number(rateData[0]) / 10; // Konversi ke desimal
+        const count = Number(rateData[1]);
+        
+        if(count > 0) {
+            document.getElementById(`rate-${nick}`).innerText = `${avg.toFixed(1)} (${count})`;
+        } else {
+            document.getElementById(`rate-${nick}`).innerText = "Rate";
+        }
+
+    } catch(e) { console.log("Social fetch error", e); }
+}
+
+// B. Toggle Like
+async function toggleLike(nick) {
+    if(!gameContract) return showToast("Connect Wallet first!", "warning");
+    
+    // Animasi Optimistik (Langsung update angka sebelum transaksi selesai biar UX enak)
+    const el = document.getElementById(`like-${nick}`);
+    let current = parseInt(el.innerText) || 0;
+    el.innerText = current + 1; // Nambah dulu (nanti divalidasi blockchain)
+    el.parentElement.classList.add("liked");
+
+    try {
+        const tx = await gameContract.toggleLike(nick);
+        await tx.wait();
+        fetchSocialStats(nick); // Refresh data asli dari blockchain
+    } catch(e) {
+        el.innerText = current; // Balikin angka kalau gagal
+        el.parentElement.classList.remove("liked");
+        showToast("Like failed/cancelled", "error");
+    }
+}
+
+// C. Buka Modal Rating
+function openRatingModal(nick) {
+    currentRateNick = nick;
+    document.getElementById('ratingTargetNick').innerText = nick;
+    
+    // Reset State
+    setStar(0);
+    document.getElementById('selectedQuote').value = "";
+    
+    // Render Pilihan Quote (Chips)
+    const container = document.getElementById('quoteList');
+    container.innerHTML = "";
+    REVIEW_QUOTES.forEach(quote => {
+        const chip = document.createElement('div');
+        chip.className = 'quote-chip';
+        chip.innerText = quote;
+        chip.onclick = () => selectQuote(chip, quote);
+        container.appendChild(chip);
+    });
+
+    const modal = document.getElementById('ratingModal');
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeRatingModal() {
+    const modal = document.getElementById('ratingModal');
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 300);
+}
+
+// D. Helper Bintang & Quote
+function setStar(n) {
+    document.getElementById('selectedStar').value = n;
+    const stars = document.querySelectorAll('.star-rating span');
+    stars.forEach((s, index) => {
+        if(index < n) s.classList.add('active');
+        else s.classList.remove('active');
+    });
+}
+
+function selectQuote(el, text) {
+    // Hapus kelas selected dari semua chip
+    document.querySelectorAll('.quote-chip').forEach(c => c.classList.remove('selected'));
+    // Tambah ke yang dipilih
+    el.classList.add('selected');
+    document.getElementById('selectedQuote').value = text;
+}
+
+// E. Submit Rating ke Blockchain
+async function submitRatingToContract() {
+    const stars = document.getElementById('selectedStar').value;
+    const quote = document.getElementById('selectedQuote').value;
+    
+    if(stars == 0) return showToast("Please select stars!", "warning");
+    if(!quote) return showToast("Please select a feedback quote!", "warning");
+
+    try {
+        // Panggil: rateAndComment(_nick, _stars, _commentText)
+        const tx = await gameContract.rateAndComment(currentRateNick, stars, quote);
+        
+        closeRatingModal();
+        showToast("Submitting rating...", "loading");
+        await tx.wait();
+        
+        showToast("Rated Successfully! ⭐", "success");
+        fetchSocialStats(currentRateNick); // Refresh tampilan kartu
+        
+    } catch(e) {
+        showToast("Error: " + (e.reason || e.message), "error");
+    }
+}
 
         // --- 9. LIVE FEED ENGINE ---
 async function startLiveFeed() {
