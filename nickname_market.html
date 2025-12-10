@@ -535,6 +535,7 @@ async function connectWallet() {
                     if (isForSale) {
                         const currentPriceBig = saleData[2]; // Index 2 Price
                         const currentSeller = saleData[3];   // Index 3 Seller
+                        const currentTimestamp = Number(saleData[4]);
                         const currentRarity = Number(saleData[5]); // Index 5 Rarity
                         
                         const priceEth = ethers.formatEther(currentPriceBig);
@@ -546,6 +547,7 @@ async function connectWallet() {
                             priceEth: parseFloat(priceEth),
                             rarity: currentRarity,
                             marketId: Number(saleData[0]),
+                            timestamp: currentTimestamp,
                             seller: currentSeller,
                             avatarUrl: avatarUrl,
                             isMyListing: (userAddress && currentSeller.toLowerCase() === userAddress.toLowerCase())
@@ -609,61 +611,72 @@ async function loadMyInventory() {
             if(container) container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
         } else {
             for (let nick of uniqueNicks) {
-                const isActive = (nick === activeNick);
-                const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-                const saleData = await gameContract.nickMarketplace(nickHash);
-                
-                // Struct: [0]marketId, [1]isForSale, [2]price, [3]seller, [4]listedAt
-                const isForSale = saleData[1]; 
-                const priceBig = saleData[2];  
-                const listedAt = Number(saleData[4]); // Ambil waktu listing
+            const isActive = (nick === activeNick);
+            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+            const saleData = await gameContract.nickMarketplace(nickHash);
+            // Struct: [0]marketId, [1]isForSale, [2]price, [3]seller, [4]listedAt
+            const isForSale = saleData[1]; 
+            const priceBig = saleData[2];
+            // 1. AMBIL DATA DARI BLOCKCHAIN
+            const listedAt = Number(saleData[4]); // <--- Nama variabelnya 'listedAt'
+            // --- LOGIKA UTAMA PEMBERSIHAN ---
+            if (isForSale) {
+                activeSellItems.push({
+                    type: 'Sell',
+                    nick: nick,
+                    price: ethers.formatEther(priceBig),
+                    status: 'On Sale 🛒',
+                    cssClass: 'status-sale',
+                    badgeType: 'badge-sell-active',
+                    timestamp: listedAt 
+                });
+            }
 
-                // --- LOGIKA UTAMA PEMBERSIHAN ---
-                // Jika barang SEDANG DIJUAL, simpan ke array activeSellItems untuk tabel nanti
-                if (isForSale) {
-                    activeSellItems.push({
-                        type: 'Sell',
-                        nick: nick,
-                        price: ethers.formatEther(priceBig),
-                        status: 'On Sale 🛒',
-                        cssClass: 'status-sale',
-                        badgeType: 'badge-sell-active',
-                        timestamp: listedAt // Gunakan waktu real dari struct
-                    });
-                }
+            // Render Kartu Grid (Visual)
+            const div = document.createElement('div');
+            div.className = 'nick-card';
 
-                // Render Kartu Grid (Visual)
-                const div = document.createElement('div');
-                div.className = 'nick-card';
-                
-                let actionHtml = '';
-                if (isForSale) {
-                    const priceEth = ethers.formatEther(priceBig);
-                    actionHtml = `
-                        <div style="font-size:0.8em; color:var(--gold); text-align:center; margin-bottom:5px;">Listed: ${priceEth} ETH</div>
-                        <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">❌ Cancel Sale</button>
-                    `;
-                } else {
-                    let switchBtn = isActive 
-                        ? `<div style="text-align:center; color:var(--success); font-weight:bold; padding:8px;">✅ ACTIVE</div>`
-                        : `<button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:5px;">🔄 USE</button>`;
+            // --- 2. FORMAT WAKTU (FIX NAMA VARIABEL) ---
+            let timeDisplay = "";
+            // 🔥 PERBAIKAN: Gunakan 'listedAt', BUKAN 'listedAtVal' 🔥
+            if (listedAt > 0) { 
+                const d = new Date(listedAt * 1000); 
+                // Contoh: 12 Dec, 14:30
+                timeDisplay = d.toLocaleDateString([], {day:'numeric', month:'short'}) + ", " + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            }
 
-                    actionHtml = `
-                        ${switchBtn}
-                        <div style="display:flex; gap:5px; margin-top:5px;">
-                            <input type="number" id="price-${nick}" class="sell-input" placeholder="ETH" style="margin-bottom:0; width:60%;">
-                            <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:40%; margin-top:0;">SELL</button>
-                        </div>
-                    `;
-                }
-                div.innerHTML = `
-                    <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
-                    <div style="text-align:center; margin-bottom:10px;">
-                        <span class="owner-badge">Item</span>
+            let actionHtml = '';
+            if (isForSale) {
+                const priceEth = ethers.formatEther(priceBig);
+                actionHtml = `
+                    <div style="display:flex; justify-content:space-between; font-size:0.75em; color:#aaa; margin-bottom:5px; border-bottom:1px solid #333; padding-bottom:5px;">
+                        <span>Listed: ${priceEth} ETH</span>
+                        <span>🕒 ${timeDisplay}</span>
                     </div>
-                    ${actionHtml}
+                    <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">❌ Cancel Sale</button>
                 `;
-                if(container) container.appendChild(div);
+            } else {
+                let switchBtn = isActive 
+                    ? `<div style="text-align:center; color:var(--success); font-weight:bold; padding:8px;">✅ ACTIVE</div>`
+                    : `<button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:5px;">🔄 USE</button>`;
+
+                actionHtml = `
+                    ${switchBtn}
+                    <div style="display:flex; gap:5px; margin-top:5px;">
+                        <input type="number" id="price-${nick}" class="sell-input" placeholder="ETH" style="margin-bottom:0; width:60%;">
+                        <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:40%; margin-top:0;">SELL</button>
+                    </div>
+                `;
+            }
+
+            div.innerHTML = `
+                <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
+                <div style="text-align:center; margin-bottom:10px;">
+                    <span class="owner-badge">Item</span>
+                </div>
+                ${actionHtml}
+            `;
+            if(container) container.appendChild(div);
             }
         }
 
