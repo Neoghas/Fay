@@ -1344,72 +1344,198 @@ async function connectWallet() {
 
         // --- LOAD INVENTORY (CLEAN HISTORY VERSION) ---
 async function loadMyInventory() {
+
     if(!gameContract || !userAddress) return;
+
     
+
     const container = document.getElementById('inventory-list');
+
     const tableBody = document.getElementById('history-body');
+
     
+
     // UI Loading
-    if(container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Updating Collection...</div>';
+
+    if(container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;"><div class="loading-pulse"></div>Updating Collection...</div>';
+
     if(tableBody) tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Scanning Clean History...</td></tr>';
 
+
+
     try {
+
         // ==========================================
-        // 1. PERSIAPAN DATA
+
+        // 1. PERSIAPAN DATA (FIX ACTIVE NICKNAME)
+
         // ==========================================
-        const userData = await gameContract.users(userAddress);
-        const activeNick = userData[0] || "-";
-        if(document.getElementById('active-nick-display')) {
-            document.getElementById('active-nick-display').innerText = activeNick;
+
+        let activeNick = "-";
+
+        
+
+        try {
+
+            const userData = await gameContract.users(userAddress);
+
+            
+
+            // --- LOGIKA PINTAR DETEKSI DATA ---
+
+            // Cek 1: Apakah dia mengembalikan String langsung? (Misal: "Ethereum")
+
+            if (typeof userData === 'string') {
+
+                activeNick = userData;
+
+            } 
+
+            // Cek 2: Apakah dia Array/Result? (Misal: ['Ethereum'])
+
+            else if (Array.isArray(userData) || (typeof userData === 'object' && userData[0])) {
+
+                activeNick = userData[0];
+
+            }
+
+            // Cek 3: Apakah struct punya property nickname?
+
+            else if (userData.nickname) {
+
+                activeNick = userData.nickname;
+
+            }
+
+
+
+            // Validasi Kosong
+
+            if (!activeNick || activeNick === "") activeNick = "-";
+
+
+
+        } catch (err) {
+
+            console.warn("Gagal ambil active nick:", err);
+
         }
 
-        // Wadah untuk menyimpan item yang SEDANG DIJUAL (Active Listings)
+
+
+        // Tampilkan di Header Inventory
+
+        if(document.getElementById('active-nick-display')) {
+
+            // Jika "Unknown", beri warna merah/abu agar user sadar
+
+            if(activeNick === "Unknown") {
+
+                 document.getElementById('active-nick-display').innerHTML = `<span style="color:#666;">Unknown (Sold)</span>`;
+
+            } else {
+
+                 document.getElementById('active-nick-display').innerText = activeNick;
+
+            }
+
+        }
+
+
+
+        // Wadah untuk menyimpan item yang SEDANG DIJUAL
+
         let activeSellItems = [];
 
+
+
         // ==========================================
-        // 2. PROSES GRID KOLEKSI & CARI YANG AKTIF
+
+        // 2. PROSES GRID KOLEKSI
+
         // ==========================================
+
         let rawNicks = [];
+
         let index = 0;
+
         
-        // Loop Nickname User
+
         while(true) {
+
             try {
+
                 const nick = await gameContract.myNicknames(userAddress, index);
+
                 rawNicks.push(nick);
+
                 index++;
+
             } catch (e) { break; }
+
         }
+
         
+
         const uniqueNicks = [...new Set(rawNicks)];
+
         
-        // Render Grid
+
         if(container) container.innerHTML = ""; 
+
         
+
         if (uniqueNicks.length === 0) {
-            if(container) container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
+
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:40px;">You don't own any nicknames yet.</div>`;
+
         } else {
+
             for (let nick of uniqueNicks) {
-            const isActive = (nick === activeNick);
-            const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-            const saleData = await gameContract.nickMarketplace(nickHash);
-            // Struct: [0]marketId, [1]isForSale, [2]price, [3]seller, [4]listedAt
-            const isForSale = saleData[1]; 
-            const priceBig = saleData[2];
-            // 1. AMBIL DATA DARI BLOCKCHAIN
-            const listedAt = Number(saleData[4]); // <--- Nama variabelnya 'listedAt'
-            // --- LOGIKA UTAMA PEMBERSIHAN ---
-            if (isForSale) {
-                activeSellItems.push({
-                    type: 'Sell',
-                    nick: nick,
-                    price: ethers.formatEther(priceBig),
-                    status: 'On Sale 🛒',
-                    cssClass: 'status-sale',
-                    badgeType: 'badge-sell-active',
-                    timestamp: listedAt 
-                });
-            }
+
+                // --- BANDINGKAN NICKNAME ---
+
+                // Pastikan Active Nick dan Nick sekarang sama persis string-nya
+
+                const isActive = (nick === activeNick);
+
+
+
+                const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+
+                const saleData = await gameContract.nickMarketplace(nickHash);
+
+                
+
+                const isForSale = saleData[1]; 
+
+                const priceBig = saleData[2];
+
+                const listedAt = Number(saleData[4]);
+
+
+
+                if (isForSale) {
+
+                    activeSellItems.push({
+
+                        type: 'Sell',
+
+                        nick: nick,
+
+                        price: ethers.formatEther(priceBig),
+
+                        status: 'On Sale 🛒',
+
+                        cssClass: 'status-sale',
+
+                        badgeType: 'badge-sell-active',
+
+                        timestamp: listedAt 
+
+                    });
+
+                }
 
             // Render Kartu Grid (Visual)
             const div = document.createElement('div');
