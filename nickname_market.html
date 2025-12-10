@@ -860,6 +860,51 @@ body { padding-bottom: 50px; }
     margin: 0 auto 15px auto;
     animation: spin 1s linear infinite;
 }
+
+        /* --- STYLE KHUSUS MYTHICAL (PALINDROM) --- */
+
+/* 1. Border & Glow Ungu Misterius */
+.card-mythical {
+    border: 1px solid #d900ff !important;
+    background: linear-gradient(145deg, #180024, #0f1016);
+    box-shadow: 0 0 15px rgba(217, 0, 255, 0.4);
+    position: relative;
+    overflow: hidden;
+    animation: mythicPulse 3s infinite alternate;
+}
+
+/* 2. Efek Kilau Emas Berjalan (Opsional: Bikin makin mahal) */
+.card-mythical::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent);
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
+}
+
+/* 3. Badge Khusus */
+.card-mythical-badge {
+    background: linear-gradient(90deg, #aa00ff, #ff00cc);
+    color: white;
+    font-weight: bold;
+    border: 1px solid #ff99cc;
+    box-shadow: 0 0 8px #aa00ff;
+}
+
+/* ANIMASI DENYUT */
+@keyframes mythicPulse {
+    0% { box-shadow: 0 0 10px rgba(217, 0, 255, 0.3); border-color: #aa00ff; }
+    100% { box-shadow: 0 0 25px rgba(217, 0, 255, 0.8); border-color: #ff00cc; }
+}
+
+@keyframes shine {
+    0% { transform: translateX(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) rotate(45deg); }
+    }
     </style>
 </head>
 <body>
@@ -1727,9 +1772,25 @@ function renderNextBatch() {
         // COPY DARI SCRIPT SEBELUMNYA (Bagian A, B, C, D)
         
         let rarityClass = "card-common";
-        if(item.rarity===1) rarityClass="card-rare";
-        if(item.rarity===2) rarityClass="card-legendary";
-        if(item.rarity===3) rarityClass="card-mythical";
+        let rarityLabel = "COMMON";
+        let rarityIcon = "⚪"; // Icon default
+
+        if (item.rarity == 1) {
+            rarityClass = "card-rare";
+            rarityLabel = "RARE";
+            rarityIcon = "🔵";
+        } 
+        else if (item.rarity == 2) {
+            rarityClass = "card-legendary";
+            rarityLabel = "LEGENDARY";
+            rarityIcon = "🟡";
+        } 
+        else if (item.rarity == 3) {
+            // 🔥 INI BAGIAN PALINDROM / MYTHICAL 🔥
+            rarityClass = "card-mythical";
+            rarityLabel = "MYTHICAL";
+            rarityIcon = "🟣"; // Atau icon api/petir
+        }
 
         let actionButtons = '';
         if (item.isMyListing) {
@@ -1758,6 +1819,9 @@ function renderNextBatch() {
             <div class="nick-card ${rarityClass}">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:10px;">
                     <span style="background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; font-size:0.75em; color:#aaa; font-family:monospace;">#${item.marketId}</span>
+                    <span class="${rarityClass}-badge" style="background:rgba(255,255,255,0.1); padding:3px 8px; border-radius:4px; font-size:0.75em; font-weight:bold; color:white; border:1px solid rgba(255,255,255,0.2);">
+                        ${rarityIcon} ${rarityLabel}
+                    </span>
                     <span style="font-size:0.75em; color:#666;" title="Listed Time">${fullTime}</span>
                 </div>
                 <div style="text-align:center; padding:5px;">
