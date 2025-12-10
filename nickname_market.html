@@ -379,160 +379,183 @@
             }
         }
 
-        // --- 4. LOAD MY INVENTORY (FIXED INDEX) ---
-        async function loadMyInventory() {
-            if(!gameContract || !userAddress) return;
-            
-            const container = document.getElementById('inventory-list');
-            const tableBody = document.getElementById('history-body');
-            
-            if(container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Updating Collection...</div>';
-            if(tableBody) tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Scanning history...</td></tr>';
+        // --- LOAD INVENTORY (CLEAN HISTORY VERSION) ---
+async function loadMyInventory() {
+    if(!gameContract || !userAddress) return;
+    
+    const container = document.getElementById('inventory-list');
+    const tableBody = document.getElementById('history-body');
+    
+    // UI Loading
+    if(container) container.innerHTML = '<div style="grid-column:1/-1; text-align:center; color:#666; padding:20px;">Updating Collection...</div>';
+    if(tableBody) tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Scanning Clean History...</td></tr>';
 
+    try {
+        // ==========================================
+        // 1. PERSIAPAN DATA
+        // ==========================================
+        const userData = await gameContract.users(userAddress);
+        const activeNick = userData[0] || "-";
+        if(document.getElementById('active-nick-display')) {
+            document.getElementById('active-nick-display').innerText = activeNick;
+        }
+
+        // Wadah untuk menyimpan item yang SEDANG DIJUAL (Active Listings)
+        let activeSellItems = [];
+
+        // ==========================================
+        // 2. PROSES GRID KOLEKSI & CARI YANG AKTIF
+        // ==========================================
+        let rawNicks = [];
+        let index = 0;
+        
+        // Loop Nickname User
+        while(true) {
             try {
-                // A. KOLEKSI (GRID)
-                const activeNick = await gameContract.users(userAddress); 
-                document.getElementById('active-nick-display').innerText = activeNick || "-";
+                const nick = await gameContract.myNicknames(userAddress, index);
+                rawNicks.push(nick);
+                index++;
+            } catch (e) { break; }
+        }
+        
+        const uniqueNicks = [...new Set(rawNicks)];
+        
+        // Render Grid
+        if(container) container.innerHTML = ""; 
+        
+        if (uniqueNicks.length === 0) {
+            if(container) container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
+        } else {
+            for (let nick of uniqueNicks) {
+                const isActive = (nick === activeNick);
+                const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
+                const saleData = await gameContract.nickMarketplace(nickHash);
+                
+                // Struct: [0]marketId, [1]isForSale, [2]price, [3]seller, [4]listedAt
+                const isForSale = saleData[1]; 
+                const priceBig = saleData[2];  
+                const listedAt = Number(saleData[4]); // Ambil waktu listing
 
-                let rawNicks = [];
-                let index = 0;
-                while(true) {
-                    try {
-                        const nick = await gameContract.myNicknames(userAddress, index);
-                        rawNicks.push(nick);
-                        index++;
-                    } catch (e) { break; }
+                // --- LOGIKA UTAMA PEMBERSIHAN ---
+                // Jika barang SEDANG DIJUAL, simpan ke array activeSellItems untuk tabel nanti
+                if (isForSale) {
+                    activeSellItems.push({
+                        type: 'Sell',
+                        nick: nick,
+                        price: ethers.formatEther(priceBig),
+                        status: 'On Sale 🛒',
+                        cssClass: 'status-sale',
+                        badgeType: 'badge-sell-active',
+                        timestamp: listedAt // Gunakan waktu real dari struct
+                    });
                 }
 
-                const uniqueNicks = [...new Set(rawNicks)];
-                if(container) container.innerHTML = ""; 
+                // Render Kartu Grid (Visual)
+                const div = document.createElement('div');
+                div.className = 'nick-card';
                 
-                if (uniqueNicks.length === 0) {
-                    container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#555; padding:20px;">You don't own any nicknames yet.</div>`;
+                let actionHtml = '';
+                if (isForSale) {
+                    const priceEth = ethers.formatEther(priceBig);
+                    actionHtml = `
+                        <div style="font-size:0.8em; color:var(--gold); text-align:center; margin-bottom:5px;">Listed: ${priceEth} ETH</div>
+                        <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">❌ Cancel Sale</button>
+                    `;
                 } else {
-                    for (let nick of uniqueNicks) {
-                        const isActive = (nick === activeNick);
-                        const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-                        const saleData = await gameContract.nickMarketplace(nickHash);
-                        
-                        // FIX INDEX: [0]=Id, [1]=isForSale, [2]=Price
-                        const isForSale = saleData[1];
-                        const priceBig = saleData[2];
+                    let switchBtn = isActive 
+                        ? `<div style="text-align:center; color:var(--success); font-weight:bold; padding:8px;">✅ ACTIVE</div>`
+                        : `<button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:5px;">🔄 USE</button>`;
 
-                        const div = document.createElement('div');
-                        div.className = 'nick-card';
-                        
-                        let actionHtml = '';
-                        if (isForSale) {
-                            const priceEth = ethers.formatEther(priceBig);
-                            actionHtml = `
-                                <div style="font-size:0.8em; color:var(--gold); text-align:center; margin-bottom:5px;">Listed: ${priceEth} ETH</div>
-                                <button class="btn-action btn-cancel" onclick="cancelSale('${nick}')">❌ Cancel Sale</button>
-                            `;
-                        } else {
-                            let switchBtn = isActive 
-                                ? `<div style="text-align:center; color:var(--success); font-weight:bold; padding:8px;">✅ ACTIVE</div>`
-                                : `<button class="btn-action btn-use" onclick="switchNick('${nick}')" style="margin-bottom:5px;">🔄 USE</button>`;
-
-                            actionHtml = `
-                                ${switchBtn}
-                                <div style="display:flex; gap:5px; margin-top:5px;">
-                                    <input type="number" id="price-${nick}" class="sell-input" placeholder="ETH" style="margin-bottom:0; width:60%;">
-                                    <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:40%; margin-top:0;">SELL</button>
-                                </div>
-                            `;
-                        }
-                        div.innerHTML = `
-                            <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
-                            <div style="text-align:center; margin-bottom:10px;">
-                                <span class="owner-badge">Item</span>
-                            </div>
-                            ${actionHtml}
-                        `;
-                        container.appendChild(div);
-                    }
+                    actionHtml = `
+                        ${switchBtn}
+                        <div style="display:flex; gap:5px; margin-top:5px;">
+                            <input type="number" id="price-${nick}" class="sell-input" placeholder="ETH" style="margin-bottom:0; width:60%;">
+                            <button class="btn-action btn-sell" onclick="sellNickname('${nick}')" style="width:40%; margin-top:0;">SELL</button>
+                        </div>
+                    `;
                 }
-
-                // B. HISTORY (TABLE)
-                const filterListed = gameContract.filters.NicknameListed();
-                const filterSold = gameContract.filters.NicknameSold();
-                
-                const logsListed = await gameContract.queryFilter(filterListed, DEPLOY_BLOCK, "latest");
-                const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
-
-                let myHistory = [];
-                const processedIDs = new Set(); 
-
-                // Event Sold: buyer(0), seller(1), nick(2), price(3), time(4)
-                await Promise.all(logsSold.map(async (log) => {
-                    const uniqueID = `${log.transactionHash}_${log.index}`;
-                    if (processedIDs.has(uniqueID)) return;
-                    processedIDs.add(uniqueID);
-
-                    const buyer = log.args[0].toLowerCase();
-                    const seller = log.args[1].toLowerCase();
-                    const nick = log.args[2]; 
-                    const price = ethers.formatEther(log.args[3]); 
-                    const timestamp = Number(log.args[4]);
-
-                    if (buyer === userAddress.toLowerCase()) {
-                        myHistory.push({ type: 'Buy', nick, price, status: 'Taken ✅', cssClass: 'status-success', badgeType: 'badge-buy', timestamp });
-                    } 
-                    else if (seller === userAddress.toLowerCase()) {
-                        myHistory.push({ type: 'Sell', nick, price, status: 'SOLDOUT ✅', cssClass: 'status-sold', badgeType: 'badge-sell-sold', timestamp });
-                    }
-                }));
-
-                // Event Listed: marketId(0), seller(1), nick(2), price(3), time(4)
-                await Promise.all(logsListed.map(async (log) => {
-                    const uniqueID = `${log.transactionHash}_${log.index}`;
-                    if (processedIDs.has(uniqueID)) return;
-                    
-                    const seller = log.args[1].toLowerCase();
-                    if (seller !== userAddress.toLowerCase()) return;
-
-                    const nick = log.args[2];
-                    const nickHash = ethers.keccak256(ethers.toUtf8Bytes(nick));
-                    const saleData = await gameContract.nickMarketplace(nickHash);
-                    const isStillForSale = saleData[1]; 
-
-                    if (isStillForSale) {
-                        processedIDs.add(uniqueID);
-                        myHistory.push({
-                            type: 'Sell', nick: nick, price: ethers.formatEther(log.args[3]),
-                            status: 'On Sale 🛒', cssClass: 'status-sale', badgeType: 'badge-sell-active', timestamp: Number(log.args[4])
-                        });
-                    }
-                }));
-
-                myHistory.sort((a, b) => b.timestamp - a.timestamp);
-                if(tableBody) {
-                    tableBody.innerHTML = "";
-                    if (myHistory.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No transaction history yet.</td></tr>';
-                    } else {
-                        myHistory.forEach(item => {
-                            const dateObj = new Date(item.timestamp * 1000);
-                            const dateStr = dateObj.toLocaleDateString('id-ID', {day:'numeric', month:'short'});
-                            const row = `
-                                <tr>
-                                    <td><span class="badge ${item.badgeType}">${item.type}</span></td>
-                                    <td style="font-weight:bold; color:white;">${item.nick}</td>
-                                    <td style="color:#00d2ff;">${item.price} ETH</td> 
-                                    <td class="${item.cssClass}">${item.status}</td>
-                                    <td style="color:#888; font-size:0.85em;">${dateStr}</td>
-                                </tr>
-                            `;
-                            tableBody.innerHTML += row;
-                        });
-                    }
-                }
-
-            } catch (e) {
-                console.error("Error History:", e);
-                if(tableBody) tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history: ${e.message}</td></tr>`;
+                div.innerHTML = `
+                    <div class="nick-title-premium" style="margin-top:25px;">${nick}</div>
+                    <div style="text-align:center; margin-bottom:10px;">
+                        <span class="owner-badge">Item</span>
+                    </div>
+                    ${actionHtml}
+                `;
+                if(container) container.appendChild(div);
             }
         }
+
+        // ==========================================
+        // 3. PROSES TABEL BERSIH (GABUNGAN)
+        // ==========================================
+        
+        // A. Ambil Data TRANSAKSI SUKSES SAJA (Sold/Bought)
+        // Kita TIDAK mengambil data "Listed" dari log, supaya listing yg dicancel tidak muncul
+        const filterSold = gameContract.filters.NicknameSold();
+        const logsSold = await gameContract.queryFilter(filterSold, DEPLOY_BLOCK, "latest");
+
+        let cleanHistory = [];
+        const processedIDs = new Set(); 
+
+        // Masukkan Data Penjualan/Pembelian (History Permanen)
+        await Promise.all(logsSold.map(async (log) => {
+            const uniqueID = `${log.transactionHash}_${log.index}`;
+            if (processedIDs.has(uniqueID)) return;
+            processedIDs.add(uniqueID);
+
+            // Event: NicknameSold(buyer, seller, nickname, price, timestamp)
+            // Index Args:          0       1        2        3        4
+            const buyer = log.args[0].toLowerCase();
+            const seller = log.args[1].toLowerCase();
+            const nick = log.args[2]; 
+            const price = ethers.formatEther(log.args[3]); 
+            const timestamp = Number(log.args[4]);
+
+            if (buyer === userAddress.toLowerCase()) {
+                cleanHistory.push({ type: 'Buy', nick, price, status: 'Taken ✅', cssClass: 'status-success', badgeType: 'badge-buy', timestamp });
+            } 
+            else if (seller === userAddress.toLowerCase()) {
+                cleanHistory.push({ type: 'Sell', nick, price, status: 'SOLDOUT ✅', cssClass: 'status-sold', badgeType: 'badge-sell-sold', timestamp });
+            }
+        }));
+
+        // B. GABUNGKAN DENGAN ITEM YANG SEDANG AKTIF DIJUAL
+        // Item yang dicancel tidak akan masuk ke sini, karena di loop atas (langkah 2) isForSale-nya False.
+        cleanHistory = cleanHistory.concat(activeSellItems);
+
+        // C. Sorting (Terbaru Paling Atas)
+        cleanHistory.sort((a, b) => b.timestamp - a.timestamp);
+
+        // D. Render Tabel Final
+        if(tableBody) {
+            tableBody.innerHTML = "";
+            if (cleanHistory.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No active listings or history.</td></tr>';
+            } else {
+                cleanHistory.forEach(item => {
+                    const dateObj = new Date(item.timestamp * 1000);
+                    const dateStr = dateObj.toLocaleDateString('id-ID', {day:'numeric', month:'short'});
+                    const timeStr = dateObj.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
+
+                    const row = `
+                        <tr>
+                            <td><span class="badge ${item.badgeType}">${item.type}</span></td>
+                            <td style="font-weight:bold; color:white;">${item.nick}</td>
+                            <td style="color:#00d2ff;">${item.price} ETH</td> 
+                            <td class="${item.cssClass}">${item.status}</td>
+                            <td style="color:#888; font-size:0.85em;">${dateStr} ${timeStr}</td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            }
+        }
+
+    } catch (e) {
+        console.error("Error History:", e);
+        if(tableBody) tableBody.innerHTML = `<tr><td colspan="5" style="color:red; text-align:center;">Error loading history: ${e.message}</td></tr>`;
+    }
+}
 
         // --- 5. FILTERING SYSTEM ---
         function runSmartFilter() {
