@@ -994,6 +994,7 @@ body { padding-bottom: 50px; }
 
     <div id="reviewListModal" class="modal-backdrop" style="display:none;">
     <div class="modal-content" style="max-width: 500px; height: 70vh; display:flex; flex-direction:column;">
+        
         <div class="modal-header">
             <h3>📜 Reviews: <span id="reviewTargetTitle" style="color:var(--gold);">...</span></h3>
             <span class="close-btn" onclick="closeReviewList()">×</span>
@@ -1002,6 +1003,13 @@ body { padding-bottom: 50px; }
         <div class="modal-body" style="flex:1; overflow-y:auto; padding-right:5px;" id="reviewListContainer">
             <div style="text-align:center; color:#666; margin-top:50px;">Loading reviews...</div>
         </div>
+
+        <div class="modal-footer" style="margin-top:10px; border-top:1px solid #333; padding-top:10px;">
+            <button class="btn-action" onclick="switchToRateModal()" style="background:var(--primary); color:black; font-weight:bold;">
+                ➕ ADD YOUR REVIEW
+            </button>
+        </div>
+
     </div>
     </div>
 
@@ -1579,6 +1587,7 @@ function runSmartFilter() {
                         <span class="price-tag">${parseFloat(item.priceEth).toFixed(4)} ETH</span>
                     </div>
                 </div>
+                ${actionButtons}
                 <div class="social-bar">
                     <div class="like-btn" onclick="toggleLike('${item.nickname}')">
                         ❤️ <span id="${likeId}">...</span>
@@ -1587,7 +1596,6 @@ function runSmartFilter() {
     ⭐ <span id="${rateId}">...</span>
 </div>
                 </div>
-                ${actionButtons}
             </div>
         `;
         container.insertAdjacentHTML('beforeend', cardHTML);
@@ -2197,6 +2205,20 @@ function closeReviewList() {
     const modal = document.getElementById('reviewListModal');
     modal.classList.remove('show');
     setTimeout(() => modal.style.display = 'none', 300);
+}
+
+        // --- FUNGSI PINDAH MODAL (DARI LIST KE INPUT RATE) ---
+function switchToRateModal() {
+    // 1. Ambil Nickname dari Judul Modal List
+    const nick = document.getElementById('reviewTargetTitle').innerText;
+    
+    // 2. Tutup Modal List
+    closeReviewList();
+    
+    // 3. Buka Modal Rating (Beri jeda sedikit biar smooth)
+    setTimeout(() => {
+        openRatingModal(nick);
+    }, 300);
 }
 
         // --- 9. LIVE FEED ENGINE ---
