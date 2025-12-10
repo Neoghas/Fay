@@ -252,48 +252,125 @@
         let rawMarketData = []; // Wadah untuk filter
 
         // --- 2. CORE FUNCTIONS ---
-
-        async function connectWallet() {
-            if (window.ethereum) {
-                try {
-                    // Switch Chain Logic
+async function connectWallet() {
+    if (window.ethereum) {
+        try {
+            // 1. SWITCH CHAIN (LOGIKA STANDAR)
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }],
+                });
+            } catch (switchError) {
+                if (switchError.code === 4902) {
                     try {
                         await window.ethereum.request({
-                            method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }],
+                            method: 'wallet_addEthereumChain',
+                            params: [BASE_SEPOLIA_CONFIG],
                         });
-                    } catch (switchError) {
-                        if (switchError.code === 4902) {
-                            try {
-                                await window.ethereum.request({
-                                    method: 'wallet_addEthereumChain',
-                                    params: [BASE_SEPOLIA_CONFIG],
-                                });
-                            } catch (addError) { return; }
-                        } else { return; }
-                    }
-
-                    provider = new ethers.BrowserProvider(window.ethereum);
-                    signer = await provider.getSigner();
-                    userAddress = await signer.getAddress();
-                    
-                    // Inisialisasi Contract (Market)
-                    gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, signer);
-                    
-                    document.getElementById('connectBtn').innerText = userAddress.substring(0,6) + "..." + userAddress.slice(-4);
-                    
-                    // Load Data
-                    loadMyInventory();
-                    loadMarketListings();
-
-                } catch (err) {
-                    console.error("Connection Error:", err);
-                    showToast("Terjadi kesalahan koneksi.", "error");
-                }
-            } else {
-                showToast("Please install EVM Wallet!", "warning");
+                    } catch (addError) { return; }
+                } else { return; }
             }
+
+            // 2. SETUP PROVIDER & ADDRESS
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            userAddress = await signer.getAddress();
+
+            // -------------------------------------------------------------
+            // 🔥 LOGIKA BARU: SIGNATURE & LOCAL STORAGE (SESSION 1 BULAN) 🔥
+            // -------------------------------------------------------------
+            
+            // Kunci penyimpanan unik per wallet (supaya kalau ganti akun tidak bentrok)
+            const STORAGE_KEY = `faylotto_auth_${userAddress.toLowerCase()}`;
+            
+            // Cek apakah ada data sesi tersimpan?
+            const cachedSession = localStorage.getItem(STORAGE_KEY);
+            let isSessionValid = false;
+
+            // A. CEK VALIDASI SESI LAMA
+            if (cachedSession) {
+                const sessionData = JSON.parse(cachedSession);
+                const now = Date.now();
+                
+                // Syarat Valid: Alamat sama DAN Waktu belum expired
+                if (sessionData.address === userAddress && now < sessionData.expiry) {
+                    console.log("✅ Auto-Login: Sesi valid (Signature cached).");
+                    isSessionValid = true; 
+                } else {
+                    // Jika expired, hapus sampah lama
+                    console.log("⚠️ Sesi habis, meminta tanda tangan ulang...");
+                    localStorage.removeItem(STORAGE_KEY);
+                }
+            }
+
+            // B. JIKA BELUM ADA / TIDAK VALID -> MINTA SIGNATURE BARU
+            if (!isSessionValid) {
+                if(typeof showToast === 'function') showToast("Please sign message to login...", "info");
+                
+                // Format Pesan Sesuai Permintaan
+                const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const localTime = new Date().toLocaleString();
+                const uniqueId = Date.now(); // ID Unik berdasarkan Timestamp (ms)
+
+                const message = `Welcome To Faylotto Nickname Market\n\nUser: ${userAddress}\nZone: ${timeZone} (${localTime})\nSession ID: ${uniqueId}`;
+
+                try {
+                    // Minta User Sign di MetaMask (Gratis, tidak pakai gas)
+                    const signature = await signer.signMessage(message);
+                    
+                    // Hitung Waktu Expired (30 Hari ke depan)
+                    // 30 hari * 24 jam * 60 menit * 60 detik * 1000 milidetik
+                    const expiryDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
+
+                    // Simpan Data ke Local Storage
+                    const newSession = {
+                        address: userAddress,
+                        signature: signature,
+                        expiry: expiryDate,
+                        loginTime: Date.now()
+                    };
+                    
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
+                    if(typeof showToast === 'function') showToast("Login Successful! Session saved for 30 days.", "success");
+
+                } catch (signErr) {
+                    console.error("Signature Rejected:", signErr);
+                    if(typeof showToast === 'function') showToast("Login Failed: You rejected the signature.", "error");
+                    // Reset variabel jika user menolak, supaya UI tidak berubah jadi connect
+                    userAddress = null;
+                    signer = null;
+                    return; 
+                }
+            }
+
+            // -------------------------------------------------------------
+            // 3. JIKA LOLOS AUTH, LANJUT LOAD APP
+            // -------------------------------------------------------------
+            
+            // Inisialisasi Contract (Market)
+            gameContract = new ethers.Contract(CONTRACT_ADDRESS, GAME_ABI, signer);
+            
+            // Update Tombol Connect
+            const btn = document.getElementById('connectBtn');
+            if(btn) {
+                btn.innerText = userAddress.substring(0,6) + "..." + userAddress.slice(-4);
+                btn.style.background = "var(--success)";
+                btn.style.color = "black";
+            }
+            
+            // Load Data
+            if(typeof loadMyInventory === 'function') loadMyInventory();
+            if(typeof loadMarketListings === 'function') loadMarketListings();
+
+        } catch (err) {
+            console.error("Connection Error:", err);
+            if(typeof showToast === 'function') showToast("Terjadi kesalahan koneksi.", "error");
         }
+    } else {
+        if(typeof showToast === 'function') showToast("Please install EVM Wallet!", "warning");
+    }
+}
 
         function switchTab(tab) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
