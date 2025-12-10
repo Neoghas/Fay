@@ -807,6 +807,77 @@ body { padding-bottom: 50px; }
     font-family: monospace;
     color: var(--primary);
 }
+
+        /* --- MARKET SHOWCASE (ETALASE) --- */
+.market-showcase {
+    background: rgba(13, 18, 30, 0.4); /* Gelap transparan */
+    border: 1px solid rgba(255, 255, 255, 0.05); /* Border sangat tipis */
+    border-radius: 24px; /* Sudut membulat besar */
+    padding: 25px;
+    margin-top: 20px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.3); /* Bayangan lembut */
+    position: relative;
+    overflow: hidden;
+}
+
+/* Garis Neon di Atas (Aksen) */
+.market-showcase::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 30%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
+    box-shadow: 0 0 10px var(--primary);
+}
+
+/* HEADER SHOWCASE */
+.showcase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+}
+
+.showcase-title {
+    font-size: 1.1em;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 1px;
+    display: flex; align-items: center; gap: 10px;
+}
+
+.live-dot {
+    width: 8px; height: 8px;
+    background: #00ff9d;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #00ff9d;
+    animation: blink 2s infinite;
+}
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+.showcase-stats {
+    font-size: 0.85em;
+    color: #666;
+    font-family: monospace;
+}
+
+/* GRID ADJUSTMENT (Agar pas di dalam showcase) */
+.market-grid {
+    gap: 20px; /* Jarak antar kartu lebih renggang dikit */
+}
+
+/* LOADING PULSE (Animasi Loading Keren) */
+.loading-pulse {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    margin: 0 auto 15px auto;
+    animation: spin 1s linear infinite;
+}
     </style>
 </head>
 <body>
@@ -860,11 +931,26 @@ body { padding-bottom: 50px; }
     </div>
 
     <div id="view-buy" class="market-view">
-        <div id="market-list" class="market-grid">
-            <div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">
-                Scanning Listings...
+    
+    <div class="market-showcase">
+        
+        <div class="showcase-header">
+            <div class="showcase-title">
+                <span class="live-dot"></span> LIVE MARKET
+            </div>
+            <div class="showcase-stats" id="marketStats">
+                Scanning...
             </div>
         </div>
+
+        <div id="market-list" class="market-grid">
+            <div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">
+                <div class="loading-pulse"></div>
+                Scanning Blockchain...
+            </div>
+        </div>
+
+    </div>
     </div>
 
     <div id="view-inventory" class="market-view" style="display:none;">
@@ -1565,7 +1651,7 @@ function runSmartFilter() {
                         #${item.marketId}
                     </span>
                     <span style="font-size:0.75em; color:#666;" title="Listed Time">
-                        ${fullTime}
+                    ${fullTime}
                     </span>
                 </div>
 
@@ -1580,27 +1666,42 @@ function runSmartFilter() {
                         <span style="font-size:0.7em; color:#888;">SELLER</span>
                         <span style="font-size:0.85em; color:#ccc;">${item.seller.substring(0, 6)}...${item.seller.slice(-4)}</span>
                     </div>
-                    </div>
-                    <div class="info-bar">
+                </div>
+
+                <div class="info-bar" style="margin-top:5px;">
                     <div style="display:flex; flex-direction:column; align-items:flex-start;">
                         <span style="font-size:0.7em; color:#888;">PRICE</span>
                         <span class="price-tag">${parseFloat(item.priceEth).toFixed(4)} ETH</span>
                     </div>
                 </div>
-                ${actionButtons}
+
+                <div style="margin-top:10px;">
+                    ${actionButtons}
+                </div>
+
                 <div class="social-bar">
                     <div class="like-btn" onclick="toggleLike('${item.nickname}')">
                         ❤️ <span id="${likeId}">...</span>
                     </div>
                     <div class="rating-display" onclick="openReviewList('${item.nickname}')" style="cursor:pointer;" title="Click to see reviews">
-    ⭐ <span id="${rateId}">...</span>
-</div>
+                        ⭐ <span id="${rateId}">...</span>
+                    </div>
                 </div>
+
             </div>
         `;
+        
         container.insertAdjacentHTML('beforeend', cardHTML);
         fetchSocialStats(item.nickname);
     });
+    const statsEl = document.getElementById('marketStats');
+    if(statsEl) {
+        if(results.length > 0) {
+            statsEl.innerHTML = `Showing <span style="color:white;">${results.length}</span> items`;
+        } else {
+            statsEl.innerHTML = "No items";
+        }
+    }
 }
 
 // --- HELPER: TOMBOL CLEAR ---
