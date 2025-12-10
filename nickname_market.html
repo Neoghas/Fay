@@ -764,6 +764,49 @@ body { padding-bottom: 50px; }
     font-weight: bold;
     box-shadow: 0 0 10px rgba(0, 210, 255, 0.4);
 }
+
+        /* --- REVIEW LIST STYLES --- */
+.review-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+}
+
+.review-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--primary);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8em;
+    color: #888;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed rgba(255,255,255,0.1);
+    padding-bottom: 5px;
+}
+
+.review-stars {
+    color: var(--gold);
+    font-size: 1em;
+    margin-bottom: 5px;
+}
+
+.review-text {
+    font-size: 0.95em;
+    color: #ddd;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.reviewer-addr {
+    font-family: monospace;
+    color: var(--primary);
+}
     </style>
 </head>
 <body>
@@ -945,6 +988,19 @@ body { padding-bottom: 50px; }
 
         <div class="modal-footer">
             <button class="btn-action" onclick="submitRatingToContract()" style="background:var(--success); color:black;">✅ SUBMIT RATING</button>
+        </div>
+    </div>
+    </div>
+
+    <div id="reviewListModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-content" style="max-width: 500px; height: 70vh; display:flex; flex-direction:column;">
+        <div class="modal-header">
+            <h3>📜 Reviews: <span id="reviewTargetTitle" style="color:var(--gold);">...</span></h3>
+            <span class="close-btn" onclick="closeReviewList()">×</span>
+        </div>
+        
+        <div class="modal-body" style="flex:1; overflow-y:auto; padding-right:5px;" id="reviewListContainer">
+            <div style="text-align:center; color:#666; margin-top:50px;">Loading reviews...</div>
         </div>
     </div>
     </div>
@@ -1527,9 +1583,9 @@ function runSmartFilter() {
                     <div class="like-btn" onclick="toggleLike('${item.nickname}')">
                         ❤️ <span id="${likeId}">...</span>
                     </div>
-                    <div class="rating-display" onclick="openRatingModal('${item.nickname}')">
-                        ⭐ <span id="${rateId}">...</span>
-                    </div>
+                    <div class="rating-display" onclick="openReviewList('${item.nickname}')" style="cursor:pointer;" title="Click to see reviews">
+    ⭐ <span id="${rateId}">...</span>
+</div>
                 </div>
                 ${actionButtons}
             </div>
@@ -2045,6 +2101,102 @@ async function submitRatingToContract() {
     } catch(e) {
         showToast("Error: " + (e.reason || e.message), "error");
     }
+}
+
+        // --- 10. FITUR RIWAYAT ULASAN PUBLIK ---
+
+async function openReviewList(nick) {
+    document.getElementById('reviewListModal').style.display = 'flex';
+    document.getElementById('reviewTargetTitle').innerText = nick;
+    const container = document.getElementById('reviewListContainer');
+    
+    // Animasi Loading
+    container.innerHTML = '<div style="text-align:center; padding:20px;">Scanning Blockchain History... <br> ⏳</div>';
+    
+    // Animasi Modal Masuk
+    setTimeout(() => document.getElementById('reviewListModal').classList.add('show'), 10);
+
+    try {
+        // 1. Ambil Data Rating (Bintang)
+        const raters = await gameContract.getRaters(nick);
+        
+        // 2. Ambil Data Komentar (Teks)
+        const comments = await gameContract.getComments(nick);
+
+        container.innerHTML = "";
+
+        if (raters.length === 0) {
+            container.innerHTML = `
+                <div style="text-align:center; padding:40px; color:#666;">
+                    <div style="font-size:3em; filter:grayscale(100%); opacity:0.5;">⭐</div>
+                    No reviews yet. Be the first!
+                </div>`;
+            return;
+        }
+
+        // 3. Mapping Komentar agar mudah dicocokkan dengan Rater
+        // Kita pakai Map: Key = Address User -> Value = Array of Comments
+        const commentMap = new Map();
+        comments.forEach(c => {
+            const author = c.author.toLowerCase(); // Index 1 di Struct Comment
+            const text = c.text;                   // Index 2 di Struct Comment
+            // Simpan komentar terakhir user tersebut
+            commentMap.set(author, text);
+        });
+
+        // 4. Render Loop (Reverse agar terbaru di atas)
+        // Clone array dulu biar gak ngerusak urutan asli, lalu reverse
+        [...raters].reverse().forEach(r => {
+            // Struct RatingData: [0]rater, [1]stars, [2]timestamp
+            const raterAddr = r[0];
+            const stars = Number(r[1]);
+            const timestamp = Number(r[2]);
+            
+            // Format Waktu
+            const dateObj = new Date(timestamp * 1000);
+            const dateStr = dateObj.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'2-digit'});
+
+            // Generate Bintang Visual (⭐⭐⭐⭐⭐)
+            let starVisual = "";
+            for(let i=0; i<5; i++) {
+                starVisual += (i < stars) ? "⭐" : "☆";
+            }
+
+            // Cek apakah user ini meninggalkan komentar teks?
+            // Kita ambil dari Map yang sudah dibuat di langkah 3
+            let userComment = commentMap.get(raterAddr.toLowerCase());
+            
+            // Jika tidak ada komentar teks, pakai default
+            if (!userComment || userComment === "") {
+                userComment = '<span style="opacity:0.5;">(No written comment)</span>';
+            } else {
+                userComment = `"${userComment}"`; // Tambah tanda kutip biar keren
+            }
+
+            // HTML Item Review
+            const itemHTML = `
+                <div class="review-item">
+                    <div class="review-header">
+                        <span class="reviewer-addr">${raterAddr.substring(0,6)}...${raterAddr.slice(-4)}</span>
+                        <span>${dateStr}</span>
+                    </div>
+                    <div class="review-stars">${starVisual}</div>
+                    <div class="review-text">${userComment}</div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', itemHTML);
+        });
+
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div style="color:red; text-align:center;">Error loading reviews.</div>';
+    }
+}
+
+function closeReviewList() {
+    const modal = document.getElementById('reviewListModal');
+    modal.classList.remove('show');
+    setTimeout(() => modal.style.display = 'none', 300);
 }
 
         // --- 9. LIVE FEED ENGINE ---
