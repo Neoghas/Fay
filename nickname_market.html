@@ -808,39 +808,23 @@ body { padding-bottom: 50px; }
     color: var(--primary);
 }
 
-        /* --- MARKET SHOWCASE (ETALASE) --- */
-.market-showcase {
-    background: rgba(13, 18, 30, 0.4); /* Gelap transparan */
-    border: 1px solid rgba(255, 255, 255, 0.05); /* Border sangat tipis */
-    border-radius: 24px; /* Sudut membulat besar */
-    padding: 25px;
-    margin-top: 20px;
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.3); /* Bayangan lembut */
-    position: relative;
-    overflow: hidden;
-}
-
-/* Garis Neon di Atas (Aksen) */
-.market-showcase::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 50%; transform: translateX(-50%);
-    width: 30%; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--primary), transparent);
-    box-shadow: 0 0 10px var(--primary);
-}
-
-/* HEADER SHOWCASE */
-.showcase-header {
+        /* --- FEED HEADER STYLE (Facebook Style) --- */
+.feed-header-sticky {
+    position: sticky;
+    top: 0; /* Menempel di atas saat scroll */
+    z-index: 50; /* Di atas kartu */
+    background: rgba(15, 16, 22, 0.95); /* Gelap hampir solid */
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 15px 5px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 25px;
-    padding-bottom: 15px;
-    border-bottom: 1px dashed rgba(255,255,255,0.1);
+    margin-bottom: 10px;
+    margin-top: -10px; /* Kompensasi padding body */
 }
 
-.showcase-title {
+.feed-title {
     font-size: 1.1em;
     font-weight: 800;
     color: #fff;
@@ -849,7 +833,7 @@ body { padding-bottom: 50px; }
 }
 
 .live-dot {
-    width: 8px; height: 8px;
+    width: 10px; height: 10px;
     background: #00ff9d;
     border-radius: 50%;
     box-shadow: 0 0 10px #00ff9d;
@@ -858,18 +842,16 @@ body { padding-bottom: 50px; }
 
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
-.showcase-stats {
+.feed-stats {
     font-size: 0.85em;
-    color: #666;
+    color: #888;
     font-family: monospace;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
-/* GRID ADJUSTMENT (Agar pas di dalam showcase) */
-.market-grid {
-    gap: 20px; /* Jarak antar kartu lebih renggang dikit */
-}
-
-/* LOADING PULSE (Animasi Loading Keren) */
+/* LOADING PULSE (Tetap Dipakai) */
 .loading-pulse {
     width: 40px; height: 40px;
     border: 3px solid rgba(255,255,255,0.1);
@@ -932,25 +914,24 @@ body { padding-bottom: 50px; }
 
     <div id="view-buy" class="market-view">
     
-    <div class="market-showcase">
-        
-        <div class="showcase-header">
-            <div class="showcase-title">
-                <span class="live-dot"></span> LIVE MARKET
-            </div>
-            <div class="showcase-stats" id="marketStats">
-                Scanning...
-            </div>
+    <div class="feed-header-sticky">
+        <div class="feed-title">
+            <span class="live-dot"></span> LIVE MARKET FEED
         </div>
-
-        <div id="market-list" class="market-grid">
-            <div style="grid-column:1/-1; text-align:center; color:#666; padding:40px;">
-                <div class="loading-pulse"></div>
-                Scanning Blockchain...
-            </div>
+        <div class="feed-stats" id="marketStats">
+            Waiting for data...
         </div>
-
     </div>
+
+    <div id="market-list" class="market-grid" style="padding-top: 20px;">
+        <div style="grid-column:1/-1; text-align:center; color:#666; margin-top:50px;">
+            <div class="loading-pulse"></div>
+            Syncing Blockchain...
+        </div>
+    </div>
+
+    <div id="scroll-sentinel" style="height: 50px; margin-top: 20px;"></div>
+
     </div>
 
     <div id="view-inventory" class="market-view" style="display:none;">
@@ -1138,12 +1119,16 @@ body { padding-bottom: 50px; }
     "📦 Smooth Process",
     "💰 Reasonable Price"
 ];
+        const BATCH_SIZE = 12;
+        
         let provider, signer, gameContract;
         let userAddress = null;
         let rawMarketData = [];
         let currentTargetNick = "";
         let currentRateNick = "";
         let toastTimeout;
+        let allFilteredData = []; // Menyimpan semua hasil filter
+        let currentRenderIndex = 0; // Melacak sampai mana kita merender
 
         // --- 2. CORE FUNCTIONS ---
 async function connectWallet() {
@@ -1549,29 +1534,28 @@ async function loadMyInventory() {
     }
 }
 
-        // --- 5. FILTERING SYSTEM (UPGRADED) ---
+        // --- 5. FILTERING SYSTEM (V2: INFINITE SCROLL READY) ---
 function runSmartFilter() {
     const container = document.getElementById('market-list');
     if (!container) return;
     
-    // 1. Ambil Nilai Input
     const searchInput = document.getElementById('searchInput');
-    const searchText = searchInput.value.toLowerCase();
-    const sortType = document.getElementById('sortSelect').value;
+    const searchText = searchInput ? searchInput.value.toLowerCase() : "";
+    const sortSelect = document.getElementById('sortSelect');
+    const sortType = sortSelect ? sortSelect.value : "newest";
     const minP = parseFloat(document.getElementById('minPrice').value) || 0;
     const maxP = parseFloat(document.getElementById('maxPrice').value) || 999999;
 
-    // 2. Kontrol Tombol Clear (X) - Otomatis muncul jika ada teks
-    toggleClear(); 
+    toggleClear();
 
-    // 3. Proses Filter
+    // 1. FILTER DATA (Tapi jangan render dulu)
     let results = rawMarketData.filter(item => {
         if (!item.nickname.toLowerCase().includes(searchText)) return false;
         if (item.priceEth < minP || item.priceEth > maxP) return false;
         return true;
     });
 
-    // 4. Sorting
+    // 2. SORTING
     results.sort((a, b) => {
         if (sortType === 'newest') return b.marketId - a.marketId;
         if (sortType === 'price_low') return a.priceEth - b.priceEth;
@@ -1580,129 +1564,107 @@ function runSmartFilter() {
         return 0;
     });
 
-    // 5. Render Hasil
-    container.innerHTML = "";
+    // 3. SIMPAN KE GLOBAL & RESET
+    allFilteredData = results;
+    currentRenderIndex = 0;
+    container.innerHTML = ""; // Bersihkan layar
+
+    // 4. UPDATE STATS HEADER
+    const statsEl = document.getElementById('marketStats');
+    if(statsEl) statsEl.innerHTML = `Found ${results.length} Items`;
+
+    // 5. RENDER BATCH PERTAMA
+    renderNextBatch();
+}
+
+        // --- FUNGSI RENDER BERTAHAP (INFINITE) ---
+function renderNextBatch() {
+    const container = document.getElementById('market-list');
     
-    // --- JIKA KOSONG -> TAMPILKAN GAMBAR RADAR ---
-    if (results.length === 0) {
-        // Cek apakah kosong karena search atau memang belum ada data sama sekali?
-        if (rawMarketData.length > 0) {
-            // Kosong karena filter (Search tidak ketemu)
-            container.innerHTML = `
-                <div class="no-results-box">
-                    <div class="no-results-icon">
-                        <img src="radar.svg" alt="Radar Scan">
-                    </div>
-                    <div class="no-results-text">No Nickname Found</div>
-                    <div class="no-results-sub">
-                        Try searching for "${searchInput.value}" with different keywords
-                    </div>
-                </div>
-            `;
-        } else {
-            // Kosong karena memang belum ada data di market
-            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#666;">Market is currently empty.</div>`;
-        }
+    // Jika tidak ada data sama sekali
+    if (allFilteredData.length === 0) {
+        container.innerHTML = `
+            <div class="no-results-box" style="grid-column:1/-1; text-align:center; padding:60px 20px;">
+                <div class="no-results-icon"><img src="radar.svg" style="width:100px; opacity:0.6; filter:grayscale(100%);"></div>
+                <div class="no-results-text">No Nickname Found</div>
+            </div>`;
         return;
     }
 
-    // --- JIKA ADA HASIL -> RENDER KARTU ---
-    results.forEach(item => {
-        // A. Setup Class Rarity
+    // Hitung batas data yang mau diambil
+    const nextIndex = currentRenderIndex + BATCH_SIZE;
+    const batchItems = allFilteredData.slice(currentRenderIndex, nextIndex);
+
+    // Loop Batch Ini Saja
+    batchItems.forEach(item => {
+        // ... (KODE RENDER KARTU ANDA YANG LAMA DISINI) ...
+        // COPY DARI SCRIPT SEBELUMNYA (Bagian A, B, C, D)
+        
         let rarityClass = "card-common";
         if(item.rarity===1) rarityClass="card-rare";
         if(item.rarity===2) rarityClass="card-legendary";
         if(item.rarity===3) rarityClass="card-mythical";
 
-        // B. UPDATE LOGIKA TOMBOL (Supaya Ada Tombol Nego)
         let actionButtons = '';
-        
         if (item.isMyListing) {
-            // Jika milik sendiri -> Tombol Cancel saja
             actionButtons = `<button class="btn-action btn-cancel" onclick="cancelSale('${item.nickname}')">Cancel Listing</button>`;
         } else {
-            // Jika milik orang lain -> Tombol Buy DAN Nego (Sebelah-sebelahan)
             actionButtons = `
                 <div style="display:flex; gap:5px; width:100%; margin-top:auto;">
-                    <button class="btn-action btn-buy" style="flex:1;" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">BUY</button>
-                    <button class="btn-action" style="flex:1; background:#ff007a; color:white;" onclick="openOfferModal('${item.nickname}')">BID</button>
+                    <button class="btn-action btn-buy" style="flex:1;" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">⚡ BUY</button>
+                    <button class="btn-action" style="flex:1; background:#ff007a; color:white;" onclick="openOfferModal('${item.nickname}')">🤝 NEGO</button>
                 </div>
             `;
         }
 
-        // C. FORMAT WAKTU (Dengan Pengaman biar gak 'Invalid Date')
         let fullTime = "Recently";
         if (item.timestamp && Number(item.timestamp) > 0) {
             const dateObj = new Date(Number(item.timestamp) * 1000);
-            const dateStr = dateObj.toLocaleDateString([], {day:'numeric', month:'short'});
-            const timeStr = dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            const dateStr = dateObj.toLocaleDateString('id-ID', {day:'numeric', month:'short'});
+            const timeStr = dateObj.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit'});
             fullTime = `${dateStr}, ${timeStr}`;
         }
 
-        // D. HTML CARD (STRUKTUR YANG BENAR & RAPI)
         const likeId = `like-${item.nickname}`;
         const rateId = `rate-${item.nickname}`;
-        
+
         const cardHTML = `
             <div class="nick-card ${rarityClass}">
-                
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:10px;">
-                    <span style="background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; font-size:0.75em; color:#aaa; font-family:monospace;">
-                        #${item.marketId}
-                    </span>
-                    <span style="font-size:0.75em; color:#666;" title="Listed Time">
-                    ${fullTime}
-                    </span>
+                    <span style="background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; font-size:0.75em; color:#aaa; font-family:monospace;">#${item.marketId}</span>
+                    <span style="font-size:0.75em; color:#666;" title="Listed Time">${fullTime}</span>
                 </div>
-
                 <div style="text-align:center; padding:5px;">
                     <img src="${item.avatarUrl}" class="seller-avatar" style="width:60px; height:60px; border:2px solid #333;">
                 </div>
-
                 <div class="nick-title-premium">${item.nickname}</div>
-                
                 <div class="info-bar">
                     <div style="display:flex; flex-direction:column; align-items:flex-start;">
                         <span style="font-size:0.7em; color:#888;">SELLER</span>
-                        <span style="font-size:0.85em; color:#ccc;">${item.seller.substring(0, 6)}...${item.seller.slice(-4)}</span>
+                        <span style="font-size:0.85em; color:#ccc;">${item.seller.substring(0, 6)}...</span>
                     </div>
                 </div>
-
                 <div class="info-bar" style="margin-top:5px;">
                     <div style="display:flex; flex-direction:column; align-items:flex-start;">
                         <span style="font-size:0.7em; color:#888;">PRICE</span>
                         <span class="price-tag">${parseFloat(item.priceEth).toFixed(4)} ETH</span>
                     </div>
                 </div>
-
-                <div style="margin-top:10px;">
-                    ${actionButtons}
-                </div>
-
+                <div style="margin-top:10px;">${actionButtons}</div>
                 <div class="social-bar">
-                    <div class="like-btn" onclick="toggleLike('${item.nickname}')">
-                        ❤️ <span id="${likeId}">...</span>
-                    </div>
-                    <div class="rating-display" onclick="openReviewList('${item.nickname}')" style="cursor:pointer;" title="Click to see reviews">
-                        ⭐ <span id="${rateId}">...</span>
-                    </div>
+                    <div class="like-btn" onclick="toggleLike('${item.nickname}')">❤️ <span id="${likeId}">...</span></div>
+                    <div class="rating-display" onclick="openReviewList('${item.nickname}')">⭐ <span id="${rateId}">...</span></div>
                 </div>
-
             </div>
         `;
         
         container.insertAdjacentHTML('beforeend', cardHTML);
         fetchSocialStats(item.nickname);
     });
-    const statsEl = document.getElementById('marketStats');
-    if(statsEl) {
-        if(results.length > 0) {
-            statsEl.innerHTML = `Showing <span style="color:white;">${results.length}</span> items`;
-        } else {
-            statsEl.innerHTML = "No items";
-        }
-    }
-}
+
+    // Update Index
+    currentRenderIndex = nextIndex;
+                                                                                                                                                                }
 
 // --- HELPER: TOMBOL CLEAR ---
 
@@ -2394,6 +2356,22 @@ async function startLiveFeed() {
         track.innerHTML = `<span class="feed-item" style="color:red;">Feed Offline</span>`;
     }
 }
+        // --- INFINITE SCROLL OBSERVER ---
+const scrollObserver = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting) {
+        // Jika elemen sentinel terlihat di layar bawah, muat lebih banyak data
+        if (allFilteredData.length > currentRenderIndex) {
+            console.log("Loading more items...");
+            renderNextBatch();
+        }
+    }
+}, { rootMargin: "200px" }); // Muat 200px sebelum mentok bawah
+
+// Pasang Observer saat halaman siap
+window.addEventListener('load', () => {
+    const sentinel = document.getElementById('scroll-sentinel');
+    if(sentinel) scrollObserver.observe(sentinel);
+});
 
         window.onload = connectWallet;
     </script>
