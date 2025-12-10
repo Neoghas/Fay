@@ -688,7 +688,7 @@ async function connectWallet() {
 
             // B. JIKA BELUM ADA / TIDAK VALID -> MINTA SIGNATURE BARU
             if (!isSessionValid) {
-                if(typeof showToast === 'function') showToast("Please sign message to login...", "info");
+                if(typeof showToast === 'function') showToast("Please sign message to login...", 'info');
                 
                 // Format Pesan Sesuai Permintaan
                 const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -714,11 +714,11 @@ async function connectWallet() {
                     };
                     
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(newSession));
-                    if(typeof showToast === 'function') showToast("Login Successful! Session saved for 30 days.", "success");
+                    if(typeof showToast === 'function') showToast("Login Successful! Session saved for 30 days.", 'success');
 
                 } catch (signErr) {
                     console.error("Signature Rejected:", signErr);
-                    if(typeof showToast === 'function') showToast("Login Failed: You rejected the signature.", "error");
+                    if(typeof showToast === 'function') showToast("Login Failed: You rejected the signature.", 'error');
                     // Reset variabel jika user menolak, supaya UI tidak berubah jadi connect
                     userAddress = null;
                     signer = null;
@@ -747,10 +747,10 @@ async function connectWallet() {
 
         } catch (err) {
             console.error("Connection Error:", err);
-            if(typeof showToast === 'function') showToast("Terjadi kesalahan koneksi.", "error");
+            if(typeof showToast === 'function') showToast("A connection error occurred.", 'error');
         }
     } else {
-        if(typeof showToast === 'function') showToast("Please install EVM Wallet!", "warning");
+        if(typeof showToast === 'function') showToast("Please install EVM Wallet!", 'warning');
     }
 }
 
@@ -1172,44 +1172,44 @@ function clearSearch() {
         async function buyNickname(nick, priceEth) {
             try {
                 const tx = await gameContract.buyNickname(nick, { value: ethers.parseEther(priceEth.toString()) });
-                showToast("Buying...", "loading");
+                showToast("Buying...", 'loading');
                 await tx.wait();
-                showToast("Success!", "success");
+                showToast("Success!", 'success');
                 loadMarketListings(); loadMyInventory();
-            } catch(e) { showToast(e.message, "error"); }
+            } catch(e) { showToast(e.message, 'error'); }
         }
 
         async function sellNickname(nick) {
             const input = document.getElementById(`price-${nick}`);
-            if(!input || !input.value) return showToast("Enter Price!", "warning");
+            if(!input || !input.value) return showToast("Enter Price!", 'warning');
             try {
                 const priceWei = ethers.parseEther(input.value.toString());
                 const tx = await gameContract.sellNickname(nick, priceWei);
-                showToast("Listing item...", "loading");
+                showToast("Listing item...", 'loading');
                 await tx.wait();
-                showToast("Listed Successfully!", "success");
+                showToast("Listed Successfully!", 'success');
                 loadMyInventory();
-            } catch(e) { showToast(e.reason || e.message, "error"); }
+            } catch(e) { showToast(e.reason || e.message, 'error'); }
         }
 
         async function cancelSale(nick) {
             try {
                 const tx = await gameContract.cancelSale(nick);
-                showToast("Cancelling...", "loading");
+                showToast("Cancelling...", 'loading');
                 await tx.wait();
-                showToast("Cancelled!", "success");
+                showToast("Cancelled!", 'success');
                 loadMyInventory();
-            } catch(e) { showToast(e.reason || e.message, "error"); }
+            } catch(e) { showToast(e.reason || e.message, 'error'); }
         }
 
         async function switchNick(nick) {
             try {
                 const tx = await gameContract.switchNickname(nick);
-                showToast("Switching...", "loading");
+                showToast("Switching...", 'loading');
                 await tx.wait();
-                showToast("Active Nickname Updated!", "success");
+                showToast("Active Nickname Updated!", 'success');
                 loadMyInventory();
-            } catch(e) { showToast(e.reason || e.message, "error"); }
+            } catch(e) { showToast(e.reason || e.message, 'error'); }
         }
 
         // 1. MEMBUKA MODAL NEGO
@@ -1218,7 +1218,7 @@ async function openOfferModal(targetNick) {
 
     if(!gameContract || !userAddress) {
 
-        showToast("Please connect wallet first!", "warning");
+        showToast("Please connect wallet first!", 'wolf');
 
         return;
 
@@ -1236,7 +1236,7 @@ async function openOfferModal(targetNick) {
 
         if(owner.toLowerCase() === userAddress.toLowerCase()) {
 
-            showToast("You cannot offer on your own item!", "error");
+            showToast("You cannot offer on your own item!", 'error');
 
             return;
 
@@ -1334,7 +1334,7 @@ async function sendSwapRequest() {
 
     if(!myNick) {
 
-        showToast("You MUST select a nickname to swap!", "warning");
+        showToast("You MUST select a nickname to swap!", 'warning');
 
         return;
 
@@ -1362,11 +1362,11 @@ async function sendSwapRequest() {
 
         closeNegoModal();
 
-        showToast("Sending Offer... Waiting for confirmation.", "loading");
+        showToast("Sending Offer... Waiting for confirmation.", 'loading');
 
         await tx.wait();
 
-        showToast("Offer Sent Successfully! 📨", "success");
+        showToast("Offer Sent Successfully! 📨", 'success');
 
         
 
@@ -1374,7 +1374,7 @@ async function sendSwapRequest() {
 
         console.error(e);
 
-        showToast("Failed: " + (e.reason || e.message), "error");
+        showToast("Failed: " + (e.reason || e.message), 'error');
 
     }
 
@@ -1518,11 +1518,11 @@ async function acceptSwap(myNick, offeredNick) {
 
         const tx = await gameContract.executeSwap(myNick, offeredNick);
 
-        showToast("Accepting offer...", "loading");
+        showToast("Accepting offer...", 'loading');
 
         await tx.wait();
 
-        showToast("Swap Success! Items Exchanged. 🤝", "success");
+        showToast("Swap Success! Items Exchanged. 🤝", 'success');
 
         loadMyInventory(); // Refresh inventory
 
@@ -1530,7 +1530,7 @@ async function acceptSwap(myNick, offeredNick) {
 
     } catch(e) {
 
-        showToast("Failed: " + e.message, "error");
+        showToast("Failed: " + e.message, 'error');
 
     }
 
