@@ -494,7 +494,6 @@ async function connectWallet() {
         }
 
         // --- 3. LOAD MARKET LISTINGS (GLOBAL) ---
-        // FIX: Menggunakan logika struct & event baru
         async function loadMarketListings() {
             if(!gameContract) return;
 
@@ -799,25 +798,52 @@ function runSmartFilter() {
 
     // --- JIKA ADA HASIL -> RENDER KARTU ---
     results.forEach(item => {
+        // A. Setup Class Rarity (Tetap sama)
         let rarityClass = "card-common";
-        if (item.rarity === 1) rarityClass = "card-rare";
-        if (item.rarity === 2) rarityClass = "card-legendary";
-        if (item.rarity === 3) rarityClass = "card-mythical";
+        if(item.rarity===1) rarityClass="card-rare";
+        if(item.rarity===2) rarityClass="card-legendary";
+        if(item.rarity===3) rarityClass="card-mythical";
 
+        // B. Logika Tombol (Tetap sama)
         let btnAction = item.isMyListing
             ? `<button class="btn-action btn-cancel" onclick="cancelSale('${item.nickname}')">Cancel Listing</button>`
             : `<button class="btn-action btn-buy" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">⚡ BUY NOW</button>`;
 
+        // --- C. FITUR BARU: FORMAT WAKTU LOKAL ---
+        // Mengubah timestamp blockchain menjadi waktu HP/Laptop user
+        const dateObj = new Date(item.timestamp * 1000);
+        const dateStr = dateObj.toLocaleDateString([], {day:'numeric', month:'short'}); // Contoh: 10 Dec
+        const timeStr = dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); // Contoh: 14:30
+        const fullTime = `${dateStr}, ${timeStr}`;
+
+        // --- D. HTML CARD (UPDATED) ---
         const cardHTML = `
             <div class="nick-card ${rarityClass}">
-                <div style="text-align:center; padding:10px;">
-                    <img src="${item.avatarUrl}" class="seller-avatar" style="width:50px; height:50px;">
+
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:10px;">
+                    <span style="background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px; font-size:0.75em; color:#aaa; font-family:monospace;">
+                        #${item.marketId}
+                    </span>
+                    <span style="font-size:0.75em; color:#666;" title="Listed Time">
+                        🕒 ${fullTime}
+                    </span>
                 </div>
+
+                <div style="text-align:center; padding:5px;">
+                    <img src="${item.avatarUrl}" class="seller-avatar" style="width:60px; height:60px; border:2px solid #333;">
+                </div>
+
                 <div class="nick-title-premium">${item.nickname}</div>
                 <div class="info-bar">
-                    <span>Seller: ${item.seller.substring(0, 6)}...</span>
-                    <span class="price-tag">${item.priceEth.toFixed(4)} ETH</span>
-                </div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                        <span style="font-size:0.7em; color:#888;">SELLER</span>
+                        <span style="font-size:0.85em; color:#ccc;">${item.seller.substring(0, 6)}...${item.seller.slice(-4)}</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                        <span style="font-size:0.7em; color:#888;">PRICE</span>
+                        <span class="price-tag">${item.priceEth.toFixed(4)} ETH</span>
+                    </div>
+                </div>             
                 ${btnAction}
             </div>
         `;
