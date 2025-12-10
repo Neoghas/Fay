@@ -621,6 +621,71 @@
     margin: 10px 0;
     border: 1px dashed #444;
         }
+
+        /* --- LIVE FEED BAR (RUNNING TEXT) --- */
+.live-feed-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 35px;
+    background: #0f1016;
+    border-top: 1px solid var(--primary);
+    display: flex;
+    align-items: center;
+    z-index: 9000;
+    font-family: 'Courier New', monospace; /* Font ala hacker/terminal */
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+}
+
+.feed-label {
+    background: var(--primary);
+    color: black;
+    font-weight: bold;
+    padding: 0 15px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    font-size: 0.8em;
+    z-index: 2; /* Supaya di atas teks jalan */
+}
+
+.feed-window {
+    flex: 1;
+    overflow: hidden; /* Sembunyikan teks yang lewat */
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.feed-content {
+    display: flex;
+    gap: 50px; /* Jarak antar berita */
+    white-space: nowrap; /* Jangan turun baris */
+    animation: scrollLeft 20s linear infinite; /* Animasi Jalan */
+    padding-left: 100%; /* Mulai dari kanan layar */
+}
+
+.feed-item {
+    font-size: 0.85em;
+    color: #00ff9d;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.feed-item b { color: white; }
+.feed-highlight { color: var(--gold); }
+
+/* ANIMASI JALAN DARI KANAN KE KIRI */
+@keyframes scrollLeft {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+}
+
+/* Supaya konten utama tidak ketutup bar di bawah */
+body { padding-bottom: 50px; }
     </style>
 </head>
 <body>
@@ -772,6 +837,15 @@
     </div>
 </div>
 
+    <div class="live-feed-bar">
+    <div class="feed-label">⚡ LIVE OFFERS</div>
+    <div class="feed-window">
+        <div class="feed-content" id="liveFeedTrack">
+            <span class="feed-item">Scanning Blockchain for live offers...</span>
+        </div>
+    </div>
+    </div>
+
     <div id="toast"></div>
 
     <script>
@@ -910,6 +984,7 @@ async function connectWallet() {
             // Load Data
             if(typeof loadMyInventory === 'function') loadMyInventory();
             if(typeof loadMarketListings === 'function') loadMarketListings();
+            if(typeof startLiveFeed === 'function') startLiveFeed();
 
         } catch (err) {
             console.error("Connection Error:", err);
@@ -1718,6 +1793,60 @@ async function acceptSwap(myNick, offeredNick) {
         x.className = x.className.replace("show", ""); 
     }, 10000); 
         }
+
+        // --- 9. LIVE FEED ENGINE ---
+async function startLiveFeed() {
+    if(!gameContract) return;
+    const track = document.getElementById('liveFeedTrack');
+    
+    try {
+        // Ambil 500 Block terakhir saja biar ringan
+        const currentBlock = await provider.getBlockNumber();
+        const fromBlock = currentBlock - 1000; 
+
+        // 1. Ambil Event Swap/Nego
+        const filter = gameContract.filters.SwapRequested();
+        const logs = await gameContract.queryFilter(filter, fromBlock, "latest");
+
+        if(logs.length === 0) {
+            track.innerHTML = `<span class="feed-item" style="color:#666;">Waiting for new offers... Market is quiet. 💤</span>`;
+            return;
+        }
+
+        // 2. Format Data Menjadi Teks
+        let htmlContent = "";
+        
+        // Ambil 10 Terakhir saja & Reverse (Terbaru dulu)
+        const recentLogs = logs.slice(-10).reverse();
+
+        for(const log of recentLogs) {
+            // Args: [0]myNick, [1]targetNick, [2]ethOffered, [3]initiator
+            const offerNick = log.args[0]; // Yang ditawarkan
+            const targetNick = log.args[1]; // Yang diminta
+            const ethVal = ethers.formatEther(log.args[2]);
+            const bidder = log.args[3].substring(0,6) + "..."; // Alamat pendek
+
+            // Template Teks Berjalan
+            // Contoh: [0x123] menawar 'Bitcoin' dengan 'Shiba' + 0.5 ETH
+            htmlContent += `
+                <span class="feed-item">
+                    👤 ${bidder} offers 
+                    <span class="feed-highlight">${offerNick}</span> 
+                    + ${parseFloat(ethVal).toFixed(4)} ETH 
+                    for <b>${targetNick}</b> 🔄
+                </span>
+            `;
+        }
+
+        // 3. Masukkan ke HTML
+        // Kita duplikat isi content agar looping terlihat nyambung (seamless)
+        track.innerHTML = htmlContent + htmlContent;
+
+    } catch(e) {
+        console.error("Feed Error:", e);
+        track.innerHTML = `<span class="feed-item" style="color:red;">Feed Offline</span>`;
+    }
+}
 
         window.onload = connectWallet;
     </script>
