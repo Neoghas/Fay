@@ -125,6 +125,26 @@
             background-color: #0f172a; color: white; border: 1px solid #334155; padding: 10px; border-radius: 8px;
         }
 
+        /* --- STYLE TOMBOL CLEAR (X) --- */
+.search-clear-img {
+    width: 16px; height: 16px; cursor: pointer; margin-left: 10px;
+    opacity: 0; visibility: hidden; 
+    transform: scale(0.5) rotate(-90deg); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.search-clear-img.visible { opacity: 1; visibility: visible; transform: scale(1) rotate(0deg); }
+.search-clear-img:hover { transform: scale(1.2) rotate(90deg); filter: drop-shadow(0 0 5px #ff0055); }
+
+/* --- STYLE 'NO RESULTS' (RADAR) --- */
+.no-results-box {
+    grid-column: 1 / -1; text-align: center; padding: 60px 20px;
+    animation: fadeInUp 0.5s ease-out;
+}
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.no-results-icon img { width: 100px; opacity: 0.6; margin-bottom: 20px; filter: grayscale(100%); }
+.no-results-text { font-size: 1.4em; font-weight: bold; color: #fff; margin-bottom: 5px; }
+.no-results-sub { font-size: 0.9em; color: #666; }
+
         /* TOAST */
         #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 15px; }
         .toast-card {
@@ -154,10 +174,12 @@
 
     <div id="market-search-panel">
         <div class="search-container">
-            <div class="search-wrapper">
-                <span style="font-size:1.2em; margin-right:10px;">🔍</span>
-                <input type="text" id="searchInput" placeholder="Search nickname..." onkeyup="runSmartFilter()">      
-            </div>
+    <div class="search-wrapper">
+        <img src="search.png" class="search-icon-img">
+        <input type="text" id="searchInput" placeholder="Search nickname..." onkeyup="runSmartFilter()" oninput="toggleClear()">
+        <img src="x.svg" id="clearBtn" class="search-clear-img" onclick="clearSearch()">
+    </div>
+        </div>
         </div>
 
         <div class="filter-panel-simple">
@@ -634,65 +656,114 @@ async function loadMyInventory() {
     }
 }
 
-        // --- 5. FILTERING SYSTEM ---
-        function runSmartFilter() {
-            const container = document.getElementById('market-list');
-            if(!container) return;
-            
-            const searchText = document.getElementById('searchInput').value.toLowerCase();
-            const sortType = document.getElementById('sortSelect').value;
-            const minP = parseFloat(document.getElementById('minPrice').value) || 0;
-            const maxP = parseFloat(document.getElementById('maxPrice').value) || 999999;
+        // --- 5. FILTERING SYSTEM (UPGRADED) ---
+function runSmartFilter() {
+    const container = document.getElementById('market-list');
+    if (!container) return;
+    
+    // 1. Ambil Nilai Input
+    const searchInput = document.getElementById('searchInput');
+    const searchText = searchInput.value.toLowerCase();
+    const sortType = document.getElementById('sortSelect').value;
+    const minP = parseFloat(document.getElementById('minPrice').value) || 0;
+    const maxP = parseFloat(document.getElementById('maxPrice').value) || 999999;
 
-            let results = rawMarketData.filter(item => {
-                if (!item.nickname.toLowerCase().includes(searchText)) return false;
-                if (item.priceEth < minP || item.priceEth > maxP) return false;
-                return true;
-            });
+    // 2. Kontrol Tombol Clear (X) - Otomatis muncul jika ada teks
+    toggleClear(); 
 
-            // Sorting
-            results.sort((a, b) => {
-                if (sortType === 'newest') return b.marketId - a.marketId;
-                if (sortType === 'price_low') return a.priceEth - b.priceEth;
-                if (sortType === 'price_high') return b.priceEth - a.priceEth;
-                if (sortType === 'rarity_high') return b.rarity - a.rarity;
-                return 0;
-            });
+    // 3. Proses Filter
+    let results = rawMarketData.filter(item => {
+        if (!item.nickname.toLowerCase().includes(searchText)) return false;
+        if (item.priceEth < minP || item.priceEth > maxP) return false;
+        return true;
+    });
 
-            // Render
-            container.innerHTML = "";
-            if (results.length === 0) {
-                container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#666;">No signals detected</div>`;
-                return;
-            }
+    // 4. Sorting
+    results.sort((a, b) => {
+        if (sortType === 'newest') return b.marketId - a.marketId;
+        if (sortType === 'price_low') return a.priceEth - b.priceEth;
+        if (sortType === 'price_high') return b.priceEth - a.priceEth;
+        if (sortType === 'rarity_high') return b.rarity - a.rarity;
+        return 0;
+    });
 
-            results.forEach(item => {
-                let rarityClass = "card-common";
-                if(item.rarity===1) rarityClass="card-rare";
-                if(item.rarity===2) rarityClass="card-legendary";
-                if(item.rarity===3) rarityClass="card-mythical";
-
-                let btnAction = item.isMyListing
-                    ? `<button class="btn-action btn-cancel" onclick="cancelSale('${item.nickname}')">Cancel Listing</button>`
-                    : `<button class="btn-action btn-buy" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">⚡ BUY NOW</button>`;
-
-                const cardHTML = `
-                    <div class="nick-card ${rarityClass}">
-                        <div style="text-align:center; padding:10px;">
-                            <img src="${item.avatarUrl}" class="seller-avatar" style="width:50px; height:50px;">
-                        </div>
-                        <div class="nick-title-premium">${item.nickname}</div>
-                        <div class="info-bar">
-                            <span>Seller: ${item.seller.substring(0,6)}...</span>
-                            <span class="price-tag">${item.priceEth.toFixed(4)} ETH</span>
-                        </div>
-                        ${btnAction}
+    // 5. Render Hasil
+    container.innerHTML = "";
+    
+    // --- JIKA KOSONG -> TAMPILKAN GAMBAR RADAR ---
+    if (results.length === 0) {
+        // Cek apakah kosong karena search atau memang belum ada data sama sekali?
+        if (rawMarketData.length > 0) {
+            // Kosong karena filter (Search tidak ketemu)
+            container.innerHTML = `
+                <div class="no-results-box">
+                    <div class="no-results-icon">
+                        <img src="radar.svg" alt="Radar Scan">
                     </div>
-                `;
-                container.insertAdjacentHTML('beforeend', cardHTML);
-            });
+                    <div class="no-results-text">No Nickname Found</div>
+                    <div class="no-results-sub">
+                        Try searching for "${searchInput.value}" with different keywords
+                    </div>
+                </div>
+            `;
+        } else {
+            // Kosong karena memang belum ada data di market
+            container.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#666;">Market is currently empty.</div>`;
         }
+        return;
+    }
 
+    // --- JIKA ADA HASIL -> RENDER KARTU ---
+    results.forEach(item => {
+        let rarityClass = "card-common";
+        if (item.rarity === 1) rarityClass = "card-rare";
+        if (item.rarity === 2) rarityClass = "card-legendary";
+        if (item.rarity === 3) rarityClass = "card-mythical";
+
+        let btnAction = item.isMyListing
+            ? `<button class="btn-action btn-cancel" onclick="cancelSale('${item.nickname}')">Cancel Listing</button>`
+            : `<button class="btn-action btn-buy" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">⚡ BUY NOW</button>`;
+
+        const cardHTML = `
+            <div class="nick-card ${rarityClass}">
+                <div style="text-align:center; padding:10px;">
+                    <img src="${item.avatarUrl}" class="seller-avatar" style="width:50px; height:50px;">
+                </div>
+                <div class="nick-title-premium">${item.nickname}</div>
+                <div class="info-bar">
+                    <span>Seller: ${item.seller.substring(0, 6)}...</span>
+                    <span class="price-tag">${item.priceEth.toFixed(4)} ETH</span>
+                </div>
+                ${btnAction}
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', cardHTML);
+    });
+}
+
+// --- HELPER: TOMBOL CLEAR ---
+
+function toggleClear() {
+    const input = document.getElementById('searchInput');
+    const btn = document.getElementById('clearBtn');
+    if (input && btn) {
+        if (input.value.length > 0) {
+            btn.classList.add('visible');
+        } else {
+            btn.classList.remove('visible');
+        }
+    }
+}
+
+function clearSearch() {
+    const input = document.getElementById('searchInput');
+    if (input) {
+        input.value = '';
+        input.focus(); // Kembalikan kursor ke input
+        runSmartFilter(); // Jalankan filter ulang (hasil reset)
+    }
+}
+        
         // --- 6. ACTIONS (BUY/SELL) ---
         async function buyNickname(nick, priceEth) {
             try {
