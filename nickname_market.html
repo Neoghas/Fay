@@ -1624,8 +1624,8 @@ function runSmartFilter() {
             // Jika milik orang lain -> Tombol Buy DAN Nego (Sebelah-sebelahan)
             actionButtons = `
                 <div style="display:flex; gap:5px; width:100%; margin-top:auto;">
-                    <button class="btn-action btn-buy" style="flex:1;" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">⚡ BUY</button>
-                    <button class="btn-action" style="flex:1; background:#ff007a; color:white;" onclick="openOfferModal('${item.nickname}')">🤝 BID</button>
+                    <button class="btn-action btn-buy" style="flex:1;" onclick="buyNickname('${item.nickname}', '${item.priceEth}')">BUY</button>
+                    <button class="btn-action" style="flex:1; background:#ff007a; color:white;" onclick="openOfferModal('${item.nickname}')">BID</button>
                 </div>
             `;
         }
@@ -2322,53 +2322,72 @@ function switchToRateModal() {
     }, 300);
 }
 
-        // --- 9. LIVE FEED ENGINE ---
+        // --- 9. LIVE FEED ENGINE (REALTIME + HISTORY) ---
 async function startLiveFeed() {
     if(!gameContract) return;
     const track = document.getElementById('liveFeedTrack');
     
-    try {
-        // Ambil 500 Block terakhir saja biar ringan
-        const currentBlock = await provider.getBlockNumber();
-        const fromBlock = currentBlock - 1000; 
+    // Helper: Fungsi bikin HTML Item biar rapi
+    const createItemHTML = (bidder, offerNick, ethVal, targetNick, isNew = false) => {
+        const badge = isNew ? '<span style="background:red; color:white; padding:0 4px; border-radius:2px; font-size:0.8em; margin-right:5px;">LIVE</span>' : '';
+        return `
+            <span class="feed-item">
+                ${badge}
+                👤 ${bidder.substring(0,6)}... offers 
+                <span class="feed-highlight">${offerNick}</span> 
+                + ${parseFloat(ethers.formatEther(ethVal)).toFixed(4)} ETH 
+                for <b>${targetNick}</b> 🔄
+            </span>
+        `;
+    };
 
-        // 1. Ambil Event Swap/Nego
+    try {
+        // ===============================================
+        // 1. LOAD DATA LAMA (SEJARAH) - Agar gak kosong
+        // ===============================================
+        const currentBlock = await provider.getBlockNumber();
+        const fromBlock = currentBlock - 2000; // Ambil agak banyak
+
         const filter = gameContract.filters.SwapRequested();
         const logs = await gameContract.queryFilter(filter, fromBlock, "latest");
 
-        if(logs.length === 0) {
-            track.innerHTML = `<span class="feed-item" style="color:#666;">Waiting for new offers... Market is quiet. 💤</span>`;
-            return;
-        }
-
-        // 2. Format Data Menjadi Teks
-        let htmlContent = "";
+        let initialContent = "";
         
-        // Ambil 10 Terakhir saja & Reverse (Terbaru dulu)
-        const recentLogs = logs.slice(-10).reverse();
-
-        for(const log of recentLogs) {
-            // Args: [0]myNick, [1]targetNick, [2]ethOffered, [3]initiator
-            const offerNick = log.args[0]; // Yang ditawarkan
-            const targetNick = log.args[1]; // Yang diminta
-            const ethVal = ethers.formatEther(log.args[2]);
-            const bidder = log.args[3].substring(0,6) + "..."; // Alamat pendek
-
-            // Template Teks Berjalan
-            // Contoh: [0x123] menawar 'Bitcoin' dengan 'Shiba' + 0.5 ETH
-            htmlContent += `
-                <span class="feed-item">
-                    👤 ${bidder} offers 
-                    <span class="feed-highlight">${offerNick}</span> 
-                    + ${parseFloat(ethVal).toFixed(4)} ETH 
-                    for <b>${targetNick}</b> 🔄
-                </span>
-            `;
+        if(logs.length === 0) {
+            initialContent = `<span class="feed-item" style="color:#666;">Waiting for offers... Market is quiet. 💤</span>`;
+        } else {
+            // Ambil 10 Terakhir saja & Reverse
+            const recentLogs = logs.slice(-10).reverse();
+            for(const log of recentLogs) {
+                const offerNick = log.args[0];
+                const targetNick = log.args[1];
+                const ethVal = log.args[2];
+                const bidder = log.args[3];
+                
+                initialContent += createItemHTML(bidder, offerNick, ethVal, targetNick, false);
+            }
         }
 
-        // 3. Masukkan ke HTML
-        // Kita duplikat isi content agar looping terlihat nyambung (seamless)
-        track.innerHTML = htmlContent + htmlContent;
+        // Masukkan konten awal (Diduplikat agar scroll seamless)
+        track.innerHTML = initialContent + initialContent;
+
+        // ===============================================
+        // 2. 🔥 PASANG CCTV (EVENT LISTENER) 🔥
+        // ===============================================
+        // Ini yang bikin update otomatis tanpa refresh
+        
+        gameContract.on("SwapRequested", (offerNick, targetNick, ethVal, bidder, event) => {
+            console.log("⚡ NEW LIVE OFFER DETECTED!");
+
+            // 1. Buat HTML Item Baru (Pakai Badge LIVE)
+            const newItem = createItemHTML(bidder, offerNick, ethVal, targetNick, true);
+
+            // 2. Suntikkan ke dalam Bar (Prepend = Taruh Paling Depan)
+            track.insertAdjacentHTML('afterbegin', newItem);
+            
+            // 3. Opsional: Munculkan Toast juga biar user sadar
+            showToast(`New Offer Incoming: ${offerNick} ➡️ ${targetNick}`, "success");
+        });
 
     } catch(e) {
         console.error("Feed Error:", e);
