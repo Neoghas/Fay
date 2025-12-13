@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirim Karya - Galeri Nusantara</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <style>
+        /* --- GAYA CSS SAMA PERSIS DENGAN ADMIN --- */
+        * { box-sizing: border-box; }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            background: #f4f1ea; 
+            padding: 20px; 
+            color: #333; 
+            margin: 0; 
+        }
+
+        .container { 
+            width: 100%; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            border-top: 5px solid #27ae60; /* Hijau untuk Publik */
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            .container { padding: 20px; }
+        }
+
+        /* Header & Connect Button */
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        h1 { color: #27ae60; margin: 0; font-size: 24px; }
+        
+        #btn-connect {
+            background: #2c3e50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;
+        }
+        #btn-connect.connected { background: #27ae60; cursor: default; }
+
+        /* Form Styling */
+        label { font-weight: bold; font-size: 14px; display: block; margin-top: 15px; color: #555; }
+        input, select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        fieldset { border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 15px; background: #fafafa; }
+        legend { font-weight: bold; color: #27ae60; padding: 0 5px; }
+        
+        /* Action Button */
+        .btn-action { background-color: #27ae60; color: white; padding: 15px; border: none; width: 100%; cursor: pointer; font-size: 16px; border-radius: 5px; margin-top: 20px; transition: 0.3s; font-weight: bold; }
+        .btn-action:hover { background-color: #219150; }
+        .btn-action:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        .status { margin-top: 15px; text-align: center; font-weight: bold; padding: 10px; border-radius: 5px; }
+        .success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; } 
+        .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
+        .loading { color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div>
+            <h1>📤 Upload Publik</h1>
+            <small style="color:#666;">Kontribusikan koleksi wayang Anda</small>
+        </div>
+        <button id="btn-connect" onclick="connectWallet()">Connect Wallet</button>
+    </div>
+    
+    <fieldset>
+        <legend>1. Identitas Utama</legend>
+        <label>Nama Tokoh:</label>
+        <input type="text" id="inputNama" placeholder="Contoh: Raden Werkudara">
+        
+        <div style="display: flex; gap: 15px;">
+            <div style="flex: 1;">
+                <label>Golongan:</label>
+                <select id="inputGolongan">
+                    <option value="Satria">Satria</option>
+                    <option value="Dewa">Dewa</option>
+                    <option value="Yaksa">Yaksa</option>
+                    <option value="Wanara">Wanara</option>
+                    <option value="Panakawan">Panakawan</option>
+                    <option value="Kayon">Kayon</option>
+                    <option value="Bambangan">Bambangan</option>
+                    <option value="Punggawa">Punggawa</option>
+                    <option value="Krodan">Krodan</option>
+                    <option value="Resi">Resi</option>
+                    <option value="Putren">Putren</option>
+                    <option value="Buta Kiwe">Buta Kiwe</option>
+                    <option value="Sato">Sato</option>
+                    <option value="Gaman">Gaman</option>
+                </select>
+            </div>
+            <div style="flex: 1;">
+                <label>Gaya:</label>
+                <select id="inputGaya">
+                    <option value="Yogyakarta">Yogyakarta</option>
+                    <option value="Surakarta">Surakarta</option>
+                    <option value="Cirebon">Cirebon</option>
+                    <option value="Banyumas">Banyumas</option>
+                    <option value="Jawa Timur">Jawa Timur</option>
+                    <option value="Lainnya">Lainnya / Kreasi</option>
+                </select>
+            </div>
+        </div>
+    </fieldset>
+
+    <fieldset>
+        <legend>2. Detail Fisik</legend>
+        <label>Wanda (Ekspresi):</label>
+        <input type="text" id="inputWanda" placeholder="Contoh: Lindhu, Geger">
+        <label>Material Kulit:</label>
+        <input type="text" id="inputKulit" placeholder="Contoh: Kulit Kerbau Bule">
+        <label>Pembuat (Jika ada):</label>
+        <input type="text" id="inputPembuat" placeholder="Nama Empu / Pembuat">
+    </fieldset>
+
+    <fieldset>
+        <legend>3. Silsilah</legend>
+        <div style="display: flex; gap: 15px;">
+            <div style="flex: 1;"><label>Ayah:</label><input type="text" id="inputAyah"></div>
+            <div style="flex: 1;"><label>Ibu:</label><input type="text" id="inputIbu"></div>
+        </div>
+        <label>Negara/Tempat:</label>
+        <input type="text" id="inputNegara" placeholder="Contoh: Jodipati">
+    </fieldset>
+
+    <fieldset>
+        <legend>4. Media & Cerita</legend>
+        <label>Deskripsi Singkat:</label>
+        <textarea id="inputDeskripsi" rows="3" placeholder="Ceritakan sejarah wayang ini..."></textarea>
+        <label>Upload Foto:</label>
+        <input type="file" id="inputGambar" accept="image/*">
+    </fieldset>
+
+    <button class="btn-action" onclick="kirimKarya()">KIRIM UNTUK REVIEW</button>
+    <div id="statusPublik"></div>
+</div>
+
+<script>
+    // --- KONFIGURASI IPFS ---
+    const PINATA_API_KEY = "4658f1eb70d0c8bcb9dc"; 
+    const PINATA_SECRET_KEY = "4cc702ab4f76139600b8e18c1f95166c9aefe4611b5c81cfeb5dc8b58c33dbf5";
+
+    let userAddress = "";
+
+    // 1. KONEKSI WALLET
+    async function connectWallet() {
+        if (!window.ethereum) return alert("Metamask tidak terdeteksi!");
+
+        try {
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+            const signer = provider.getSigner();
+            userAddress = await signer.getAddress();
+            
+            const btn = document.getElementById("btn-connect");
+            btn.innerText = userAddress.substring(0,6) + "...";
+            btn.classList.add("connected");
+
+        } catch (err) {
+            console.error(err);
+            alert("Gagal koneksi: " + err.message);
+        }
+    }
+
+    // 2. HELPER UPLOAD IPFS
+    async function uploadToIPFS(file) {
+        const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+        let data = new FormData();
+        data.append('file', file);
+        const res = await axios.post(url, data, {
+            headers: {'pinata_api_key': PINATA_API_KEY, 'pinata_secret_api_key': PINATA_SECRET_KEY, "Content-Type": "multipart/form-data"}
+        });
+        return `https://gateway.pinata.cloud/ipfs/${res.data.IpfsHash}`;
+    }
+
+    async function uploadJSON(jsonData) {
+        const url = `https://api.pinata.cloud/pinning/pinJSONToIPFS`;
+        const res = await axios.post(url, jsonData, {
+            headers: {'pinata_api_key': PINATA_API_KEY, 'pinata_secret_api_key': PINATA_SECRET_KEY}
+        });
+        return `ipfs://${res.data.IpfsHash}`;
+    }
+
+    // 3. LOGIKA KIRIM KARYA (KE LOCALSTORAGE / INBOX)
+    async function kirimKarya() {
+        const statusEl = document.getElementById("statusPublik");
+        
+        // Validasi
+        if(!userAddress) return alert("Silakan Connect Wallet terlebih dahulu!");
+        const nama = document.getElementById("inputNama").value;
+        const file = document.getElementById("inputGambar").files[0];
+        
+        if(!nama || !file) { return alert("Nama dan Gambar wajib diisi!"); }
+
+        try {
+            statusEl.className = "status loading";
+            statusEl.innerText = "⏳ 1/2 Mengupload Gambar ke Cloud...";
+            
+            // A. Upload Gambar
+            const imgUrl = await uploadToIPFS(file);
+
+            // B. Susun Metadata Lengkap (Sama seperti Admin)
+            statusEl.innerText = "⏳ 2/2 Menyimpan Metadata...";
+            const metadata = {
+                name: nama,
+                description: document.getElementById("inputDeskripsi").value,
+                image: imgUrl,
+                attributes: [
+                    { trait_type: "Golongan", value: document.getElementById("inputGolongan").value },
+                    { trait_type: "Gaya", value: document.getElementById("inputGaya").value },
+                    { trait_type: "Wanda", value: document.getElementById("inputWanda").value || "-" },
+                    { trait_type: "Material Kulit", value: document.getElementById("inputKulit").value || "-" },
+                    { trait_type: "Pembuat", value: document.getElementById("inputPembuat").value || "-" },
+                    { trait_type: "Ayah", value: document.getElementById("inputAyah").value || "-" },
+                    { trait_type: "Ibu", value: document.getElementById("inputIbu").value || "-" },
+                    { trait_type: "Negara", value: document.getElementById("inputNegara").value || "-" },
+                    { trait_type: "Creator", value: userAddress }, // Credit Pengirim
+                    { trait_type: "Status", value: "Community Upload" }
+                ]
+            };
+            
+            const tokenURI = await uploadJSON(metadata);
+
+            // C. Simpan ke Inbox (Simulasi Server)
+            // Data ini nanti dibaca oleh 'approval.html'
+            const pengajuanBaru = {
+                id: Date.now(),
+                pengirim: userAddress,
+                tokenURI: tokenURI,
+                nama: nama,
+                golongan: document.getElementById("inputGolongan").value,
+                gaya: document.getElementById("inputGaya").value,
+                tanggal: new Date().toLocaleString()
+            };
+
+            let inbox = JSON.parse(localStorage.getItem("wayang_inbox") || "[]");
+            inbox.push(pengajuanBaru);
+            localStorage.setItem("wayang_inbox", JSON.stringify(inbox));
+
+            // D. Sukses
+            statusEl.className = "status success";
+            statusEl.innerHTML = `✅ BERHASIL DIKIRIM!<br>Data Anda masuk antrian review Admin.`;
+            
+            // Reset Form
+            document.getElementById("inputNama").value = "";
+            document.getElementById("inputGambar").value = "";
+            document.getElementById("inputDeskripsi").value = "";
+
+        } catch (err) {
+            console.error(err);
+            statusEl.className = "status error";
+            statusEl.innerText = "Gagal: " + err.message;
+        }
+    }
+</script>
+</body>
+  </html>
