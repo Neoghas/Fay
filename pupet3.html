@@ -9,7 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     
     <style>
-        /* --- GAYA CSS DARI ANDA --- */
+        /* --- GAYA DASAR & TOMBOL SIMETRIS (REQUEST ANDA) --- */
         body { font-family: 'Georgia', serif; background-color: #2c241b; color: #f4f1ea; margin: 0; padding: 20px; }
         
         .header { text-align: center; padding: 40px 0; border-bottom: 2px solid #8b5a2b; margin-bottom: 30px; position: relative; }
@@ -26,36 +26,45 @@
         h1 { font-size: 3em; margin: 0; color: #deb887; text-transform: uppercase; letter-spacing: 5px; }
         p.subtitle { font-style: italic; color: #aaa; margin-top: 10px; }
 
+        /* Filter Container Rapih */
         .filter-container { max-width: 1000px; margin: 0 auto 30px auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
         .btn-filter { background: #3e2723; color: #deb887; border: 1px solid #5d4037; padding: 10px; cursor: pointer; transition: 0.3s; font-family: sans-serif; text-transform: uppercase; font-size: 12px; }
         .btn-filter:hover, .btn-filter.active { background: #deb887; color: #3e2723; font-weight: bold; }
 
+        /* Gallery Grid */
         .galeri-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 30px; max-width: 1200px; margin: 0 auto; }
         
-        .wayang-card { background: #fdfbf7; color: #333; border-radius: 8px; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: transform 0.3s; position: relative; }
+        /* --- GAYA KARTU "PENASARAN" (UPDATE CANGGIH) --- */
+        .wayang-card { 
+            background: #fdfbf7; color: #333; border-radius: 8px; overflow: hidden; 
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: transform 0.3s; 
+            text-decoration: none; display: block; position: relative;
+        }
         .wayang-card:hover { transform: translateY(-10px); }
         
-        /* Modifikasi: Position relative untuk badge overlay */
-        .wayang-img { width: 100%; height: 350px; background: #e0e0e0; display: flex; align-items: center; justify-content: center; border-bottom: 5px solid #8b5a2b; position: relative; }
+        .wayang-img { 
+            width: 100%; height: 350px; background: #e0e0e0; 
+            display: flex; align-items: center; justify-content: center; 
+            border-bottom: 5px solid #8b5a2b; position: relative; 
+        }
         .wayang-img img { max-width: 90%; max-height: 90%; filter: drop-shadow(5px 5px 5px rgba(0,0,0,0.5)); transition: opacity 0.3s; }
         
+        /* Badges & Overlay */
+        .badge-group { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; z-index: 5; }
+        .badge-overlay { background: rgba(0,0,0,0.7); color: gold; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; backdrop-filter: blur(2px); border: 1px solid rgba(255,215,0,0.3); }
+        .badge-new { position: absolute; top: 10px; left: 10px; background: #27ae60; color: white; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 5; }
+
         .card-body { padding: 20px; }
-        .card-badge { background: #8b5a2b; color: white; padding: 3px 10px; border-radius: 15px; font-size: 11px; text-transform: uppercase; display: inline-block; margin-bottom: 10px; }
-        h3 { margin: 0 0 5px 0; font-size: 1.5em; color: #3e2723; }
-        .wanda-label { font-size: 0.9em; color: #666; font-style: italic; display: block; margin-bottom: 15px; }
-        .desc { font-size: 0.9em; line-height: 1.5; color: #444; margin-bottom: 15px; height: 60px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;}
-
-        table { width: 100%; font-size: 0.85em; border-top: 1px dashed #ccc; padding-top: 10px; }
-        td { padding: 3px 0; }
-        td.label { color: #888; width: 60px; font-weight: bold; }
-        td.val { color: #000; font-weight: bold; }
         
-        a.card-link { text-decoration: none; color: inherit; display: block; }
+        /* Meta Data Row */
+        .card-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .gaya-text { background: #8b5a2b; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px; text-transform: uppercase; }
+        .date-text { font-size: 11px; color: #888; font-weight: bold; }
 
-        /* --- TAMBAHAN CSS UNTUK FITUR CANGGIH --- */
-        .badge-group { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; z-index: 10; }
-        .badge-pill { background: rgba(0,0,0,0.7); color: gold; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; backdrop-filter: blur(2px); border: 1px solid rgba(255,215,0,0.3); }
-        .badge-date { position: absolute; top: 10px; left: 10px; background: #27ae60; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 10; }
+        h3 { margin: 5px 0 10px 0; font-size: 1.5em; color: #3e2723; }
+        
+        /* Call to Action Text */
+        .stats-row { border-top: 1px dashed #ccc; padding-top: 10px; margin-top: 10px; font-size: 12px; color: #666; font-style: italic; text-align: center; }
         
         @media (max-width: 600px) { .wallet-container { position: static; margin-bottom: 20px; } }
     </style>
@@ -104,7 +113,7 @@
         rpcUrls: [BASE_SEPOLIA_RPC], blockExplorerUrls: ['https://sepolia.basescan.org']
     };
 
-    // ABI LENGKAP (Termasuk fitur canggih)
+    // ABI LENGKAP (Termasuk getInfoWayang & Socials)
     const CONTRACT_ABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"approved","type":"address"},{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"operator","type":"address"},{"indexed":false,"internalType":"bool","name":"approved","type":"bool"}],"name":"ApprovalForAll","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"address","name":"user","type":"address"}],"name":"Liked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint8","name":"star","type":"uint8"},{"indexed":false,"internalType":"string","name":"ulasan","type":"string"}],"name":"Reviewed","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"string","name":"nama","type":"string"},{"indexed":false,"internalType":"string","name":"golongan","type":"string"}],"name":"WayangLahir","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":false,"internalType":"string","name":"namaBaru","type":"string"},{"indexed":false,"internalType":"string","name":"uriBaru","type":"string"}],"name":"WayangUpdate","type":"event"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"approve","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_penerima","type":"address"},{"internalType":"string","name":"_tokenURI","type":"string"},{"internalType":"string","name":"_nama","type":"string"},{"internalType":"string","name":"_golongan","type":"string"},{"internalType":"string","name":"_gaya","type":"string"}],"name":"arsipWayang","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"dalang","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getApproved","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getAverageRating","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"string","name":"golongan","type":"string"}],"name":"getIdsByGolongan","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getInfoWayang","outputs":[{"components":[{"internalType":"string","name":"nama","type":"string"},{"internalType":"string","name":"golongan","type":"string"},{"internalType":"string","name":"gaya","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"}],"internalType":"struct WayangArsipPro.WayangInfo","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"getReviews","outputs":[{"components":[{"internalType":"address","name":"reviewer","type":"address"},{"internalType":"uint8","name":"bintang","type":"uint8"},{"internalType":"string","name":"ulasan","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct WayangArsipPro.Review[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"hasLiked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"address","name":"","type":"address"}],"name":"hasReviewed","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"operator","type":"address"}],"name":"isApprovedForAll","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"kasihLike","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"uint8","name":"_bintang","type":"uint8"},{"internalType":"string","name":"_ulasanPilihan","type":"string"}],"name":"kasihUlasan","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"ownerOf","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"_tokenId","type":"uint256"},{"internalType":"string","name":"_namaBaru","type":"string"},{"internalType":"string","name":"_uriBaru","type":"string"}],"name":"revisiDataWayang","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"safeTransferFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"operator","type":"address"},{"internalType":"bool","name":"approved","type":"bool"}],"name":"setApprovalForAll","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"bytes4","name":"interfaceId","type":"bytes4"}],"name":"supportsInterface","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"pure","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"tokenURI","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"totalLikes","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"from","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"transferFrom","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"_owner","type":"address"}],"name":"walletOfOwner","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"wayangRegistry","outputs":[{"internalType":"string","name":"nama","type":"string"},{"internalType":"string","name":"golongan","type":"string"},{"internalType":"string","name":"gaya","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"},{"internalType":"bool","name":"isActive","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"wayangReviews","outputs":[{"internalType":"address","name":"reviewer","type":"address"},{"internalType":"uint8","name":"bintang","type":"uint8"},{"internalType":"string","name":"ulasan","type":"string"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"}];
 
     let provider, signer;
@@ -191,39 +200,36 @@
 
             const results = await Promise.all(promises);
 
-            // RENDER KARTU (Dengan Data Blockchain dulu, Gambar belakangan)
-            for (const w of results) {
-                if(!w) continue;
+            // RENDER KARTU "PENASARAN"
+            for (const item of results) {
+                if(!item) continue;
                 
                 const html = `
-                    <a href="detail.html?id=${w.id}" class="card-link">
-                        <div class="wayang-card">
-                            <div class="wayang-img">
-                                <div class="badge-date">${w.date}</div>
-                                <div class="badge-group">
-                                    <div class="badge-pill">❤️ ${w.likes}</div>
-                                    <div class="badge-pill">⭐ ${w.rating}</div>
-                                </div>
-                                <img id="img-${w.id}" src="https://via.placeholder.com/300x350/cccccc/969696?text=Loading+IPFS..." alt="${w.nama}" loading="lazy">
+                    <a href="detail.html?id=${item.id}" class="wayang-card">
+                        <div class="wayang-img">
+                            <span class="badge-new">${item.date}</span>
+                            <div class="badge-group">
+                                <div class="badge-overlay">❤️ ${item.likes}</div>
+                                <div class="badge-overlay">⭐ ${item.rating}</div>
                             </div>
-                            <div class="card-body">
-                                <span class="card-badge">${w.gaya}</span>
-                                <h3>${w.nama}</h3>
-                                <span class="wanda-label" id="wanda-${w.id}">Memuat data...</span>
-                                <p class="desc" id="desc-${w.id}">...</p>
-                                
-                                <table id="table-${w.id}">
-                                    <tr><td class="label">Negara</td><td class="val">-</td></tr>
-                                    <tr><td class="label">Ayah</td><td class="val">-</td></tr>
-                                    <tr><td class="label">Ibu</td><td class="val">-</td></tr>
-                                </table>
+                            <img id="img-${item.id}" src="https://via.placeholder.com/300x350/333/777?text=Loading+IPFS..." alt="${item.nama}" loading="lazy">
+                        </div>
+                        <div class="card-body">
+                            <div class="card-meta">
+                                <span class="gaya-text">${item.gaya}</span>
+                                <span class="date-text">#${item.id}</span>
+                            </div>
+                            <h3>${item.nama}</h3>
+                            <div class="stats-row">
+                                <div class="stat-item">Klik untuk lihat detail & ulasan</div>
                             </div>
                         </div>
                     </a>`;
+                
                 container.innerHTML += html;
 
-                // ASYNC LOAD IPFS (Biar UI tidak macet)
-                fetchIPFSData(w.metaUrl, w.id);
+                // ASYNC LOAD IPFS (Load gambar belakangan agar UI tidak macet)
+                fetchImage(item.metaUrl, item.id);
             }
 
         } catch (err) {
@@ -232,39 +238,18 @@
         }
     }
 
-    // Helper: Ambil Data Detail dari IPFS (Gambar, Deskripsi, Silsilah)
-    async function fetchIPFSData(url, id) {
+    // Helper: Ambil Gambar dari JSON IPFS
+    async function fetchImage(url, id) {
         try {
             const res = await axios.get(url);
-            const meta = res.data;
-            const imgUrl = meta.image.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/");
-            
-            // Update Gambar
+            const imgUrl = res.data.image.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/");
             const imgEl = document.getElementById(`img-${id}`);
             if(imgEl) {
                 imgEl.src = imgUrl;
                 imgEl.style.opacity = 0; 
                 imgEl.onload = () => imgEl.style.opacity = 1; // Efek Fade In
             }
-
-            // Helper Attributes
-            const getAttr = (k) => {
-                const f = meta.attributes.find(a => a.trait_type === k);
-                return f ? f.value : "-";
-            };
-
-            // Update Text Detail
-            document.getElementById(`wanda-${id}`).innerText = "Wanda: " + getAttr("Wanda");
-            document.getElementById(`desc-${id}`).innerText = meta.description;
-            
-            // Update Tabel
-            document.getElementById(`table-${id}`).innerHTML = `
-                <tr><td class="label">Negara</td><td class="val">${getAttr("Negara")}</td></tr>
-                <tr><td class="label">Ayah</td><td class="val">${getAttr("Ayah")}</td></tr>
-                <tr><td class="label">Ibu</td><td class="val">${getAttr("Ibu")}</td></tr>
-            `;
-
-        } catch(e) { console.log("Gagal load IPFS id " + id); }
+        } catch(e) { console.log("Gagal load gambar id " + id); }
     }
 </script>
 </body>
