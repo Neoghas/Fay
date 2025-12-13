@@ -271,27 +271,53 @@
     }
 
     // --- 4. LOAD METADATA (IPFS) ---
-    async function loadDetail(id) {
-        try {
-            // Gunakan RPC Publik untuk baca data (Gratis/Cepat)
-            const readProvider = new ethers.providers.JsonRpcProvider(BASE_SEPOLIA_RPC);
-            const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, readProvider);
+    async function loadDetail() {
+        // 1. Ambil ID dari URL
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
 
+        if (!id) {
+            document.getElementById("loading").innerText = "ID Arsip tidak ditemukan.";
+            return;
+        }
+
+        try {
+            // 2. Koneksi Blockchain (Read-Only RPC)
+            const provider = new ethers.providers.JsonRpcProvider(BASE_SEPOLIA_RPC);
+            const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+
+            // 3. Ambil URI Metadata
             const uri = await contract.tokenURI(id);
             const httpUri = uri.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/");
             
+            // 4. Download JSON
             const response = await axios.get(httpUri);
             const meta = response.data;
 
-            // Helper Attributes
+            // 5. OPTIMASI GAMBAR (TARGET: 500KB - 700KB)
+            const rawImgUrl = meta.image.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/");
+            
+            // w=1200 : Resolusi Besar (HD), enak dilihat di Laptop/Tablet
+            // q=95   : Kompresi sangat sedikit, detail ukiran wayang tajam
+            const hdImageUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawImgUrl)}&w=1200&q=95&output=webp`;
+
+            // 6. Helper Function Attributes
             const getAttr = (k) => {
                 const f = meta.attributes.find(a => a.trait_type === k);
                 return f ? f.value : "-";
             };
 
-            // Isi HTML
+            // 7. Masukkan Data ke HTML
             document.getElementById("displayId").innerText = id;
-            document.getElementById("displayImg").src = meta.image.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/");
+            
+            // Set Gambar HD
+            const imgEl = document.getElementById("displayImg");
+            imgEl.src = hdImageUrl;
+            
+            // Efek Loading Halus
+            imgEl.style.opacity = 0;
+            imgEl.onload = () => { imgEl.style.opacity = 1; imgEl.style.transition = "opacity 0.5s"; };
+
             document.getElementById("displayName").innerText = meta.name;
             document.getElementById("displayGaya").innerText = getAttr("Gaya");
             document.getElementById("displayDesc").innerText = meta.description;
@@ -300,17 +326,19 @@
             document.getElementById("displayWanda").innerText = getAttr("Wanda");
             document.getElementById("displayKulit").innerText = getAttr("Material Kulit");
             document.getElementById("displayPembuat").innerText = getAttr("Pembuat");
+            
             document.getElementById("displayNegara").innerText = getAttr("Negara");
             document.getElementById("displayAyah").innerText = getAttr("Ayah");
             document.getElementById("displayIbu").innerText = getAttr("Ibu");
             document.getElementById("displayPusaka").innerText = getAttr("Pusaka") || "-";
 
+            // Tampilkan Konten
             document.getElementById("loading").style.display = "none";
             document.getElementById("content").style.display = "flex";
 
         } catch (err) {
             console.error(err);
-            document.getElementById("loading").innerText = "Gagal memuat metadata.";
+            document.getElementById("loading").innerText = "Gagal memuat data wayang. Cek koneksi.";
         }
     }
 
