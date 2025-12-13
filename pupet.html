@@ -146,6 +146,30 @@ body {
     <div id="statusAdmin"></div>
 </div>
 
+    <div class="container" style="margin-top: 50px; border-top: 5px solid #d35400;">
+    <h1>✏️ Menu Revisi (Edit Data)</h1>
+    <p style="color: #666; font-size: 14px;">Gunakan ini jika ada kesalahan input pada data sebelumnya.</p>
+
+    <fieldset>
+        <legend>Form Perbaikan</legend>
+        
+        <label>ID Wayang (Angka):</label>
+        <input type="number" id="editId" placeholder="Contoh: 1">
+
+        <label>Nama Baru (Perbaikan):</label>
+        <input type="text" id="editNama" placeholder="Nama yang benar">
+
+        <label>Upload Foto Baru (Opsional - Jika ingin ganti foto):</label>
+        <input type="file" id="editGambar">
+        
+        <label>Link Metadata Baru (Otomatis):</label>
+        <input type="text" id="editURI" placeholder="Link IPFS baru akan muncul di sini..." readonly style="background: #eee;">
+    </fieldset>
+
+    <button class="btn-action" style="background-color: #d35400;" onclick="revisiWayang()">UPDATE DATA BLOCKCHAIN</button>
+    <div id="statusRevisi" class="status"></div>
+    </div>
+
 <script>
     // --- 1. KONFIGURASI PENTING (ISI INI) ---
     const CONTRACT_ADDRESS = "0x5dfe8311e98b0443C471A10e26198b72355Ca713"; // <--- Paste Contract Address Disini
@@ -301,6 +325,73 @@ body {
             statusEl.innerText = "Gagal: " + (err.reason || err.message);
         }
     }
+
+    // --- FUNGSI BARU: REVISI WAYANG ---
+async function revisiWayang() {
+    const statusEl = document.getElementById("statusRevisi");
+    const id = document.getElementById("editId").value;
+    const namaBaru = document.getElementById("editNama").value;
+    const fileBaru = document.getElementById("editGambar").files[0];
+
+    if (!id || !namaBaru) return alert("ID dan Nama Baru wajib diisi!");
+
+    try {
+        if (!signer) await connectWallet();
+
+        // 1. Jika ada gambar baru, upload ulang ke IPFS
+        let tokenURI = "";
+        
+        if (fileBaru) {
+            statusEl.className = "status loading";
+            statusEl.innerText = "⏳ Upload Foto & Metadata Baru...";
+            
+            const imgUrl = await uploadToIPFS(fileBaru);
+            
+            // Kita buat JSON baru (Sederhana untuk revisi)
+            // Catatan: Idealnya ambil data lama lalu timpa, tapi ini versi cepat
+            const metadata = {
+                name: namaBaru,
+                description: "Data ini telah direvisi oleh Dalang.",
+                image: imgUrl,
+                attributes: [
+                    { trait_type: "Status", value: "Revisi" } 
+                ]
+            };
+            tokenURI = await uploadJSON(metadata);
+            document.getElementById("editURI").value = tokenURI;
+        } else {
+            // Jika tidak ganti foto, user harus manual isi URI atau
+            // logic ambil URI lama agak kompleks di frontend only.
+            // Untuk kemudahan, admin wajib upload foto ulang saat revisi di versi simple ini.
+            return alert("Untuk saat ini, mohon upload ulang foto wayangnya juga.");
+        }
+
+        // 2. Eksekusi Smart Contract
+        statusEl.innerText = "⏳ Mengirim Perubahan ke Blockchain...";
+        
+        // Pastikan ABI sudah menyertakan fungsi revisiDataWayang
+        // Tambahkan ini ke const CONTRACT_ABI di atas:
+        // "function revisiDataWayang(uint256, string, string) public"
+        
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, [
+            ...CONTRACT_ABI, // Gabung dengan ABI lama
+            "function revisiDataWayang(uint256 _tokenId, string memory _namaBaru, string memory _uriBaru) public"
+        ], signer);
+
+        const tx = await contract.revisiDataWayang(id, namaBaru, tokenURI);
+        
+        statusEl.innerText = "⛏️ Sedang Update...";
+        await tx.wait();
+
+        statusEl.className = "status success";
+        statusEl.innerText = "✅ Data Berhasil Direvisi!";
+
+    } catch (err) {
+        console.error(err);
+        statusEl.className = "status error";
+        statusEl.innerText = "Gagal: " + (err.reason || err.message);
+    }
+}
 </script>
 </body>
 </html>
