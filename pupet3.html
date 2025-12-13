@@ -228,8 +228,7 @@
                 
                 container.innerHTML += html;
 
-                // ASYNC LOAD IPFS (Load gambar belakangan agar UI tidak macet)
-                fetchImage(item.metaUrl, item.id);
+                fetchOptimizedImage(item.metaUrl, item.id);
             }
 
         } catch (err) {
@@ -238,16 +237,34 @@
         }
     }
 
-    // Helper: Ambil Gambar dari JSON IPFS
-    async function fetchImage(url, id) {
+    // --- FUNGSI UPDATE: FETCH GAMBAR PREMIUM (250kb - 350kb) ---
+    async function fetchOptimizedImage(metaUrl, id) {
         try {
-            const res = await axios.get(url);
-            const imgUrl = res.data.image.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/");
+            // 1. Ambil Metadata JSON
+            const res = await axios.get(metaUrl);
+            const meta = res.data;
+            
+            // 2. URL Asli
+            const rawImgUrl = meta.image.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/");
+            
+            // 3. GENERATE URL OPTIMASI (Target: ~300KB)
+            // w=800 : Lebar diperbesar (Sangat tajam untuk Retina Display / Tablet)
+            // q=92  : Kualitas sangat tinggi (Hampir lossless, detail sunggingan aman)
+            // output=webp : Format modern agar tetap efisien di size segitu
+            const optimizedUrl = `https://wsrv.nl/?url=${encodeURIComponent(rawImgUrl)}&w=800&q=92&output=webp`;
+
+            // 4. Update Gambar di HTML
             const imgEl = document.getElementById(`img-${id}`);
             if(imgEl) {
-                imgEl.src = imgUrl;
-                imgEl.style.opacity = 0; 
-                imgEl.onload = () => imgEl.style.opacity = 1; // Efek Fade In
+                // Pre-load image di memory
+                const tempImg = new Image();
+                tempImg.src = optimizedUrl;
+                tempImg.onload = () => {
+                    imgEl.src = optimizedUrl; 
+                    imgEl.style.opacity = 0; 
+                    // Efek Fade In
+                    setTimeout(() => { imgEl.style.opacity = 1; }, 50);
+                };
             }
         } catch(e) { console.log("Gagal load gambar id " + id); }
     }
