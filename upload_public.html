@@ -12,11 +12,46 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
     <style>
-        /* CSS SAMA PERSIS ADMIN */
-        * { box-sizing: border-box; }
-        body { font-family: 'Rubix', sans-serif; background: #fff; padding: 0; color: #333; margin: 0; }
-        
-        .container { 
+    /* 1. RESET BODY: Hapus padding agar Navbar mentok pinggir */
+    * { box-sizing: border-box; }
+    body { 
+        font-family: 'Rubik', sans-serif; 
+        background: #f8f9fa; /* Ganti background body jadi agak abu dikit biar Container putih menonjol */
+        padding: 0; /* WAJIB 0 */
+        margin: 0;  /* WAJIB 0 */
+        color: #333; 
+    }
+
+    /* 2. NAVBAR: Full Width & Sticky */
+    .navbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 5%; 
+        background: #ffffff; /* Putih bersih */
+        position: sticky;
+        top: 0;
+        width: 100%; 
+        z-index: 1000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Bayangan halus */
+        border-bottom: 1px solid #eee;
+    }
+
+    .nav-left { display: flex; align-items: center; gap: 12px; }
+    
+    .nav-logo {
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .nav-brand {
+        font-size: 1.1em; font-weight: 700; color: #2c3e50;
+        text-transform: uppercase; letter-spacing: 1px;
+    }
+
+    /* 3. CONTAINER FORM: Tetap di tengah dengan margin */
+    .container { 
         width: 90%; /* Agar tidak nempel pinggir di HP */
         max-width: 800px; 
         margin: 40px auto; /* Jarak atas-bawah dari Navbar/Footer */
@@ -24,87 +59,71 @@
         padding: 40px; 
         border-radius: 12px; 
         box-shadow: 0 5px 20px rgba(0,0,0,0.05); 
-        }
+        border-top: 5px solid #27ae60; 
+    }
 
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 5%; /* Jarak konten dalam navbar */
-            background: #f6f9ff;
-            backdrop-filter: blur(10px);
-            position: sticky;
-            top: 0;
-            width: 100%; /* WAJIB FULL */
-            z-index: 1000;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
+    /* Tombol Connect di Navbar */
+    #btn-connect {
+        background: #2c3e50; color: white; border: none; 
+        padding: 10px 20px; border-radius: 6px; cursor: pointer; 
+        font-weight: bold; font-size: 14px; transition: 0.3s;
+    }
+    #btn-connect:hover { background: #34495e; }
 
-        .nav-left { display: flex; align-items: center; gap: 15px; }
-        
-        .nav-logo {
-            width: 45px; height: 45px;
-            border-radius: 50%;
-            border: 2px solid #7385a5;
-            object-fit: cover;
-        }
+    /* Elemen Form (Sama seperti sebelumnya) */
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #f1f1f1; padding-bottom: 15px; }
+    h1 { color: #27ae60; margin: 0; font-size: 22px; }
+    
+    label { font-weight: 600; font-size: 14px; display: block; margin-top: 20px; color: #555; }
+    input, select, textarea { 
+        width: 100%; padding: 12px; margin-top: 8px; 
+        border: 1px solid #ddd; border-radius: 6px; 
+        font-size: 14px; transition: 0.3s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #27ae60; outline: none; }
+    
+    fieldset { border: 1px solid #eee; padding: 20px; border-radius: 8px; margin-bottom: 20px; background: #fff; }
+    legend { font-weight: bold; color: #27ae60; padding: 0 10px; }
+    
+    .btn-action { 
+        background-color: #27ae60; color: white; padding: 15px; 
+        border: none; width: 100%; cursor: pointer; font-size: 16px; 
+        border-radius: 8px; margin-top: 30px; font-weight: bold; 
+        box-shadow: 0 4px 10px rgba(39, 174, 96, 0.3);
+    }
+    .btn-action:hover { background-color: #219150; transform: translateY(-2px); }
 
-        .nav-brand {
-            font-size: 1.2em; font-weight: bold; color: #7385a5;
-            letter-spacing: 1.5px;
-        }
+    /* 4. FOOTER: Full Width */
+    .footer {
+        background: #ffffff;
+        padding: 40px 20px;
+        margin-top: auto; /* Dorong ke bawah */
+        border-top: 1px solid #eee;
+        text-align: center;
+        width: 100%;
+    }
 
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
-        h1 { color: #27ae60; margin: 0; font-size: 24px; }
-        
-        #btn-connect {
-            background: #2c3e50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;
-        }
-        #btn-connect.connected { background: #27ae60; cursor: default; }
+    .social-link {
+        display: inline-flex; justify-content: center; align-items: center;
+        width: 40px; height: 40px; margin: 0 5px;
+        border-radius: 50%; background: #f8f9fa; color: #555;
+        font-size: 18px; transition: all 0.3s ease; 
+        text-decoration: none;
+    }
+    .social-link:hover { background: #27ae60; color: #fff; transform: translateY(-3px); }
+    .copyright { color: #999; font-size: 13px; margin-top: 15px; }
 
-        label { font-weight: bold; font-size: 14px; display: block; margin-top: 15px; color: #555; }
-        input, select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        fieldset { border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 15px; background: #fafafa; }
-        legend { font-weight: bold; color: #27ae60; padding: 0 5px; }
-        
-        .btn-action { background-color: #27ae60; color: white; padding: 15px; border: none; width: 100%; cursor: pointer; font-size: 16px; border-radius: 5px; margin-top: 20px; transition: 0.3s; font-weight: bold; }
-        .btn-action:hover { background-color: #219150; }
+    /* Status Messages */
+    .status { margin-top: 15px; text-align: center; font-weight: bold; padding: 10px; border-radius: 5px; }
+    .success { color: #155724; background-color: #d4edda; } 
+    .error { color: #721c24; background-color: #f8d7da; }
+    .loading { color: #856404; background-color: #fff3cd; }
 
-        .status { margin-top: 15px; text-align: center; font-weight: bold; padding: 10px; border-radius: 5px; }
-        .success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; } 
-        .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; }
-        .loading { color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; }
-
-        @media (max-width: 480px) {
-            body { padding: 10px; }
-            .container { padding: 20px; }
-        }
-
-        .footer {
-            background: #f6f9ff;
-            padding: 20px 20px;
-            margin-top: 25px;
-            text-align: center;
-            width: 100%; /* WAJIB FULL */
-        }
-
-        .social-icons { margin-bottom: 10px; }
-        
-        .social-link {
-            display: inline-flex; justify-content: center; align-items: center;
-            width: 35px; height: 35px; margin: 0 07px;
-            border-radius: 50%; background: #7385a5; color: #fff;
-            font-size: 15px; transition: all 0.3s ease; border: 1.5px solid #7385a5;
-            text-decoration: none;
-        }
-        .social-link:hover {
-            background: #fff; color: #7385a5;
-            transform: translateY(-5px); box-shadow: 0 0 15px #7385a5;
-        }
-
-        .copyright { color: #888; font-size: 13px; letter-spacing: 1px; margin-top: 10px; }
-        
-    </style>
+    @media (max-width: 600px) {
+        .container { margin: 20px auto; width: 95%; padding: 20px; }
+        .navbar { padding: 15px; }
+    }
+</style>
 </head>
 <body>
 <nav class="navbar">
