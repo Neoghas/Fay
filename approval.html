@@ -51,16 +51,16 @@
 <body>
 
 <div class="container">
-    <h1>🛡️ Cek Pengajuan Karya</h1>
+    <h3>Cek Pengajuan Karya</h3>
     
     <div class="connect-box">
-        <button id="btn-connect" onclick="connectWallet()">1. Koneksi Admin</button>
+        <button id="btn-connect" onclick="connectWallet()">Koneksi Admin</button>
     </div>
 
     <div class="input-area">
         <label>Masukkan Kode IPFS (CID) dari User:</label>
         <input type="text" id="ipfsInput" placeholder="Contoh: ipfs://QmXyZ123abc...">
-        <button class="btn-check" onclick="cekData()">2. CEK DATA & PREVIEW</button>
+        <button class="btn-check" onclick="cekData()">CEK & PREVIEW</button>
     </div>
 
     <div id="previewArea" class="preview-card">
@@ -75,6 +75,42 @@
             <div class="meta-row">
                 <span class="meta-label">Gaya:</span>
                 <span class="meta-val" id="pGaya">-</span>
+            </div>
+
+            <div class="meta-row">
+                <span class="meta-label">Wanda:</span>
+                <span class="meta-val" id="pWanda">-</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Material:</span>
+                <span class="meta-val" id="pMaterial">-</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Pembuat:</span>
+                <span class="meta-val" id="pPembuat">-</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Negara:</span>
+                <span class="meta-val" id="pNegara">-</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Ayah:</span>
+                <span class="meta-val" id="pAyah">-</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Ibu:</span>
+                <span class="meta-val" id="pIbu">-</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Pusaka:</span>
+                <span class="meta-val" id="pPusaka">-</span>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px dashed #ccc; margin: 10px 0;">
+            
+            <div class="meta-row" style="display:block;">
+                <span class="meta-label">Deskripsi:</span>
+                <p id="pDeskripsi" style="margin-top:5px; font-style:italic; color:#555;">-</p>
             </div>
 
             <div class="creator-box">
@@ -135,26 +171,52 @@
 
             // Tampilkan ke Layar Preview
             document.getElementById("previewArea").style.display = "block";
+            
+            // Gambar & Nama
             document.getElementById("pImg").src = meta.image.replace("ipfs://", "https://gateway.pinata.cloud/ipfs/");
             document.getElementById("pNama").innerText = meta.name;
+            
+            // Data Atribut (Helper getAttr harus sudah ada sebelumnya)
             document.getElementById("pGol").innerText = getAttr("Golongan");
             document.getElementById("pGaya").innerText = getAttr("Gaya");
+            
+            // --- DATA TAMBAHAN ---
+            document.getElementById("pWanda").innerText = getAttr("Wanda");
+            document.getElementById("pMaterial").innerText = getAttr("Material");
+            document.getElementById("pPembuat").innerText = getAttr("Empu") || getAttr("Pembuat"); // Jaga-jaga nama atributnya beda
+            document.getElementById("pNegara").innerText = getAttr("Negara");
+            document.getElementById("pAyah").innerText = getAttr("Ayah");
+            document.getElementById("pIbu").innerText = getAttr("Ibu");
+            document.getElementById("pPusaka").innerText = getAttr("Pusaka");
+            
+            // Deskripsi (Biasanya ada di root JSON, bukan di attributes)
+            document.getElementById("pDeskripsi").innerText = meta.description || "-";
             
             const creator = getAttr("Creator");
             document.getElementById("pCreator").innerText = creator;
 
             // Simpan data ke variabel global agar bisa diminting nanti
             pendingData = {
-                uri: uri, // CID Asli
+                uri: `ipfs://${cleanCID}`, 
                 nama: meta.name,
+                creator: creator, // Pastikan variabel creator sudah didefinisikan sebelumnya
+                
+                // Data Lengkap
                 golongan: getAttr("Golongan"),
                 gaya: getAttr("Gaya"),
-                creator: creator
+                wanda: getAttr("Wanda"),
+                material: getAttr("Material"),
+                pembuat: getAttr("Empu") || getAttr("Pembuat"),
+                negara: getAttr("Negara"),
+                ayah: getAttr("Ayah"),
+                ibu: getAttr("Ibu"),
+                pusaka: getAttr("Pusaka"),
+                deskripsi: meta.description
             };
 
             // Reset tombol Mint
             const btnMint = document.getElementById("btnMint");
-            btnMint.innerText = "3. ACC & MINT SEKARANG";
+            btnMint.innerText = "ACC & MINT";
             btnMint.disabled = false;
 
         } catch (err) {
@@ -176,14 +238,22 @@
 
             const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
 
-            // PANGGIL SMART CONTRACT
-            // Parameter 1: pendingData.creator (Alamat User, BUKAN Admin)
+            // Eksekusi ke Smart Contract
             const tx = await contract.arsipWayang(
                 pendingData.creator, 
                 pendingData.uri,
                 pendingData.nama,
                 pendingData.golongan,
-                pendingData.gaya
+                pendingData.gaya,
+                // Parameter Tambahan (Pastikan urutan SAMA PERSIS dengan di Solidity)
+                pendingData.wanda,
+                pendingData.material,
+                pendingData.pembuat,
+                pendingData.negara,
+                pendingData.ayah,
+                pendingData.ibu,
+                pendingData.pusaka,
+                pendingData.deskripsi
             );
 
             await tx.wait();
